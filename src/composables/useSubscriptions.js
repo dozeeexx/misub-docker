@@ -9,23 +9,15 @@ export function useSubscriptions(initialSubsRef, markDirty) {
   const subsCurrentPage = ref(1);
   const subsItemsPerPage = 3;
 
-  const initializeSubscriptions = (subsData) => {
+  // 【关键修正】: 将内部所有辅助函数从 'const' 改为 'function' 声明
+
+  function initializeSubscriptions(subsData) {
     subscriptions.value = (subsData || []).map(sub => ({
       ...sub, id: crypto.randomUUID(), enabled: sub.enabled ?? true, nodeCount: sub.nodeCount || 0, isUpdating: false,
     }));
     subscriptions.value.forEach(sub => handleUpdateNodeCount(sub.id, true));
-  };
+  }
 
-  watch(initialSubsRef, (newInitialSubs) => {
-    initializeSubscriptions(newInitialSubs);
-  }, { immediate: true, deep: true });
-
-  const subsTotalPages = computed(() => Math.ceil(subscriptions.value.length / subsItemsPerPage));
-  const paginatedSubscriptions = computed(() => {
-    const start = (subsCurrentPage.value - 1) * subsItemsPerPage;
-    const end = start + subsItemsPerPage;
-    return subscriptions.value.slice(start, end);
-  });
   const enabledSubscriptions = computed(() => subscriptions.value.filter(s => s.enabled));
   const nodesFromSubs = computed(() =>
     enabledSubscriptions.value.reduce((acc, sub) => {
@@ -33,13 +25,19 @@ export function useSubscriptions(initialSubsRef, markDirty) {
       return acc + (isNaN(count) ? 0 : count);
     }, 0)
   );
+  const subsTotalPages = computed(() => Math.ceil(subscriptions.value.length / subsItemsPerPage));
+  const paginatedSubscriptions = computed(() => {
+    const start = (subsCurrentPage.value - 1) * subsItemsPerPage;
+    const end = start + subsItemsPerPage;
+    return subscriptions.value.slice(start, end);
+  });
 
-  const changeSubsPage = (page) => {
+  function changeSubsPage(page) {
     if (page < 1 || page > subsTotalPages.value) return;
     subsCurrentPage.value = page;
-  };
+  }
 
-  const handleUpdateNodeCount = async (subId, isInitialLoad = false) => {
+  async function handleUpdateNodeCount(subId, isInitialLoad = false) {
     const subToUpdate = subscriptions.value.find(s => s.id === subId);
     if (!subToUpdate || !subToUpdate.url.startsWith('http')) return;
     subToUpdate.isUpdating = true;
@@ -55,16 +53,16 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     } finally {
       subToUpdate.isUpdating = false;
     }
-  };
+  }
 
-  const addSubscription = (sub) => {
+  function addSubscription(sub) {
     subscriptions.value.unshift(sub);
     subsCurrentPage.value = 1;
     handleUpdateNodeCount(sub.id);
     markDirty();
-  };
+  }
 
-  const updateSubscription = (updatedSub) => {
+  function updateSubscription(updatedSub) {
     const index = subscriptions.value.findIndex(s => s.id === updatedSub.id);
     if (index !== -1) {
       if (subscriptions.value[index].url !== updatedSub.url) {
@@ -74,21 +72,25 @@ export function useSubscriptions(initialSubsRef, markDirty) {
       subscriptions.value[index] = updatedSub;
       markDirty();
     }
-  };
+  }
 
-  const deleteSubscription = (subId) => {
+  function deleteSubscription(subId) {
     subscriptions.value = subscriptions.value.filter((s) => s.id !== subId);
     if (paginatedSubscriptions.value.length === 0 && subsCurrentPage.value > 1) {
       subsCurrentPage.value--;
     }
     markDirty();
-  };
+  }
 
-  const deleteAllSubscriptions = () => {
+  function deleteAllSubscriptions() {
     subscriptions.value = [];
     subsCurrentPage.value = 1;
     markDirty();
-  };
+  }
+
+  watch(initialSubsRef, (newInitialSubs) => {
+    initializeSubscriptions(newInitialSubs);
+  }, { immediate: true, deep: true });
 
   return {
     subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions,

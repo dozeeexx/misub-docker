@@ -6,15 +6,13 @@ export function useManualNodes(initialNodesRef, markDirty) {
   const manualNodesCurrentPage = ref(1);
   const manualNodesPerPage = 24;
 
-  const initializeManualNodes = (nodesData) => {
+  // 【关键修正】: 将内部所有辅助函数从 'const' 改为 'function' 声明
+
+  function initializeManualNodes(nodesData) {
     manualNodes.value = (nodesData || []).map(node => ({
       ...node, id: crypto.randomUUID(), enabled: node.enabled ?? true,
     }));
-  };
-
-  watch(initialNodesRef, (newInitialNodes) => {
-    initializeManualNodes(newInitialNodes);
-  }, { immediate: true, deep: true });
+  }
 
   const manualNodesTotalPages = computed(() => Math.ceil(manualNodes.value.length / manualNodesPerPage));
   const paginatedManualNodes = computed(() => {
@@ -24,43 +22,47 @@ export function useManualNodes(initialNodesRef, markDirty) {
   });
   const enabledManualNodes = computed(() => manualNodes.value.filter(n => n.enabled));
 
-  const changeManualNodesPage = (page) => {
+  function changeManualNodesPage(page) {
     if (page < 1 || page > manualNodesTotalPages.value) return;
     manualNodesCurrentPage.value = page;
-  };
+  }
 
-  const addNode = (node) => {
+  function addNode(node) {
     manualNodes.value.unshift(node);
     manualNodesCurrentPage.value = 1;
     markDirty();
-  };
+  }
 
-  const updateNode = (updatedNode) => {
+  function updateNode(updatedNode) {
     const index = manualNodes.value.findIndex(n => n.id === updatedNode.id);
     if (index !== -1) {
       manualNodes.value[index] = updatedNode;
       markDirty();
     }
-  };
+  }
 
-  const deleteNode = (nodeId) => {
+  function deleteNode(nodeId) {
     manualNodes.value = manualNodes.value.filter(n => n.id !== nodeId);
     if (paginatedManualNodes.value.length === 0 && manualNodesCurrentPage.value > 1) {
       manualNodesCurrentPage.value--;
     }
     markDirty();
-  };
+  }
 
-  const deleteAllNodes = () => {
+  function deleteAllNodes() {
     manualNodes.value = [];
     manualNodesCurrentPage.value = 1;
     markDirty();
-  };
+  }
 
-  const addNodesFromBulk = (nodes) => {
+  function addNodesFromBulk(nodes) {
     manualNodes.value.unshift(...nodes);
     markDirty();
-  };
+  }
+
+  watch(initialNodesRef, (newInitialNodes) => {
+    initializeManualNodes(newInitialNodes);
+  }, { immediate: true, deep: true });
 
   return {
     manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes,
