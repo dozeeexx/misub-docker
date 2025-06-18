@@ -69,7 +69,8 @@ async function getSUB(apiUrls, userAgentHeader) {
             else if (isValidBase64(text.replace(/\s/g, ''))) { 
                 try { 
                     // 【核心修正】使用能正确处理中文字符的解码方式
-                    const decodedWithChinese = decodeURIComponent(escape(atob(text.replace(/\s/g, ''))));
+                    const uint8Array = new Uint8Array(atob(text.replace(/\s/g, '')).split('').map(c => c.charCodeAt(0)));
+                    const decodedWithChinese = new TextDecoder('utf-8').decode(uint8Array);
                     content += decodedWithChinese + '\n'; 
                 } catch (e) {
                     console.error("Base64 decoding failed:", e);
@@ -276,7 +277,7 @@ async function handleMisubRequest(request, env) {
     }
 
     let targetFormat = 'base64';
-    const validFormats = ['clash', 'singbox', 'surge', 'quanx', 'loon', 'base64'];
+    const validFormats = ['clash', 'singbox', 'surge', 'quanx', 'loon', 'base64', 'snell'];
     const urlTarget = url.searchParams.get('target');
 
     if (urlTarget && validFormats.includes(urlTarget)) {
@@ -305,8 +306,17 @@ async function handleMisubRequest(request, env) {
             subConverterContent = clashFix(subConverterContent);
         }
 
-        // --- 【关键修复】为配置文件添加 .yaml 后缀 ---
-        const fileName = `${config.FileName}.yaml`;
+        // --- 为配置文件提供格式化的后缀 ---
+        const extensionMap = {
+            clash: 'yaml',
+            singbox: 'json',
+            surge: 'conf',
+            quanx: 'conf',
+            loon: 'conf',
+            snell: 'conf' // 假设 snell 也使用 .conf 格式
+        };
+        const extension = extensionMap[targetFormat] || 'txt';
+        const fileName = `${config.FileName}.${extension}`;
 
         return new Response(subConverterContent, { 
             headers: { 

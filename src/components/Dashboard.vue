@@ -342,17 +342,21 @@ const changeManualNodesPage = (page) => {
                 </div>
 
                 <div v-if="subscriptions.length > 0">
-                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                      <Card
-                        v-for="subscription in paginatedSubscriptions"
-                        :key="subscription.id"
-                        :misub="subscription"
-                        @delete="handleDeleteSubscription(subscription.id)"
-                        @change="markDirty"
-                        @update="handleUpdateNodeCount(subscription.id)"
-                        @edit="handleEditSubscription(subscription.id)"
-                      />
-                  </div>
+                  <TransitionGroup
+                    tag="div"
+                    name="list-fade"
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+                  >
+                    <Card
+                      v-for="subscription in paginatedSubscriptions"
+                      :key="subscription.id"
+                      :misub="subscription"
+                      @delete="handleDeleteSubscription(subscription.id)"
+                      @change="markDirty"
+                      @update="handleUpdateNodeCount(subscription.id)"
+                      @edit="handleEditSubscription(subscription.id)"
+                    />
+                  </TransitionGroup>
                   <div v-if="subsTotalPages > 1" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
                       <button @click="changeSubsPage(subsCurrentPage - 1)" :disabled="subsCurrentPage === 1" class="px-3 py-1 rounded-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">&laquo; 上一页</button>
                       <span class="text-gray-500 dark:text-gray-400">第 {{ subsCurrentPage }} / {{ subsTotalPages }} 页</span>
@@ -360,8 +364,19 @@ const changeManualNodesPage = (page) => {
                   </div>
                 </div>
                 <div v-else class="text-center py-16 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                  </svg>
                   <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">没有机场订阅</h3>
-                  <p class="mt-1 text-sm text-gray-500">你可以通过批量导入或点击新增。</p>
+                  <p class="mt-1 text-sm text-gray-500">从添加你的第一个订阅开始。</p>
+                  <div class="mt-6 flex justify-center gap-3">
+                    <button @click="showBulkImportModal = true" class="text-sm font-semibold px-4 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 border-2 border-indigo-500/50 hover:bg-indigo-500/10 transition-colors">
+                      批量导入
+                    </button>
+                    <button @click="handleAddSubscription" class="text-sm font-semibold px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm">
+                      新增订阅
+                    </button>
+                  </div>
                 </div>
             </div>
 
@@ -374,7 +389,11 @@ const changeManualNodesPage = (page) => {
                     </div>
                 </div>
                 <div v-if="manualNodes.length > 0">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <TransitionGroup
+                      tag="div"
+                      name="list-fade"
+                      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+                    >
                         <ManualNodeCard 
                             v-for="node in paginatedManualNodes" 
                             :key="node.id"
@@ -382,7 +401,7 @@ const changeManualNodesPage = (page) => {
                             @edit="handleEditNode(node.id)"
                             @delete="handleDeleteNode(node.id)"
                         />
-                    </div>
+                    </TransitionGroup>
                     <div v-if="manualNodesTotalPages > 1" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
                       <button @click="changeManualNodesPage(manualNodesCurrentPage - 1)" :disabled="manualNodesCurrentPage === 1" class="px-3 py-1 rounded-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">&laquo; 上一页</button>
                       <span class="text-gray-500 dark:text-gray-400">第 {{ manualNodesCurrentPage }} / {{ manualNodesTotalPages }} 页</span>
@@ -390,8 +409,19 @@ const changeManualNodesPage = (page) => {
                     </div>
                 </div>
                 <div v-else class="text-center py-16 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l-4 4-4-4M6 16l-4-4 4-4" />
+                    </svg>
                     <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">没有手动节点</h3>
-                    <p class="mt-1 text-sm text-gray-500">你可以通过批量导入或点击新增。</p>
+                    <p class="mt-1 text-sm text-gray-500">添加分享链接或单个节点。</p>
+                    <div class="mt-6 flex justify-center gap-3">
+                        <button @click="showBulkImportModal = true" class="text-sm font-semibold px-4 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 border-2 border-indigo-500/50 hover:bg-indigo-500/10 transition-colors">
+                          批量导入
+                        </button>
+                        <button @click="handleAddNode" class="text-sm font-semibold px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm">
+                          新增节点
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -432,11 +462,29 @@ const changeManualNodesPage = (page) => {
 </template>
 
 <style scoped>
-.slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.3s ease-out; }
-.slide-fade-leave-active { transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1); }
+.slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.3s ease-out;  }
+.slide-fade-leave-active { transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);  }
 .slide-fade-enter-from,
 .slide-fade-leave-to {
   transform: translateY(-20px);
+  opacity: 0; 
+}
+
+/* --- 新增的列表动画 --- */
+.list-fade-move,
+.list-fade-enter-active,
+.list-fade-leave-active {
+  transition: all 0.5s cubic-bezier(0.55, 0, 0.1, 1);
+}
+
+.list-fade-enter-from,
+.list-fade-leave-to {
   opacity: 0;
+  transform: scaleY(0.01) translate(30px, 0);
+}
+
+/* 确保离开的元素脱离文档流，以便其他元素能够平滑移动到新位置 */
+.list-fade-leave-active {
+  position: absolute;
 }
 </style>
