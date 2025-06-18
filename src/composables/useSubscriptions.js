@@ -1,4 +1,4 @@
-// src/composables/useSubscriptions.js
+// FILE: src/composables/useSubscriptions.js
 import { ref, computed, watch } from 'vue';
 import { fetchNodeCount } from '../lib/api.js';
 import { useToast } from '../lib/stores.js';
@@ -96,5 +96,6 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions,
     nodesFromSubs, enabledSubscriptionsCount: computed(() => enabledSubscriptions.value.length),
     changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
+    handleUpdateNodeCount, // <-- 【关键修正】在这里加上它
   };
 }

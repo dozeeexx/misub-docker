@@ -1,4 +1,4 @@
-// src/composables/useManualNodes.js
+// FILE: src/composables/useManualNodes.js
 import { ref, computed, watch } from 'vue';
 
 export function useManualNodes(initialNodesRef, markDirty) {
@@ -67,6 +67,7 @@ export function useManualNodes(initialNodesRef, markDirty) {
   return {
     manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes,
     enabledManualNodesCount: computed(() => enabledManualNodes.value.length),
-    changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes, addNodesFromBulk,
+    changeManualNodesPage, addNode, updateNode, deleteNode, // <-- 【最终修正】在这里加上它
+    deleteAllNodes, addNodesFromBulk,
   };
 }

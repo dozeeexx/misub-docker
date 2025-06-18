@@ -7,7 +7,6 @@ const SESSION_DURATION = 8 * 60 * 60 * 1000;
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  prependSubName: true,
   BotToken: '',
   ChatID: '',
   subConverter: 'subapi.cmliussss.com',
@@ -70,9 +69,6 @@ async function getSUB(apiUrls, userAgentHeader) {
             else if (isValidBase64(text.replace(/\s/g, ''))) { 
                 try { 
                     // 【核心修正】使用能正确处理中文字符的解码方式
-                    // 这是一个经典技巧：atob本身只支持ASCII，直接解码中文会乱码。
-                    // escape() 会将非ASCII字符转为%xx的格式,
-                    // 然后 decodeURIComponent() 可以正确地将这些%xx格式的字符解码成原始的多字节字符。
                     const decodedWithChinese = decodeURIComponent(escape(atob(text.replace(/\s/g, ''))));
                     content += decodedWithChinese + '\n'; 
                 } catch (e) {
@@ -144,8 +140,8 @@ async function handleApiRequest(request, env) {
             case '/data': {
                 const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
                 const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
-                const fullConfig = { ...defaultSettings, ...settings };
-                return new Response(JSON.stringify({ misubs, config: fullConfig }), { headers: { 'Content-Type': 'application/json' } });
+                const config = { FileName: settings.FileName || 'MISUB', mytoken: settings.mytoken || 'auto' };
+                return new Response(JSON.stringify({ misubs, config }), { headers: { 'Content-Type': 'application/json' } });
             }
 
             // 处理保存订阅列表的请求
@@ -187,8 +183,7 @@ async function handleApiRequest(request, env) {
                     let count = 0;
                     // 【核心优化】
                     try {
-                        // 【核心优化】: 优先尝试 YAML 解析
-                        // 这种方式对于标准的Clash配置文件非常高效和准确。
+                        // 优先尝试 YAML 解析
                         const doc = yaml.load(decoded);
                         if (doc && Array.isArray(doc.proxies)) {
                             // 如果是 Clash 配置，直接得到数量
@@ -199,7 +194,6 @@ async function handleApiRequest(request, env) {
                         }
                     } catch (e) {
                         // YAML 解析失败（对普通订阅是正常情况），立刻回退到极速的按行匹配
-                        // 这种 "try-catch" 的回退模式，完美地兼容了两种完全不同的订阅内容格式。
                         const nodeLines = decoded
                             .split('\n')
                             .map(line => line.trim())
@@ -244,57 +238,10 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 // --- 订阅生成路由 ---
-// in functions/[[path]].js
-
-// 【新】创建一个独立的辅助函数来处理重命名逻辑，让代码更清晰
-async function processSubscriptionContent(content, subName, shouldPrepend) {
-    if (!shouldPrepend || !content) {
-        return content;
-    }
-
-    // 尝试将内容作为Clash配置 (YAML) 解析
-    try {
-        const doc = yaml.load(content);
-        if (doc && Array.isArray(doc.proxies)) {
-            doc.proxies.forEach(proxy => {
-                // 为每个节点的 name 字段加上前缀
-                proxy.name = `[${subName}] ${proxy.name}`;
-            });
-            // 将修改后的对象转换回 YAML 字符串
-            return yaml.dump(doc);
-        }
-    } catch (e) {
-        // YAML 解析失败，说明是普通链接列表，继续执行下面的逻辑
-    }
-
-    // 处理普通链接列表 (V2Ray, SS, Trojan etc.)
-    const lines = content.split('\n');
-    const processedLines = lines.map(line => {
-        line = line.trim();
-        if (!line || !line.includes('://')) {
-            return line;
-        }
-        
-        const parts = line.split('#');
-        const mainPart = parts[0];
-        // 解码原始的节点名，如果没有则为空字符串
-        const originalName = parts.length > 1 ? decodeURIComponent(parts[1]) : '';
-        // 创建新的带前缀的节点名
-        const newName = `[${subName}] ${originalName}`;
-        
-        // 重新组合成带新锚点的URL
-        return `${mainPart}#${encodeURIComponent(newName)}`;
-    });
-    
-    return processedLines.join('\n');
-}
-
-
-// 【替换】整个 handleMisubRequest 函数
 async function handleMisubRequest(request, env) {
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
-
+    
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = {
         mytoken: kv_settings.mytoken || env.TOKEN || 'auto',
@@ -304,51 +251,26 @@ async function handleMisubRequest(request, env) {
         SUBUpdateTime: kv_settings.SUBUpdateTime || env.SUBUPDATETIME || 6,
         BotToken: kv_settings.BotToken || env.TGTOKEN || '',
         ChatID: kv_settings.ChatID || env.TGID || '',
-        prependSubName: kv_settings.prependSubName ?? true,
     };
 
     const timeTemp = Math.ceil(Date.now() / (1000 * 60 * 60));
-    const fakeToken = await MD5MD5(`<span class="math-inline">\{config\.mytoken\}</span>{timeTemp}`);
+    const fakeToken = await MD5MD5(`${config.mytoken}${timeTemp}`);
     let token = url.searchParams.get('token');
     if (url.pathname === `/${config.mytoken}`) token = config.mytoken;
     if (!token || ![config.mytoken, fakeToken].includes(token)) return new Response('Invalid token', { status: 403 });
-
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
-
-    let allProcessedContent = []; // 改为数组，方便处理
-    let manualNodes = [];
-
+    let urls = [], manualNodes = '';
     for (const sub of enabledMisubs) {
-        if (sub.url.toLowerCase().startsWith('http')) {
-            try {
-                const response = await getUrl(sub.url, userAgentHeader);
-                if (response.ok) {
-                    const originalContent = await response.text();
-                    const processedContent = await processSubscriptionContent(originalContent, sub.name || "未命名订阅", config.prependSubName);
-                    allProcessedContent.push(processedContent);
-                } else {
-                    // 【关键修正】如果HTTP状态码不是2xx，也视为错误
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-            } catch (e) {
-                console.error(`Failed to fetch or process sub: ${sub.url}`, e);
-                // 【关键修正】添加一个错误节点，方便调试
-                const errorNodeName = `[${sub.name || '订阅加载失败'}] Error: ${e.message}`;
-                // 使用 vless 格式作为通用的错误载体
-                const errorNode = `vless://error@error:1?type=ws#${encodeURIComponent(errorNodeName)}`;
-                allProcessedContent.push(errorNode);
-            }
-        } else {
-            manualNodes.push(sub.url);
-        }
+        if (sub.url.toLowerCase().startsWith('http')) urls.push(sub.url);
+        else manualNodes += sub.url + '\n';
     }
-
-    const combinedContent = [...manualNodes, ...allProcessedContent].join('\n').split('\n').filter(line => line.trim()).join('\n');
+    const subContent = await getSUB(urls, userAgentHeader);
+    const combinedContent = (manualNodes + subContent).split('\n').filter(line => line.trim()).join('\n');
     const base64Data = btoa(unescape(encodeURIComponent(combinedContent)));
-
+    
     if (token === fakeToken) return new Response(base64Data);
-
+    
     if (config.BotToken && config.ChatID) {
         await sendMessage(config.BotToken, config.ChatID, `#获取订阅 ${config.FileName}`, request.headers.get('CF-Connecting-IP'), `UA: ${userAgentHeader}`);
     }
@@ -367,14 +289,14 @@ async function handleMisubRequest(request, env) {
         else if (ua.includes('quantumult%20x') || ua.includes('quanx')) targetFormat = 'quanx';
         else if (ua.includes('loon')) targetFormat = 'loon';
     }
-
+    
     if (targetFormat === 'base64') {
         return new Response(base64Data, { headers: { "content-type": "text/plain; charset=utf-8", "Profile-Update-Interval": `${config.SUBUpdateTime}` } });
     }
-
-    const callbackUrl = `<span class="math-inline">\{url\.protocol\}//</span>{url.hostname}/sub?token=${fakeToken}`;
-    const subConverterUrl = `https://<span class="math-inline">\{config\.subConverter\}/sub?target\=</span>{targetFormat}&url=<span class="math-inline">\{encodeURIComponent\(callbackUrl\)\}&insert\=false&config\=</span>{encodeURIComponent(config.subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-
+    
+    const callbackUrl = `${url.protocol}//${url.hostname}/sub?token=${fakeToken}`;
+    const subConverterUrl = `https://${config.subConverter}/sub?target=${targetFormat}&url=${encodeURIComponent(callbackUrl)}&insert=false&config=${encodeURIComponent(config.subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
+    
     try {
         const subConverterResponse = await fetch(subConverterUrl);
         if (!subConverterResponse.ok) return new Response(`订阅转换失败: ${subConverterResponse.status}`, { status: 502 });
@@ -383,7 +305,9 @@ async function handleMisubRequest(request, env) {
             subConverterContent = clashFix(subConverterContent);
         }
 
+        // --- 【关键修复】为配置文件添加 .yaml 后缀 ---
         const fileName = `${config.FileName}.yaml`;
+
         return new Response(subConverterContent, { 
             headers: { 
                 "Content-Disposition": `attachment; filename*=utf-8''${encodeURIComponent(fileName)}`,
@@ -395,6 +319,7 @@ async function handleMisubRequest(request, env) {
         return new Response("订阅转换服务器连接失败", { status: 502 });
     }
 }
+
 
 // --- Cloudflare Pages Functions 入口 ---
 export async function onRequest(context) {
