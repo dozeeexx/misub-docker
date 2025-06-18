@@ -144,8 +144,8 @@ async function handleApiRequest(request, env) {
             case '/data': {
                 const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
                 const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
-                const config = { FileName: settings.FileName || 'MISUB', mytoken: settings.mytoken || 'auto' };
-                return new Response(JSON.stringify({ misubs, config }), { headers: { 'Content-Type': 'application/json' } });
+                const fullConfig = { ...defaultSettings, ...settings };
+                return new Response(JSON.stringify({ misubs, config: fullConfig }), { headers: { 'Content-Type': 'application/json' } });
             }
 
             // 处理保存订阅列表的请求

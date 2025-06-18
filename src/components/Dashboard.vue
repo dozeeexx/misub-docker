@@ -20,6 +20,8 @@ const props = defineProps({
   data: Object,
 });
 
+const config = computed(() => props.data?.config || {});
+
 // --- 全局状态、工具、模态框等 ---
 const { showToast } = useToast();
 const isLoading = ref(true);
