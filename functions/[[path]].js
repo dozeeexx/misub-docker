@@ -294,7 +294,7 @@ async function processSubscriptionContent(content, subName, shouldPrepend) {
 async function handleMisubRequest(request, env) {
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
-    
+
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = {
         mytoken: kv_settings.mytoken || env.TOKEN || 'auto',
@@ -304,12 +304,11 @@ async function handleMisubRequest(request, env) {
         SUBUpdateTime: kv_settings.SUBUpdateTime || env.SUBUPDATETIME || 6,
         BotToken: kv_settings.BotToken || env.TGTOKEN || '',
         ChatID: kv_settings.ChatID || env.TGID || '',
-        // 读取我们新加的设置
         prependSubName: kv_settings.prependSubName ?? true,
     };
-    
+
     const timeTemp = Math.ceil(Date.now() / (1000 * 60 * 60));
-    const fakeToken = await MD5MD5(`${config.mytoken}${timeTemp}`);
+    const fakeToken = await MD5MD5(`<span class="math-inline">\{config\.mytoken\}</span>{timeTemp}`);
     let token = url.searchParams.get('token');
     if (url.pathname === `/${config.mytoken}`) token = config.mytoken;
     if (!token || ![config.mytoken, fakeToken].includes(token)) return new Response('Invalid token', { status: 403 });
@@ -317,32 +316,37 @@ async function handleMisubRequest(request, env) {
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
 
-    let allProcessedContent = "";
-    let manualNodes = "";
+    let allProcessedContent = []; // 改为数组，方便处理
+    let manualNodes = [];
 
-    // 【核心改动】分别处理每个订阅，而不是先获取再合并
     for (const sub of enabledMisubs) {
         if (sub.url.toLowerCase().startsWith('http')) {
             try {
                 const response = await getUrl(sub.url, userAgentHeader);
                 if (response.ok) {
                     const originalContent = await response.text();
-                    // 调用新函数处理内容
                     const processedContent = await processSubscriptionContent(originalContent, sub.name || "未命名订阅", config.prependSubName);
-                    allProcessedContent += processedContent + '\n';
+                    allProcessedContent.push(processedContent);
+                } else {
+                    // 【关键修正】如果HTTP状态码不是2xx，也视为错误
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
             } catch (e) {
                 console.error(`Failed to fetch or process sub: ${sub.url}`, e);
+                // 【关键修正】添加一个错误节点，方便调试
+                const errorNodeName = `[${sub.name || '订阅加载失败'}] Error: ${e.message}`;
+                // 使用 vless 格式作为通用的错误载体
+                const errorNode = `vless://error@error:1?type=ws#${encodeURIComponent(errorNodeName)}`;
+                allProcessedContent.push(errorNode);
             }
         } else {
-            // 手动节点直接添加，不加前缀
-            manualNodes += sub.url + '\n';
+            manualNodes.push(sub.url);
         }
     }
-    
-    const combinedContent = (manualNodes + allProcessedContent).split('\n').filter(line => line.trim()).join('\n');
+
+    const combinedContent = [...manualNodes, ...allProcessedContent].join('\n').split('\n').filter(line => line.trim()).join('\n');
     const base64Data = btoa(unescape(encodeURIComponent(combinedContent)));
-    
+
     if (token === fakeToken) return new Response(base64Data);
 
     if (config.BotToken && config.ChatID) {
@@ -363,14 +367,14 @@ async function handleMisubRequest(request, env) {
         else if (ua.includes('quantumult%20x') || ua.includes('quanx')) targetFormat = 'quanx';
         else if (ua.includes('loon')) targetFormat = 'loon';
     }
-    
+
     if (targetFormat === 'base64') {
         return new Response(base64Data, { headers: { "content-type": "text/plain; charset=utf-8", "Profile-Update-Interval": `${config.SUBUpdateTime}` } });
     }
-    
-    const callbackUrl = `${url.protocol}//${url.hostname}/sub?token=${fakeToken}`;
-    const subConverterUrl = `https://${config.subConverter}/sub?target=${targetFormat}&url=${encodeURIComponent(callbackUrl)}&insert=false&config=${encodeURIComponent(config.subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-    
+
+    const callbackUrl = `<span class="math-inline">\{url\.protocol\}//</span>{url.hostname}/sub?token=${fakeToken}`;
+    const subConverterUrl = `https://<span class="math-inline">\{config\.subConverter\}/sub?target\=</span>{targetFormat}&url=<span class="math-inline">\{encodeURIComponent\(callbackUrl\)\}&insert\=false&config\=</span>{encodeURIComponent(config.subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
+
     try {
         const subConverterResponse = await fetch(subConverterUrl);
         if (!subConverterResponse.ok) return new Response(`订阅转换失败: ${subConverterResponse.status}`, { status: 502 });
@@ -378,7 +382,7 @@ async function handleMisubRequest(request, env) {
         if (targetFormat === 'clash') {
             subConverterContent = clashFix(subConverterContent);
         }
-        
+
         const fileName = `${config.FileName}.yaml`;
         return new Response(subConverterContent, { 
             headers: { 
@@ -391,7 +395,6 @@ async function handleMisubRequest(request, env) {
         return new Response("订阅转换服务器连接失败", { status: 502 });
     }
 }
-
 
 // --- Cloudflare Pages Functions 入口 ---
 export async function onRequest(context) {
