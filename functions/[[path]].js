@@ -156,32 +156,29 @@ async function handleMisubRequest(request, env) {
         }
     });
 
-    // [修改] 并行处理所有HTTP订阅 (V4 - 终极方案：动态UA + 超时容错)
+    // [修改] 并行处理所有HTTP订阅 (V5 - 终极方案：伪装成浏览器)
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            // [核心修改 ①] 将客户端的原始 User-Agent 传递给上游服务器
+            // [核心修改] 将 User-Agent 硬编码为通用的浏览器标识
             const requestHeaders = {
-                'User-Agent': userAgentHeader,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
             };
 
             const fetchPromise = fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow" }));
 
-            // [核心修改 ②] 增加 5 秒的请求超时逻辑
             const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error('Request timed out')), 5000)
             );
 
-            // 使用 Promise.race 来实现超时控制
             const response = await Promise.race([fetchPromise, timeoutPromise]);
             
             if (!response.ok) {
                 console.log(`Failed to fetch ${sub.url}: Status ${response.status}`);
-                return ''; // 请求失败则返回空字符串
+                return '';
             }
 
             let text = await response.text();
             
-            // 健壮的Base64解码
             try {
                 const cleanedText = text.replace(/\s/g, '');
                 if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
@@ -194,17 +191,15 @@ async function handleMisubRequest(request, env) {
                 }
             } catch (e) { /* 不是Base64, 忽略错误 */ }
 
-            // 节点名称前缀功能
             if (config.prependSubName && sub.name) {
                 const nodes = text.split('\n').filter(line => line.trim());
-                // prependNodeName 函数需要已在项目中定义
                 const prefixedNodes = nodes.map(node => prependNodeName(node, sub.name)); 
                 return prefixedNodes.join('\n');
             }
             return text;
         } catch (e) {
             console.log(`Failed to process ${sub.url}: ${e.message}`);
-            return ''; // 捕获任何可能的错误（包括超时），返回空字符串
+            return ''; 
         }
     });
 
