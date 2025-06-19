@@ -295,7 +295,7 @@ async function handleMisubRequest(request, env) {
         return new Response(base64Data, { headers: { "content-type": "text/plain; charset=utf-8", "Profile-Update-Interval": `${config.SUBUpdateTime}` } });
     }
     
-    const callbackUrl = `${url.protocol}//${url.hostname}/sub?token=${fakeToken}`;
+    const callbackUrl = `<span class="math-inline">\{url\.protocol\}//</span>{url.hostname}/sub?token=${config.mytoken}`;
     const subConverterUrl = `https://${config.subConverter}/sub?target=${targetFormat}&url=${encodeURIComponent(callbackUrl)}&insert=false&config=${encodeURIComponent(config.subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
     
     try {
