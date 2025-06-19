@@ -1,4 +1,5 @@
 import yaml from 'js-yaml';
+import { prependNodeName } from '../src/lib/utils.js';
 
 // --- 全局常量 ---
 const KV_KEY_MAIN = 'misub_data_v1';
@@ -11,7 +12,8 @@ const defaultSettings = {
   BotToken: '',
   ChatID: '',
   subConverter: 'subapi.cmliussss.com',
-  subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini'
+  subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
+  prependSubName: true // [新增] 默认开启前缀功能
 };
 
 // --- 核心工具函数 (身份验证) ---
@@ -141,29 +143,61 @@ async function handleMisubRequest(request, env) {
         return new Response('Invalid token', { status: 403 });
     }
 
-    // 获取和合并订阅
+    // ...函数开始部分...
+    // [修改] 获取和合并订阅 (V2 - 支持节点重命名)
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
-    let urls = [], manualNodes = '';
-    for (const sub of enabledMisubs) {
-        if (sub.url.toLowerCase().startsWith('http')) urls.push(sub.url);
-        else manualNodes += sub.url + '\n';
-    }
-    
-    let subContent = '';
-    if (urls.length > 0) {
-        const responses = await Promise.allSettled(urls.map(apiUrl => fetch(new Request(apiUrl, { headers: {'User-Agent': `MiSub-Fetcher`}, redirect: "follow"})).then(res => res.ok ? res.text() : Promise.reject())));
-        for (const response of responses) {
-            if (response.status === 'fulfilled') {
-                const text = response.value;
-                if (text.includes('://')) { subContent += text + '\n'; }
-                else { try { subContent += atob(text.replace(/\s/g, '')) + '\n'; } catch (e) {} }
-            }
+    let manualNodes = '';
+
+    const httpSubs = enabledMisubs.filter(sub => sub.url.toLowerCase().startsWith('http'));
+    enabledMisubs.forEach(sub => {
+        if (!sub.url.toLowerCase().startsWith('http')) {
+            manualNodes += sub.url + '\n';
         }
-    }
-    
+    });
+
+    // [修改] 并行处理所有HTTP订阅 (V2 - 采用健壮的UTF-8解码)
+    const subPromises = httpSubs.map(async (sub) => {
+        try {
+            const response = await fetch(new Request(sub.url, { headers: { 'User-Agent': `MiSub-Fetcher` }, redirect: "follow" }));
+            if (!response.ok) return ''; // 请求失败则返回空字符串
+            
+            let text = await response.text();
+            
+            // [核心修改] 采用更可靠的 Base64 -> UTF-8 解码流程
+            try {
+                const cleanedText = text.replace(/\s/g, '');
+                // 简单的检查，判断是否可能是Base64
+                if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
+                    const binaryString = atob(cleanedText);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    text = new TextDecoder('utf-8').decode(bytes);
+                }
+            } catch (e) {
+                // 解码失败，可能本身就是明文，忽略错误，使用原始文本
+            }
+
+            // 如果开启了前缀功能，并且订阅有名称，则处理所有节点
+            if (config.prependSubName && sub.name) {
+                const nodes = text.split('\n').filter(line => line.trim());
+                const prefixedNodes = nodes.map(node => prependNodeName(node, sub.name)); 
+                return prefixedNodes.join('\n');
+            }
+            return text;
+        } catch (e) {
+            return ''; // 捕获任何可能的错误
+        }
+    });
+
+    const processedSubContents = await Promise.all(subPromises);
+    const subContent = processedSubContents.join('\n');
+
     const combinedContent = (manualNodes + subContent).split('\n').filter(line => line.trim()).join('\n');
     const base64Data = btoa(unescape(encodeURIComponent(combinedContent)));
+    // ...后续代码...
     
     // 根据UA或参数决定输出格式
     let targetFormat = 'base64';
