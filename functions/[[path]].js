@@ -276,59 +276,50 @@ async function handleMisubRequest(request, env) {
         await sendMessage(config.BotToken, config.ChatID, `#获取订阅 ${config.FileName}`, request.headers.get('CF-Connecting-IP'), `UA: ${userAgentHeader}`);
     }
 
-    let targetFormat = 'base64';
-    const validFormats = ['clash', 'singbox', 'surge', 'quanx', 'loon', 'base64', 'snell'];
-    const urlTarget = url.searchParams.get('target');
+    // --- [开始替换] ---
 
-    if (urlTarget && validFormats.includes(urlTarget)) {
-        targetFormat = urlTarget;
-    } else {
-        const ua = userAgentHeader.toLowerCase();
-        if (ua.includes('clash')) targetFormat = 'clash';
-        else if (ua.includes('sing-box') || ua.includes('singbox')) targetFormat = 'singbox';
-        else if (ua.includes('surge')) targetFormat = 'surge';
-        else if (ua.includes('quantumult%20x') || ua.includes('quanx')) targetFormat = 'quanx';
-        else if (ua.includes('loon')) targetFormat = 'loon';
-    }
-    
-    if (targetFormat === 'base64') {
-        return new Response(base64Data, { headers: { "content-type": "text/plain; charset=utf-8", "Profile-Update-Interval": `${config.SUBUpdateTime}` } });
-    }
-    
-    const callbackUrl = `<span class="math-inline">\{url\.protocol\}//</span>{url.hostname}/sub?token=${config.mytoken}`;
-    const subConverterUrl = `https://${config.subConverter}/sub?target=${targetFormat}&url=${encodeURIComponent(callbackUrl)}&insert=false&config=${encodeURIComponent(config.subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-    
-    try {
-        const subConverterResponse = await fetch(subConverterUrl);
-        if (!subConverterResponse.ok) return new Response(`订阅转换失败: ${subConverterResponse.status}`, { status: 502 });
-        let subConverterContent = await subConverterResponse.text();
-        if (targetFormat === 'clash') {
-            subConverterContent = clashFix(subConverterContent);
-        }
-
-        // --- 为配置文件提供格式化的后缀 ---
-        const extensionMap = {
-            clash: 'yaml',
-            singbox: 'json',
-            surge: 'conf',
-            quanx: 'conf',
-            loon: 'conf',
-            snell: 'conf' // 假设 snell 也使用 .conf 格式
-        };
-        const extension = extensionMap[targetFormat] || 'txt';
-        const fileName = `${config.FileName}.${extension}`;
-
-        return new Response(subConverterContent, { 
+    // 如果是基础的Base64请求，或者内部回调请求，直接返回聚合后的Base64数据
+    if (targetFormat === 'base64' || token === fakeToken) {
+        return new Response(base64Data, { 
             headers: { 
-                "Content-Disposition": `attachment; filename*=utf-8''${encodeURIComponent(fileName)}`,
-                "content-type": "text/plain; charset=utf-8",
-                "Profile-Update-Interval": `${config.SUBUpdateTime}`
+                "content-type": "text/plain; charset=utf-8", 
+                "Profile-Update-Interval": `${config.SUBUpdateTime}` 
             } 
         });
-    } catch (error) {
-        return new Response("订阅转换服务器连接失败", { status: 502 });
     }
+
+    // --- 内置转换逻辑开始 ---
+    let convertedContent = '';
+    const fileName = `${config.FileName}`;
+    let fileExtension = 'txt';
+
+    // 根据目标格式，调用不同的生成函数
+    if (targetFormat === 'clash') {
+        // 注意：这里的 generateClashConfig 是一个简化实现，用于演示。
+        // 完整的实现需要更详细的节点参数解析和填充。
+        convertedContent = generateClashConfig(combinedContent);
+        fileExtension = 'yaml';
+    } else if (['surge', 'quanx', 'loon', 'snell'].includes(targetFormat)) {
+        // 其他格式使用一个通用的生成器作为示例
+        convertedContent = generateOtherConfig(combinedContent, targetFormat);
+        fileExtension = 'conf';
+    } else {
+        // 如果没有匹配的内置转换器，默认返回 Base64
+        convertedContent = base64Data;
+    }
+
+    // 返回转换后的配置文件
+    return new Response(convertedContent, {
+        headers: {
+            "Content-Disposition": `attachment; filename*=utf-8''${encodeURIComponent(fileName)}.${fileExtension}`,
+            "content-type": "text/plain; charset=utf-8",
+            "Profile-Update-Interval": `${config.SUBUpdateTime}`
+        }
+    });
+
+    // --- [替换结束] ---
 }
+// 这里应该是onRequest等文件的其余部分
 
 
 // --- Cloudflare Pages Functions 入口 ---
@@ -345,4 +336,118 @@ export async function onRequest(context) {
         console.error("Critical error in onRequest:", e);
         return new Response("Internal Server Error: " + e.message, { status: 500 });
     }
+}
+
+// --- [新增] 内置订阅转换逻辑 ---
+
+/**
+ * 解析单个节点链接，返回包含名称和必要信息的对象
+ * @param {string} link - 例如 vmess://... 或 trojan://...
+ * @returns {object|null}
+ */
+function parseNodeLink(link) {
+    try {
+        const url = new URL(link);
+        let node = {
+            protocol: url.protocol.replace(':', ''),
+            name: decodeURIComponent(url.hash).substring(1) || url.hostname
+        };
+        // 这是一个简化的解析器，仅为生成配置提供基础。
+        // 您可以根据需要扩展它来解析更详细的参数。
+        switch (node.protocol) {
+            case 'vmess':
+            case 'vless':
+            case 'trojan':
+                node.server = url.hostname;
+                node.port = url.port;
+                // 更多参数可以从 url.searchParams 获取...
+                break;
+            case 'ss':
+                // SS链接需要更复杂的解析，这里仅作演示
+                const userInfo = atob(url.host);
+                const parts = userInfo.split(':');
+                node.server = url.hostname;
+                node.port = url.port;
+                node.cipher = parts[0];
+                node.password = parts[1];
+                break;
+            default:
+                return null;
+        }
+        return node;
+    } catch (e) {
+        // console.error(`Failed to parse node link: ${link}`, e);
+        return null; // 解析失败则忽略此行
+    }
+}
+
+/**
+ * 根据节点列表生成一个基础的Clash配置文件 (YAML格式)
+ * @param {string} nodesString - 包含多个节点链接的字符串，每行一个
+ * @param {object} options - 包含如文件名等选项
+ * @returns {string} - 生成的Clash配置字符串
+ */
+function generateClashConfig(nodesString, options = {}) {
+    const proxies = nodesString.split('\n')
+        .map(link => parseNodeLink(link.trim()))
+        .filter(Boolean); // 过滤掉无法解析的行
+
+    if (proxies.length === 0) return "# No valid proxies found.";
+
+    const proxyNames = proxies.map(p => p.name);
+
+    // 使用模板字符串构建YAML文件
+    const clashConfig = `
+# Generated by MiSub at ${new Date().toISOString()}
+port: 7890
+socks-port: 7891
+allow-lan: false
+mode: Rule
+log-level: info
+external-controller: 127.0.0.1:9090
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  fallback:
+    - https://dns.google/dns-query
+    - https://1.1.1.1/dns-query
+
+proxies:
+${proxies.map(p => `  - { name: "${p.name}", type: ${p.protocol}, server: ${p.server}, port: ${p.port}, ... } # 简化示例，需要根据协议填充更多参数`).join('\n')}
+
+proxy-groups:
+  - name: "PROXY"
+    type: select
+    proxies:
+${proxyNames.map(name => `      - "${name}"`).join('\n')}
+
+rules:
+  - MATCH,PROXY
+`;
+    // 注意：上面的proxies部分是一个非常简化的示例。
+    // 一个完整的实现需要为每个协议(vmess, trojan等)构建完整的参数集。
+    // 但这个结构足以验证流程是可行的。
+    return clashConfig.trim();
+}
+
+/**
+ * [占位符] 生成Surge等其他格式的配置
+ * @param {string} nodesString
+ * @returns {string}
+ */
+function generateOtherConfig(nodesString, target) {
+    // 这里可以仿照 generateClashConfig 的方式实现其他格式的生成逻辑
+    // 为保持示例简洁，我们只返回一个提示信息
+    const proxies = nodesString.split('\n')
+        .map(link => parseNodeLink(link.trim()))
+        .filter(Boolean);
+
+    let output = `# Generated for ${target} by MiSub\n`;
+    proxies.forEach(p => {
+        output += `${p.name} = ${p.protocol}, ${p.server}, ${p.port} # 简化输出\n`;
+    });
+    return output;
 }
