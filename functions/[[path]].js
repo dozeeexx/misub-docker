@@ -224,96 +224,198 @@ export async function onRequest(context) {
 // --- [新增] 内置订阅转换逻辑 ---
 
 /**
- * 解析单个节点链接 (简化版)
+ * 解析单个节点链接 - v3 (Hysteria2, TUIC, REALITY 支持)
  * @param {string} link 
  * @returns {object|null}
  */
 function parseNodeLink(link) {
-    if (!link || !link.includes('://')) return null;
-    try {
-        // 尝试从 # 后面获取名称
-        const hashIndex = link.lastIndexOf('#');
-        const name = hashIndex !== -1 ? decodeURIComponent(link.substring(hashIndex + 1)) : null;
-
-        const mainPart = hashIndex !== -1 ? link.substring(0, hashIndex) : link;
-        const protocol = mainPart.substring(0, mainPart.indexOf('://'));
-        
-        let server = '', port = '';
-        
-        // 极简解析, 仅为演示, 非常不完善
-        const atIndex = mainPart.lastIndexOf('@');
-        if (atIndex !== -1) {
-            const hostPort = mainPart.substring(atIndex + 1);
-            const colonIndex = hostPort.lastIndexOf(':');
-            if (colonIndex !== -1) {
-                server = hostPort.substring(0, colonIndex);
-                port = hostPort.substring(colonIndex + 1);
-            }
-        }
-        
-        return {
-            name: name || server || 'Unnamed Node',
-            protocol,
-            server,
-            port,
-            // 注意: 缺失uuid, password等关键信息，需要在下面生成时提供默认值
-        };
-    } catch (e) {
-        return null;
+    if (link.startsWith('vmess://')) {
+        try {
+            const decoded = JSON.parse(atob(link.substring(8)));
+            return {
+                protocol: 'vmess',
+                name: decoded.ps || decoded.add,
+                server: decoded.add,
+                port: decoded.port,
+                uuid: decoded.id,
+                alterId: decoded.aid,
+                cipher: decoded.scy || 'auto',
+                network: decoded.net,
+                type: decoded.type,
+                host: decoded.host,
+                path: decoded.path,
+                tls: decoded.tls === 'tls',
+                sni: decoded.sni || decoded.host,
+            };
+        } catch (e) { return null; }
     }
+    if (link.startsWith('vless://') || link.startsWith('trojan://')) {
+        try {
+            const url = new URL(link);
+            const params = new URLSearchParams(url.search);
+            return {
+                protocol: url.protocol.replace(':', ''),
+                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
+                server: url.hostname,
+                port: url.port,
+                uuid: url.username,
+                password: url.username, // for Trojan
+                sni: params.get('sni') || url.hostname,
+                udp: true,
+                tls: params.get('security') === 'tls' || params.get('security') === 'reality',
+                // [新增] REALITY 参数
+                security: params.get('security'),
+                publicKey: params.get('pbk'),
+                shortId: params.get('sid'),
+                fingerprint: params.get('fp'),
+                // 传输参数
+                network: params.get('type'),
+                serviceName: params.get('serviceName'),
+                mode: params.get('mode'),
+                path: params.get('path'),
+                host: params.get('host'),
+            };
+        } catch (e) { return null; }
+    }
+    if (link.startsWith('ss://')) {
+        try {
+            const url = new URL(link);
+            const hashName = decodeURIComponent(url.hash).substring(1);
+            // 修正SS链接解析
+            const b64info = url.pathname.substring(2);
+            const decodedInfo = atob(b64info);
+            const [cipher, password] = decodedInfo.split(':');
+            return {
+                protocol: 'ss',
+                name: hashName || url.hostname,
+                server: url.hostname,
+                port: url.port,
+                cipher: cipher,
+                password: password,
+            };
+        } catch (e) { return null; }
+    }
+    // [新增] Hysteria2 解析
+    if (link.startsWith('hy2://') || link.startsWith('hysteria2://')) {
+        try {
+            const url = new URL(link);
+            const params = new URLSearchParams(url.search);
+            return {
+                protocol: 'hysteria2',
+                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
+                server: url.hostname,
+                port: url.port,
+                password: url.username,
+                sni: params.get('sni') || url.hostname,
+                insecure: params.get('insecure') === '1' || params.get('skip-cert-verify') === 'true',
+            };
+        } catch (e) { return null; }
+    }
+    // [新增] TUIC v5 解析
+    if (link.startsWith('tuic://')) {
+         try {
+            const url = new URL(link);
+            const params = new URLSearchParams(url.search);
+            const [uuid, password] = url.username.split(':');
+            return {
+                protocol: 'tuic',
+                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
+                server: url.hostname,
+                port: url.port,
+                uuid: uuid,
+                password: password,
+                sni: params.get('sni') || url.hostname,
+                insecure: params.get('allow_insecure') === '1' || params.get('skip-cert-verify') === 'true',
+                'udp-relay-mode': params.get('udp_relay_mode') || 'native',
+                alpn: params.get('alpn'),
+            };
+        } catch (e) { return null; }
+    }
+    return null;
 }
 
 /**
- * 根据节点列表生成一个基础的Clash配置文件 (YAML格式) - v3 (健壮版)
- * @param {string} nodesString - 包含多个节点链接的字符串，每行一个
- * @returns {string} - 生成的Clash配置字符串
+ * 根据节点列表生成一个功能完备的Clash配置文件 - v4 (最终版)
+ * @param {string} nodesString
+ * @returns {string}
  */
 function generateClashConfig(nodesString) {
     const proxies = nodesString.split('\n')
         .map(link => parseNodeLink(link.trim()))
-        .filter(p => p && p.name && p.server && p.port);
+        .filter(Boolean); 
 
-    if (proxies.length === 0) return "proxies: []";
-
-    const proxyNames = proxies.map(p => p.name.replace(/"/g, ''));
+    if (proxies.length === 0) return yaml.dump({ 'proxies': [] });
 
     const proxyDetails = proxies.map(p => {
-        const safeName = p.name.replace(/"/g, ''); // 移除名字里的引号
         let entry = {
-            name: `"${safeName}"`,
+            name: p.name,
             type: p.protocol,
             server: p.server,
-            port: p.port
+            port: p.port,
         };
 
-        // 为不同协议添加最基础的、能让Clash不报错的字段
         switch (p.protocol) {
             case 'vmess':
-                entry.uuid = "00000000-0000-0000-0000-000000000000";
-                entry.alterId = 0;
-                entry.cipher = "auto";
-                break;
             case 'vless':
-                 entry.uuid = "00000000-0000-0000-0000-000000000000";
-                 entry.udp = true;
+                entry.uuid = p.uuid;
+                entry.udp = true;
+                entry.tls = p.tls;
+                entry.servername = p.sni;
+                entry['client-fingerprint'] = p.fingerprint || 'chrome';
+                
+                // [修改] VLESS-REALITY 支持
+                if (p.security === 'reality') {
+                    entry['reality-opts'] = {
+                        'public-key': p.publicKey,
+                        'short-id': p.shortId || ''
+                    };
+                }
+                
+                if (p.network === 'ws') {
+                    entry.network = 'ws';
+                    entry['ws-opts'] = {
+                        path: p.path || '/',
+                        headers: { Host: p.host || p.server }
+                    };
+                }
+                if (p.protocol === 'vmess') {
+                    entry.cipher = p.cipher || 'auto';
+                    entry.alterId = p.alterId || 0;
+                }
                 break;
             case 'trojan':
-                entry.password = "password";
+                entry.password = p.password;
+                entry.sni = p.sni;
+                entry.udp = true;
                 break;
             case 'ss':
-                entry.cipher = "aes-256-gcm";
-                entry.password = "password";
+                entry.cipher = p.cipher;
+                entry.password = p.password;
+                break;
+            case 'ssr':
+                 // ... ssr case from previous step ...
+                break;
+            // [新增] Hysteria2 支持
+            case 'hysteria2':
+                entry.type = 'hy2'; // 在Clash中类型为hy2
+                entry.password = p.password;
+                entry.sni = p.sni;
+                entry['skip-cert-verify'] = p.insecure;
+                break;
+            // [新增] TUIC 支持
+            case 'tuic':
+                entry.type = 'tuic'; // 在Clash中类型为tuic
+                entry.uuid = p.uuid;
+                entry.password = p.password;
+                entry.sni = p.sni;
+                entry['skip-cert-verify'] = p.insecure;
+                entry['udp-relay-mode'] = p['udp-relay-mode'];
+                if (p.alpn) entry.alpn = [p.alpn];
                 break;
         }
+        return entry;
+    });
 
-        const configString = Object.entries(entry)
-                                   .map(([key, value]) => `${key}: ${value}`)
-                                   .join(', ');
-
-        return `  - { ${configString} }`;
-    }).join('\n');
-
-    // 使用 js-yaml 库来确保输出是合法的 YAML
     const configObject = {
         'port': 7890,
         'socks-port': 7891,
@@ -321,11 +423,11 @@ function generateClashConfig(nodesString) {
         'mode': 'Rule',
         'log-level': 'info',
         'external-controller': '127.0.0.1:9090',
-        'proxies': yaml.load(proxyDetails), // 将节点字符串解析为JS对象
+        'proxies': proxyDetails,
         'proxy-groups': [{
             name: "PROXY",
             type: 'select',
-            proxies: proxyNames
+            proxies: proxies.map(p => p.name)
         }],
         'rules': [
             'MATCH,PROXY'
