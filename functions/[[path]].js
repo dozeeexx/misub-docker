@@ -156,18 +156,24 @@ async function handleMisubRequest(request, env) {
         }
     });
 
-    // [修改] 并行处理所有HTTP订阅 (V5 - 终极方案：伪装成浏览器)
+    // [修改] 并行处理所有HTTP订阅 (V6 - 终极方案：忽略SSL错误)
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            // [核心修改] 将 User-Agent 硬编码为通用的浏览器标识
             const requestHeaders = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
             };
 
-            const fetchPromise = fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow" }));
+            // [核心修正] 添加 cf 对象以忽略SSL证书错误，与 CF-Workers-SUB 行为对齐
+            const fetchPromise = fetch(new Request(sub.url, {
+                headers: requestHeaders,
+                redirect: "follow",
+                cf: {
+                    insecureSkipVerify: true
+                }
+            }));
 
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Request timed out')), 5000)
+                setTimeout(() => reject(new Error('Request timed out')), 10000) // 适当延长超时
             );
 
             const response = await Promise.race([fetchPromise, timeoutPromise]);
