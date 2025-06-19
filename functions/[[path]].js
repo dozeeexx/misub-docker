@@ -156,18 +156,22 @@ async function handleMisubRequest(request, env) {
         }
     });
 
-    // [修改] 并行处理所有HTTP订阅 (V2 - 采用健壮的UTF-8解码)
+    // [修改] 并行处理所有HTTP订阅 (V3 - 伪装User-Agent)
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            const response = await fetch(new Request(sub.url, { headers: { 'User-Agent': `MiSub-Fetcher` }, redirect: "follow" }));
-            if (!response.ok) return ''; // 请求失败则返回空字符串
+            // [核心修改] 伪装成Clash客户端的User-Agent
+            const requestHeaders = {
+                'User-Agent': 'Clash/2023.08.17 (Windows; Premium)'
+            };
+
+            const response = await fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow" }));
             
+            if (!response.ok) return '';
+
             let text = await response.text();
             
-            // [核心修改] 采用更可靠的 Base64 -> UTF-8 解码流程
             try {
                 const cleanedText = text.replace(/\s/g, '');
-                // 简单的检查，判断是否可能是Base64
                 if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
                     const binaryString = atob(cleanedText);
                     const bytes = new Uint8Array(binaryString.length);
@@ -177,10 +181,9 @@ async function handleMisubRequest(request, env) {
                     text = new TextDecoder('utf-8').decode(bytes);
                 }
             } catch (e) {
-                // 解码失败，可能本身就是明文，忽略错误，使用原始文本
+                // 解码失败，使用原始文本
             }
 
-            // 如果开启了前缀功能，并且订阅有名称，则处理所有节点
             if (config.prependSubName && sub.name) {
                 const nodes = text.split('\n').filter(line => line.trim());
                 const prefixedNodes = nodes.map(node => prependNodeName(node, sub.name)); 
@@ -188,7 +191,7 @@ async function handleMisubRequest(request, env) {
             }
             return text;
         } catch (e) {
-            return ''; // 捕获任何可能的错误
+            return ''; 
         }
     });
 
