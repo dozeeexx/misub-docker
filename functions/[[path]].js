@@ -156,20 +156,32 @@ async function handleMisubRequest(request, env) {
         }
     });
 
-    // [修改] 并行处理所有HTTP订阅 (V3 - 伪装User-Agent)
+    // [修改] 并行处理所有HTTP订阅 (V4 - 终极方案：动态UA + 超时容错)
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            // [核心修改] 伪装成Clash客户端的User-Agent
+            // [核心修改 ①] 将客户端的原始 User-Agent 传递给上游服务器
             const requestHeaders = {
-                'User-Agent': 'Clash/2023.08.17 (Windows; Premium)'
+                'User-Agent': userAgentHeader,
             };
 
-            const response = await fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow" }));
+            const fetchPromise = fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow" }));
+
+            // [核心修改 ②] 增加 5 秒的请求超时逻辑
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timed out')), 5000)
+            );
+
+            // 使用 Promise.race 来实现超时控制
+            const response = await Promise.race([fetchPromise, timeoutPromise]);
             
-            if (!response.ok) return '';
+            if (!response.ok) {
+                console.log(`Failed to fetch ${sub.url}: Status ${response.status}`);
+                return ''; // 请求失败则返回空字符串
+            }
 
             let text = await response.text();
             
+            // 健壮的Base64解码
             try {
                 const cleanedText = text.replace(/\s/g, '');
                 if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
@@ -180,18 +192,19 @@ async function handleMisubRequest(request, env) {
                     }
                     text = new TextDecoder('utf-8').decode(bytes);
                 }
-            } catch (e) {
-                // 解码失败，使用原始文本
-            }
+            } catch (e) { /* 不是Base64, 忽略错误 */ }
 
+            // 节点名称前缀功能
             if (config.prependSubName && sub.name) {
                 const nodes = text.split('\n').filter(line => line.trim());
+                // prependNodeName 函数需要已在项目中定义
                 const prefixedNodes = nodes.map(node => prependNodeName(node, sub.name)); 
                 return prefixedNodes.join('\n');
             }
             return text;
         } catch (e) {
-            return ''; 
+            console.log(`Failed to process ${sub.url}: ${e.message}`);
+            return ''; // 捕获任何可能的错误（包括超时），返回空字符串
         }
     });
 
