@@ -278,6 +278,11 @@ export async function onRequest(context) {
  * @param {string} link 
  * @returns {object|null}
  */
+/**
+ * 解析单个节点链接 - v4 (Hysteria2 alpn 支持)
+ * @param {string} link 
+ * @returns {object|null}
+ */
 function parseNodeLink(link) {
     if (link.startsWith('vmess://')) {
         try {
@@ -292,14 +297,11 @@ function parseNodeLink(link) {
             return { protocol: url.protocol.replace(':', ''), name: decodeURIComponent(url.hash).substring(1) || url.hostname, server: url.hostname, port: url.port, uuid: url.username, password: url.username, sni: params.get('sni') || url.hostname, udp: true, tls: params.get('security') === 'tls' || params.get('security') === 'reality', security: params.get('security'), publicKey: params.get('pbk'), shortId: params.get('sid'), fingerprint: params.get('fp'), network: params.get('type'), serviceName: params.get('serviceName'), mode: params.get('mode'), path: params.get('path'), host: params.get('host') };
         } catch (e) { return null; }
     }
-    // [核心修正] 采用更健壮的SS链接解析逻辑
     if (link.startsWith('ss://')) {
         try {
             const url = new URL(link);
             const hashName = decodeURIComponent(url.hash).substring(1);
             let cipher, password;
-
-            // 标准格式: ss://<base64-encoded-method:password>@server:port
             if (url.username) {
                 const decodedUserInfo = atob(url.username);
                 const colonIndex = decodedUserInfo.indexOf(':');
@@ -308,27 +310,24 @@ function parseNodeLink(link) {
                     password = decodedUserInfo.substring(colonIndex + 1);
                 }
             }
-            
-            if (!cipher || !password) return null; // 如果无法解析出密码，则视为无效节点
-
-            return {
-                protocol: 'ss',
-                name: hashName || url.hostname,
-                server: url.hostname,
-                port: url.port,
-                cipher: cipher,
-                password: password,
-            };
-        } catch (e) {
-             console.error("Failed to parse SS link:", link, e);
-             return null;
-        }
+            if (!cipher || !password) return null;
+            return { protocol: 'ss', name: hashName || url.hostname, server: url.hostname, port: url.port, cipher: cipher, password: password };
+        } catch (e) { return null; }
     }
     if (link.startsWith('hy2://') || link.startsWith('hysteria2://')) {
         try {
             const url = new URL(link);
             const params = new URLSearchParams(url.search);
-            return { protocol: 'hysteria2', name: decodeURIComponent(url.hash).substring(1) || url.hostname, server: url.hostname, port: url.port, password: url.username, sni: params.get('sni') || url.hostname, insecure: params.get('insecure') === '1' || params.get('skip-cert-verify') === 'true' };
+            return {
+                protocol: 'hysteria2',
+                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
+                server: url.hostname,
+                port: url.port,
+                password: url.username,
+                sni: params.get('sni') || url.hostname,
+                insecure: params.get('insecure') === '1' || params.get('skip-cert-verify') === 'true',
+                alpn: params.get('alpn') // [新增] 提取 alpn 参数
+            };
         } catch (e) { return null; }
     }
     if (link.startsWith('tuic://')) {
@@ -343,7 +342,7 @@ function parseNodeLink(link) {
 }
 
 /**
- * 根据节点列表生成一个功能完备的Clash配置文件 - v4 (最终版)
+ * 根据节点列表生成一个功能完备的Clash配置文件 - v5 (Hysteria2 最终修正版)
  * @param {string} nodesString
  * @returns {string}
  */
@@ -370,15 +369,12 @@ function generateClashConfig(nodesString) {
                 entry.tls = p.tls;
                 entry.servername = p.sni;
                 entry['client-fingerprint'] = p.fingerprint || 'chrome';
-                
-                // [修改] VLESS-REALITY 支持
                 if (p.security === 'reality') {
                     entry['reality-opts'] = {
                         'public-key': p.publicKey,
                         'short-id': p.shortId || ''
                     };
                 }
-                
                 if (p.network === 'ws') {
                     entry.network = 'ws';
                     entry['ws-opts'] = {
@@ -400,19 +396,19 @@ function generateClashConfig(nodesString) {
                 entry.cipher = p.cipher;
                 entry.password = p.password;
                 break;
-            case 'ssr':
-                 // ... ssr case from previous step ...
-                break;
-            // [新增] Hysteria2 支持
+            // [最终修正] Hysteria2 支持
             case 'hysteria2':
-                entry.type = 'hy2'; // 在Clash中类型为hy2
+                entry.type = 'hysteria2'; // 关键修正：使用 hysteria2 作为类型
                 entry.password = p.password;
+                entry.auth = p.password; // 关键补充：增加 auth 字段
                 entry.sni = p.sni;
                 entry['skip-cert-verify'] = p.insecure;
+                if (p.alpn) {
+                    entry.alpn = [p.alpn]; // 关键补充：增加 alpn 字段
+                }
                 break;
-            // [新增] TUIC 支持
             case 'tuic':
-                entry.type = 'tuic'; // 在Clash中类型为tuic
+                entry.type = 'tuic';
                 entry.uuid = p.uuid;
                 entry.password = p.password;
                 entry.sni = p.sni;
