@@ -273,63 +273,44 @@ export async function onRequest(context) {
  * @param {string} link 
  * @returns {object|null}
  */
+/**
+ * 解析单个节点链接 - v4 (SS协议解析修正版)
+ * @param {string} link 
+ * @returns {object|null}
+ */
 function parseNodeLink(link) {
     if (link.startsWith('vmess://')) {
         try {
             const decoded = JSON.parse(atob(link.substring(8)));
-            return {
-                protocol: 'vmess',
-                name: decoded.ps || decoded.add,
-                server: decoded.add,
-                port: decoded.port,
-                uuid: decoded.id,
-                alterId: decoded.aid,
-                cipher: decoded.scy || 'auto',
-                network: decoded.net,
-                type: decoded.type,
-                host: decoded.host,
-                path: decoded.path,
-                tls: decoded.tls === 'tls',
-                sni: decoded.sni || decoded.host,
-            };
+            return { protocol: 'vmess', name: decoded.ps || decoded.add, server: decoded.add, port: decoded.port, uuid: decoded.id, alterId: decoded.aid, cipher: decoded.scy || 'auto', network: decoded.net, type: decoded.type, host: decoded.host, path: decoded.path, tls: decoded.tls === 'tls', sni: decoded.sni || decoded.host };
         } catch (e) { return null; }
     }
     if (link.startsWith('vless://') || link.startsWith('trojan://')) {
         try {
             const url = new URL(link);
             const params = new URLSearchParams(url.search);
-            return {
-                protocol: url.protocol.replace(':', ''),
-                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
-                server: url.hostname,
-                port: url.port,
-                uuid: url.username,
-                password: url.username, // for Trojan
-                sni: params.get('sni') || url.hostname,
-                udp: true,
-                tls: params.get('security') === 'tls' || params.get('security') === 'reality',
-                // [新增] REALITY 参数
-                security: params.get('security'),
-                publicKey: params.get('pbk'),
-                shortId: params.get('sid'),
-                fingerprint: params.get('fp'),
-                // 传输参数
-                network: params.get('type'),
-                serviceName: params.get('serviceName'),
-                mode: params.get('mode'),
-                path: params.get('path'),
-                host: params.get('host'),
-            };
+            return { protocol: url.protocol.replace(':', ''), name: decodeURIComponent(url.hash).substring(1) || url.hostname, server: url.hostname, port: url.port, uuid: url.username, password: url.username, sni: params.get('sni') || url.hostname, udp: true, tls: params.get('security') === 'tls' || params.get('security') === 'reality', security: params.get('security'), publicKey: params.get('pbk'), shortId: params.get('sid'), fingerprint: params.get('fp'), network: params.get('type'), serviceName: params.get('serviceName'), mode: params.get('mode'), path: params.get('path'), host: params.get('host') };
         } catch (e) { return null; }
     }
+    // [核心修正] 采用更健壮的SS链接解析逻辑
     if (link.startsWith('ss://')) {
         try {
             const url = new URL(link);
             const hashName = decodeURIComponent(url.hash).substring(1);
-            // 修正SS链接解析
-            const b64info = url.pathname.substring(2);
-            const decodedInfo = atob(b64info);
-            const [cipher, password] = decodedInfo.split(':');
+            let cipher, password;
+
+            // 标准格式: ss://<base64-encoded-method:password>@server:port
+            if (url.username) {
+                const decodedUserInfo = atob(url.username);
+                const colonIndex = decodedUserInfo.indexOf(':');
+                if (colonIndex !== -1) {
+                    cipher = decodedUserInfo.substring(0, colonIndex);
+                    password = decodedUserInfo.substring(colonIndex + 1);
+                }
+            }
+            
+            if (!cipher || !password) return null; // 如果无法解析出密码，则视为无效节点
+
             return {
                 protocol: 'ss',
                 name: hashName || url.hostname,
@@ -338,42 +319,24 @@ function parseNodeLink(link) {
                 cipher: cipher,
                 password: password,
             };
-        } catch (e) { return null; }
+        } catch (e) {
+             console.error("Failed to parse SS link:", link, e);
+             return null;
+        }
     }
-    // [新增] Hysteria2 解析
     if (link.startsWith('hy2://') || link.startsWith('hysteria2://')) {
         try {
             const url = new URL(link);
             const params = new URLSearchParams(url.search);
-            return {
-                protocol: 'hysteria2',
-                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
-                server: url.hostname,
-                port: url.port,
-                password: url.username,
-                sni: params.get('sni') || url.hostname,
-                insecure: params.get('insecure') === '1' || params.get('skip-cert-verify') === 'true',
-            };
+            return { protocol: 'hysteria2', name: decodeURIComponent(url.hash).substring(1) || url.hostname, server: url.hostname, port: url.port, password: url.username, sni: params.get('sni') || url.hostname, insecure: params.get('insecure') === '1' || params.get('skip-cert-verify') === 'true' };
         } catch (e) { return null; }
     }
-    // [新增] TUIC v5 解析
     if (link.startsWith('tuic://')) {
          try {
             const url = new URL(link);
             const params = new URLSearchParams(url.search);
             const [uuid, password] = url.username.split(':');
-            return {
-                protocol: 'tuic',
-                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
-                server: url.hostname,
-                port: url.port,
-                uuid: uuid,
-                password: password,
-                sni: params.get('sni') || url.hostname,
-                insecure: params.get('allow_insecure') === '1' || params.get('skip-cert-verify') === 'true',
-                'udp-relay-mode': params.get('udp_relay_mode') || 'native',
-                alpn: params.get('alpn'),
-            };
+            return { protocol: 'tuic', name: decodeURIComponent(url.hash).substring(1) || url.hostname, server: url.hostname, port: url.port, uuid: uuid, password: password, sni: params.get('sni') || url.hostname, insecure: params.get('allow_insecure') === '1' || params.get('skip-cert-verify') === 'true', 'udp-relay-mode': params.get('udp_relay_mode') || 'native', alpn: params.get('alpn') };
         } catch (e) { return null; }
     }
     return null;
