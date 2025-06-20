@@ -118,7 +118,7 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版] 统一流水线架构
+// [最终版] 采用后端代理模式，并修正拼写错误
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -132,10 +132,7 @@ async function handleMisubRequest(context) {
         return new Response('Invalid token', { status: 403 });
     }
 
-    // =================================================================
-    //  == 步骤一：统一的节点聚合、解码、添加前缀、去重逻辑 ==
-    //  无论最终输出什么格式，这一步都会首先执行
-    // =================================================================
+    // 2. 统一的节点聚合、解码、添加前缀、去重逻辑
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
     let manualNodes = '';
@@ -159,7 +156,7 @@ async function handleMisubRequest(context) {
                     text = new TextDecoder('utf-8').decode(bytes);
                 }
             } catch (e) {}
-
+            
             const cleanText = text.replace(/\r\n/g, '\n');
             if (config.prependSubName && sub.name) {
                 const nodes = cleanText.split('\n').map(line => line.trim()).filter(line => line);
@@ -169,15 +166,13 @@ async function handleMisubRequest(context) {
             return cleanText;
         } catch (e) { return ''; }
     });
-    
+
     const processedSubContents = await Promise.all(subPromises);
     const combinedContent = (manualNodes + processedSubContents.join('\n'));
     const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
     const finalNodesString = uniqueNodes.join('\n');
 
-    // =================================================================
-    //  == 步骤二：根据请求决定最终输出格式 ==
-    // =================================================================
+    // 3. 根据请求决定最终输出格式
     let targetFormat = 'base64';
     const urlTarget = url.searchParams.get('target');
     if (urlTarget) {
@@ -192,15 +187,18 @@ async function handleMisubRequest(context) {
     if (targetFormat === 'base64') {
         return new Response(btoa(unescape(encodeURIComponent(finalNodesString))));
     } else {
-        // 使用 Data URI scheme 将我们处理好的节点列表直接“喂”给 subconverter
         const base64Content = btoa(unescape(encodeURIComponent(finalNodesString)));
         const dataUri = `data:text/plain;base64,${base64Content}`;
 
         const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
+        
+        // [核心修正] 将所有 search_params.set 改为 searchParams.set
         subconverterUrl.searchParams.set('target', targetFormat);
-        subconverterUrl.searchParams.set('url', dataUri); // 核心改变：不再使用回调，而是直接传递数据
+        subconverterUrl.searchParams.set('url', dataUri);
         subconverterUrl.searchParams.set('config', config.subConfig);
-        subconverterUrl.searchParams.set('new_name', 'false'); // 强制subconverter使用我们提供的名字
+        subconverterUrl.searchParams.set('new_name', 'false');
+        subconverterUrl.searchParams.set('emoji', 'true');
+        subconverterUrl.searchParams.set('scv', 'true');
 
         try {
             const subconverterResponse = await fetch(subconverterUrl.toString(), {
