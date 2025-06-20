@@ -187,7 +187,7 @@ async function handleMisubRequest(context) {
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', callbackUrl);
     subconverterUrl.searchParams.set('config', config.subConfig);
-    subconverterUrl.searchParams.set('new_name', 'true');
+    subconverterUrl.searchParams.set('new_name', 'false');
     subconverterUrl.searchParams.set('emoji', 'true');
     subconverterUrl.searchParams.set('scv', 'true');
 
