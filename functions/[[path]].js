@@ -272,6 +272,27 @@ async function handleMisubRequest(context) { // [修改]
     });
 }
 
+async function sendMessage(type, ip, add_data = "") {
+    const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
+    const botToken = settings.BotToken;
+    const chatId = settings.ChatID;
+
+    if (!botToken || !chatId) return;
+
+    let msg = `*${type}*\nIP: \`${ip || 'N/A'}\`\n${add_data}`;
+    try {
+        const response = await fetch(`http://ip-api.com/json/${ip}?lang=zh-CN`);
+        if (response.ok) {
+            const ipInfo = await response.json();
+            msg = `*${type}*\nIP: \`${ip}\`\n地址: ${ipInfo.country}, ${ipInfo.city}\n组织: \`${ipInfo.org}\`\n${add_data}`;
+        }
+    } catch (e) {}
+
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=<span class="math-inline">\{chatId\}&parse\_mode\=Markdown&text\=</span>{encodeURIComponent(msg)}`;
+    // 使用 context.waitUntil 确保异步任务在响应结束后仍能完成
+    context.waitUntil(fetch(url));
+}
+
 // --- Cloudflare Pages Functions 入口 ---
 export async function onRequest(context) {
     const { request, env, next } = context;
@@ -477,25 +498,4 @@ function generateClashConfig(nodesString) {
     };
 
     return yaml.dump(configObject);
-}
-
-async function sendMessage(type, ip, add_data = "") {
-    const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
-    const botToken = settings.BotToken;
-    const chatId = settings.ChatID;
-
-    if (!botToken || !chatId) return;
-
-    let msg = `*${type}*\nIP: \`${ip || 'N/A'}\`\n${add_data}`;
-    try {
-        const response = await fetch(`http://ip-api.com/json/${ip}?lang=zh-CN`);
-        if (response.ok) {
-            const ipInfo = await response.json();
-            msg = `*${type}*\nIP: \`${ip}\`\n地址: ${ipInfo.country}, ${ipInfo.city}\n组织: \`${ipInfo.org}\`\n${add_data}`;
-        }
-    } catch (e) {}
-
-    const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=<span class="math-inline">\{chatId\}&parse\_mode\=Markdown&text\=</span>{encodeURIComponent(msg)}`;
-    // 使用 context.waitUntil 确保异步任务在响应结束后仍能完成
-    context.waitUntil(fetch(url));
 }
