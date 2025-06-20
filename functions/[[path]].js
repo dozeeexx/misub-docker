@@ -118,7 +118,7 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版] 采用后端代理模式，并修正拼写错误
+// [最终版] 采用 POST 方法提交数据，解决URL过长问题
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -156,12 +156,10 @@ async function handleMisubRequest(context) {
                     text = new TextDecoder('utf-8').decode(bytes);
                 }
             } catch (e) {}
-            
             const cleanText = text.replace(/\r\n/g, '\n');
             if (config.prependSubName && sub.name) {
                 const nodes = cleanText.split('\n').map(line => line.trim()).filter(line => line);
-                const prefixedNodes = nodes.map(node => prependNodeName(node, sub.name));
-                return prefixedNodes.join('\n');
+                return nodes.map(node => prependNodeName(node, sub.name)).join('\n');
             }
             return cleanText;
         } catch (e) { return ''; }
@@ -171,7 +169,7 @@ async function handleMisubRequest(context) {
     const combinedContent = (manualNodes + processedSubContents.join('\n'));
     const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
     const finalNodesString = uniqueNodes.join('\n');
-
+    
     // 3. 根据请求决定最终输出格式
     let targetFormat = 'base64';
     const urlTarget = url.searchParams.get('target');
@@ -190,23 +188,31 @@ async function handleMisubRequest(context) {
         const base64Content = btoa(unescape(encodeURIComponent(finalNodesString)));
         const dataUri = `data:text/plain;base64,${base64Content}`;
 
-        const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
-        
-        // [核心修正] 将所有 search_params.set 改为 searchParams.set
-        subconverterUrl.searchParams.set('target', targetFormat);
-        subconverterUrl.searchParams.set('url', dataUri);
-        subconverterUrl.searchParams.set('config', config.subConfig);
-        subconverterUrl.searchParams.set('new_name', 'false');
-        subconverterUrl.searchParams.set('emoji', 'true');
-        subconverterUrl.searchParams.set('scv', 'true');
+        const subconverterUrl = `https://${config.subConverter}/sub`;
+
+        // [核心修正] 构建 POST 请求的数据体
+        const formData = new URLSearchParams();
+        formData.append('target', targetFormat);
+        formData.append('url', dataUri);
+        formData.append('config', config.subConfig);
+        formData.append('new_name', 'false');
+        formData.append('emoji', 'true');
+        formData.append('scv', 'true');
 
         try {
-            const subconverterResponse = await fetch(subconverterUrl.toString(), {
-                headers: { 'User-Agent': userAgentHeader },
+            const subconverterResponse = await fetch(subconverterUrl, {
+                method: 'POST', // 指定使用 POST 方法
+                headers: {
+                    'User-Agent': userAgentHeader,
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'
+                },
+                body: formData, // 将参数放在 body 中
                 cf: { insecureSkipVerify: true }
             });
+            
             if (!subconverterResponse.ok) {
-                throw new Error(`Subconverter service returned status: ${subconverterResponse.status}`);
+                const errorBody = await subconverterResponse.text();
+                throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
             }
             return new Response(subconverterResponse.body, subconverterResponse);
         } catch (error) {
