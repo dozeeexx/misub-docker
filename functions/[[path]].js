@@ -107,7 +107,7 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版] 采用“混合模式/后端代理”架构
+// [最终修正版] 采用后端代理模式，并修正了异常处理逻辑
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -129,6 +129,7 @@ async function handleMisubRequest(context) {
         else if (ua.includes('surge')) targetFormat = 'surge';
     }
 
+    // 如果请求的是Base64，则作为回调，聚合所有节点并返回
     if (targetFormat === 'base64') {
         const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
         const enabledMisubs = misubs.filter(sub => sub.enabled);
@@ -160,6 +161,7 @@ async function handleMisubRequest(context) {
                         if (hashIndex === -1) return `${node}#${encodeURIComponent(sub.name)}`;
                         const baseLink = node.substring(0, hashIndex);
                         const originalName = decodeURIComponent(node.substring(hashIndex + 1));
+                        if (originalName.startsWith(sub.name)) return node;
                         return `${baseLink}#${encodeURIComponent(`${sub.name} - ${originalName}`)}`;
                     }).join('\n');
                 }
@@ -170,9 +172,18 @@ async function handleMisubRequest(context) {
         const processedSubContents = await Promise.all(subPromises);
         const combinedContent = (manualNodes + processedSubContents.join('\n'));
         const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
-        return new Response(btoa(unescape(encodeURIComponent(uniqueNodes.join('\n')))));
+        const base64Content = btoa(unescape(encodeURIComponent(uniqueNodes.join('\n'))));
+        
+        const headers = {
+            "Content-Type": "text/plain; charset=utf-8",
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+        };
+        return new Response(base64Content, { headers });
     }
 
+    // 如果是其他格式，则由后端代理请求subconverter
     const callbackUrl = `${url.protocol}//${url.host}/sub?token=${config.mytoken}&target=base64`;
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
@@ -183,17 +194,28 @@ async function handleMisubRequest(context) {
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
             method: 'GET',
-            // [最终修正] 无论原始请求是什么，在请求subconverter时，都伪装成标准浏览器
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' },
+            headers: { 'User-Agent': userAgentHeader },
             cf: { insecureSkipVerify: true }
         });
+        
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
+
+        // 成功时，直接返回从 subconverter 获取到的响应
         return new Response(subconverterResponse.body, subconverterResponse);
+
     } catch (error) {
-        return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502 });
+        // [核心修正] 异常处理模块
+        console.error("Failed to fetch from subconverter:", error);
+        const errorHeaders = {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        };
+        return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502, headers: errorHeaders });
     }
 }
 
