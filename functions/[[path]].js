@@ -156,24 +156,21 @@ async function handleMisubRequest(request, env) {
         }
     });
 
-    // [修改] 并行处理所有HTTP订阅 (V6 - 终极方案：忽略SSL错误)
+    // [修改] 并行处理所有HTTP订阅 (V7 - 兼容Windows换行符)
     const subPromises = httpSubs.map(async (sub) => {
         try {
             const requestHeaders = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
             };
 
-            // [核心修正] 添加 cf 对象以忽略SSL证书错误，与 CF-Workers-SUB 行为对齐
             const fetchPromise = fetch(new Request(sub.url, {
                 headers: requestHeaders,
                 redirect: "follow",
-                cf: {
-                    insecureSkipVerify: true
-                }
+                cf: { insecureSkipVerify: true }
             }));
 
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Request timed out')), 10000) // 适当延长超时
+                setTimeout(() => reject(new Error('Request timed out')), 10000)
             );
 
             const response = await Promise.race([fetchPromise, timeoutPromise]);
@@ -196,13 +193,17 @@ async function handleMisubRequest(request, env) {
                     text = new TextDecoder('utf-8').decode(bytes);
                 }
             } catch (e) { /* 不是Base64, 忽略错误 */ }
+            
+            // [核心修正] 先将所有 \r\n 替换为 \n，再进行处理
+            const cleanText = text.replace(/\r\n/g, '\n');
 
             if (config.prependSubName && sub.name) {
-                const nodes = text.split('\n').filter(line => line.trim());
+                const nodes = cleanText.split('\n').map(line => line.trim()).filter(line => line);
                 const prefixedNodes = nodes.map(node => prependNodeName(node, sub.name)); 
                 return prefixedNodes.join('\n');
             }
-            return text;
+            // 对于不加前缀的情况，也要确保返回的是清理过换行符的内容
+            return cleanText;
         } catch (e) {
             console.log(`Failed to process ${sub.url}: ${e.message}`);
             return ''; 
@@ -212,7 +213,10 @@ async function handleMisubRequest(request, env) {
     const processedSubContents = await Promise.all(subPromises);
     const subContent = processedSubContents.join('\n');
 
-    const combinedContent = (manualNodes + subContent).split('\n').filter(line => line.trim()).join('\n');
+    // [核心修正] 在合并所有节点后，进行去重处理
+    const allNodesAsText = (manualNodes + subContent);
+    const uniqueNodes = [...new Set(allNodesAsText.split(/\r?\n/).map(line => line.trim()).filter(line => line))];
+    const combinedContent = uniqueNodes.join('\n');
     const base64Data = btoa(unescape(encodeURIComponent(combinedContent)));
     // ...后续代码...
     
