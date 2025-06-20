@@ -201,15 +201,25 @@ async function handleMisubRequest(context) {
     }
 }
 
-// --- Cloudflare Pages Functions 主入口 ---
+// [最终版] 兼容路径 token 的主入口
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
+
     try {
-        if (url.pathname.startsWith('/api/')) return handleApiRequest(request, env);
-        if (url.pathname === '/sub') return handleMisubRequest(context);
+        if (url.pathname.startsWith('/api/')) {
+            return handleApiRequest(request, env);
+        }
+
+        // 将 /sub?token=... 和 /<token>?... 的请求都交给 handleMisubRequest 处理
+        if (url.pathname.startsWith('/sub') || (url.pathname !== '/' && !url.pathname.includes('.') && !url.pathname.startsWith('/assets'))) {
+            return handleMisubRequest(context);
+        }
+
+        // 其他所有请求（如/、/index.html等）交给Pages静态文件服务处理
         return next();
     } catch (e) {
+        console.error("Critical error in onRequest:", e);
         return new Response("Internal Server Error", { status: 500 });
     }
 }
