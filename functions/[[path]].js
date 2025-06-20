@@ -352,17 +352,41 @@ function parseNodeLink(link) {
 }
 
 /**
- * 根据节点列表生成一个功能完备的Clash配置文件 - v5 (Hysteria2 最终修正版)
+ * 根据节点列表生成一个功能完备的Clash配置文件 - v7 (重名节点智能重命名)
  * @param {string} nodesString
  * @returns {string}
  */
 function generateClashConfig(nodesString) {
-    const proxies = nodesString.split('\n')
+    let proxies = nodesString.split('\n')
         .map(link => parseNodeLink(link.trim()))
-        .filter(Boolean); 
+        .filter(Boolean);
+
+    // [核心修正] 智能重命名逻辑，以代替之前的过滤逻辑
+    const nameCounts = new Map();
+    proxies = proxies.map(p => {
+        if (!p.name) {
+            // 为没有名字的节点创建一个唯一的名字
+            p.name = `${p.protocol}-${p.server}:${p.port}`;
+        }
+
+        const originalName = p.name;
+        const count = nameCounts.get(originalName) || 0;
+        
+        if (count > 0) {
+            // 如果名字已经存在，添加数字后缀
+            p.name = `${originalName} ${count + 1}`;
+        }
+
+        // 更新原始名称的计数
+        nameCounts.set(originalName, (count + 1));
+        
+        // 返回处理后的节点对象，它现在拥有了唯一的名称
+        return p;
+    });
 
     if (proxies.length === 0) return yaml.dump({ 'proxies': [] });
 
+    // 后续的 proxyDetails 和 configObject 生成逻辑保持不变
     const proxyDetails = proxies.map(p => {
         let entry = {
             name: p.name,
@@ -380,17 +404,11 @@ function generateClashConfig(nodesString) {
                 entry.servername = p.sni;
                 entry['client-fingerprint'] = p.fingerprint || 'chrome';
                 if (p.security === 'reality') {
-                    entry['reality-opts'] = {
-                        'public-key': p.publicKey,
-                        'short-id': p.shortId || ''
-                    };
+                    entry['reality-opts'] = { 'public-key': p.publicKey, 'short-id': p.shortId || '' };
                 }
                 if (p.network === 'ws') {
                     entry.network = 'ws';
-                    entry['ws-opts'] = {
-                        path: p.path || '/',
-                        headers: { Host: p.host || p.server }
-                    };
+                    entry['ws-opts'] = { path: p.path || '/', headers: { Host: p.host || p.server } };
                 }
                 if (p.protocol === 'vmess') {
                     entry.cipher = p.cipher || 'auto';
@@ -406,16 +424,13 @@ function generateClashConfig(nodesString) {
                 entry.cipher = p.cipher;
                 entry.password = p.password;
                 break;
-            // [最终修正] Hysteria2 支持
             case 'hysteria2':
-                entry.type = 'hysteria2'; // 关键修正：使用 hysteria2 作为类型
+                entry.type = 'hysteria2';
                 entry.password = p.password;
-                entry.auth = p.password; // 关键补充：增加 auth 字段
+                entry.auth = p.password;
                 entry.sni = p.sni;
                 entry['skip-cert-verify'] = p.insecure;
-                if (p.alpn) {
-                    entry.alpn = [p.alpn]; // 关键补充：增加 alpn 字段
-                }
+                if (p.alpn) { entry.alpn = [p.alpn]; }
                 break;
             case 'tuic':
                 entry.type = 'tuic';
