@@ -1,5 +1,4 @@
 import yaml from 'js-yaml';
-// 注意：我们不再需要 prependNodeName 或其他本地解析函数
 
 // --- 全局常量 ---
 const KV_KEY_MAIN = 'misub_data_v1';
@@ -9,14 +8,13 @@ const SESSION_DURATION = 8 * 60 * 60 * 1000;
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  BotToken: '',
-  ChatID: '',
+  // 注意：subConverter 和 subConfig 在此模式下已无效，但保留以兼容旧设置
   subConverter: 'subapi.cmliussss.com',
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true
 };
 
-// --- 认证相关的核心工具函数 ---
+// --- 认证相关的核心工具函数 (无需修改) ---
 async function createSignedToken(key, data) {
     if (!key || !data) throw new Error("Key and data are required for signing.");
     const encoder = new TextEncoder();
@@ -46,6 +44,7 @@ async function authMiddleware(request, env) {
 
 // --- API 请求处理 (无需修改) ---
 async function handleApiRequest(request, env) {
+    // ... 此函数与之前版本相同，无需改动 ...
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
     if (path !== '/login') {
@@ -118,21 +117,19 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版] 采用 POST 方法提交数据，解决URL过长问题
+// [最终版] 完全自托管的订阅处理函数
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
-    const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
     
-    // 1. 获取配置与认证
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = { ...defaultSettings, ...kv_settings };
+    
     const token = url.searchParams.get('token');
     if (!token || token !== config.mytoken) {
         return new Response('Invalid token', { status: 403 });
     }
 
-    // 2. 统一的节点聚合、解码、添加前缀、去重逻辑
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
     let manualNodes = '';
@@ -158,8 +155,7 @@ async function handleMisubRequest(context) {
             } catch (e) {}
             const cleanText = text.replace(/\r\n/g, '\n');
             if (config.prependSubName && sub.name) {
-                const nodes = cleanText.split('\n').map(line => line.trim()).filter(line => line);
-                return nodes.map(node => prependNodeName(node, sub.name)).join('\n');
+                return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => prependNodeName(node, sub.name)).join('\n');
             }
             return cleanText;
         } catch (e) { return ''; }
@@ -169,8 +165,8 @@ async function handleMisubRequest(context) {
     const combinedContent = (manualNodes + processedSubContents.join('\n'));
     const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
     const finalNodesString = uniqueNodes.join('\n');
-    
-    // 3. 根据请求决定最终输出格式
+
+    const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
     let targetFormat = 'base64';
     const urlTarget = url.searchParams.get('target');
     if (urlTarget) {
@@ -178,72 +174,22 @@ async function handleMisubRequest(context) {
     } else {
         const ua = userAgentHeader.toLowerCase();
         if (ua.includes('clash')) targetFormat = 'clash';
-        else if (ua.includes('sing-box')) targetFormat = 'singbox';
-        else if (ua.includes('surge')) targetFormat = 'surge';
     }
+
+    let outputBody = '';
+    let outputHeaders = { "Content-Type": "text/plain; charset=utf-8" };
 
     if (targetFormat === 'base64') {
-        return new Response(btoa(unescape(encodeURIComponent(finalNodesString))));
-    } else {
-        const base64Content = btoa(unescape(encodeURIComponent(finalNodesString)));
-        const dataUri = `data:text/plain;base64,${base64Content}`;
-
-        const subconverterUrl = `https://${config.subConverter}/sub`;
-
-        // [核心修正] 构建 POST 请求的数据体
-        const formData = new URLSearchParams();
-        formData.append('target', targetFormat);
-        formData.append('url', dataUri);
-        formData.append('config', config.subConfig);
-        formData.append('new_name', 'false');
-        formData.append('emoji', 'true');
-        formData.append('scv', 'true');
-
-        try {
-            const subconverterResponse = await fetch(subconverterUrl, {
-                method: 'POST', // 指定使用 POST 方法
-                headers: {
-                    'User-Agent': userAgentHeader,
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'
-                },
-                body: formData, // 将参数放在 body 中
-                cf: { insecureSkipVerify: true }
-            });
-            
-            if (!subconverterResponse.ok) {
-                const errorBody = await subconverterResponse.text();
-                throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
-            }
-            return new Response(subconverterResponse.body, subconverterResponse);
-        } catch (error) {
-            console.error("Failed to fetch from subconverter:", error);
-            return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502 });
-        }
+        outputBody = btoa(unescape(encodeURIComponent(finalNodesString)));
+    } else if (targetFormat === 'clash') {
+        outputBody = generateClashConfig(finalNodesString, config);
+        outputHeaders['Content-Disposition'] = `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}.yaml`;
     }
+
+    return new Response(outputBody, { headers: outputHeaders });
 }
 
-// 修正后的 TG 通知函数
-async function sendMessage(context, type, ip, add_data = "") {
-    const { env } = context;
-    const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
-    const botToken = settings.BotToken;
-    const chatId = settings.ChatID;
-    if (!botToken || !chatId) return;
-
-    let msg = `*${type}*\nIP: \`${ip || 'N/A'}\`\n${add_data}`;
-    try {
-        const response = await fetch(`http://ip-api.com/json/${ip}?lang=zh-CN`);
-        if (response.ok) {
-            const ipInfo = await response.json();
-            msg = `*${type}*\nIP: \`${ip}\`\n地址: ${ipInfo.country}, ${ipInfo.city}\n组织: \`${ipInfo.org}\`\n${add_data}`;
-        }
-    } catch (e) {}
-
-    const tgUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&parse_mode=Markdown&text=${encodeURIComponent(msg)}`;
-    context.waitUntil(fetch(tgUrl));
-}
-
-// --- Cloudflare Pages Functions 主入口 ---
+// --- 主入口 ---
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
@@ -252,7 +198,126 @@ export async function onRequest(context) {
         if (url.pathname === '/sub') return handleMisubRequest(context);
         return next();
     } catch (e) {
-        console.error("Critical error in onRequest:", e);
         return new Response("Internal Server Error", { status: 500 });
     }
+}
+
+// --- 辅助函数 ---
+function prependNodeName(link, prefix) {
+  if (!prefix) return link;
+  const hashIndex = link.lastIndexOf('#');
+  if (hashIndex === -1) return `${link}#${encodeURIComponent(prefix)}`;
+  const baseLink = link.substring(0, hashIndex);
+  const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+  if (originalName.startsWith(prefix)) return link;
+  const newName = `${prefix} - ${originalName}`;
+  return `${baseLink}#${encodeURIComponent(newName)}`;
+}
+
+function parseNodeLink(link) {
+    if (link.startsWith('vmess://')) {
+        try {
+            const decoded = JSON.parse(atob(link.substring(8)));
+            return { protocol: 'vmess', name: decoded.ps || decoded.add, server: decoded.add, port: decoded.port, uuid: decoded.id, alterId: decoded.aid, cipher: decoded.scy || 'auto', network: decoded.net, type: decoded.type, host: decoded.host, path: decoded.path, tls: decoded.tls === 'tls', sni: decoded.sni || decoded.host };
+        } catch (e) { return null; }
+    }
+    if (link.startsWith('vless://') || link.startsWith('trojan://')) {
+        try {
+            const url = new URL(link);
+            const params = new URLSearchParams(url.search);
+            return { protocol: url.protocol.replace(':', ''), name: decodeURIComponent(url.hash).substring(1) || url.hostname, server: url.hostname, port: url.port, uuid: url.username, password: url.username, sni: params.get('sni') || url.hostname, udp: true, tls: params.get('security') === 'tls' || params.get('security') === 'reality', security: params.get('security'), publicKey: params.get('pbk'), shortId: params.get('sid'), fingerprint: params.get('fp'), network: params.get('type'), serviceName: params.get('serviceName'), mode: params.get('mode'), path: params.get('path'), host: params.get('host') };
+        } catch (e) { return null; }
+    }
+    if (link.startsWith('ss://')) {
+        try {
+            const url = new URL(link);
+            const hashName = decodeURIComponent(url.hash).substring(1);
+            let cipher, password;
+            if (url.username) {
+                const decodedUserInfo = atob(url.username);
+                const colonIndex = decodedUserInfo.indexOf(':');
+                if (colonIndex !== -1) {
+                    cipher = decodedUserInfo.substring(0, colonIndex);
+                    password = decodedUserInfo.substring(colonIndex + 1);
+                }
+            }
+            if (!cipher || !password) return null;
+            return { protocol: 'ss', name: hashName || url.hostname, server: url.hostname, port: url.port, cipher: cipher, password: password };
+        } catch (e) { return null; }
+    }
+    if (link.startsWith('hy2://') || link.startsWith('hysteria2://')) {
+        try {
+            const url = new URL(link);
+            const params = new URLSearchParams(url.search);
+            return { protocol: 'hysteria2', name: decodeURIComponent(url.hash).substring(1) || url.hostname, server: url.hostname, port: url.port, password: url.username, sni: params.get('sni') || url.hostname, insecure: params.get('insecure') === '1' || params.get('skip-cert-verify') === 'true', alpn: params.get('alpn') };
+        } catch (e) { return null; }
+    }
+    if (link.startsWith('tuic://')) {
+         try {
+            const url = new URL(link);
+            const params = new URLSearchParams(url.search);
+            const [uuid, password] = url.username.split(':');
+            return { protocol: 'tuic', name: decodeURIComponent(url.hash).substring(1) || url.hostname, server: url.hostname, port: url.port, uuid: uuid, password: password, sni: params.get('sni') || url.hostname, insecure: params.get('allow_insecure') === '1' || params.get('skip-cert-verify') === 'true', 'udp-relay-mode': params.get('udp_relay_mode') || 'native', alpn: params.get('alpn') };
+        } catch (e) { return null; }
+    }
+    return null;
+}
+
+function generateClashConfig(nodesString, config) {
+    let proxies = nodesString.split('\n')
+        .map(link => parseNodeLink(link.trim()))
+        .filter(Boolean);
+    const nameCounts = new Map();
+    proxies = proxies.map(p => {
+        if (!p.name) p.name = `${p.protocol}-${p.server}:${p.port}`;
+        const originalName = p.name;
+        const count = nameCounts.get(originalName) || 0;
+        if (count > 0) p.name = `${originalName} ${count + 1}`;
+        nameCounts.set(originalName, (count + 1));
+        return p;
+    });
+
+    if (proxies.length === 0) return yaml.dump({ 'proxies': [] });
+
+    const proxyDetails = proxies.map(p => {
+        let entry = { name: p.name, type: p.protocol, server: p.server, port: p.port };
+        switch (p.protocol) {
+            case 'vmess': case 'vless':
+                entry.uuid = p.uuid; entry.udp = true; entry.tls = p.tls; entry.servername = p.sni; entry['client-fingerprint'] = p.fingerprint || 'chrome';
+                if (p.security === 'reality') { entry['reality-opts'] = { 'public-key': p.publicKey, 'short-id': p.shortId || '' }; }
+                if (p.network === 'ws') { entry.network = 'ws'; entry['ws-opts'] = { path: p.path || '/', headers: { Host: p.host || p.server } }; }
+                if (p.protocol === 'vmess') { entry.cipher = p.cipher || 'auto'; entry.alterId = p.alterId || 0; }
+                break;
+            case 'trojan':
+                entry.password = p.password; entry.sni = p.sni; entry.udp = true;
+                break;
+            case 'ss':
+                entry.cipher = p.cipher; entry.password = p.password;
+                break;
+            case 'hysteria2':
+                entry.type = 'hysteria2'; entry.password = p.password; entry.auth = p.password; entry.sni = p.sni; entry['skip-cert-verify'] = p.insecure;
+                if (p.alpn) { entry.alpn = [p.alpn]; }
+                break;
+            case 'tuic':
+                entry.type = 'tuic'; entry.uuid = p.uuid; entry.password = p.password; entry.sni = p.sni; entry['skip-cert-verify'] = p.insecure; entry['udp-relay-mode'] = p['udp-relay-mode'];
+                if (p.alpn) entry.alpn = [p.alpn];
+                break;
+        }
+        return entry;
+    });
+
+    const configObject = {
+        'port': 7890,
+        'socks-port': 7891,
+        'allow-lan': false,
+        'mode': 'Rule',
+        'log-level': 'info',
+        'external-controller': '127.0.0.1:9090',
+        'proxies': proxyDetails,
+        'proxy-groups': [{
+            name: "PROXY", type: 'select', proxies: proxies.map(p => p.name)
+        }],
+        'rules': ['MATCH,PROXY']
+    };
+    return yaml.dump(configObject);
 }
