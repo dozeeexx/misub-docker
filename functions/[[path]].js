@@ -118,23 +118,66 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版] 采用后端代理模式，兼容所有客户端
+// [最终版] 统一流水线架构
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
     
-    // 1. 获取配置
+    // 1. 获取配置与认证
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = { ...defaultSettings, ...kv_settings };
-    
-    // 2. 认证
     const token = url.searchParams.get('token');
     if (!token || token !== config.mytoken) {
         return new Response('Invalid token', { status: 403 });
     }
 
-    // 3. 根据客户端UA或URL参数，决定最终输出格式
+    // =================================================================
+    //  == 步骤一：统一的节点聚合、解码、添加前缀、去重逻辑 ==
+    //  无论最终输出什么格式，这一步都会首先执行
+    // =================================================================
+    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
+    const enabledMisubs = misubs.filter(sub => sub.enabled);
+    let manualNodes = '';
+    const httpSubs = enabledMisubs.filter(sub => sub.url.toLowerCase().startsWith('http') ? true : (manualNodes += sub.url + '\n', false));
+
+    const subPromises = httpSubs.map(async (sub) => {
+        try {
+            const requestHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
+            const response = await Promise.race([
+                fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
+            ]);
+            if (!response.ok) return '';
+            let text = await response.text();
+            try {
+                const cleanedText = text.replace(/\s/g, '');
+                if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
+                    const binaryString = atob(cleanedText);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                    text = new TextDecoder('utf-8').decode(bytes);
+                }
+            } catch (e) {}
+
+            const cleanText = text.replace(/\r\n/g, '\n');
+            if (config.prependSubName && sub.name) {
+                const nodes = cleanText.split('\n').map(line => line.trim()).filter(line => line);
+                const prefixedNodes = nodes.map(node => prependNodeName(node, sub.name));
+                return prefixedNodes.join('\n');
+            }
+            return cleanText;
+        } catch (e) { return ''; }
+    });
+    
+    const processedSubContents = await Promise.all(subPromises);
+    const combinedContent = (manualNodes + processedSubContents.join('\n'));
+    const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
+    const finalNodesString = uniqueNodes.join('\n');
+
+    // =================================================================
+    //  == 步骤二：根据请求决定最终输出格式 ==
+    // =================================================================
     let targetFormat = 'base64';
     const urlTarget = url.searchParams.get('target');
     if (urlTarget) {
@@ -146,66 +189,32 @@ async function handleMisubRequest(context) {
         else if (ua.includes('surge')) targetFormat = 'surge';
     }
 
-    // 4. 如果客户端请求的是Base64，则作为回调，聚合所有节点并返回
     if (targetFormat === 'base64') {
-        const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
-        const enabledMisubs = misubs.filter(sub => sub.enabled);
-        let manualNodes = '';
-        const httpSubs = enabledMisubs.filter(sub => sub.url.toLowerCase().startsWith('http') ? true : (manualNodes += sub.url + '\n', false));
+        return new Response(btoa(unescape(encodeURIComponent(finalNodesString))));
+    } else {
+        // 使用 Data URI scheme 将我们处理好的节点列表直接“喂”给 subconverter
+        const base64Content = btoa(unescape(encodeURIComponent(finalNodesString)));
+        const dataUri = `data:text/plain;base64,${base64Content}`;
 
-        const subPromises = httpSubs.map(async (sub) => {
-            try {
-                const requestHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
-                const response = await Promise.race([
-                    fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
-                ]);
-                if (!response.ok) return '';
-                let text = await response.text();
-                try {
-                    const cleanedText = text.replace(/\s/g, '');
-                    if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
-                        const binaryString = atob(cleanedText);
-                        const bytes = new Uint8Array(binaryString.length);
-                        for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-                        text = new TextDecoder('utf-8').decode(bytes);
-                    }
-                } catch (e) {}
-                return text.replace(/\r\n/g, '\n');
-            } catch (e) { return ''; }
-        });
+        const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
+        subconverterUrl.searchParams.set('target', targetFormat);
+        subconverterUrl.searchParams.set('url', dataUri); // 核心改变：不再使用回调，而是直接传递数据
+        subconverterUrl.searchParams.set('config', config.subConfig);
+        subconverterUrl.searchParams.set('new_name', 'false'); // 强制subconverter使用我们提供的名字
 
-        const processedSubContents = await Promise.all(subPromises);
-        const combinedContent = (manualNodes + processedSubContents.join('\n'));
-        const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
-        return new Response(btoa(unescape(encodeURIComponent(uniqueNodes.join('\n')))), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
-    }
-
-    // 5. 如果是其他格式，则构建subconverter链接，并由后端代理请求
-    const callbackUrl = `${url.protocol}//${url.host}/sub?token=${config.mytoken}&target=base64`;
-    const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
-    subconverterUrl.searchParams.set('target', targetFormat);
-    subconverterUrl.searchParams.set('url', callbackUrl);
-    subconverterUrl.searchParams.set('config', config.subConfig);
-    subconverterUrl.searchParams.set('new_name', 'false');
-    subconverterUrl.searchParams.set('emoji', 'true');
-    subconverterUrl.searchParams.set('scv', 'true');
-
-    try {
-        const subconverterResponse = await fetch(subconverterUrl.toString(), {
-            headers: { 'User-Agent': userAgentHeader },
-            cf: { insecureSkipVerify: true }
-        });
-        
-        if (!subconverterResponse.ok) {
-            throw new Error(`Subconverter service returned status: ${subconverterResponse.status}`);
+        try {
+            const subconverterResponse = await fetch(subconverterUrl.toString(), {
+                headers: { 'User-Agent': userAgentHeader },
+                cf: { insecureSkipVerify: true }
+            });
+            if (!subconverterResponse.ok) {
+                throw new Error(`Subconverter service returned status: ${subconverterResponse.status}`);
+            }
+            return new Response(subconverterResponse.body, subconverterResponse);
+        } catch (error) {
+            console.error("Failed to fetch from subconverter:", error);
+            return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502 });
         }
-
-        return new Response(subconverterResponse.body, subconverterResponse);
-
-    } catch (error) {
-        console.error("Failed to fetch from subconverter:", error);
-        return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502 });
     }
 }
 
