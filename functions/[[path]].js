@@ -11,7 +11,9 @@ const defaultSettings = {
   // 注意：subConverter 和 subConfig 在此模式下已无效，但保留以兼容旧设置
   subConverter: 'subapi.cmliussss.com',
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
-  prependSubName: true
+  prependSubName: true,
+  autoGroups: `{"PROXY":["."],"DIRECT":["direct"],"REJECT":["reject"]}`, // [新增] 默认分组关键词
+  customRules: "[]" // [新增] 默认规则
 };
 
 // --- 认证相关的核心工具函数 (无需修改) ---
@@ -263,10 +265,15 @@ function parseNodeLink(link) {
     return null;
 }
 
+/**
+ * 根据节点列表和内置设置生成最终Clash配置 - v11 (内置精选规则与分组)
+ * @param {string} nodesString
+ * @param {object} config - 包含了 autoGroups, customRules 等设置的对象
+ * @returns {string} - 生成的Clash配置字符串
+ */
 function generateClashConfig(nodesString, config) {
-    let proxies = nodesString.split('\n')
-        .map(link => parseNodeLink(link.trim()))
-        .filter(Boolean);
+    // 1. 解析和准备节点
+    let proxies = nodesString.split('\n').map(link => parseNodeLink(link.trim())).filter(Boolean);
     const nameCounts = new Map();
     proxies = proxies.map(p => {
         if (!p.name) p.name = `${p.protocol}-${p.server}:${p.port}`;
@@ -276,9 +283,7 @@ function generateClashConfig(nodesString, config) {
         nameCounts.set(originalName, (count + 1));
         return p;
     });
-
-    if (proxies.length === 0) return yaml.dump({ 'proxies': [] });
-
+    
     const proxyDetails = proxies.map(p => {
         let entry = { name: p.name, type: p.protocol, server: p.server, port: p.port };
         switch (p.protocol) {
@@ -288,36 +293,96 @@ function generateClashConfig(nodesString, config) {
                 if (p.network === 'ws') { entry.network = 'ws'; entry['ws-opts'] = { path: p.path || '/', headers: { Host: p.host || p.server } }; }
                 if (p.protocol === 'vmess') { entry.cipher = p.cipher || 'auto'; entry.alterId = p.alterId || 0; }
                 break;
-            case 'trojan':
-                entry.password = p.password; entry.sni = p.sni; entry.udp = true;
-                break;
-            case 'ss':
-                entry.cipher = p.cipher; entry.password = p.password;
-                break;
-            case 'hysteria2':
-                entry.type = 'hysteria2'; entry.password = p.password; entry.auth = p.password; entry.sni = p.sni; entry['skip-cert-verify'] = p.insecure;
-                if (p.alpn) { entry.alpn = [p.alpn]; }
-                break;
-            case 'tuic':
-                entry.type = 'tuic'; entry.uuid = p.uuid; entry.password = p.password; entry.sni = p.sni; entry['skip-cert-verify'] = p.insecure; entry['udp-relay-mode'] = p['udp-relay-mode'];
-                if (p.alpn) entry.alpn = [p.alpn];
-                break;
+            case 'trojan': entry.password = p.password; entry.sni = p.sni; entry.udp = true; break;
+            case 'ss': entry.cipher = p.cipher; entry.password = p.password; break;
+            case 'hysteria2': entry.type = 'hysteria2'; entry.password = p.password; entry.auth = p.password; entry.sni = p.sni; entry['skip-cert-verify'] = p.insecure; if (p.alpn) { entry.alpn = [p.alpn]; } break;
+            case 'tuic': entry.type = 'tuic'; entry.uuid = p.uuid; entry.password = p.password; entry.sni = p.sni; entry['skip-cert-verify'] = p.insecure; entry['udp-relay-mode'] = p['udp-relay-mode']; if (p.alpn) entry.alpn = [p.alpn]; break;
         }
         return entry;
     });
 
-    const configObject = {
+    const proxyNames = proxies.map(p => p.name);
+
+    // 2. 根据设置中的关键词，自动生成地区分组
+    let autoGroups = [];
+    let autoGroupNames = [];
+    try {
+        const autoGroupSettings = JSON.parse(config.autoGroups || '{}');
+        for (const groupName in autoGroupSettings) {
+            const keywords = autoGroupSettings[groupName].map(k => k.toLowerCase());
+            const matchedProxies = proxyNames.filter(name => keywords.some(kw => name.toLowerCase().includes(kw)));
+            if (matchedProxies.length > 0) {
+                autoGroups.push({ name: groupName, type: 'select', proxies: matchedProxies });
+                autoGroupNames.push(groupName);
+            }
+        }
+    } catch(e) { console.error("解析自动分组关键词失败:", e); }
+
+    // 3. 定义一套高质量的内置策略组
+    const functionalGroups = [
+        { name: '国外媒体', type: 'select', proxies: ['PROXY', 'DIRECT', ...autoGroupNames] },
+        { name: '国内媒体', type: 'select', proxies: ['DIRECT', 'PROXY'] },
+        { name: '苹果服务', type: 'select', proxies: ['DIRECT', 'PROXY'] },
+        { name: '微软服务', type: 'select', proxies: ['DIRECT', 'PROXY'] },
+        { name: '广告拦截', type: 'select', proxies: ['REJECT', 'DIRECT'] },
+        { name: '最终选择', type: 'select', proxies: ['PROXY', 'DIRECT'] }
+    ];
+    
+    // 4. 定义主选择器和自动测速组
+    const mainGroups = [
+      { name: 'PROXY', type: 'select', proxies: ['自动测速', ...autoGroupNames, ...functionalGroups.map(g => g.name)] },
+      { name: '自动测速', type: 'url-test', proxies: proxyNames, url: 'http://www.gstatic.com/generate_204', interval: 300 }
+    ];
+
+    // 5. 定义一套精选的内置规则
+    const defaultRules = [
+        'DOMAIN-SUFFIX,ad.com,广告拦截',
+        'DOMAIN-KEYWORD,ad,广告拦截',
+        'DOMAIN-SUFFIX,googlesyndication.com,广告拦截',
+        'DOMAIN-SUFFIX,google-analytics.com,广告拦截',
+        'DOMAIN-SUFFIX,doubleclick.net,广告拦截',
+        'DOMAIN-SUFFIX,bilibili.com,国内媒体',
+        'DOMAIN-SUFFIX,iqiyi.com,国内媒体',
+        'DOMAIN-SUFFIX,v.qq.com,国内媒体',
+        'DOMAIN-SUFFIX,youku.com,国内媒体',
+        'DOMAIN-SUFFIX,netflix.com,国外媒体',
+        'DOMAIN-SUFFIX,youtube.com,国外媒体',
+        'DOMAIN-SUFFIX,hulu.com,国外媒体',
+        'DOMAIN-SUFFIX,disneyplus.com,国外媒体',
+        'DOMAIN-SUFFIX,apple.com,苹果服务',
+        'DOMAIN-SUFFIX,itunes.apple.com,苹果服务',
+        'DOMAIN-SUFFIX,microsoft.com,微软服务',
+        'DOMAIN-SUFFIX,office.com,微软服务',
+        'GEOIP,CN,DIRECT',
+        'MATCH,最终选择'
+    ];
+
+    let finalRules = defaultRules;
+    try {
+        const customRulesParsed = yaml.load(config.customRules || '[]');
+        if (Array.isArray(customRulesParsed) && customRulesParsed.length > 0) {
+            finalRules = customRulesParsed; // 如果用户提供了自定义规则，则覆盖默认规则
+        }
+    } catch(e) { console.error("解析自定义规则失败:", e); }
+
+    // 6. 组装最终配置对象
+    const finalConfig = {
         'port': 7890,
         'socks-port': 7891,
         'allow-lan': false,
         'mode': 'Rule',
         'log-level': 'info',
         'external-controller': '127.0.0.1:9090',
+        'dns': {
+            'enable': true,
+            'listen': '0.0.0.0:53',
+            'default-nameserver': ['223.5.5.5', '119.29.29.29', '8.8.8.8'],
+            'fallback': ['tls://1.0.0.1:853', 'https://dns.google/dns-query']
+        },
         'proxies': proxyDetails,
-        'proxy-groups': [{
-            name: "PROXY", type: 'select', proxies: proxies.map(p => p.name)
-        }],
-        'rules': ['MATCH,PROXY']
+        'proxy-groups': [...mainGroups, ...autoGroups, ...functionalGroups],
+        'rules': finalRules,
     };
-    return yaml.dump(configObject);
+
+    return yaml.dump(finalConfig);
 }

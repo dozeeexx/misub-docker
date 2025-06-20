@@ -6,7 +6,6 @@ const props = defineProps({
   show: Boolean,
   confirmKeyword: String,
 });
-
 const emit = defineEmits(['update:show', 'confirm']);
 
 const confirmInput = ref('');
@@ -18,8 +17,8 @@ const handleKeydown = (e) => {
 };
 
 const handleConfirm = () => {
-  emit('confirm'); // 先发出确认事件
-  emit('update:show', false); // 再发出事件关闭模态框
+  emit('confirm');
+  emit('update:show', false);
 }
 
 onMounted(() => window.addEventListener('keydown', handleKeydown));
@@ -31,7 +30,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
     <div
       v-if="show"
       role="button"
-     tabindex="0"
+      tabindex="0"
       aria-label="关闭弹窗"
       class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99] flex items-center justify-center p-4"
       @click="emit('update:show', false)"
@@ -41,24 +40,26 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
       <Transition name="modal-inner">
         <div
           v-if="show"
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm text-left ring-1 ring-black/5 dark:ring-white/10"
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh] ring-1 ring-black/5 dark:ring-white/10"
           @click.stop
         >
-          <div class="mb-4">
+          <div class="p-6 border-b border-gray-200 dark:border-gray-700 shrink-0">
             <slot name="title">
               <h3 class="text-lg font-bold text-gray-900 dark:text-white">确认操作</h3>
             </slot>
           </div>
-          <div class="mb-6">
+
+          <div class="p-6 overflow-y-auto">
              <slot name="body">
                 <p class="text-sm text-gray-500 dark:text-gray-400">你确定要继续吗？</p>
             </slot>
+            <div v-if="confirmKeyword" class="mt-4">
+              <p class="text-xs text-gray-400 mb-1">请输入"<span class="font-bold text-red-400">{{ confirmKeyword }}</span>" 以确认</p>
+              <input type="text" v-model="confirmInput" class="w-full rounded-md bg-gray-100 dark:bg-gray-700 border-transparent focus:ring-indigo-500">
+            </div>
           </div>
-          <div v-if="confirmKeyword" class="mt-4">
-            <p class="text-xs text-gray-400 mb-1">请输入 "<span class="font-bold text-red-400">{{ confirmKeyword }}</span>" 以确认:</p>
-            <input type="text" v-model="confirmInput" class="w-full rounded-md bg-gray-100 dark:bg-gray-700 border-transparent focus:ring-indigo-500">
-          </div>
-          <div class="flex justify-end space-x-3 mt-6">
+
+          <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 shrink-0 flex justify-end space-x-3">
             <button @click="emit('update:show', false)" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm rounded-lg transition-colors">取消</button>
             <button 
                 @click="handleConfirm" 
