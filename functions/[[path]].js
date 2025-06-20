@@ -183,7 +183,8 @@ async function handleMisubRequest(context) {
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
             method: 'GET',
-            headers: { 'User-Agent': userAgentHeader },
+            // [最终修正] 无论原始请求是什么，在请求subconverter时，都伪装成标准浏览器
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' },
             cf: { insecureSkipVerify: true }
         });
         if (!subconverterResponse.ok) {
