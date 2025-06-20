@@ -131,7 +131,20 @@ async function handleApiRequest(request, env) {
 }
 
 // --- 订阅生成处理 ---
-async function handleMisubRequest(request, env) {
+async function handleMisubRequest(context) { // [修改]
+    const { request, env } = context; // [新增] 从 context 中解构出 request 和 env
+    // [新增] 在处理请求的开始处，发送Telegram通知
+    try {
+        const clientIp = request.headers.get('CF-Connecting-IP');
+        const userAgent = request.headers.get('User-Agent') || "Unknown";
+        const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
+        const config = { ...defaultSettings, ...settings };
+
+        // 调用 sendMessage 函数
+        sendMessage(context, `获取订阅 ${config.FileName}`, clientIp, `UA: \`${userAgent}\``);
+    } catch (e) {
+        console.error("Failed to send Telegram message:", e);
+    }
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
@@ -265,7 +278,7 @@ export async function onRequest(context) {
     const url = new URL(request.url);
     try {
         if (url.pathname.startsWith('/api/')) return handleApiRequest(request, env);
-        if (url.pathname === '/sub') return handleMisubRequest(request, env);
+        if (url.pathname === '/sub') return handleMisubRequest(context); // 传递完整的 context
         return next();
     } catch (e) {
         console.error("Critical error in onRequest:", e);
@@ -464,4 +477,25 @@ function generateClashConfig(nodesString) {
     };
 
     return yaml.dump(configObject);
+}
+
+async function sendMessage(type, ip, add_data = "") {
+    const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
+    const botToken = settings.BotToken;
+    const chatId = settings.ChatID;
+
+    if (!botToken || !chatId) return;
+
+    let msg = `*${type}*\nIP: \`${ip || 'N/A'}\`\n${add_data}`;
+    try {
+        const response = await fetch(`http://ip-api.com/json/${ip}?lang=zh-CN`);
+        if (response.ok) {
+            const ipInfo = await response.json();
+            msg = `*${type}*\nIP: \`${ip}\`\n地址: ${ipInfo.country}, ${ipInfo.city}\n组织: \`${ipInfo.org}\`\n${add_data}`;
+        }
+    } catch (e) {}
+
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=<span class="math-inline">\{chatId\}&parse\_mode\=Markdown&text\=</span>{encodeURIComponent(msg)}`;
+    // 使用 context.waitUntil 确保异步任务在响应结束后仍能完成
+    context.waitUntil(fetch(url));
 }
