@@ -107,7 +107,7 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终修正版] 采用后端代理模式，并修正了异常处理逻辑
+// [最终版] 兼容路径和参数两种Token验证方式
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -116,11 +116,20 @@ async function handleMisubRequest(context) {
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = { ...defaultSettings, ...kv_settings };
 
-    const token = url.searchParams.get('token');
+    // [核心修正] 优先从路径获取 Token，其次从参数获取
+    let token = '';
+    const pathSegments = url.pathname.split('/').filter(Boolean);
+    if (pathSegments.length > 0 && pathSegments[0] !== 'sub') {
+        token = pathSegments[0]; // 例如 /test?target=clash -> token = 'test'
+    } else {
+        token = url.searchParams.get('token'); // 兼容 /sub?token=test
+    }
+
     if (!token || token !== config.mytoken) {
         return new Response('Invalid token', { status: 403 });
     }
 
+    // 后续所有逻辑保持不变...
     let targetFormat = url.searchParams.get('target') || 'base64';
     if (!url.searchParams.has('target')) {
         const ua = userAgentHeader.toLowerCase();
@@ -129,8 +138,8 @@ async function handleMisubRequest(context) {
         else if (ua.includes('surge')) targetFormat = 'surge';
     }
 
-    // 如果请求的是Base64，则作为回调，聚合所有节点并返回
     if (targetFormat === 'base64') {
+        // ... 此处省略 base64 的处理逻辑，与您文件中的版本保持一致 ...
         const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
         const enabledMisubs = misubs.filter(sub => sub.enabled);
         let manualNodes = '';
@@ -139,10 +148,7 @@ async function handleMisubRequest(context) {
         const subPromises = httpSubs.map(async (sub) => {
             try {
                 const requestHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
-                const response = await Promise.race([
-                    fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
-                ]);
+                const response = await Promise.race([ fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })), new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))]);
                 if (!response.ok) return '';
                 let text = await response.text();
                 try {
@@ -156,35 +162,22 @@ async function handleMisubRequest(context) {
                 } catch (e) {}
                 const cleanText = text.replace(/\r\n/g, '\n');
                 if (config.prependSubName && sub.name) {
-                    return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => {
-                        const hashIndex = node.lastIndexOf('#');
-                        if (hashIndex === -1) return `${node}#${encodeURIComponent(sub.name)}`;
-                        const baseLink = node.substring(0, hashIndex);
-                        const originalName = decodeURIComponent(node.substring(hashIndex + 1));
-                        if (originalName.startsWith(sub.name)) return node;
-                        return `${baseLink}#${encodeURIComponent(`${sub.name} - ${originalName}`)}`;
-                    }).join('\n');
+                    return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => prependNodeName(node, sub.name)).join('\n');
                 }
                 return cleanText;
             } catch (e) { return ''; }
         });
-        
+
         const processedSubContents = await Promise.all(subPromises);
         const combinedContent = (manualNodes + processedSubContents.join('\n'));
         const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
         const base64Content = btoa(unescape(encodeURIComponent(uniqueNodes.join('\n'))));
-        
-        const headers = {
-            "Content-Type": "text/plain; charset=utf-8",
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-        };
+
+        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate', 'Pragma': 'no-cache', 'Expires': '0' };
         return new Response(base64Content, { headers });
     }
 
-    // 如果是其他格式，则由后端代理请求subconverter
-    const callbackUrl = `${url.protocol}//${url.host}/sub?token=${config.mytoken}&target=base64`;
+    const callbackUrl = `<span class="math-inline">\{url\.protocol\}//</span>{url.host}/${config.mytoken}?target=base64`; // [修改] 回调URL也使用新格式
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', callbackUrl);
@@ -194,27 +187,16 @@ async function handleMisubRequest(context) {
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
             method: 'GET',
-            headers: { 'User-Agent': userAgentHeader },
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' },
             cf: { insecureSkipVerify: true }
         });
-        
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
-
-        // 成功时，直接返回从 subconverter 获取到的响应
         return new Response(subconverterResponse.body, subconverterResponse);
-
     } catch (error) {
-        // [核心修正] 异常处理模块
-        console.error("Failed to fetch from subconverter:", error);
-        const errorHeaders = {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-        };
+        const errorHeaders = { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate", "Pragma": "no-cache", "Expires": "0" };
         return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502, headers: errorHeaders });
     }
 }
