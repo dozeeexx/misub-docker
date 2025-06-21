@@ -57,3 +57,31 @@ export function extractNodeName(url) {
         }
     } catch (e) { return url.substring(0, 50); }
 }
+
+/**
+ * 为节点链接添加名称前缀
+ * @param {string} link - 原始节点链接
+ * @param {string} prefix - 要添加的前缀 (通常是订阅名)
+ * @returns {string} - 添加了前缀的新链接
+ */
+export function prependNodeName(link, prefix) {
+  if (!prefix) return link; // 如果没有前缀，直接返回原链接
+
+  const hashIndex = link.lastIndexOf('#');
+  
+  // 如果链接没有 #fragment
+  if (hashIndex === -1) {
+    return `${link}#${encodeURIComponent(prefix)}`;
+  }
+
+  const baseLink = link.substring(0, hashIndex);
+  const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+  
+  // 如果原始名称已经包含了前缀，则不再重复添加
+  if (originalName.startsWith(prefix)) {
+      return link;
+  }
+
+  const newName = `${prefix} - ${originalName}`;
+  return `${baseLink}#${encodeURIComponent(newName)}`;
+}

@@ -1,5 +1,3 @@
-import yaml from 'js-yaml';
-
 // --- 全局常量 ---
 const KV_KEY_MAIN = 'misub_data_v1';
 const KV_KEY_SETTINGS = 'worker_settings_v1';
@@ -8,13 +6,12 @@ const SESSION_DURATION = 8 * 60 * 60 * 1000;
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  BotToken: '',
-  ChatID: '',
-  subConverter: 'subapi.cmliussss.com',
-  subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini'
+  subConverter: 'api.v1.mk',
+  subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
+  prependSubName: true
 };
 
-// --- 核心工具函数 (身份验证) ---
+// --- 认证相关的核心工具函数 ---
 async function createSignedToken(key, data) {
     if (!key || !data) throw new Error("Key and data are required for signing.");
     const encoder = new TextEncoder();
@@ -24,7 +21,6 @@ async function createSignedToken(key, data) {
     const signature = await crypto.subtle.sign('HMAC', cryptoKey, dataToSign);
     return `${data}.${Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('')}`;
 }
-
 async function verifySignedToken(key, token) {
     if (!key || !token) return null;
     const parts = token.split('.');
@@ -33,7 +29,6 @@ async function verifySignedToken(key, token) {
     const expectedToken = await createSignedToken(key, data);
     return token === expectedToken ? data : null;
 }
-
 async function authMiddleware(request, env) {
     if (!env.COOKIE_SECRET) return false;
     const cookie = request.headers.get('Cookie');
@@ -48,13 +43,9 @@ async function authMiddleware(request, env) {
 async function handleApiRequest(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
-
     if (path !== '/login') {
-        if (!await authMiddleware(request, env)) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-        }
+        if (!await authMiddleware(request, env)) { return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }); }
     }
-
     try {
         switch (path) {
             case '/login': {
@@ -68,20 +59,17 @@ async function handleApiRequest(request, env) {
                 }
                 return new Response(JSON.stringify({ error: '密码错误' }), { status: 401 });
             }
-
             case '/logout': {
                 const headers = new Headers({ 'Content-Type': 'application/json' });
                 headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
-
             case '/data': {
                 const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
                 const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
                 const config = { FileName: settings.FileName || 'MISUB', mytoken: settings.mytoken || 'auto' };
                 return new Response(JSON.stringify({ misubs, config }), { headers: { 'Content-Type': 'application/json' } });
             }
-
             case '/misubs': {
                 if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
                 const { misubs } = await request.json();
@@ -89,24 +77,18 @@ async function handleApiRequest(request, env) {
                 await env.MISUB_KV.put(KV_KEY_MAIN, JSON.stringify(misubs));
                 return new Response(JSON.stringify({ success: true, message: '订阅源已保存' }));
             }
-            
             case '/node_count': {
                 if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
                 const { url: subUrl } = await request.json();
-                if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
-                    return new Response(JSON.stringify({ error: 'Invalid or missing url' }), { status: 400 });
-                }
+                if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) { return new Response(JSON.stringify({ error: 'Invalid or missing url' }), { status: 400 });}
                 const response = await fetch(new Request(subUrl, { headers: {'User-Agent': 'MiSub-Node-Counter'}, redirect: "follow" }));
                 if (!response.ok) return new Response(JSON.stringify({ count: 0 }));
-                
                 const text = await response.text();
                 let decoded = '';
                 try { decoded = atob(text.replace(/\s/g, '')); } catch (e) { decoded = text; }
-                
                 let count = (decoded.match(/^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//gm) || []).length;
                 return new Response(JSON.stringify({ count }), { headers: { 'Content-Type': 'application/json' } });
             }
-
             case '/settings': {
                 if (request.method === 'GET') {
                     const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
@@ -121,318 +103,136 @@ async function handleApiRequest(request, env) {
                 return new Response('Method Not Allowed', { status: 405 });
             }
         }
-    } catch (e) {
-        console.error(`API Error in path ${path}:`, e);
-        return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 });
-    }
+    } catch (e) { return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 }); }
     return new Response('API route not found', { status: 404 });
 }
 
-// --- 订阅生成处理 ---
-async function handleMisubRequest(request, env) {
+// [最终版] “后端代理”模式的订阅处理函数
+async function handleMisubRequest(context) {
+    const { request, env } = context;
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
+    
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = { ...defaultSettings, ...kv_settings };
-    
-    // 认证
-    const token = url.searchParams.get('token');
+
+    // 兼容路径和参数两种Token验证方式
+    let token = '';
+    const pathSegments = url.pathname.split('/').filter(Boolean);
+    if (pathSegments.length > 0 && pathSegments[0] !== 'sub') {
+        token = pathSegments[0];
+    } else {
+        token = url.searchParams.get('token');
+    }
+
     if (!token || token !== config.mytoken) {
         return new Response('Invalid token', { status: 403 });
     }
 
-    // 获取和合并订阅
-    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
-    const enabledMisubs = misubs.filter(sub => sub.enabled);
-    let urls = [], manualNodes = '';
-    for (const sub of enabledMisubs) {
-        if (sub.url.toLowerCase().startsWith('http')) urls.push(sub.url);
-        else manualNodes += sub.url + '\n';
-    }
-    
-    let subContent = '';
-    if (urls.length > 0) {
-        const responses = await Promise.allSettled(urls.map(apiUrl => fetch(new Request(apiUrl, { headers: {'User-Agent': `MiSub-Fetcher`}, redirect: "follow"})).then(res => res.ok ? res.text() : Promise.reject())));
-        for (const response of responses) {
-            if (response.status === 'fulfilled') {
-                const text = response.value;
-                if (text.includes('://')) { subContent += text + '\n'; }
-                else { try { subContent += atob(text.replace(/\s/g, '')) + '\n'; } catch (e) {} }
-            }
-        }
-    }
-    
-    const combinedContent = (manualNodes + subContent).split('\n').filter(line => line.trim()).join('\n');
-    const base64Data = btoa(unescape(encodeURIComponent(combinedContent)));
-    
-    // 根据UA或参数决定输出格式
-    let targetFormat = 'base64';
-    const ua = userAgentHeader.toLowerCase();
-    const urlTarget = url.searchParams.get('target');
-
-    if (urlTarget) {
-        targetFormat = urlTarget;
-    } else {
+    // 根据客户端UA或URL参数，决定最终输出格式
+    let targetFormat = url.searchParams.get('target') || 'base64';
+    if (!url.searchParams.has('target')) {
+        const ua = userAgentHeader.toLowerCase();
         if (ua.includes('clash')) targetFormat = 'clash';
-        else if (ua.includes('sing-box') || ua.includes('singbox')) targetFormat = 'singbox';
-        else if (ua.includes('surge')) targetFormat = 'surge';
     }
-    
-    // 直接返回 Base64
+
+    // 如果客户端请求的是Base64，则作为回调，聚合所有节点并返回
     if (targetFormat === 'base64') {
-        return new Response(base64Data, { headers: { "content-type": "text/plain; charset=utf-8" } });
+        const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
+        const enabledMisubs = misubs.filter(sub => sub.enabled);
+        let manualNodes = '';
+        const httpSubs = enabledMisubs.filter(sub => sub.url.toLowerCase().startsWith('http') ? true : (manualNodes += sub.url + '\n', false));
+
+        const subPromises = httpSubs.map(async (sub) => {
+            try {
+                const requestHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
+                const response = await Promise.race([
+                    fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
+                ]);
+                if (!response.ok) return '';
+                let text = await response.text();
+                try {
+                    const cleanedText = text.replace(/\s/g, '');
+                    if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
+                        const binaryString = atob(cleanedText);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                        text = new TextDecoder('utf-8').decode(bytes);
+                    }
+                } catch (e) {}
+                const cleanText = text.replace(/\r\n/g, '\n');
+                if (config.prependSubName && sub.name) {
+                    return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => prependNodeName(node, sub.name)).join('\n');
+                }
+                return cleanText;
+            } catch (e) { return ''; }
+        });
+        
+        const processedSubContents = await Promise.all(subPromises);
+        const combinedContent = (manualNodes + processedSubContents.join('\n'));
+        const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
+        const base64Content = btoa(unescape(encodeURIComponent(uniqueNodes.join('\n'))));
+        
+        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate', 'Pragma': 'no-cache', 'Expires': '0' };
+        return new Response(base64Content, { headers });
     }
 
-    // --- 内置转换逻辑 ---
-    let convertedContent = '';
-    let fileExtension = 'txt';
+    // 如果是其他格式，则由后端代理请求subconverter
+    const callbackUrl = `${url.protocol}//${url.host}/${config.mytoken}?target=base64`;
+    const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
+    subconverterUrl.searchParams.set('target', targetFormat);
+    subconverterUrl.searchParams.set('url', callbackUrl);
+    subconverterUrl.searchParams.set('config', config.subConfig);
+    subconverterUrl.searchParams.set('new_name', 'false');
 
-    if (targetFormat === 'clash') {
-        convertedContent = generateClashConfig(combinedContent);
-        fileExtension = 'yaml';
-    } else { // 为所有其他格式提供一个基础的、未转换的占位符
-        convertedContent = `# ${targetFormat} conversion is not fully implemented yet.\n# Raw nodes:\n${combinedContent}`;
-        fileExtension = 'txt';
-    }
-
-    // 返回转换后的配置文件
-    return new Response(convertedContent, {
-        headers: {
-            "Content-Disposition": `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}.${fileExtension}`,
-            "content-type": "text/plain; charset=utf-8",
+    try {
+        const subconverterResponse = await fetch(subconverterUrl.toString(), {
+            method: 'GET',
+            // [最终修正] 无论原始请求是什么，在请求subconverter时，都伪装成标准浏览器
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' },
+            cf: { insecureSkipVerify: true }
+        });
+        
+        if (!subconverterResponse.ok) {
+            const errorBody = await subconverterResponse.text();
+            throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
-    });
+        return new Response(subconverterResponse.body, subconverterResponse);
+    } catch (error) {
+        const errorHeaders = { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-cache", "Pragma": "no-cache", "Expires": "0" };
+        return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502, headers: errorHeaders });
+    }
 }
 
-// --- Cloudflare Pages Functions 入口 ---
+// --- Cloudflare Pages Functions 主入口 ---
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
     try {
         if (url.pathname.startsWith('/api/')) return handleApiRequest(request, env);
-        if (url.pathname === '/sub') return handleMisubRequest(request, env);
+        if (url.pathname.startsWith('/sub') || (url.pathname !== '/' && !url.pathname.includes('.') && !url.pathname.startsWith('/assets'))) {
+            return handleMisubRequest(context);
+        }
         return next();
     } catch (e) {
         console.error("Critical error in onRequest:", e);
-        if (e instanceof Error) {
-            return new Response(e.message, { status: 500 });
-        }
         return new Response("Internal Server Error", { status: 500 });
     }
 }
 
-// --- [新增] 内置订阅转换逻辑 ---
-
-/**
- * 解析单个节点链接 - v3 (Hysteria2, TUIC, REALITY 支持)
- * @param {string} link 
- * @returns {object|null}
- */
-function parseNodeLink(link) {
-    if (link.startsWith('vmess://')) {
-        try {
-            const decoded = JSON.parse(atob(link.substring(8)));
-            return {
-                protocol: 'vmess',
-                name: decoded.ps || decoded.add,
-                server: decoded.add,
-                port: decoded.port,
-                uuid: decoded.id,
-                alterId: decoded.aid,
-                cipher: decoded.scy || 'auto',
-                network: decoded.net,
-                type: decoded.type,
-                host: decoded.host,
-                path: decoded.path,
-                tls: decoded.tls === 'tls',
-                sni: decoded.sni || decoded.host,
-            };
-        } catch (e) { return null; }
-    }
-    if (link.startsWith('vless://') || link.startsWith('trojan://')) {
-        try {
-            const url = new URL(link);
-            const params = new URLSearchParams(url.search);
-            return {
-                protocol: url.protocol.replace(':', ''),
-                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
-                server: url.hostname,
-                port: url.port,
-                uuid: url.username,
-                password: url.username, // for Trojan
-                sni: params.get('sni') || url.hostname,
-                udp: true,
-                tls: params.get('security') === 'tls' || params.get('security') === 'reality',
-                // [新增] REALITY 参数
-                security: params.get('security'),
-                publicKey: params.get('pbk'),
-                shortId: params.get('sid'),
-                fingerprint: params.get('fp'),
-                // 传输参数
-                network: params.get('type'),
-                serviceName: params.get('serviceName'),
-                mode: params.get('mode'),
-                path: params.get('path'),
-                host: params.get('host'),
-            };
-        } catch (e) { return null; }
-    }
-    if (link.startsWith('ss://')) {
-        try {
-            const url = new URL(link);
-            const hashName = decodeURIComponent(url.hash).substring(1);
-            // 修正SS链接解析
-            const b64info = url.pathname.substring(2);
-            const decodedInfo = atob(b64info);
-            const [cipher, password] = decodedInfo.split(':');
-            return {
-                protocol: 'ss',
-                name: hashName || url.hostname,
-                server: url.hostname,
-                port: url.port,
-                cipher: cipher,
-                password: password,
-            };
-        } catch (e) { return null; }
-    }
-    // [新增] Hysteria2 解析
-    if (link.startsWith('hy2://') || link.startsWith('hysteria2://')) {
-        try {
-            const url = new URL(link);
-            const params = new URLSearchParams(url.search);
-            return {
-                protocol: 'hysteria2',
-                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
-                server: url.hostname,
-                port: url.port,
-                password: url.username,
-                sni: params.get('sni') || url.hostname,
-                insecure: params.get('insecure') === '1' || params.get('skip-cert-verify') === 'true',
-            };
-        } catch (e) { return null; }
-    }
-    // [新增] TUIC v5 解析
-    if (link.startsWith('tuic://')) {
-         try {
-            const url = new URL(link);
-            const params = new URLSearchParams(url.search);
-            const [uuid, password] = url.username.split(':');
-            return {
-                protocol: 'tuic',
-                name: decodeURIComponent(url.hash).substring(1) || url.hostname,
-                server: url.hostname,
-                port: url.port,
-                uuid: uuid,
-                password: password,
-                sni: params.get('sni') || url.hostname,
-                insecure: params.get('allow_insecure') === '1' || params.get('skip-cert-verify') === 'true',
-                'udp-relay-mode': params.get('udp_relay_mode') || 'native',
-                alpn: params.get('alpn'),
-            };
-        } catch (e) { return null; }
-    }
-    return null;
-}
-
-/**
- * 根据节点列表生成一个功能完备的Clash配置文件 - v4 (最终版)
- * @param {string} nodesString
- * @returns {string}
- */
-function generateClashConfig(nodesString) {
-    const proxies = nodesString.split('\n')
-        .map(link => parseNodeLink(link.trim()))
-        .filter(Boolean); 
-
-    if (proxies.length === 0) return yaml.dump({ 'proxies': [] });
-
-    const proxyDetails = proxies.map(p => {
-        let entry = {
-            name: p.name,
-            type: p.protocol,
-            server: p.server,
-            port: p.port,
-        };
-
-        switch (p.protocol) {
-            case 'vmess':
-            case 'vless':
-                entry.uuid = p.uuid;
-                entry.udp = true;
-                entry.tls = p.tls;
-                entry.servername = p.sni;
-                entry['client-fingerprint'] = p.fingerprint || 'chrome';
-                
-                // [修改] VLESS-REALITY 支持
-                if (p.security === 'reality') {
-                    entry['reality-opts'] = {
-                        'public-key': p.publicKey,
-                        'short-id': p.shortId || ''
-                    };
-                }
-                
-                if (p.network === 'ws') {
-                    entry.network = 'ws';
-                    entry['ws-opts'] = {
-                        path: p.path || '/',
-                        headers: { Host: p.host || p.server }
-                    };
-                }
-                if (p.protocol === 'vmess') {
-                    entry.cipher = p.cipher || 'auto';
-                    entry.alterId = p.alterId || 0;
-                }
-                break;
-            case 'trojan':
-                entry.password = p.password;
-                entry.sni = p.sni;
-                entry.udp = true;
-                break;
-            case 'ss':
-                entry.cipher = p.cipher;
-                entry.password = p.password;
-                break;
-            case 'ssr':
-                 // ... ssr case from previous step ...
-                break;
-            // [新增] Hysteria2 支持
-            case 'hysteria2':
-                entry.type = 'hy2'; // 在Clash中类型为hy2
-                entry.password = p.password;
-                entry.sni = p.sni;
-                entry['skip-cert-verify'] = p.insecure;
-                break;
-            // [新增] TUIC 支持
-            case 'tuic':
-                entry.type = 'tuic'; // 在Clash中类型为tuic
-                entry.uuid = p.uuid;
-                entry.password = p.password;
-                entry.sni = p.sni;
-                entry['skip-cert-verify'] = p.insecure;
-                entry['udp-relay-mode'] = p['udp-relay-mode'];
-                if (p.alpn) entry.alpn = [p.alpn];
-                break;
-        }
-        return entry;
-    });
-
-    const configObject = {
-        'port': 7890,
-        'socks-port': 7891,
-        'allow-lan': false,
-        'mode': 'Rule',
-        'log-level': 'info',
-        'external-controller': '127.0.0.1:9090',
-        'proxies': proxyDetails,
-        'proxy-groups': [{
-            name: "PROXY",
-            type: 'select',
-            proxies: proxies.map(p => p.name)
-        }],
-        'rules': [
-            'MATCH,PROXY'
-        ]
-    };
-
-    return yaml.dump(configObject);
+// --- [必需] 名称前缀辅助函数 ---
+function prependNodeName(link, prefix) {
+  if (!prefix) return link;
+  const hashIndex = link.lastIndexOf('#');
+  if (hashIndex === -1) {
+    return `${link}#${encodeURIComponent(prefix)}`;
+  }
+  const baseLink = link.substring(0, hashIndex);
+  const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+  if (originalName.startsWith(prefix)) {
+      return link;
+  }
+  const newName = `${prefix} - ${originalName}`;
+  return `${baseLink}#${encodeURIComponent(newName)}`;
 }
