@@ -6,12 +6,12 @@ const SESSION_DURATION = 8 * 60 * 60 * 1000;
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  subConverter: 'api.v1.mk',
+  subConverter: 'subapi.cmliussss.com', // 推荐使用一个兼容性好的服务
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true
 };
 
-// --- 认证相关的核心工具函数 ---
+// --- 认证与API处理的核心函数 ---
 async function createSignedToken(key, data) {
     if (!key || !data) throw new Error("Key and data are required for signing.");
     const encoder = new TextEncoder();
@@ -38,8 +38,6 @@ async function authMiddleware(request, env) {
     const verifiedData = await verifySignedToken(env.COOKIE_SECRET, token);
     return verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
 }
-
-// --- API 请求处理 ---
 async function handleApiRequest(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
@@ -107,12 +105,12 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版] “后端代理”模式的订阅处理函数
+// [最终版] 增加了对不规范Clash配置的自动纠错功能
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
-    
+
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = { ...defaultSettings, ...kv_settings };
 
@@ -124,25 +122,22 @@ async function handleMisubRequest(context) {
     } else {
         token = url.searchParams.get('token');
     }
-
     if (!token || token !== config.mytoken) {
         return new Response('Invalid token', { status: 403 });
     }
 
-    // 根据客户端UA或URL参数，决定最终输出格式
     let targetFormat = url.searchParams.get('target') || 'base64';
     if (!url.searchParams.has('target')) {
         const ua = userAgentHeader.toLowerCase();
         if (ua.includes('clash')) targetFormat = 'clash';
     }
 
-    // 如果客户端请求的是Base64，则作为回调，聚合所有节点并返回
+    // Base64 回调逻辑
     if (targetFormat === 'base64') {
         const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
         const enabledMisubs = misubs.filter(sub => sub.enabled);
         let manualNodes = '';
         const httpSubs = enabledMisubs.filter(sub => sub.url.toLowerCase().startsWith('http') ? true : (manualNodes += sub.url + '\n', false));
-
         const subPromises = httpSubs.map(async (sub) => {
             try {
                 const requestHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
@@ -163,22 +158,27 @@ async function handleMisubRequest(context) {
                 } catch (e) {}
                 const cleanText = text.replace(/\r\n/g, '\n');
                 if (config.prependSubName && sub.name) {
-                    return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => prependNodeName(node, sub.name)).join('\n');
+                    return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => {
+                        const hashIndex = node.lastIndexOf('#');
+                        if (hashIndex === -1) return `${node}#${encodeURIComponent(sub.name)}`;
+                        const baseLink = node.substring(0, hashIndex);
+                        const originalName = decodeURIComponent(node.substring(hashIndex + 1));
+                        if (originalName.startsWith(sub.name)) return node;
+                        return `${baseLink}#${encodeURIComponent(`${sub.name} - ${originalName}`)}`;
+                    }).join('\n');
                 }
                 return cleanText;
             } catch (e) { return ''; }
         });
-        
         const processedSubContents = await Promise.all(subPromises);
         const combinedContent = (manualNodes + processedSubContents.join('\n'));
         const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
         const base64Content = btoa(unescape(encodeURIComponent(uniqueNodes.join('\n'))));
-        
-        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate', 'Pragma': 'no-cache', 'Expires': '0' };
+        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
     }
 
-    // 如果是其他格式，则由后端代理请求subconverter
+    // Clash 等其他格式的代理逻辑
     const callbackUrl = `${url.protocol}//${url.host}/${config.mytoken}?target=base64`;
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
@@ -189,19 +189,34 @@ async function handleMisubRequest(context) {
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
             method: 'GET',
-            // [最终修正] 无论原始请求是什么，在请求subconverter时，都伪装成标准浏览器
             headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' },
             cf: { insecureSkipVerify: true }
         });
-        
+
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
-        return new Response(subconverterResponse.body, subconverterResponse);
+
+        // [核心修正] 拦截并修正不规范的YAML内容
+        let originalText = await subconverterResponse.text();
+        const correctedText = originalText
+            .replace(/^Proxy:/m, 'proxies:')
+            .replace(/^Proxy Group:/m, 'proxy-groups:')
+            .replace(/^Rule:/m, 'rules:');
+
+        const responseHeaders = new Headers(subconverterResponse.headers);
+        responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
+        responseHeaders.set('Cache-Control', 'no-store, no-cache');
+        
+        return new Response(correctedText, {
+            status: subconverterResponse.status,
+            statusText: subconverterResponse.statusText,
+            headers: responseHeaders
+        });
+
     } catch (error) {
-        const errorHeaders = { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-cache", "Pragma": "no-cache", "Expires": "0" };
-        return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502, headers: errorHeaders });
+        return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502 });
     }
 }
 
@@ -219,20 +234,4 @@ export async function onRequest(context) {
         console.error("Critical error in onRequest:", e);
         return new Response("Internal Server Error", { status: 500 });
     }
-}
-
-// --- [必需] 名称前缀辅助函数 ---
-function prependNodeName(link, prefix) {
-  if (!prefix) return link;
-  const hashIndex = link.lastIndexOf('#');
-  if (hashIndex === -1) {
-    return `${link}#${encodeURIComponent(prefix)}`;
-  }
-  const baseLink = link.substring(0, hashIndex);
-  const originalName = decodeURIComponent(link.substring(hashIndex + 1));
-  if (originalName.startsWith(prefix)) {
-      return link;
-  }
-  const newName = `${prefix} - ${originalName}`;
-  return `${baseLink}#${encodeURIComponent(newName)}`;
 }
