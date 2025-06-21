@@ -3,7 +3,7 @@
 // Clash 格式的 fallback 配置（纯字符串）
 export const FALLBACK_CLASH = `
 export const FALLBACK_CLASH = `
-# Fallback Clash Config
+// Fallback Clash Config
 proxies:
   - name: "Fallback-Proxy"
     type: vmess
