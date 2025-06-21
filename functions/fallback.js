@@ -49,7 +49,7 @@ export const FALLBACK_SINGBOX = btoa(
       }
     ]
   }
-}`.trim())
+}`.trim()))
 );
 
 // Base64 格式的 fallback 节点（订阅格式）
@@ -59,5 +59,4 @@ vmess://ewogICJuYW1lIjogIkZhbGxiYWNrIFZNUyBQcm94eSIsCiAgInNlcnZlciI6ICJleGFtcGxl
 
 ss://cmM0LW1kNTpwYXNzd2Q@1.1.1.1:8443#Fallback_SS_Node
 trojan://test@example.com:443?security=tls&sni=example.com&fp=random&type=tcp&headerType=none#Fallback_Trojan_Node
-`.trim()))
-);
+`.trim())));
