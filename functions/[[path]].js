@@ -171,6 +171,7 @@ async function generateCombinedNodeList(context, config) {
     return uniqueNodes.join('\n');
 }
 
+// 请只替换 handleMisubRequest 这一个函数
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -179,6 +180,7 @@ async function handleMisubRequest(context) {
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = { ...defaultSettings, ...kv_settings };
 
+    // 令牌验证逻辑 (与之前相同)
     let token = '';
     const pathSegments = url.pathname.split('/').filter(Boolean);
     if (pathSegments.length > 0 && pathSegments[0] !== 'sub') {
@@ -190,6 +192,7 @@ async function handleMisubRequest(context) {
         return new Response('Invalid token', { status: 403 });
     }
 
+    // 格式判断逻辑 (与之前相同)
     let targetFormat = url.searchParams.get('target') || 'base64';
     if (!url.searchParams.has('target')) {
         const ua = userAgentHeader.toLowerCase();
@@ -197,50 +200,90 @@ async function handleMisubRequest(context) {
         if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
-    const combinedNodeList = await generateCombinedNodeList(context, config);
+    // --- 核心架构重写：模仿 CF-Workers-SUB 的成功模式 ---
 
-    if (targetFormat === 'base64') {
-        const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
-        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
-        return new Response(base64Content, { headers });
+    // 1. 从 KV 中获取所有订阅项
+    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
+    const enabledMisubs = misubs.filter(sub => sub.enabled);
+
+    // 2. 分离手动节点和订阅链接
+    let manualNodes = '';
+    const subLinks = [];
+    for (const sub of enabledMisubs) {
+        if (sub.url.toLowerCase().startsWith('http')) {
+            subLinks.push(sub.url);
+        } else {
+            manualNodes += sub.url + '\n';
+        }
     }
     
-    if (!config.subConverter) {
-        return new Response("Subconverter backend is not configured.", { status: 500 });
+    // 3. 将手动节点内容进行 Base64 编码，作为回调的基础
+    const manualNodesBase64 = btoa(unescape(encodeURIComponent(manualNodes)));
+    // 创建一个只包含手动节点的回调 URL
+    const callbackUrl = `${url.protocol}//${url.host}/sub?token=${token}&target=base64_callback_for_manual_nodes`;
+
+    // 4. 将回调 URL 和所有其他订阅链接合并成一个清单
+    let finalUrlList = [callbackUrl, ...subLinks].join('|');
+
+    // 特殊处理：当请求是 base64_callback_for_manual_nodes 时，只返回手动节点
+    if (targetFormat === 'base64_callback_for_manual_nodes') {
+        return new Response(manualNodesBase64);
     }
 
+    // 5. 如果最终目标是 base64，则需要下载所有内容并合并
+    if (targetFormat === 'base64') {
+        const subPromises = subLinks.map(link => 
+            fetch(link, { headers: { 'User-Agent': userAgentHeader }})
+            .then(res => res.ok ? res.text() : '')
+            .catch(() => '')
+        );
+        const subContents = await Promise.all(subPromises);
+        let allNodes = manualNodes;
+        subContents.forEach(content => {
+             try {
+                // 尝试解码可能的base64内容
+                const decoded = atob(content.replace(/\s/g, ''));
+                allNodes += decoded + '\n';
+             } catch(e) {
+                allNodes += content + '\n';
+             }
+        });
+        const uniqueNodes = [...new Set(allNodes.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
+        const base64Content = btoa(unescape(encodeURIComponent(uniqueNodes)));
+        return new Response(base64Content, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    }
+    
+    // 6. 对于 Clash 等格式，将 URL 清单发送给 subconverter
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
+    subconverterUrl.searchParams.set('url', finalUrlList);
     subconverterUrl.searchParams.set('config', config.subConfig);
-    subconverterUrl.searchParams.set('new_name', 'false');
+    // 添加一些在 CF-Workers-SUB 中使用的、可能有用的参数
+    subconverterUrl.searchParams.set('new_name', 'true');
+    subconverterUrl.searchParams.set('emoji', 'true');
+    subconverterUrl.searchParams.set('scv', 'true');
 
     try {
-        const subconverterResponse = await fetch(subconverterUrl.toString(), {
-            method: 'POST',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-                'Content-Type': 'text/plain; charset=utf-8'
-            },
-            body: combinedNodeList,
-            cf: { insecureSkipVerify: true }
-        });
+        const subconverterResponse = await fetch(subconverterUrl.toString());
 
+        // 采用 CF-Workers-SUB 的优雅降级策略
         if (!subconverterResponse.ok) {
-            const errorBody = await subconverterResponse.text();
-            throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
+            console.error(`Subconverter failed, falling back to base64. Status: ${subconverterResponse.status}`);
+            // 触发一次 base64 的生成并返回
+            return handleMisubRequest({
+                ...context,
+                request: new Request(`${url.protocol}//${url.host}/sub?token=${token}&target=base64`, request)
+            });
         }
 
-        let originalText = await subconverterResponse.text();
-        const correctedText = originalText
-            .replace(/^Proxy:/m, 'proxies:')
-            .replace(/^Proxy Group:/m, 'proxy-groups:')
-            .replace(/^Rule:/m, 'rules:');
-
+        const subconverterContent = await subconverterResponse.text();
         const responseHeaders = new Headers(subconverterResponse.headers);
+
+        responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
-        
-        return new Response(correctedText, {
+
+        return new Response(subconverterContent, {
             status: subconverterResponse.status,
             statusText: subconverterResponse.statusText,
             headers: responseHeaders
@@ -248,7 +291,11 @@ async function handleMisubRequest(context) {
 
     } catch (error) {
         console.error(`[MiSub Final Error] ${error.message}`);
-        return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502 });
+        // 最终的降级策略
+        return handleMisubRequest({
+            ...context,
+            request: new Request(`${url.protocol}//${url.host}/sub?token=${token}&target=base64`, request)
+        });
     }
 }
 
