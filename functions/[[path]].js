@@ -164,7 +164,7 @@ async function handleMisubRequest(context) {
                         const baseLink = node.substring(0, hashIndex);
                         const originalName = decodeURIComponent(node.substring(hashIndex + 1));
                         if (originalName.startsWith(sub.name)) return node;
-                        return `${baseLink}#${encodeURIComponent(`${sub.name} - ${originalName}`)}`;
+                        return `${baseLink}#${encodeURIComponent(`${sub.name} | ${originalName}`)}`;
                     }).join('\n');
                 }
                 return cleanText;
