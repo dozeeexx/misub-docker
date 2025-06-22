@@ -206,12 +206,19 @@ async function handleMisubRequest(context) {
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
 
-    // 2. 分离手动节点和订阅链接
+    // 2. 分离手动节点和订阅链接，并按需添加 subconverter 可识别的前缀标签
     let manualNodes = '';
     const subLinks = [];
     for (const sub of enabledMisubs) {
         if (sub.url.toLowerCase().startsWith('http')) {
-            subLinks.push(sub.url);
+            // 如果开启了前缀功能，并且该订阅有名称
+            if (config.prependSubName && sub.name) {
+                // 为订阅链接添加 #sub=... 标签
+                subLinks.push(`${sub.url}#sub=${encodeURIComponent(sub.name)}`);
+            } else {
+                // 否则，使用原始链接
+                subLinks.push(sub.url);
+            }
         } else {
             manualNodes += sub.url + '\n';
         }
