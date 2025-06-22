@@ -6,12 +6,13 @@ const SESSION_DURATION = 8 * 60 * 60 * 1000;
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  subConverter: 'subapi.cmliussss.com', // 推荐使用一个兼容性好的服务
+  // [最终修正] 修正为正确的、能正常工作的 subconverter 后端地址
+  subConverter: 'SUBAPI.cmliussss.net', 
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true
 };
 
-// --- 认证与API处理的核心函数 (这部分未作修改) ---
+// --- 认证与API处理的核心函数 (无修改) ---
 async function createSignedToken(key, data) {
     if (!key || !data) throw new Error("Key and data are required for signing.");
     const encoder = new TextEncoder();
@@ -105,25 +106,14 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-
-// --- 核心重构部分 ---
-
-/**
- * [新增的辅助函数]
- * 该函数负责抓取所有启用的订阅和手动节点，
- * 清理节点名称，并返回一个合并后的、纯文本的节点链接列表。
- * 这是实现“直接提交模式”的关键。
- */
 async function generateCombinedNodeList(context, config) {
     const { env } = context;
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
     let manualNodes = '';
     
-    // 筛选出 HTTP 订阅和手动节点
     const httpSubs = enabledMisubs.filter(sub => sub.url.toLowerCase().startsWith('http') ? true : (manualNodes += sub.url + '\n', false));
     
-    // 并行抓取所有 HTTP 订阅内容
     const subPromises = httpSubs.map(async (sub) => {
         try {
             const requestHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
@@ -135,7 +125,6 @@ async function generateCombinedNodeList(context, config) {
             
             let text = await response.text();
             
-            // 尝试解码 Base64 订阅
             try {
                 const cleanedText = text.replace(/\s/g, '');
                 if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
@@ -148,7 +137,6 @@ async function generateCombinedNodeList(context, config) {
             
             const cleanText = text.replace(/\r\n/g, '\n');
 
-            // [核心修正] 统一处理所有节点，清理名称后再按需添加前缀
             return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => {
                 const hashIndex = node.lastIndexOf('#');
                 if (hashIndex === -1) {
@@ -160,11 +148,9 @@ async function generateCombinedNodeList(context, config) {
                 const baseLink = node.substring(0, hashIndex);
                 let name = decodeURIComponent(node.substring(hashIndex + 1));
                 
-                // 清理逻辑：移除 "前缀 - " 格式，避免干扰 subconverter 解析
                 const cleanedName = name.replace(/^.*?\s-\s/, '').trim();
                 name = cleanedName || name;
                 
-                // 按需附加订阅名
                 if (config.prependSubName && sub.name && !name.startsWith(sub.name)) {
                     name = `${sub.name} - ${name}`;
                 }
@@ -182,16 +168,9 @@ async function generateCombinedNodeList(context, config) {
     const combinedContent = (manualNodes + processedSubContents.join('\n'));
     const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
     
-    // 返回纯文本的节点列表，而不是 Base64
     return uniqueNodes.join('\n');
 }
 
-
-/**
- * [重构后的主处理函数]
- * 无论目标格式是什么，都先在内部生成完整的节点列表，
- * 然后再决定是直接输出 Base64，还是提交给 subconverter。
- */
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -200,7 +179,6 @@ async function handleMisubRequest(context) {
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = { ...defaultSettings, ...kv_settings };
 
-    // 兼容路径和参数两种Token验证方式
     let token = '';
     const pathSegments = url.pathname.split('/').filter(Boolean);
     if (pathSegments.length > 0 && pathSegments[0] !== 'sub') {
@@ -219,47 +197,36 @@ async function handleMisubRequest(context) {
         if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
-    // --- 逻辑重构 ---
-    // 1. 不论目标格式，首先在 Worker 内部生成完整的、合并后的节点列表（纯文本）。
     const combinedNodeList = await generateCombinedNodeList(context, config);
 
-    // 2. 如果目标是 base64，直接编码后返回。
     if (targetFormat === 'base64') {
         const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
     }
+    
+    if (!config.subConverter) {
+        return new Response("Subconverter backend is not configured.", { status: 500 });
+    }
 
-    // 3. 如果目标是 Clash 等其他格式，将合并后的节点列表作为 'url' 参数直接提交。
-    // [最终修正] 使用 POST 方法提交，以避免 URL 长度超限问题
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('config', config.subConfig);
     subconverterUrl.searchParams.set('new_name', 'false');
 
-    console.log("--- [MiSub Debug] Combined Node List to be Sent via POST ---");
-    console.log(combinedNodeList);
-
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
-            // 核心改动 1：方法从 'GET' 变为 'POST'
             method: 'POST',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-                // 核心改动 2：告知服务器请求体是纯文本
                 'Content-Type': 'text/plain; charset=utf-8'
             },
-            // 核心改动 3：将庞大的节点列表放入请求体(body)中
             body: combinedNodeList,
             cf: { insecureSkipVerify: true }
         });
 
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
-            // 在抛出错误前，打印从 subconverter 返回的详细错误信息
-            console.error("--- [MiSub Debug] Subconverter Returned an Error ---");
-            console.error(`Status: ${subconverterResponse.status}`);
-            console.error("Body:", errorBody);
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
 
@@ -280,14 +247,12 @@ async function handleMisubRequest(context) {
         });
 
     } catch (error) {
-        // 在最终返回 502 之前，打印捕获到的完整错误
-        console.error("--- [MiSub Debug] Caught an exception during fetch ---");
-        console.error(error.message);
+        console.error(`[MiSub Final Error] ${error.message}`);
         return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502 });
     }
 }
 
-// --- Cloudflare Pages Functions 主入口 (这部分未作修改) ---
+// --- Cloudflare Pages Functions 主入口 (无修改) ---
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
