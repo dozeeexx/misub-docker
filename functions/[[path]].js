@@ -200,7 +200,6 @@ async function handleMisubRequest(context) {
         if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
-    // --- 核心架构重写：模仿 CF-Workers-SUB 的成功模式 ---
 
     // 1. 从 KV 中获取所有订阅项
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
@@ -265,15 +264,14 @@ async function handleMisubRequest(context) {
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', finalUrlList);
     subconverterUrl.searchParams.set('config', config.subConfig);
-    // 添加一些在 CF-Workers-SUB 中使用的、可能有用的参数
-    subconverterUrl.searchParams.set('new_name', 'true');
+    // subconverterUrl.searchParams.set('new_name', 'true');
     subconverterUrl.searchParams.set('emoji', 'true');
     subconverterUrl.searchParams.set('scv', 'true');
 
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString());
 
-        // 采用 CF-Workers-SUB 的优雅降级策略
+        // 采用优雅降级策略
         if (!subconverterResponse.ok) {
             console.error(`Subconverter failed, falling back to base64. Status: ${subconverterResponse.status}`);
             // 触发一次 base64 的生成并返回
