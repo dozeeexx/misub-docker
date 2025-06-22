@@ -11,7 +11,7 @@ const defaultSettings = {
   prependSubName: true
 };
 
-// --- 认证与API处理的核心函数 ---
+// --- 认证与API处理的核心函数 (这部分未作修改) ---
 async function createSignedToken(key, data) {
     if (!key || !data) throw new Error("Key and data are required for signing.");
     const encoder = new TextEncoder();
@@ -105,7 +105,93 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版] 增加了对不规范Clash配置的自动纠错功能
+
+// --- 核心重构部分 ---
+
+/**
+ * [新增的辅助函数]
+ * 该函数负责抓取所有启用的订阅和手动节点，
+ * 清理节点名称，并返回一个合并后的、纯文本的节点链接列表。
+ * 这是实现“直接提交模式”的关键。
+ */
+async function generateCombinedNodeList(context, config) {
+    const { env } = context;
+    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
+    const enabledMisubs = misubs.filter(sub => sub.enabled);
+    let manualNodes = '';
+    
+    // 筛选出 HTTP 订阅和手动节点
+    const httpSubs = enabledMisubs.filter(sub => sub.url.toLowerCase().startsWith('http') ? true : (manualNodes += sub.url + '\n', false));
+    
+    // 并行抓取所有 HTTP 订阅内容
+    const subPromises = httpSubs.map(async (sub) => {
+        try {
+            const requestHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
+            const response = await Promise.race([
+                fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
+            ]);
+            if (!response.ok) return '';
+            
+            let text = await response.text();
+            
+            // 尝试解码 Base64 订阅
+            try {
+                const cleanedText = text.replace(/\s/g, '');
+                if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
+                    const binaryString = atob(cleanedText);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                    text = new TextDecoder('utf-8').decode(bytes);
+                }
+            } catch (e) {}
+            
+            const cleanText = text.replace(/\r\n/g, '\n');
+
+            // [核心修正] 统一处理所有节点，清理名称后再按需添加前缀
+            return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => {
+                const hashIndex = node.lastIndexOf('#');
+                if (hashIndex === -1) {
+                    if (config.prependSubName && sub.name) {
+                        return `${node}#${encodeURIComponent(sub.name)}`;
+                    }
+                    return node;
+                }
+                const baseLink = node.substring(0, hashIndex);
+                let name = decodeURIComponent(node.substring(hashIndex + 1));
+                
+                // 清理逻辑：移除 "前缀 - " 格式，避免干扰 subconverter 解析
+                const cleanedName = name.replace(/^.*?\s-\s/, '').trim();
+                name = cleanedName || name;
+                
+                // 按需附加订阅名
+                if (config.prependSubName && sub.name && !name.startsWith(sub.name)) {
+                    name = `${sub.name} - ${name}`;
+                }
+                
+                return `${baseLink}#${encodeURIComponent(name)}`;
+            }).join('\n');
+
+        } catch (e) { 
+            console.error(`Failed to fetch sub: ${sub.url}`, e);
+            return ''; 
+        }
+    });
+
+    const processedSubContents = await Promise.all(subPromises);
+    const combinedContent = (manualNodes + processedSubContents.join('\n'));
+    const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
+    
+    // 返回纯文本的节点列表，而不是 Base64
+    return uniqueNodes.join('\n');
+}
+
+
+/**
+ * [重构后的主处理函数]
+ * 无论目标格式是什么，都先在内部生成完整的节点列表，
+ * 然后再决定是直接输出 Base64，还是提交给 subconverter。
+ */
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -130,59 +216,26 @@ async function handleMisubRequest(context) {
     if (!url.searchParams.has('target')) {
         const ua = userAgentHeader.toLowerCase();
         if (ua.includes('clash')) targetFormat = 'clash';
+        if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
-    // Base64 回调逻辑
+    // --- 逻辑重构 ---
+    // 1. 不论目标格式，首先在 Worker 内部生成完整的、合并后的节点列表（纯文本）。
+    const combinedNodeList = await generateCombinedNodeList(context, config);
+
+    // 2. 如果目标是 base64，直接编码后返回。
     if (targetFormat === 'base64') {
-        const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
-        const enabledMisubs = misubs.filter(sub => sub.enabled);
-        let manualNodes = '';
-        const httpSubs = enabledMisubs.filter(sub => sub.url.toLowerCase().startsWith('http') ? true : (manualNodes += sub.url + '\n', false));
-        const subPromises = httpSubs.map(async (sub) => {
-            try {
-                const requestHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
-                const response = await Promise.race([
-                    fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
-                ]);
-                if (!response.ok) return '';
-                let text = await response.text();
-                try {
-                    const cleanedText = text.replace(/\s/g, '');
-                    if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
-                        const binaryString = atob(cleanedText);
-                        const bytes = new Uint8Array(binaryString.length);
-                        for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-                        text = new TextDecoder('utf-8').decode(bytes);
-                    }
-                } catch (e) {}
-                const cleanText = text.replace(/\r\n/g, '\n');
-                if (config.prependSubName && sub.name) {
-                    return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => {
-                        const hashIndex = node.lastIndexOf('#');
-                        if (hashIndex === -1) return `${node}#${encodeURIComponent(sub.name)}`;
-                        const baseLink = node.substring(0, hashIndex);
-                        const originalName = decodeURIComponent(node.substring(hashIndex + 1));
-                        if (originalName.startsWith(sub.name)) return node;
-                        return `${baseLink}#${encodeURIComponent(`${sub.name} | ${originalName}`)}`;
-                    }).join('\n');
-                }
-                return cleanText;
-            } catch (e) { return ''; }
-        });
-        const processedSubContents = await Promise.all(subPromises);
-        const combinedContent = (manualNodes + processedSubContents.join('\n'));
-        const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
-        const base64Content = btoa(unescape(encodeURIComponent(uniqueNodes.join('\n'))));
+        const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
     }
 
-    // Clash 等其他格式的代理逻辑
-    const callbackUrl = `${url.protocol}//${url.host}/${config.mytoken}?target=base64`;
+    // 3. 如果目标是 Clash 等其他格式，将合并后的节点列表作为 'url' 参数直接提交。
+    //    这避免了使用回调地址，从而解决了 502 错误。
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
-    subconverterUrl.searchParams.set('url', callbackUrl);
+    // 关键改动：不再传递 callbackUrl，而是直接将节点列表作为参数值
+    subconverterUrl.searchParams.set('url', combinedNodeList);
     subconverterUrl.searchParams.set('config', config.subConfig);
     subconverterUrl.searchParams.set('new_name', 'false');
 
@@ -198,7 +251,6 @@ async function handleMisubRequest(context) {
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
 
-        // [核心修正] 拦截并修正不规范的YAML内容
         let originalText = await subconverterResponse.text();
         const correctedText = originalText
             .replace(/^Proxy:/m, 'proxies:')
@@ -220,7 +272,7 @@ async function handleMisubRequest(context) {
     }
 }
 
-// --- Cloudflare Pages Functions 主入口 ---
+// --- Cloudflare Pages Functions 主入口 (这部分未作修改) ---
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
