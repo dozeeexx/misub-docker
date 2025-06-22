@@ -231,18 +231,23 @@ async function handleMisubRequest(context) {
     }
 
     // 3. 如果目标是 Clash 等其他格式，将合并后的节点列表作为 'url' 参数直接提交。
-    //    这避免了使用回调地址，从而解决了 502 错误。
+    // [最终修正] 使用 POST 方法提交，以避免 URL 长度超限问题
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
-    // 关键改动：不再传递 callbackUrl，而是直接将节点列表作为参数值
-    subconverterUrl.searchParams.set('url', combinedNodeList);
     subconverterUrl.searchParams.set('config', config.subConfig);
     subconverterUrl.searchParams.set('new_name', 'false');
 
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
-            method: 'GET',
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' },
+            // 核心改动 1：方法从 'GET' 变为 'POST'
+            method: 'POST',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+                // 核心改动 2：告知服务器请求体是纯文本
+                'Content-Type': 'text/plain; charset=utf-8'
+            },
+            // 核心改动 3：将庞大的节点列表放入请求体(body)中
+            body: combinedNodeList,
             cf: { insecureSkipVerify: true }
         });
 
