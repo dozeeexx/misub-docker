@@ -237,6 +237,9 @@ async function handleMisubRequest(context) {
     subconverterUrl.searchParams.set('config', config.subConfig);
     subconverterUrl.searchParams.set('new_name', 'false');
 
+    console.log("--- [MiSub Debug] Combined Node List to be Sent via POST ---");
+    console.log(combinedNodeList);
+
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
             // 核心改动 1：方法从 'GET' 变为 'POST'
@@ -253,6 +256,10 @@ async function handleMisubRequest(context) {
 
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
+            // 在抛出错误前，打印从 subconverter 返回的详细错误信息
+            console.error("--- [MiSub Debug] Subconverter Returned an Error ---");
+            console.error(`Status: ${subconverterResponse.status}`);
+            console.error("Body:", errorBody);
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
 
@@ -273,6 +280,9 @@ async function handleMisubRequest(context) {
         });
 
     } catch (error) {
+        // 在最终返回 502 之前，打印捕获到的完整错误
+        console.error("--- [MiSub Debug] Caught an exception during fetch ---");
+        console.error(error.message);
         return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502 });
     }
 }
