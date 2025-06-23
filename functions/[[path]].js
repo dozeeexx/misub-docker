@@ -6,8 +6,7 @@ const SESSION_DURATION = 8 * 60 * 60 * 1000;
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  // [最终修正] 修正为正确的、能正常工作的 subconverter 后端地址
-  subConverter: 'SUBAPI.cmliussss.net', 
+  subConverter: 'subapi.sam.us.kg', 
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true
 };
@@ -180,7 +179,6 @@ async function handleMisubRequest(context) {
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = { ...defaultSettings, ...kv_settings };
 
-    // 令牌验证逻辑 (与之前相同)
     let token = '';
     const pathSegments = url.pathname.split('/').filter(Boolean);
     if (pathSegments.length > 0 && pathSegments[0] !== 'sub') {
@@ -192,7 +190,6 @@ async function handleMisubRequest(context) {
         return new Response('Invalid token', { status: 403 });
     }
 
-    // 格式判断逻辑 (与之前相同)
     let targetFormat = url.searchParams.get('target') || 'base64';
     if (!url.searchParams.has('target')) {
         const ua = userAgentHeader.toLowerCase();
@@ -200,22 +197,16 @@ async function handleMisubRequest(context) {
         if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
-
-    // 1. 从 KV 中获取所有订阅项
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
 
-    // 2. 分离手动节点和订阅链接，并按需添加 subconverter 可识别的前缀标签
     let manualNodes = '';
     const subLinks = [];
     for (const sub of enabledMisubs) {
         if (sub.url.toLowerCase().startsWith('http')) {
-            // 如果开启了前缀功能，并且该订阅有名称
             if (config.prependSubName && sub.name) {
-                // 为订阅链接添加 #sub=... 标签
                 subLinks.push(`${sub.url}#sub=${encodeURIComponent(sub.name)}`);
             } else {
-                // 否则，使用原始链接
                 subLinks.push(sub.url);
             }
         } else {
@@ -223,62 +214,43 @@ async function handleMisubRequest(context) {
         }
     }
     
-    // 3. 将手动节点内容进行 Base64 编码，作为回调的基础
-    const manualNodesBase64 = btoa(unescape(encodeURIComponent(manualNodes)));
-    // 创建一个只包含手动节点的回调 URL
+    // 创建一个特殊的回调 URL，专门用于处理手动节点
     const callbackUrl = `${url.protocol}//${url.host}/sub?token=${token}&target=base64_callback_for_manual_nodes`;
 
-    // 4. 将回调 URL 和所有其他订阅链接合并成一个清单
-    let finalUrlList = [callbackUrl, ...subLinks].join('|');
-
-    // 特殊处理：当请求是 base64_callback_for_manual_nodes 时，只返回手动节点
+    // 如果请求是我们的特殊回调，则只返回手动节点的内容
     if (targetFormat === 'base64_callback_for_manual_nodes') {
-        return new Response(manualNodesBase64);
-    }
-
-    // 5. 如果最终目标是 base64，则需要下载所有内容并合并
-    if (targetFormat === 'base64') {
-        const subPromises = subLinks.map(link => 
-            fetch(link, { headers: { 'User-Agent': userAgentHeader }})
-            .then(res => res.ok ? res.text() : '')
-            .catch(() => '')
-        );
-        const subContents = await Promise.all(subPromises);
-        let allNodes = manualNodes;
-        subContents.forEach(content => {
-             try {
-                // 尝试解码可能的base64内容
-                const decoded = atob(content.replace(/\s/g, ''));
-                allNodes += decoded + '\n';
-             } catch(e) {
-                allNodes += content + '\n';
-             }
-        });
-        const uniqueNodes = [...new Set(allNodes.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
-        const base64Content = btoa(unescape(encodeURIComponent(uniqueNodes)));
-        return new Response(base64Content, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+        return new Response(btoa(unescape(encodeURIComponent(manualNodes))));
     }
     
-    // 6. 对于 Clash 等格式，将 URL 清单发送给 subconverter
-    const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
+    // 正常流程：将回调URL和订阅链接清单合并
+    const finalUrlList = [callbackUrl, ...subLinks].join('|');
+
+    if (!config.subConverter) {
+        return new Response("Subconverter backend is not configured.", { status: 500 });
+    }
+
+    // 智能判断协议是 http 还是 https
+    let subProtocol = 'https';
+    // 如果是IP地址或者包含了非标准端口，我们假定它是http
+    if (/^(\d{1,3}\.){3}\d{1,3}:\d+$/.test(config.subConverter) || config.subConverter.startsWith('http://')) {
+        subProtocol = 'http';
+    }
+    const finalSubConverter = config.subConverter.replace(/^https?:\/\//, '');
+
+
+    const subconverterUrl = new URL(`${subProtocol}://${finalSubConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', finalUrlList);
     subconverterUrl.searchParams.set('config', config.subConfig);
-    subconverterUrl.searchParams.set('new_name', 'true');
     subconverterUrl.searchParams.set('emoji', 'true');
     subconverterUrl.searchParams.set('scv', 'true');
+    // **关键：不发送 new_name=true 参数，让 #sub= 前缀生效**
 
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString());
 
-        // 采用优雅降级策略
         if (!subconverterResponse.ok) {
-            console.error(`Subconverter failed, falling back to base64. Status: ${subconverterResponse.status}`);
-            // 触发一次 base64 的生成并返回
-            return handleMisubRequest({
-                ...context,
-                request: new Request(`${url.protocol}//${url.host}/sub?token=${token}&target=base64`, request)
-            });
+            throw new Error(`Subconverter service returned status: ${subconverterResponse.status}`);
         }
 
         const subconverterContent = await subconverterResponse.text();
@@ -296,13 +268,10 @@ async function handleMisubRequest(context) {
 
     } catch (error) {
         console.error(`[MiSub Final Error] ${error.message}`);
-        // 最终的降级策略
-        return handleMisubRequest({
-            ...context,
-            request: new Request(`${url.protocol}//${url.host}/sub?token=${token}&target=base64`, request)
-        });
+        return new Response(`Error connecting to self-hosted subconverter: ${error.message}`, { status: 502 });
     }
 }
+
 
 // --- Cloudflare Pages Functions 主入口 (无修改) ---
 export async function onRequest(context) {
