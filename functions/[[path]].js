@@ -3,13 +3,14 @@ const KV_KEY_MAIN = 'misub_data_v1';
 const KV_KEY_SETTINGS = 'worker_settings_v1';
 const COOKIE_NAME = 'auth_session';
 const SESSION_DURATION = 8 * 60 * 60 * 1000;
+
+// [最终精简版] 默认设置
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  // [最终修正] 修正为正确的、能正常工作的 subconverter 后端地址
-  subConverter: 'SUBAPI.cmliussss.net', 
+  subConverter: 'subapi.cmliussss.net', 
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
-  prependSubName: true
+  // prependSubName 功能已被移除
 };
 
 // --- 认证与API处理的核心函数 (无修改) ---
@@ -106,7 +107,12 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-async function generateCombinedNodeList(context, config) {
+
+/**
+ * [精简后的辅助函数]
+ * 仅负责抓取所有订阅和手动节点，并返回一个合并后的纯文本节点链接列表。
+ */
+async function generateCombinedNodeList(context) {
     const { env } = context;
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
@@ -135,29 +141,7 @@ async function generateCombinedNodeList(context, config) {
                 }
             } catch (e) {}
             
-            const cleanText = text.replace(/\r\n/g, '\n');
-
-            return cleanText.split('\n').map(line => line.trim()).filter(line => line).map(node => {
-                const hashIndex = node.lastIndexOf('#');
-                if (hashIndex === -1) {
-                    if (config.prependSubName && sub.name) {
-                        return `${node}#${encodeURIComponent(sub.name)}`;
-                    }
-                    return node;
-                }
-                const baseLink = node.substring(0, hashIndex);
-                let name = decodeURIComponent(node.substring(hashIndex + 1));
-                
-                const cleanedName = name.replace(/^.*?\s-\s/, '').trim();
-                name = cleanedName || name;
-                
-                if (config.prependSubName && sub.name && !name.startsWith(sub.name)) {
-                    name = `${sub.name} - ${name}`;
-                }
-                
-                return `${baseLink}#${encodeURIComponent(name)}`;
-            }).join('\n');
-
+            return text.replace(/\r\n/g, '\n');
         } catch (e) { 
             console.error(`Failed to fetch sub: ${sub.url}`, e);
             return ''; 
@@ -171,7 +155,11 @@ async function generateCombinedNodeList(context, config) {
     return uniqueNodes.join('\n');
 }
 
-// 请只替换 handleMisubRequest 这一个函数
+
+/**
+ * [最终精简版主处理函数]
+ * 采用【预处理 + POST提交】的稳定架构，并使用能发挥远程配置最大作用的参数。
+ */
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -199,58 +187,38 @@ async function handleMisubRequest(context) {
         if (ua.includes('clash')) targetFormat = 'clash';
         if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
-    
-    // 如果目标是 base64，直接生成并返回
+
+    // 1. 在 Worker 内部生成完整的、合并后的节点列表（纯文本）。
+    const combinedNodeList = await generateCombinedNodeList(context);
+
+    // 2. 如果目标是 base64，直接编码后返回。
     if (targetFormat === 'base64') {
-        const nodeList = await generateCombinedNodeList(context, config); // 确保 generateCombinedNodeList 函数存在
-        const base64Content = btoa(unescape(encodeURIComponent(nodeList)));
+        const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
     }
-
-    // --- “两全其美”方案的实现 ---
-    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
-    const enabledMisubs = misubs.filter(sub => sub.enabled);
-
-    // 1. 整理订阅链接清单，并打上 #sub= 标签
-    let manualNodesContent = '';
-    const subLinks = [];
-    for (const sub of enabledMisubs) {
-        if (sub.url.toLowerCase().startsWith('http')) {
-            if (config.prependSubName && sub.name) {
-                subLinks.push(`${sub.url}#sub=${encodeURIComponent(sub.name)}`);
-            } else {
-                subLinks.push(sub.url);
-            }
-        } else {
-            manualNodesContent += sub.url + '\n';
-        }
-    }
     
-    // 2. 将手动节点也伪装成一个带 #sub= 标签的订阅链接
-    if (manualNodesContent.trim()) {
-        const manualNodesBase64 = btoa(unescape(encodeURIComponent(manualNodesContent)));
-        const manualSubUrl = `data:text/plain;base64,${manualNodesBase64}#sub=手动添加`;
-        subLinks.unshift(manualSubUrl); // 放到最前面
-    }
-
-    const finalUrlList = subLinks.join('|');
-
+    // 3. 对于 Clash 等格式，使用 POST 方法将节点列表提交给 subconverter。
     if (!config.subConverter) {
         return new Response("Subconverter backend is not configured.", { status: 500 });
     }
 
-    // 3. 构建 subconverter 请求，同时包含远程配置和 rename 参数
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
-    subconverterUrl.searchParams.set('url', finalUrlList);
-    subconverterUrl.searchParams.set('config', config.subConfig); // 保留强大的远程配置
-    
-    // 关键：添加 rename 参数，强制加上前缀
-    subconverterUrl.searchParams.set('rename', '(.+)@$$sub$ - $1');
+    subconverterUrl.searchParams.set('config', config.subConfig);
+    // 关键参数：使用 new_name=true 来启用远程配置的智能命名和分组
+    subconverterUrl.searchParams.set('new_name', 'true');
 
     try {
-        const subconverterResponse = await fetch(subconverterUrl.toString());
+        const subconverterResponse = await fetch(subconverterUrl.toString(), {
+            method: 'POST',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+                'Content-Type': 'text/plain; charset=utf-8'
+            },
+            body: combinedNodeList,
+            cf: { insecureSkipVerify: true }
+        });
 
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
@@ -263,7 +231,7 @@ async function handleMisubRequest(context) {
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
-
+        
         return new Response(subconverterContent, {
             status: subconverterResponse.status,
             statusText: subconverterResponse.statusText,
