@@ -156,7 +156,6 @@ async function generateCombinedNodeList(context) {
 }
 
 
-// 请只替换 handleMisubRequest 这一个函数
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -185,67 +184,75 @@ async function handleMisubRequest(context) {
         if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
-    // 1. 在 Worker 内部生成完整的、合并后的节点列表（纯文本）。
-    //    generateCombinedNodeList 函数内置了完善的UTF-8解码逻辑，能解决乱码问题。
-    const combinedNodeList = await generateCombinedNodeList(context);
-
-    // 2. 如果目标是 base64，直接编码后返回。
+    // 关键分流：根据目标格式，选择不同的处理模式
     if (targetFormat === 'base64') {
+        // 对于 base64 (V2RayN), 使用【预处理模式】来确保编码正确，解决乱码
+        console.log('Using pre-fetch model for base64 target.');
+        const combinedNodeList = await generateCombinedNodeList(context);
         const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
-    }
-    
-    // 3. 对于 Clash 等格式，使用 POST 方法将处理好的、编码正确的节点列表提交给 subconverter。
-    if (!config.subConverter) {
-        return new Response("Subconverter backend is not configured.", { status: 500 });
-    }
+    } else {
+        // 对于 Clash 等, 使用【委托GET模式】，确保与后端兼容，解决502问题
+        console.log(`Using delegate model for ${targetFormat} target.`);
+        const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
+        const enabledMisubs = misubs.filter(sub => sub.enabled);
 
-    // 智能判断协议是 http 还是 https
-    let subProtocol = 'https';
-    if (/^(\d{1,3}\.){3}\d{1,3}:\d+$/.test(config.subConverter)) {
-        subProtocol = 'http';
-    }
-    const finalSubConverter = config.subConverter.replace(/^https?:\/\//, '');
-
-    const subconverterUrl = new URL(`${subProtocol}://${finalSubConverter}/sub`);
-    subconverterUrl.searchParams.set('target', targetFormat);
-    subconverterUrl.searchParams.set('config', config.subConfig);
-    // 使用 new_name=true 来启用远程配置的智能命名和分组
-    subconverterUrl.searchParams.set('new_name', 'true');
-
-    try {
-        const subconverterResponse = await fetch(subconverterUrl.toString(), {
-            method: 'POST',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-                'Content-Type': 'text/plain; charset=utf-8'
-            },
-            body: combinedNodeList,
-            cf: { insecureSkipVerify: true } // 如果您自建后端使用的是自签名证书，保留此项
-        });
-
-        if (!subconverterResponse.ok) {
-            const errorBody = await subconverterResponse.text();
-            throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
+        let manualNodesContent = '';
+        const subLinks = [];
+        for (const sub of enabledMisubs) {
+            if (sub.url.toLowerCase().startsWith('http')) {
+                subLinks.push(sub.url);
+            } else {
+                manualNodesContent += sub.url + '\n';
+            }
         }
-
-        const subconverterContent = await subconverterResponse.text();
-        const responseHeaders = new Headers(subconverterResponse.headers);
-
-        responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}`);
-        responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
-        responseHeaders.set('Cache-Control', 'no-store, no-cache');
         
-        return new Response(subconverterContent, {
-            status: subconverterResponse.status,
-            statusText: subconverterResponse.statusText,
-            headers: responseHeaders
-        });
+        // 伪造一个回调URL来处理手动节点
+        const fakeToken = btoa(Math.random().toString()).slice(0, 10);
+        const callbackUrl = `${url.protocol}//${url.host}${url.pathname}?token=${token}&target=manual_nodes_${fakeToken}`;
 
-    } catch (error) {
-        console.error(`[MiSub Final Error] ${error.message}`);
-        return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
+        if (url.searchParams.get('target') === `manual_nodes_${fakeToken}`) {
+            return new Response(btoa(unescape(encodeURIComponent(manualNodesContent))));
+        }
+        
+        let finalUrlList = subLinks;
+        if (manualNodesContent.trim()) {
+            finalUrlList.unshift(callbackUrl);
+        }
+        const urlParam = finalUrlList.join('|');
+
+        const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
+        subconverterUrl.searchParams.set('target', targetFormat);
+        subconverterUrl.searchParams.set('url', urlParam);
+        subconverterUrl.searchParams.set('config', config.subConfig);
+        subconverterUrl.searchParams.set('new_name', 'true');
+
+        try {
+            const subconverterResponse = await fetch(subconverterUrl.toString(), {
+                headers: { 'User-Agent': userAgentHeader }
+            });
+
+            if (!subconverterResponse.ok) {
+                const errorBody = await subconverterResponse.text();
+                throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
+            }
+
+            const subconverterContent = await subconverterResponse.text();
+            const responseHeaders = new Headers(subconverterResponse.headers);
+            responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}`);
+            responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
+            responseHeaders.set('Cache-Control', 'no-store, no-cache');
+
+            return new Response(subconverterContent, {
+                status: subconverterResponse.status,
+                statusText: subconverterResponse.statusText,
+                headers: responseHeaders
+            });
+        } catch (error) {
+            console.error(`[MiSub Final Error] ${error.message}`);
+            return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
+        }
     }
 }
 
