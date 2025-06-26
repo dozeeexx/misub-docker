@@ -4,7 +4,6 @@ const KV_KEY_SETTINGS = 'worker_settings_v1';
 const COOKIE_NAME = 'auth_session';
 const SESSION_DURATION = 8 * 60 * 60 * 1000;
 
-// 默认设置
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
@@ -107,8 +106,9 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版辅助函数] 为 Base64 请求下载并处理节点
-async function generateCombinedNodeList(context, config, userAgent) {
+
+// [最终版辅助函数] 为所有请求下载并处理节点
+async function generateCombinedNodeList(context, config) {
     const { env } = context;
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
@@ -128,7 +128,6 @@ async function generateCombinedNodeList(context, config, userAgent) {
 
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            // [核心修正] 统一使用兼容性最好的 Clash User-Agent
             const requestHeaders = { 'User-Agent': 'ClashforWindows/0.20.39' };
             const response = await Promise.race([
                 fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
@@ -169,7 +168,7 @@ async function generateCombinedNodeList(context, config, userAgent) {
     return [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
 }
 
-// [最终完美版] 混合模式订阅处理函数
+// [最终完美版] 统一使用【预处理 + POST提交】架构
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -196,74 +195,55 @@ async function handleMisubRequest(context) {
         if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
-    // 关键分流
+    // 1. 调用统一的辅助函数，在 Worker 内部生成完整的、合并后的、编码正确的节点列表
+    const combinedNodeList = await generateCombinedNodeList(context, config);
+
+    // 2. 如果目标是 base64，直接编码后返回
     if (targetFormat === 'base64') {
-        // 对于 base64 (V2RayN), 使用【预处理模式】来确保编码正确，解决乱码和节点丢失问题
-        const combinedNodeList = await generateCombinedNodeList(context, config);
         const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
-    } else {
-        // 对于 Clash 等, 使用【委托GET模式】，确保与后端兼容，并修正手动节点的处理方式
-        const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
-        const enabledMisubs = misubs.filter(sub => sub.enabled);
+    }
+    
+    // 3. 对于 Clash 等所有其他格式，都使用 POST 方法将处理好的节点列表提交给 subconverter
+    if (!config.subConverter) {
+        return new Response("Subconverter backend is not configured.", { status: 500 });
+    }
 
-        let manualNodesContent = '';
-        const subLinks = [];
-        for (const sub of enabledMisubs) {
-            if (sub.url.toLowerCase().startsWith('http')) {
-                subLinks.push(sub.url);
-            } else {
-                manualNodesContent += sub.url + '\n';
-            }
+    const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
+    subconverterUrl.searchParams.set('target', targetFormat);
+    subconverterUrl.searchParams.set('config', config.subConfig);
+    subconverterUrl.searchParams.set('new_name', 'true'); // 确保使用远程配置文件的命名和分组
+
+    try {
+        const subconverterResponse = await fetch(subconverterUrl.toString(), {
+            method: 'POST',
+            headers: {
+                'User-Agent': 'ClashforWindows/0.20.39', // 统一使用兼容性最好的 UA
+                'Content-Type': 'text/plain; charset=utf-8'
+            },
+            body: combinedNodeList
+        });
+
+        if (!subconverterResponse.ok) {
+            const errorBody = await subconverterResponse.text();
+            throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
+
+        const subconverterContent = await subconverterResponse.text();
+        const responseHeaders = new Headers(subconverterResponse.headers);
+        responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}`);
+        responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
+        responseHeaders.set('Cache-Control', 'no-store, no-cache');
         
-        // [核心修正] 将手动节点伪装成一个 data URI 链接，不再使用不稳定的回调
-        if (manualNodesContent.trim()) {
-            const manualNodesBase64 = btoa(unescape(encodeURIComponent(manualNodesContent)));
-            const manualSubUrl = `data:text/plain;base64,${manualNodesBase64}`;
-            subLinks.unshift(manualSubUrl); // 将手动节点作为第一个“订阅链接”
-        }
-        
-        const urlParam = subLinks.join('|');
-
-        const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
-        subconverterUrl.searchParams.set('target', targetFormat);
-        subconverterUrl.searchParams.set('url', urlParam);
-        subconverterUrl.searchParams.set('config', config.subConfig);
-        subconverterUrl.searchParams.set('new_name', 'true'); // 使用远程配置的命名和分组
-
-        try {
-            const subconverterResponse = await fetch(subconverterUrl.toString(), {
-                method: 'GET',
-                headers: { 'User-Agent': userAgentHeader },
-            });
-
-            if (!subconverterResponse.ok) {
-                const errorBody = await subconverterResponse.text();
-                throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
-            }
-
-            let originalText = await subconverterResponse.text();
-            const correctedText = originalText
-                .replace(/^Proxy:/m, 'proxies:')
-                .replace(/^Proxy Group:/m, 'proxy-groups:')
-                .replace(/^Rule:/m, 'rules:');
-
-            const responseHeaders = new Headers(subconverterResponse.headers);
-            responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}`);
-            responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
-            responseHeaders.set('Cache-Control', 'no-store, no-cache');
-
-            return new Response(correctedText, {
-                status: subconverterResponse.status,
-                statusText: subconverterResponse.statusText,
-                headers: responseHeaders
-            });
-        } catch (error) {
-            console.error(`[MiSub Final Error] ${error.message}`);
-            return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
-        }
+        return new Response(subconverterContent, {
+            status: subconverterResponse.status,
+            statusText: subconverterResponse.statusText,
+            headers: responseHeaders
+        });
+    } catch (error) {
+        console.error(`[MiSub Final Error] ${error.message}`);
+        return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
     }
 }
 
