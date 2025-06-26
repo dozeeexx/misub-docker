@@ -122,7 +122,7 @@ async function generateCombinedNodeList(context) {
     
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            const requestHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
+            const requestHeaders = { 'User-Agent': 'v2rayN/6.45' };
             const response = await Promise.race([
                 fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
