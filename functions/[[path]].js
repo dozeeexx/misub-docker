@@ -4,11 +4,11 @@ const KV_KEY_SETTINGS = 'worker_settings_v1';
 const COOKIE_NAME = 'auth_session';
 const SESSION_DURATION = 8 * 60 * 60 * 1000;
 
-// 默认设置
+// [最终版] 默认设置
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  subConverter: 'subapi.cmliussss.net', 
+  subConverter: 'api.v1.mk',
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true
 };
@@ -107,6 +107,7 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
+
 // [最终版辅助函数] 为 Base64 请求下载并处理节点
 async function generateCombinedNodeList(context, config, userAgent) {
     const { env } = context;
@@ -128,8 +129,8 @@ async function generateCombinedNodeList(context, config, userAgent) {
 
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            // [核心修正] 统一使用兼容性最好的 Clash User-Agent
-            const requestHeaders = { 'User-Agent': 'ClashforWindows/0.20.39' };
+            // [核心修正] 忠实传递真实客户端的 User-Agent
+            const requestHeaders = { 'User-Agent': userAgent };
             const response = await Promise.race([
                 fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
@@ -199,7 +200,7 @@ async function handleMisubRequest(context) {
     // 关键分流
     if (targetFormat === 'base64') {
         // 对于 base64 (V2RayN), 使用【预处理模式】来确保编码正确，解决乱码和节点丢失问题
-        const combinedNodeList = await generateCombinedNodeList(context, config);
+        const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader);
         const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
