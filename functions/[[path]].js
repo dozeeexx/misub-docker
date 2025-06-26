@@ -8,7 +8,7 @@ const SESSION_DURATION = 8 * 60 * 60 * 1000;
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  subConverter: 'api.v1.mk',
+  subConverter: 'subapi.cmliussss.net', 
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true
 };
@@ -107,11 +107,8 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-
-// [最终版辅助函数] 为 Base64 请求下载并处理节点
-async function generateCombinedNodeList(context, config, userAgent) {
-    const { env } = context;
-    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
+// --- [优化版] 辅助函数，现在接收misubs作为参数，不再自己查询KV ---
+async function generateCombinedNodeList(context, config, userAgent, misubs) { // 新增了 misubs 参数
     const enabledMisubs = misubs.filter(sub => sub.enabled);
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
     let manualNodesContent = '';
@@ -129,7 +126,6 @@ async function generateCombinedNodeList(context, config, userAgent) {
 
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            // [核心修正] 忠实传递真实客户端的 User-Agent
             const requestHeaders = { 'User-Agent': userAgent };
             const response = await Promise.race([
                 fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
@@ -152,8 +148,21 @@ async function generateCombinedNodeList(context, config, userAgent) {
                 }
             } catch (e) {}
             
-            const validNodes = text.replace(/\r\n/g, '\n').split('\n')
+            let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
+
+            // --- 更安全的过滤逻辑 ---
+            validNodes = validNodes.filter(nodeLink => {
+                try {
+                    const hashIndex = nodeLink.lastIndexOf('#');
+                    if (hashIndex === -1) return true;
+                    const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
+                    return !nodeName.includes('https://');
+                } catch (e) {
+                    console.error(`Failed to decode node name, filtering it out: ${nodeLink}`, e);
+                    return false;
+                }
+            });
 
             return (config.prependSubName && sub.name) 
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
@@ -170,14 +179,22 @@ async function generateCombinedNodeList(context, config, userAgent) {
     return [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
 }
 
-// [最终完美版] 混合模式订阅处理函数
+// --- [优化版] 订阅处理函数 ---
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
-    const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
-    const config = { ...defaultSettings, ...kv_settings };
+    // --- 核心优化：并行读取两个KV，减少串行延迟 ---
+    const [kv_settings_data, misubs_data] = await Promise.all([
+        env.MISUB_KV.get(KV_KEY_SETTINGS, 'json'),
+        env.MISUB_KV.get(KV_KEY_MAIN, 'json')
+    ]);
+    const settings = kv_settings_data || {};
+    const misubs = misubs_data || [];
+    // --- 优化结束 ---
+
+    const config = { ...defaultSettings, ...settings };
 
     let token = '';
     const pathSegments = url.pathname.split('/').filter(Boolean);
@@ -187,7 +204,10 @@ async function handleMisubRequest(context) {
         token = url.searchParams.get('token');
     }
     if (!token || token !== config.mytoken) {
-        return new Response('Invalid token', { status: 403 });
+        const callbackToken = url.searchParams.get('callback_token');
+        if (!callbackToken || callbackToken !== (await getCallbackToken(env))) {
+            return new Response('Invalid token', { status: 403 });
+        }
     }
 
     let targetFormat = url.searchParams.get('target') || 'base64';
@@ -197,76 +217,73 @@ async function handleMisubRequest(context) {
         if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
-    // 关键分流
+    // 将已读取的 misubs 列表传递给处理函数
+    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, misubs);
+    const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
+
     if (targetFormat === 'base64') {
-        // 对于 base64 (V2RayN), 使用【预处理模式】来确保编码正确，解决乱码和节点丢失问题
-        const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader);
-        const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
-    } else {
-        // 对于 Clash 等, 使用【委托GET模式】，确保与后端兼容，并修正手动节点的处理方式
-        const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
-        const enabledMisubs = misubs.filter(sub => sub.enabled);
+    }
 
-        let manualNodesContent = '';
-        const subLinks = [];
-        for (const sub of enabledMisubs) {
-            if (sub.url.toLowerCase().startsWith('http')) {
-                subLinks.push(sub.url);
-            } else {
-                manualNodesContent += sub.url + '\n';
-            }
+    const callbackToken = await getCallbackToken(env);
+    const callbackUrl = `${url.protocol}//${url.host}${url.pathname}?token=${token}&target=base64&callback_token=${callbackToken}`;
+    
+    if (url.searchParams.get('callback_token') === callbackToken) {
+         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
+        return new Response(base64Content, { headers });
+    }
+    
+    const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
+    subconverterUrl.searchParams.set('target', targetFormat);
+    subconverterUrl.searchParams.set('url', callbackUrl);
+    subconverterUrl.searchParams.set('config', config.subConfig);
+    subconverterUrl.searchParams.set('new_name', 'true');
+
+    try {
+        const subconverterResponse = await fetch(subconverterUrl.toString(), {
+            method: 'GET',
+            headers: { 'User-Agent': 'Mozilla/5.0' }, // 固定UA
+        });
+
+        if (!subconverterResponse.ok) {
+            const errorBody = await subconverterResponse.text();
+            throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
-        
-        // [核心修正] 将手动节点伪装成一个 data URI 链接，不再使用不稳定的回调
-        if (manualNodesContent.trim()) {
-            const manualNodesBase64 = btoa(unescape(encodeURIComponent(manualNodesContent)));
-            const manualSubUrl = `data:text/plain;base64,${manualNodesBase64}`;
-            subLinks.unshift(manualSubUrl); // 将手动节点作为第一个“订阅链接”
-        }
-        
-        const urlParam = subLinks.join('|');
 
-        const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
-        subconverterUrl.searchParams.set('target', targetFormat);
-        subconverterUrl.searchParams.set('url', urlParam);
-        subconverterUrl.searchParams.set('config', config.subConfig);
-        subconverterUrl.searchParams.set('new_name', 'true'); // 使用远程配置的命名和分组
+        let originalText = await subconverterResponse.text();
+        const correctedText = originalText
+            .replace(/^Proxy:/m, 'proxies:')
+            .replace(/^Proxy Group:/m, 'proxy-groups:')
+            .replace(/^Rule:/m, 'rules:');
 
-        try {
-            const subconverterResponse = await fetch(subconverterUrl.toString(), {
-                method: 'GET',
-                headers: { 'User-Agent': userAgentHeader },
-            });
+        const responseHeaders = new Headers(subconverterResponse.headers);
+        responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}`);
+        responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
+        responseHeaders.set('Cache-Control', 'no-store, no-cache');
 
-            if (!subconverterResponse.ok) {
-                const errorBody = await subconverterResponse.text();
-                throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
-            }
-
-            let originalText = await subconverterResponse.text();
-            const correctedText = originalText
-                .replace(/^Proxy:/m, 'proxies:')
-                .replace(/^Proxy Group:/m, 'proxy-groups:')
-                .replace(/^Rule:/m, 'rules:');
-
-            const responseHeaders = new Headers(subconverterResponse.headers);
-            responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}`);
-            responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
-            responseHeaders.set('Cache-Control', 'no-store, no-cache');
-
-            return new Response(correctedText, {
-                status: subconverterResponse.status,
-                statusText: subconverterResponse.statusText,
-                headers: responseHeaders
-            });
-        } catch (error) {
-            console.error(`[MiSub Final Error] ${error.message}`);
-            return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
-        }
+        return new Response(correctedText, {
+            status: subconverterResponse.status,
+            statusText: subconverterResponse.statusText,
+            headers: responseHeaders
+        });
+    } catch (error) {
+        console.error(`[MiSub Final Error] ${error.message}`);
+        return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
     }
 }
+
+
+// --- 新增的辅助函数，用于生成和获取一个稳定的回调Token ---
+async function getCallbackToken(env) {
+    const secret = env.COOKIE_SECRET || 'default-callback-secret';
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    const cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode('callback-static-data'));
+    return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+
 
 // --- Cloudflare Pages Functions 主入口 (无修改) ---
 export async function onRequest(context) {
