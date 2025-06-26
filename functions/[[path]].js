@@ -4,16 +4,15 @@ const KV_KEY_SETTINGS = 'worker_settings_v1';
 const COOKIE_NAME = 'auth_session';
 const SESSION_DURATION = 8 * 60 * 60 * 1000;
 
-// [最终版] 默认设置
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  subConverter: 'api.v1.mk',
+  subConverter: 'subapi.cmliussss.net', 
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true
 };
 
-// --- 认证相关的核心工具函数 ---
+// --- 认证与API处理的核心函数 (无修改) ---
 async function createSignedToken(key, data) {
     if (!key || !data) throw new Error("Key and data are required for signing.");
     const encoder = new TextEncoder();
@@ -40,8 +39,6 @@ async function authMiddleware(request, env) {
     const verifiedData = await verifySignedToken(env.COOKIE_SECRET, token);
     return verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
 }
-
-// --- API 请求处理 ---
 async function handleApiRequest(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
@@ -109,12 +106,74 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终修正版] 订阅处理函数
+
+// [最终版辅助函数] 为所有请求下载并处理节点
+async function generateCombinedNodeList(context, config) {
+    const { env } = context;
+    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
+    const enabledMisubs = misubs.filter(sub => sub.enabled);
+    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
+    let manualNodesContent = '';
+
+    const httpSubs = enabledMisubs.filter(sub => {
+        if (sub.url.toLowerCase().startsWith('http')) return true;
+        manualNodesContent += sub.url + '\n';
+        return false;
+    });
+
+    const processedManualNodes = manualNodesContent.split('\n')
+        .map(line => line.trim()).filter(line => nodeRegex.test(line))
+        .map(node => (config.prependSubName) ? prependNodeName(node, '手动节点') : node)
+        .join('\n');
+
+    const subPromises = httpSubs.map(async (sub) => {
+        try {
+            const requestHeaders = { 'User-Agent': 'ClashforWindows/0.20.39' };
+            const response = await Promise.race([
+                fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
+            ]);
+            if (!response.ok) {
+                console.error(`Failed to fetch sub: ${sub.url}, status: ${response.status}`);
+                return '';
+            }
+            
+            let text = await response.text();
+            
+            try {
+                const cleanedText = text.replace(/\s/g, '');
+                if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
+                    const binaryString = atob(cleanedText);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                    text = new TextDecoder('utf-8').decode(bytes);
+                }
+            } catch (e) {}
+            
+            const validNodes = text.replace(/\r\n/g, '\n').split('\n')
+                .map(line => line.trim()).filter(line => nodeRegex.test(line));
+
+            return (config.prependSubName && sub.name) 
+                ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
+                : validNodes.join('\n');
+
+        } catch (e) { 
+            console.error(`Failed to fetch sub: ${sub.url}`, e);
+            return ''; 
+        }
+    });
+
+    const processedSubContents = await Promise.all(subPromises);
+    const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
+    return [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
+}
+
+// [最终完美版] 统一使用【预处理 + POST提交】架构
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
-    
+
     const kv_settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
     const config = { ...defaultSettings, ...kv_settings };
 
@@ -125,7 +184,6 @@ async function handleMisubRequest(context) {
     } else {
         token = url.searchParams.get('token');
     }
-
     if (!token || token !== config.mytoken) {
         return new Response('Invalid token', { status: 403 });
     }
@@ -134,127 +192,62 @@ async function handleMisubRequest(context) {
     if (!url.searchParams.has('target')) {
         const ua = userAgentHeader.toLowerCase();
         if (ua.includes('clash')) targetFormat = 'clash';
+        if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
-    // --- Base64 预处理逻辑 ---
-    // 这部分现在是为两种模式服务的，所以放在前面
-    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
-    const enabledMisubs = misubs.filter(sub => sub.enabled);
-    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
-    let rawManualNodesContent = '';
-    const httpSubs = enabledMisubs.filter(sub => {
-        if (sub.url.toLowerCase().startsWith('http')) {
-            return true;
-        } else {    
-            rawManualNodesContent += sub.url + '\n';
-            return false;
-        }
-    });
+    // 1. 调用统一的辅助函数，在 Worker 内部生成完整的、合并后的、编码正确的节点列表
+    const combinedNodeList = await generateCombinedNodeList(context, config);
 
-    // 如果客户端请求的是Base64，则直接聚合所有节点并返回
+    // 2. 如果目标是 base64，直接编码后返回
     if (targetFormat === 'base64') {
-        const filteredManualNodes = rawManualNodesContent.split('\n')
-            .map(line => line.trim()).filter(line => nodeRegex.test(line));
-        const processedManualNodes = config.prependSubName && filteredManualNodes.length > 0
-            ? filteredManualNodes.map(node => prependNodeName(node, '手动节点')).join('\n')
-            : filteredManualNodes.join('\n');
-
-        const subPromises = httpSubs.map(async (sub) => {
-            try {
-                // [核心修正] 忠实传递客户端的 User-Agent
-                const requestHeaders = { 'User-Agent': userAgentHeader };
-                const response = await Promise.race([
-                    fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
-                ]);
-                if (!response.ok) return '';
-                let text = await response.text();
-                try {
-                    const cleanedText = text.replace(/\s/g, '');
-                    if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
-                        const binaryString = atob(cleanedText);
-                        const bytes = new Uint8Array(binaryString.length);
-                        for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-                        text = new TextDecoder('utf-8').decode(bytes);
-                    }
-                } catch (e) {}
-                
-                let validNodes = text.replace(/\r\n/g, '\n').split('\n').map(line => line.trim()).filter(line => nodeRegex.test(line));
-                validNodes = validNodes.map(node => {
-                    if (node.startsWith('vless://')) {
-                        try {
-                            let vlessUrl = new URL(node);
-                            if (vlessUrl.searchParams.get('security') === '') {
-                                vlessUrl.searchParams.delete('security');
-                                return vlessUrl.toString();
-                            }
-                        } catch (e) {}
-                    }
-                    return node;
-                });
-                if (config.prependSubName && sub.name) {
-                    return validNodes.map(node => prependNodeName(node, sub.name)).join('\n');
-                }
-                return validNodes.join('\n');
-            } catch (e) { return ''; }
-        });
-        
-        const processedSubContents = await Promise.all(subPromises);
-        const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
-        const uniqueNodes = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))];
-        const base64Content = btoa(unescape(encodeURIComponent(uniqueNodes.join('\n'))));
-        
-        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate', 'Pragma': 'no-cache', 'Expires': '0' };
+        const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
+        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
     }
-
-    // 如果是其他格式（如Clash），则由后端代理请求subconverter
-    // [核心修正] 放弃不稳定的回调模式，改用 data URI 模式处理手动节点
-    const subLinks = httpSubs.map(sub => sub.url); // 只获取 http 链接
-    if (rawManualNodesContent.trim()) {
-        const manualNodesBase64 = btoa(unescape(encodeURIComponent(rawManualNodesContent)));
-        const manualSubUrl = `data:text/plain;base64,${manualNodesBase64}`;
-        subLinks.unshift(manualSubUrl); // 将手动节点作为第一个“订阅链接”
+    
+    // 3. 对于 Clash 等所有其他格式，都使用 POST 方法将处理好的节点列表提交给 subconverter
+    if (!config.subConverter) {
+        return new Response("Subconverter backend is not configured.", { status: 500 });
     }
 
-    const finalUrlList = subLinks.join('|');
-    
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
-    subconverterUrl.searchParams.set('url', finalUrlList);
     subconverterUrl.searchParams.set('config', config.subConfig);
-    subconverterUrl.searchParams.set('new_name', 'true');
+    subconverterUrl.searchParams.set('new_name', 'true'); // 确保使用远程配置文件的命名和分组
 
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
-            method: 'GET',
-            headers: { 'User-Agent': userAgentHeader }, // 同样忠实传递客户端 User-Agent
-            cf: { insecureSkipVerify: true }
+            method: 'POST',
+            headers: {
+                'User-Agent': 'ClashforWindows/0.20.39', // 统一使用兼容性最好的 UA
+                'Content-Type': 'text/plain; charset=utf-8'
+            },
+            body: combinedNodeList
         });
-        
+
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
-        
+
         const subconverterContent = await subconverterResponse.text();
         const responseHeaders = new Headers(subconverterResponse.headers);
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(config.FileName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
-
+        
         return new Response(subconverterContent, {
             status: subconverterResponse.status,
             statusText: subconverterResponse.statusText,
             headers: responseHeaders
         });
     } catch (error) {
-        const errorHeaders = { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-cache", "Pragma": "no-cache", "Expires": "0" };
-        return new Response(`Error fetching from subconverter: ${error.message}`, { status: 502, headers: errorHeaders });
+        console.error(`[MiSub Final Error] ${error.message}`);
+        return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
     }
 }
 
-// --- Cloudflare Pages Functions 主入口 ---
+// --- Cloudflare Pages Functions 主入口 (无修改) ---
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
