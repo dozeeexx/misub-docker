@@ -26,7 +26,7 @@ const subsDirty = ref(false);
 const saveState = ref('idle'); 
 const subsCurrentPage = ref(1);
 const manualNodesCurrentPage = ref(1);
-const subsItemsPerPage = 3;
+const subsItemsPerPage = 6;
 const manualNodesPerPage = 24;
 
 // [修改] 排序状态现在更简单
