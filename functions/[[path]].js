@@ -107,17 +107,16 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// --- [重构最终版] 辅助函数，现在能正确处理多个、不同格式的手动订阅项 ---
+// --- [最终修正版] 辅助函数，采用无状态Regex并修正手动解码逻辑 ---
 async function generateCombinedNodeList(context, config, userAgent) {
     const { env } = context;
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
-    const nodeRegex = /(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
 
     const manualEntries = [];
     const httpSubs = [];
 
-    // 步骤 1: 将启用的订阅区分为“手动输入项”和“HTTP链接项”
+    // 步骤 1: 区分订阅类型
     for (const sub of enabledMisubs) {
         if (sub.url.toLowerCase().startsWith('http')) {
             httpSubs.push(sub);
@@ -129,33 +128,32 @@ async function generateCombinedNodeList(context, config, userAgent) {
     // 步骤 2: 独立处理每一个“手动输入项”
     let processedManualNodes = [];
     for (const entry of manualEntries) {
-        let content = entry.url; // 这是您在后台文本框里粘贴的完整内容
+        let content = entry.url;
 
-        // 尝试将当前项的内容作为Base64解码
+        // 修正：正确地尝试解码Base64
         try {
             const cleaned = content.replace(/\s/g, '');
-            // 增加一个长度判断，避免误判短的纯文本为Base64
-            if (cleaned.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleaned)) {
+            if (cleaned.length > 20 && /^[A-Za-z0-9+/=]{20,}$/.test(cleaned)) {
                 const binaryString = atob(cleaned);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                // 如果解码成功，则使用解码后的内容
                 content = new TextDecoder('utf-8').decode(bytes);
             }
         } catch (e) {
-            // 解码失败，说明它本来就是纯文本，无需理会错误，继续使用原始内容
+            // 解码失败，说明是纯文本，保持 content 不变
         }
 
-        // 现在 content 无论是解码来的还是原始的，都是纯文本了
         const nodes = content.split('\n')
             .map(line => line.trim())
-            .filter(line => line && nodeRegex.test(line)) // 过滤出有效节点链接
+            // --- 核心修正: 在每次filter时都创建一个新的、无状态的RegExp对象 ---
+            .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line))
             .map(node => (config.prependSubName) ? prependNodeName(node, entry.name || '手动节点') : node);
         
-        // 将处理好的节点添加到最终列表中
         processedManualNodes.push(...nodes);
     }
 
-    // 步骤 3: 异步处理所有“HTTP链接项”（这部分逻辑和之前一样）
+    // 步骤 3: 异步处理所有“HTTP链接项”
     const subPromises = httpSubs.map(async (sub) => {
         try {
             const requestHeaders = { 'User-Agent': userAgent };
@@ -164,7 +162,7 @@ async function generateCombinedNodeList(context, config, userAgent) {
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
             ]);
             if (!response.ok) { return ''; }
-            
+
             let text = await response.text();
             
             try {
@@ -178,7 +176,9 @@ async function generateCombinedNodeList(context, config, userAgent) {
             } catch (e) {}
             
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
-                .map(line => line.trim()).filter(line => line && nodeRegex.test(line));
+                .map(line => line.trim())
+                // --- 同样应用核心修正 ---
+                .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line));
 
             validNodes = validNodes.filter(nodeLink => {
                 try {
