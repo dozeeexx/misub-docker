@@ -119,10 +119,27 @@ async function generateCombinedNodeList(context, config, userAgent, misubs) { //
         return false;
     });
 
-    const processedManualNodes = manualNodesContent.split('\n')
-        .map(line => line.trim()).filter(line => nodeRegex.test(line))
-        .map(node => (config.prependSubName) ? prependNodeName(node, '手动节点') : node)
-        .join('\n');
+    // --- [最终修正版] 手动节点处理逻辑 ---
+    let decodedManualContent = manualNodesContent;
+    try {
+        // 尝试将整个手动输入内容作为一个Base64块来解码
+        const cleanedManual = manualNodesContent.replace(/\s/g, '');
+        if (cleanedManual.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedManual)) {
+            const binaryString = atob(cleanedManual);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+            decodedManualContent = new TextDecoder('utf-8').decode(bytes);
+        }
+    } catch (e) {
+        // 如果解码失败，说明它不是Base64，就把它当作原始的纯文本处理
+        decodedManualContent = manualNodesContent;
+    }
+
+const processedManualNodes = decodedManualContent.split('\n')
+    .map(line => line.trim()).filter(line => line && nodeRegex.test(line))
+    .map(node => (config.prependSubName) ? prependNodeName(node, '手动节点') : node)
+    .join('\n');
+// --- 修正结束 ---
 
     const subPromises = httpSubs.map(async (sub) => {
         try {
