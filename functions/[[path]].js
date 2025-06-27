@@ -397,19 +397,3 @@ export async function onRequest(context) {
         return new Response("Internal Server Error", { status: 500 });
     }
 }
-
-// --- [必需] 名称前缀辅助函数 ---
-function prependNodeName(link, prefix) {
-  if (!prefix) return link;
-  const hashIndex = link.lastIndexOf('#');
-  if (hashIndex === -1) {
-    return `${link}#${encodeURIComponent(prefix)}`;
-  }
-  const baseLink = link.substring(0, hashIndex);
-  const originalName = decodeURIComponent(link.substring(hashIndex + 1));
-  if (originalName.startsWith(prefix)) {
-      return link;
-  }
-  const newName = `${prefix} - ${originalName}`;
-  return `${baseLink}#${encodeURIComponent(newName)}`;
-}
