@@ -182,34 +182,79 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终诊断版 - 函数 1/3] “直通车”模式的VMess链接处理函数
-function normalizeVmessLink(link) {
-    // 本次修改的核心：不对VMess链接做任何处理，直接原样返回。
-    return link;
-}
-
-// [最终诊断版 - 函数 2/3] 名称前缀辅助函数 (无修改，为保证完整性提供)
+// [最终版函数 1/3] 名称前缀辅助函数
 function prependNodeName(link, prefix) {
-  if (!prefix) return link;
-  const hashIndex = link.lastIndexOf('#');
-  if (hashIndex === -1) {
-    return `${link}#${encodeURIComponent(prefix)}`;
-  }
-  const baseLink = link.substring(0, hashIndex);
-  const originalName = decodeURIComponent(link.substring(hashIndex + 1));
-  if (originalName.startsWith(prefix)) {
-      return link;
-  }
-  const newName = `${prefix} - ${originalName}`;
-  return `${baseLink}#${encodeURIComponent(newName)}`;
+    if (!prefix || link.startsWith('ERROR')) return link;
+    try {
+        const url = new URL(link);
+        const originalName = url.hash.startsWith('#') ? decodeURIComponent(url.hash.substring(1)) : '';
+        if (originalName && originalName.startsWith(prefix)) {
+            return link;
+        }
+        const newName = prefix + (originalName ? ` - ${originalName}` : '');
+        url.hash = encodeURIComponent(newName);
+        return url.toString();
+    } catch (e) {
+        console.error("为链接添加前缀时出错:", link, e);
+        return link; // 出错时返回原始链接
+    }
 }
 
-// [最终诊断版 - 函数 3/3] 节点列表生成函数 (调用“直通车”模式的函数)
+// [最终版函数 2/3] VMess链接标准化辅助函数 (借鉴CF-Workers-SUB思想重写)
+function normalizeVmessLink(link) {
+    if (!link.startsWith('vmess://')) {
+        return link;
+    }
+    try {
+        const url = new URL(link);
+        const base64Part = url.pathname.slice(2); // 移除开头的 "//"
+        
+        let decodedJsonString;
+        try {
+            // 标准的atob足以解码含有换行符的Base64，问题出在后续的btoa
+            decodedJsonString = atob(base64Part);
+        } catch (e) {
+            console.error("Base64解码失败:", base64Part, e);
+            return link; // 解码失败则返回原始链接
+        }
+
+        const parsedJson = JSON.parse(decodedJsonString);
+
+        // 如果原始链接没有#节点名，则从JSON的ps字段中提取并创建
+        if (!url.hash && parsedJson.ps) {
+            url.hash = encodeURIComponent(parsedJson.ps);
+        }
+
+        // 核心：将解析后的JSON对象压缩为单行字符串
+        const minifiedJsonString = JSON.stringify(parsedJson);
+
+        // 核心修正：使用 TextEncoder 将UTF-8字符串安全地转为字节数组
+        const utf8Bytes = new TextEncoder().encode(minifiedJsonString);
+        
+        // 将字节数组转换为二进制字符串，这是btoa所需要的输入格式
+        let binaryString = '';
+        for (let i = 0; i < utf8Bytes.length; i++) {
+            binaryString += String.fromCharCode(utf8Bytes[i]);
+        }
+        
+        // 用净化后的数据重新编码为Base64
+        const newBase64Part = btoa(binaryString);
+        
+        url.pathname = `//${newBase64Part}`;
+        return url.toString();
+
+    } catch (e) {
+        console.error("无法标准化VMess链接，将返回原始链接:", link, e);
+        return link;
+    }
+}
+
+// [最终版函数 3/3] 节点列表生成函数 (调用最终版函数)
 async function generateCombinedNodeList(context, config, userAgent) {
     const { env } = context;
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
-    
+
     const manualEntries = [];
     const httpSubs = [];
 
@@ -227,61 +272,42 @@ async function generateCombinedNodeList(context, config, userAgent) {
         try {
             const cleaned = content.replace(/\s/g, '');
             if (cleaned.length > 20 && /^[A-Za-z0-9+/=]{20,}$/.test(cleaned)) {
-                const binaryString = atob(cleaned);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-                content = new TextDecoder('utf-8').decode(bytes);
+                content = atob(cleaned);
             }
         } catch (e) {}
 
         const nodes = content.split('\n')
             .map(line => line.trim())
             .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line))
-            .map(node => normalizeVmessLink(node)) // <-- 这里现在调用的是“直通车”函数
-            .map(node => (config.prependSubName) ? prependNodeName(node, entry.name || '手动节点') : node);
+            .map(node => normalizeVmessLink(node))
+            .map(node => prependNodeName(node, entry.name || '手动节点'));
         
         processedManualNodes.push(...nodes);
     }
 
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            const requestHeaders = { 'User-Agent': userAgent };
-            const response = await Promise.race([
-                fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
-            ]);
-            if (!response.ok) { return ''; }
-
+            const response = await fetch(new Request(sub.url, { headers: { 'User-Agent': userAgent }, redirect: "follow", cf: { insecureSkipVerify: true } }));
+            if (!response.ok) return '';
             let text = await response.text();
             
             try {
                 const cleanedText = text.replace(/\s/g, '');
                 if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
-                    const binaryString = atob(cleanedText);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-                    text = new TextDecoder('utf-8').decode(bytes);
+                    text = atob(cleanedText);
                 }
             } catch (e) {}
             
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim())
                 .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line))
-                .map(node => normalizeVmessLink(node)); // <-- 这里现在调用的是“直通车”函数
+                .map(node => normalizeVmessLink(node));
 
-            validNodes = validNodes.filter(nodeLink => {
-                try {
-                    const hashIndex = nodeLink.lastIndexOf('#');
-                    if (hashIndex === -1) return true;
-                    const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
-                    return !nodeName.includes('https://');
-                } catch (e) { return false; }
-            });
+            validNodes = validNodes.filter(nodeLink => !nodeLink.includes('ERROR_NORMALIZING_LINK'));
 
             return (config.prependSubName && sub.name) 
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
-
         } catch (e) { 
             console.error(`Failed to fetch sub: ${sub.url}`, e);
             return ''; 
