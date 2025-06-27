@@ -142,16 +142,45 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// --- [最终修正版] 辅助函数，采用无状态Regex并修正手动解码逻辑 ---
+// --- [新增] VMess链接标准化辅助函数 ---
+function normalizeVmessLink(link) {
+    // 只处理vmess链接
+    if (!link.startsWith('vmess://')) {
+        return link;
+    }
+    try {
+        const hashIndex = link.lastIndexOf('#');
+        const hasFragment = hashIndex !== -1;
+        const linkBody = hasFragment ? link.substring(0, hashIndex) : link;
+        const fragment = hasFragment ? link.substring(hashIndex) : '';
+
+        const base64Part = linkBody.substring(8); // 截取 "vmess://" 之后的部分
+        
+        // 解码 -> 重新序列化为无空格的JSON -> 重新编码为Base64
+        const decodedJson = atob(base64Part);
+        const parsedJson = JSON.parse(decodedJson);
+        const minifiedJson = JSON.stringify(parsedJson); // 这一步会去除所有换行和多余空格
+        const newBase64Part = btoa(minifiedJson);
+        
+        // 重新组合成标准链接
+        return `vmess://${newBase64Part}${fragment}`;
+    } catch (e) {
+        // 如果处理过程中发生任何错误，返回原始链接，避免影响其他节点
+        console.error("Failed to normalize vmess link, returning original:", link, e);
+        return link;
+    }
+}
+
+// --- [重构最终版] generateCombinedNodeList 函数 ---
 async function generateCombinedNodeList(context, config, userAgent) {
     const { env } = context;
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
+    const nodeRegex = /(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
 
     const manualEntries = [];
     const httpSubs = [];
 
-    // 步骤 1: 区分订阅类型
     for (const sub of enabledMisubs) {
         if (sub.url.toLowerCase().startsWith('http')) {
             httpSubs.push(sub);
@@ -160,35 +189,28 @@ async function generateCombinedNodeList(context, config, userAgent) {
         }
     }
 
-    // 步骤 2: 独立处理每一个“手动输入项”
     let processedManualNodes = [];
     for (const entry of manualEntries) {
         let content = entry.url;
-
-        // 修正：正确地尝试解码Base64
         try {
             const cleaned = content.replace(/\s/g, '');
             if (cleaned.length > 20 && /^[A-Za-z0-9+/=]{20,}$/.test(cleaned)) {
                 const binaryString = atob(cleaned);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-                // 如果解码成功，则使用解码后的内容
                 content = new TextDecoder('utf-8').decode(bytes);
             }
-        } catch (e) {
-            // 解码失败，说明是纯文本，保持 content 不变
-        }
+        } catch (e) {}
 
         const nodes = content.split('\n')
             .map(line => line.trim())
-            // --- 核心修正: 在每次filter时都创建一个新的、无状态的RegExp对象 ---
             .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line))
+            .map(node => normalizeVmessLink(node)) // <-- 对每个节点进行标准化处理
             .map(node => (config.prependSubName) ? prependNodeName(node, entry.name || '手动节点') : node);
         
         processedManualNodes.push(...nodes);
     }
 
-    // 步骤 3: 异步处理所有“HTTP链接项”
     const subPromises = httpSubs.map(async (sub) => {
         try {
             const requestHeaders = { 'User-Agent': userAgent };
@@ -212,8 +234,8 @@ async function generateCombinedNodeList(context, config, userAgent) {
             
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim())
-                // --- 同样应用核心修正 ---
-                .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line));
+                .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line))
+                .map(node => normalizeVmessLink(node)); // <-- 对每个节点进行标准化处理
 
             validNodes = validNodes.filter(nodeLink => {
                 try {
@@ -234,11 +256,9 @@ async function generateCombinedNodeList(context, config, userAgent) {
         }
     });
 
-    // 步骤 4: 合并所有结果
     const processedSubContents = await Promise.all(subPromises);
     const combinedContent = (processedManualNodes.join('\n') + '\n' + processedSubContents.join('\n'));
 
-    // 步骤 5: 去重并返回
     return [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
 }
 
