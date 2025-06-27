@@ -182,8 +182,9 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版函数 1/3] VMess链接标准化辅助函数 (已加入Unicode编码支持)
+// --- [最终修正版 - 解决Unicode编码问题] ---
 function normalizeVmessLink(link) {
+    // 只处理vmess链接
     if (!link.startsWith('vmess://')) {
         return link;
     }
@@ -194,23 +195,42 @@ function normalizeVmessLink(link) {
         let fragment = hasFragment ? link.substring(hashIndex) : '';
 
         const base64Part = linkBody.substring(8);
-        const decodedJson = atob(base64Part);
-        const parsedJson = JSON.parse(decodedJson);
+        
+        // 步骤1：解码。使用TextDecoder确保从Base64解码时正确处理UTF-8
+        let decodedJsonString;
+        try {
+            const bytes = atob(base64Part).split('').map(c => c.charCodeAt(0));
+            decodedJsonString = new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+        } catch(e) {
+            // 如果上述方法失败（可能因为不含unicode），使用原始atob
+            decodedJsonString = atob(base64Part);
+        }
 
-        // 如果链接本身没有#fragment，但JSON内部有ps(节点名)，则自动生成fragment
+        const parsedJson = JSON.parse(decodedJsonString);
+
+        // 如果链接本身没有#fragment，但JSON内部有ps(节点名)，则自动从JSON中提取并生成fragment
         if (!hasFragment && parsedJson.ps) {
             fragment = '#' + encodeURIComponent(parsedJson.ps);
         }
 
-        const minifiedJson = JSON.stringify(parsedJson);
+        // 步骤2：将JSON对象重新序列化为无多余空格和换行的紧凑字符串
+        const minifiedJsonString = JSON.stringify(parsedJson);
 
-        // 核心修正：使用 unescape + encodeURIComponent 组合来让 btoa 支持中文字符
-        const newBase64Part = btoa(unescape(encodeURIComponent(minifiedJson)));
+        // 步骤3：重新编码为Base64。这是本次修复的核心。
+        // 核心修正：使用 TextEncoder 将UTF-8字符串转为字节数组
+        const utf8Bytes = new TextEncoder().encode(minifiedJsonString);
+        // 将字节数组转换为二进制字符串，这是btoa所需要的格式
+        let binaryString = '';
+        for (let i = 0; i < utf8Bytes.length; i++) {
+            binaryString += String.fromCharCode(utf8Bytes[i]);
+        }
+        const newBase64Part = btoa(binaryString);
         
+        // 步骤4：重新组合成100%标准的链接
         return `vmess://${newBase64Part}${fragment}`;
     } catch (e) {
         console.error("无法标准化VMess链接，将返回原始链接:", link, e);
-        return link;
+        return link; // 如果在任何步骤出错，返回原始链接以避免程序崩溃
     }
 }
 
