@@ -107,13 +107,62 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// --- [优化版] 辅助函数，现在接收misubs作为参数，不再自己查询KV ---
-async function generateCombinedNodeList(context, config, userAgent, misubs) { // 新增了 misubs 参数
+// --- [必需] 名称前缀辅助函数 (最终修正乱码版) ---
+function prependNodeName(link, prefix) {
+  if (!prefix) return link;
+
+  // 内部辅助函数，用于处理 URL 片段 (hash)，此部分无修改
+  const appendToFragment = (baseLink, namePrefix) => {
+    const hashIndex = baseLink.lastIndexOf('#');
+    const originalName = hashIndex !== -1 ? decodeURIComponent(baseLink.substring(hashIndex + 1)) : '';
+    const base = hashIndex !== -1 ? baseLink.substring(0, hashIndex) : baseLink;
+    
+    if (originalName.startsWith(namePrefix)) {
+        return baseLink;
+    }
+    const newName = originalName ? `${namePrefix} - ${originalName}` : namePrefix;
+    return `${base}#${encodeURIComponent(newName)}`;
+  }
+
+  // --- 核心逻辑：特殊处理 vmess 链接 ---
+  if (link.startsWith('vmess://')) {
+    try {
+      const base64Part = link.substring('vmess://'.length);
+      
+      // --- 关键修正：使用 TextDecoder 正确处理 UTF-8 编码 ---
+      const binaryString = atob(base64Part);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+      }
+      const jsonString = new TextDecoder('utf-8').decode(bytes);
+      const nodeConfig = JSON.parse(jsonString);
+
+      const originalPs = nodeConfig.ps || '';
+      if (!originalPs.startsWith(prefix)) {
+        nodeConfig.ps = originalPs ? `${prefix} - ${originalPs}` : prefix;
+      }
+      
+      const newJsonString = JSON.stringify(nodeConfig);
+      const newBase64Part = btoa(unescape(encodeURIComponent(newJsonString)));
+      return 'vmess://' + newBase64Part;
+
+    } catch (e) {
+      console.error("为 vmess 节点添加名称前缀失败，将回退到通用方法。", e);
+      return appendToFragment(link, prefix);
+    }
+  }
+
+  // 对于所有其他协议，使用标准的片段命名方法
+  return appendToFragment(link, prefix);
+}
+// --- [优化版] 辅助函数 (最终修正乱码版) ---
+async function generateCombinedNodeList(context, config, userAgent, misubs) {
     const enabledMisubs = misubs.filter(sub => sub.enabled);
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
     let manualNodesContent = '';
 
-    // 新增：Vmess 链接标准化函数
+    // [新增] vmess 链接标准化函数
     const normalizeVmessLink = (link) => {
         if (!link.startsWith('vmess://')) {
             return link;
@@ -121,31 +170,25 @@ async function generateCombinedNodeList(context, config, userAgent, misubs) { //
         try {
             const base64Part = link.substring('vmess://'.length);
             
-            // 步骤 1: 将 Base64 解码为二进制字符串
+            // --- 关键修正：同样使用 TextDecoder 正确处理 UTF-8 编码 ---
             const binaryString = atob(base64Part);
-            
-            // 步骤 2: 将二进制字符串转换为正确的 UTF-8 格式 JSON 字符串
             const bytes = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++) {
                 bytes[i] = binaryString.charCodeAt(i);
             }
             const jsonString = new TextDecoder('utf-8').decode(bytes);
+
+            // 重新解析并生成紧凑的 JSON 字符串
+            const compactJsonString = JSON.stringify(JSON.parse(jsonString)); 
             
-            // 步骤 3: 解析 JSON 并重新生成紧凑的字符串 (移除换行和多余空格)
-            const compactJsonString = JSON.stringify(JSON.parse(jsonString));
-            
-            // 步骤 4: 将紧凑的 JSON 字符串重新编码为 Base64
-            // JSON.stringify 会将非 ASCII 字符转义 (例如 "日本" -> "\u65e5\u672c")
-            // 这使得输出的字符串是纯 ASCII，可以直接用 btoa() 安全编码。
-            const newBase64Part = btoa(compactJsonString);
-            
+            // 使用安全的方式重新编码为标准的 Base64
+            const newBase64Part = btoa(unescape(encodeURIComponent(compactJsonString)));
             return 'vmess://' + newBase64Part;
         } catch (e) {
-            console.error("无法标准化Vmess链接，将使用原始链接:", link, e);
-            return link; // 如果处理失败，则返回原始链接
+            console.error("标准化 vmess 链接失败，将使用原始链接:", link, e);
+            return link;
         }
     };
-
 
     const httpSubs = enabledMisubs.filter(sub => {
         if (sub.url.toLowerCase().startsWith('http')) return true;
@@ -153,8 +196,10 @@ async function generateCombinedNodeList(context, config, userAgent, misubs) { //
         return false;
     });
 
+    // 处理流程不变，但调用的函数内部逻辑已修正
     const processedManualNodes = manualNodesContent.split('\n')
-        .map(line => line.trim()).filter(line => nodeRegex.test(line))
+        .map(line => line.trim())
+        .filter(line => nodeRegex.test(line))
         .map(normalizeVmessLink)
         .map(node => (config.prependSubName) ? prependNodeName(node, '手动节点') : node)
         .join('\n');
@@ -186,7 +231,6 @@ async function generateCombinedNodeList(context, config, userAgent, misubs) { //
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
 
-            // --- 更安全的过滤逻辑 ---
             validNodes = validNodes.filter(nodeLink => {
                 try {
                     const hashIndex = nodeLink.lastIndexOf('#');
@@ -334,20 +378,4 @@ export async function onRequest(context) {
         console.error("Critical error in onRequest:", e);
         return new Response("Internal Server Error", { status: 500 });
     }
-}
-
-// --- [必需] 名称前缀辅助函数 ---
-function prependNodeName(link, prefix) {
-  if (!prefix) return link;
-  const hashIndex = link.lastIndexOf('#');
-  if (hashIndex === -1) {
-    return `${link}#${encodeURIComponent(prefix)}`;
-  }
-  const baseLink = link.substring(0, hashIndex);
-  const originalName = decodeURIComponent(link.substring(hashIndex + 1));
-  if (originalName.startsWith(prefix)) {
-      return link;
-  }
-  const newName = `${prefix} - ${originalName}`;
-  return `${baseLink}#${encodeURIComponent(newName)}`;
 }
