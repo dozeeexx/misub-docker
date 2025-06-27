@@ -182,50 +182,13 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版函数 1/3] VMess链接标准化辅助函数 (已加入Unicode编码支持)
+// [最终诊断版 - 函数 1/3] “直通车”模式的VMess链接处理函数
 function normalizeVmessLink(link) {
-    if (!link.startsWith('vmess://')) {
-        return link;
-    }
-    try {
-        const hashIndex = link.lastIndexOf('#');
-        const hasFragment = hashIndex !== -1;
-        const linkBody = hasFragment ? link.substring(0, hashIndex) : link;
-        let fragment = hasFragment ? link.substring(hashIndex) : '';
-
-        const base64Part = linkBody.substring(8);
-        
-        let decodedJsonString;
-        try {
-            const bytes = atob(base64Part).split('').map(c => c.charCodeAt(0));
-            decodedJsonString = new TextDecoder('utf-8').decode(new Uint8Array(bytes));
-        } catch(e) {
-            decodedJsonString = atob(base64Part);
-        }
-
-        const parsedJson = JSON.parse(decodedJsonString);
-
-        if (!hasFragment && parsedJson.ps) {
-            fragment = '#' + encodeURIComponent(parsedJson.ps);
-        }
-
-        const minifiedJsonString = JSON.stringify(parsedJson);
-
-        const utf8Bytes = new TextEncoder().encode(minifiedJsonString);
-        let binaryString = '';
-        for (let i = 0; i < utf8Bytes.length; i++) {
-            binaryString += String.fromCharCode(utf8Bytes[i]);
-        }
-        const newBase64Part = btoa(binaryString);
-        
-        return `vmess://${newBase64Part}${fragment}`;
-    } catch (e) {
-        console.error("无法标准化VMess链接，将返回原始链接:", link, e);
-        return link;
-    }
+    // 本次修改的核心：不对VMess链接做任何处理，直接原样返回。
+    return link;
 }
 
-// [最终版函数 2/3] 名称前缀辅助函数
+// [最终诊断版 - 函数 2/3] 名称前缀辅助函数 (无修改，为保证完整性提供)
 function prependNodeName(link, prefix) {
   if (!prefix) return link;
   const hashIndex = link.lastIndexOf('#');
@@ -241,8 +204,7 @@ function prependNodeName(link, prefix) {
   return `${baseLink}#${encodeURIComponent(newName)}`;
 }
 
-
-// [最终版函数 3/3] 节点列表生成函数
+// [最终诊断版 - 函数 3/3] 节点列表生成函数 (调用“直通车”模式的函数)
 async function generateCombinedNodeList(context, config, userAgent) {
     const { env } = context;
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
@@ -275,7 +237,7 @@ async function generateCombinedNodeList(context, config, userAgent) {
         const nodes = content.split('\n')
             .map(line => line.trim())
             .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line))
-            .map(node => normalizeVmessLink(node))
+            .map(node => normalizeVmessLink(node)) // <-- 这里现在调用的是“直通车”函数
             .map(node => (config.prependSubName) ? prependNodeName(node, entry.name || '手动节点') : node);
         
         processedManualNodes.push(...nodes);
@@ -305,7 +267,7 @@ async function generateCombinedNodeList(context, config, userAgent) {
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim())
                 .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line))
-                .map(node => normalizeVmessLink(node));
+                .map(node => normalizeVmessLink(node)); // <-- 这里现在调用的是“直通车”函数
 
             validNodes = validNodes.filter(nodeLink => {
                 try {
