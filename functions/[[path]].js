@@ -113,6 +113,40 @@ async function generateCombinedNodeList(context, config, userAgent, misubs) { //
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
     let manualNodesContent = '';
 
+    // 新增：Vmess 链接标准化函数
+    const normalizeVmessLink = (link) => {
+        if (!link.startsWith('vmess://')) {
+            return link;
+        }
+        try {
+            const base64Part = link.substring('vmess://'.length);
+            
+            // 步骤 1: 将 Base64 解码为二进制字符串
+            const binaryString = atob(base64Part);
+            
+            // 步骤 2: 将二进制字符串转换为正确的 UTF-8 格式 JSON 字符串
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const jsonString = new TextDecoder('utf-8').decode(bytes);
+            
+            // 步骤 3: 解析 JSON 并重新生成紧凑的字符串 (移除换行和多余空格)
+            const compactJsonString = JSON.stringify(JSON.parse(jsonString));
+            
+            // 步骤 4: 将紧凑的 JSON 字符串重新编码为 Base64
+            // JSON.stringify 会将非 ASCII 字符转义 (例如 "日本" -> "\u65e5\u672c")
+            // 这使得输出的字符串是纯 ASCII，可以直接用 btoa() 安全编码。
+            const newBase64Part = btoa(compactJsonString);
+            
+            return 'vmess://' + newBase64Part;
+        } catch (e) {
+            console.error("无法标准化Vmess链接，将使用原始链接:", link, e);
+            return link; // 如果处理失败，则返回原始链接
+        }
+    };
+
+
     const httpSubs = enabledMisubs.filter(sub => {
         if (sub.url.toLowerCase().startsWith('http')) return true;
         manualNodesContent += sub.url + '\n';
@@ -121,6 +155,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs) { //
 
     const processedManualNodes = manualNodesContent.split('\n')
         .map(line => line.trim()).filter(line => nodeRegex.test(line))
+        .map(normalizeVmessLink)
         .map(node => (config.prependSubName) ? prependNodeName(node, '手动节点') : node)
         .join('\n');
 
