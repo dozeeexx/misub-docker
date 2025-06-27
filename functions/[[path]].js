@@ -144,9 +144,8 @@ async function handleApiRequest(request, env) {
 
 // --- [新增] VMess链接标准化辅助函数 ---
 function normalizeVmessLink(link) {
-    // 只处理vmess链接
     if (!link.startsWith('vmess://')) {
-        return link;
+        return link; // 只处理vmess链接
     }
     try {
         const hashIndex = link.lastIndexOf('#');
@@ -154,29 +153,44 @@ function normalizeVmessLink(link) {
         const linkBody = hasFragment ? link.substring(0, hashIndex) : link;
         const fragment = hasFragment ? link.substring(hashIndex) : '';
 
-        const base64Part = linkBody.substring(8); // 截取 "vmess://" 之后的部分
-        
+        let base64Part = linkBody.substring(8); // 截取 "vmess://" 之后的部分
+
         // 解码 -> 重新序列化为无空格的JSON -> 重新编码为Base64
         const decodedJson = atob(base64Part);
         const parsedJson = JSON.parse(decodedJson);
-        const minifiedJson = JSON.stringify(parsedJson); // 这一步会去除所有换行和多余空格
+        const minifiedJson = JSON.stringify(parsedJson); // 核心步骤：将JSON压缩成单行
         const newBase64Part = btoa(minifiedJson);
         
         // 重新组合成标准链接
         return `vmess://${newBase64Part}${fragment}`;
     } catch (e) {
-        // 如果处理过程中发生任何错误，返回原始链接，避免影响其他节点
-        console.error("Failed to normalize vmess link, returning original:", link, e);
-        return link;
+        console.error("无法标准化VMess链接，将返回原始链接:", link, e);
+        return link; // 如果处理过程中发生任何错误，返回原始链接
     }
 }
+
+// --- [新增] 名称前缀辅助函数 ---
+function prependNodeName(link, prefix) {
+  if (!prefix) return link;
+  const hashIndex = link.lastIndexOf('#');
+  if (hashIndex === -1) {
+    return `${link}#${encodeURIComponent(prefix)}`;
+  }
+  const baseLink = link.substring(0, hashIndex);
+  const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+  if (originalName.startsWith(prefix)) {
+      return link;
+  }
+  const newName = `${prefix} - ${originalName}`;
+  return `${baseLink}#${encodeURIComponent(newName)}`;
+}
+
 
 // --- [重构最终版] generateCombinedNodeList 函数 ---
 async function generateCombinedNodeList(context, config, userAgent) {
     const { env } = context;
     const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
-    const nodeRegex = /(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
 
     const manualEntries = [];
     const httpSubs = [];
