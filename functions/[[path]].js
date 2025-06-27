@@ -64,81 +64,6 @@ async function handleApiRequest(request, env) {
                 headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
-            // --- 请将下面这个完整的“终极诊断”代码块添加到您的 switch 语句中 ---
-            case '/debug_final': {
-                // 辅助函数1: 标准化VMess链接
-                function normalizeVmessLink(link) {
-                    if (!link.startsWith('vmess://')) {
-                        return link;
-                    }
-                    try {
-                        const hashIndex = link.lastIndexOf('#');
-                        const hasFragment = hashIndex !== -1;
-                        const linkBody = hasFragment ? link.substring(0, hashIndex) : link;
-                        let fragment = hasFragment ? link.substring(hashIndex) : '';
-                        const base64Part = linkBody.substring(8);
-                        const decodedJson = atob(base64Part);
-                        const parsedJson = JSON.parse(decodedJson);
-                        if (!hasFragment && parsedJson.ps) {
-                            fragment = '#' + encodeURIComponent(parsedJson.ps);
-                        }
-                        const minifiedJson = JSON.stringify(parsedJson);
-                        const newBase64Part = btoa(unescape(encodeURIComponent(minifiedJson)));
-                        return `vmess://${newBase64Part}${fragment}`;
-                    } catch (e) {
-                        return `ERROR_NORMALIZING_LINK: ${e.message}`; // 在出错时返回明确的错误信息
-                    }
-                }
-
-                // 辅助函数2: 添加前缀
-                function prependNodeName(link, prefix) {
-                    if (!prefix || link.startsWith('ERROR')) return link;
-                    const hashIndex = link.lastIndexOf('#');
-                    if (hashIndex === -1) {
-                        return `${link}#${encodeURIComponent(prefix)}`;
-                    }
-                    const baseLink = link.substring(0, hashIndex);
-                    const originalName = decodeURIComponent(link.substring(hashIndex + 1));
-                    if (originalName.startsWith(prefix)) {
-                        return link;
-                    }
-                    const newName = `${prefix} - ${originalName}`;
-                    return `${baseLink}#${encodeURIComponent(newName)}`;
-                }
-
-                // --- 诊断主逻辑 ---
-                const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
-                let manualNodesContent = '';
-                const manualEntries = misubs.filter(sub => sub.enabled && !sub.url.toLowerCase().startsWith('http'));
-                
-                if (manualEntries.length > 0) {
-                    manualNodesContent = manualEntries.map(sub => sub.url).join('\n');
-                }
-
-                const lines = manualNodesContent.split('\n').map(line => line.trim()).filter(Boolean);
-                
-                const debugOutput = lines.map(line => {
-                    if (!line.startsWith('vmess://')) {
-                        return {
-                            "输入链接 (Input)": line,
-                            "备注 (Note)": "非VMess节点，跳过详细诊断"
-                        };
-                    }
-                    const normalizedLink = normalizeVmessLink(line);
-                    const finalLink = prependNodeName(normalizedLink, '手动节点');
-                    return {
-                        "输入链接 (Input)": line,
-                        "标准化后 (Normalized)": normalizedLink,
-                        "添加前缀后 (Final)": finalLink,
-                        "是否被成功修改 (Was_Modified)": (line !== normalizedLink && !normalizedLink.startsWith('ERROR'))
-                    };
-                });
-
-                return new Response(JSON.stringify(debugOutput, null, 2), {
-                    headers: { 'Content-Type': 'application/json; charset=utf-8' }
-                });
-            }
-            // --- 诊断代码块结束 ---
             case '/data': {
                 const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
                 const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
@@ -182,139 +107,67 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终修正版 - 函数 1/3] 名称前缀辅助函数 (回退到稳定的字符串处理版本)
-function prependNodeName(link, prefix) {
-    if (!prefix || link.startsWith('ERROR')) {
-        return link;
-    }
-    
-    const hashIndex = link.lastIndexOf('#');
-    
-    if (hashIndex === -1) {
-        // 链接没有原始名称，直接添加前缀
-        return `${link}#${encodeURIComponent(prefix)}`;
-    }
-    
-    const baseLink = link.substring(0, hashIndex);
-    const originalName = decodeURIComponent(link.substring(hashIndex + 1));
-    
-    // 如果已包含前缀，则不再重复添加
-    if (originalName.startsWith(prefix)) {
-        return link;
-    }
-    
-    const newName = `${prefix} - ${originalName}`;
-    return `${baseLink}#${encodeURIComponent(newName)}`;
-}
-
-// [最终版函数 2/3] VMess链接标准化辅助函数 (借鉴CF-Workers-SUB思想重写)
-function normalizeVmessLink(link) {
-    if (!link.startsWith('vmess://')) {
-        return link;
-    }
-    try {
-        const url = new URL(link);
-        const base64Part = url.pathname.slice(2); // 移除开头的 "//"
-        
-        let decodedJsonString;
-        try {
-            // 标准的atob足以解码含有换行符的Base64，问题出在后续的btoa
-            decodedJsonString = atob(base64Part);
-        } catch (e) {
-            console.error("Base64解码失败:", base64Part, e);
-            return link; // 解码失败则返回原始链接
-        }
-
-        const parsedJson = JSON.parse(decodedJsonString);
-
-        // 如果原始链接没有#节点名，则从JSON的ps字段中提取并创建
-        if (!url.hash && parsedJson.ps) {
-            url.hash = encodeURIComponent(parsedJson.ps);
-        }
-
-        // 核心：将解析后的JSON对象压缩为单行字符串
-        const minifiedJsonString = JSON.stringify(parsedJson);
-
-        // 核心修正：使用 TextEncoder 将UTF-8字符串安全地转为字节数组
-        const utf8Bytes = new TextEncoder().encode(minifiedJsonString);
-        
-        // 将字节数组转换为二进制字符串，这是btoa所需要的输入格式
-        let binaryString = '';
-        for (let i = 0; i < utf8Bytes.length; i++) {
-            binaryString += String.fromCharCode(utf8Bytes[i]);
-        }
-        
-        // 用净化后的数据重新编码为Base64
-        const newBase64Part = btoa(binaryString);
-        
-        url.pathname = `//${newBase64Part}`;
-        return url.toString();
-
-    } catch (e) {
-        console.error("无法标准化VMess链接，将返回原始链接:", link, e);
-        return link;
-    }
-}
-
-// [最终版函数 3/3] 节点列表生成函数 (调用最终版函数)
-async function generateCombinedNodeList(context, config, userAgent) {
-    const { env } = context;
-    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
+// --- [优化版] 辅助函数，现在接收misubs作为参数，不再自己查询KV ---
+async function generateCombinedNodeList(context, config, userAgent, misubs) { // 新增了 misubs 参数
     const enabledMisubs = misubs.filter(sub => sub.enabled);
+    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
+    let manualNodesContent = '';
 
-    const manualEntries = [];
-    const httpSubs = [];
+    const httpSubs = enabledMisubs.filter(sub => {
+        if (sub.url.toLowerCase().startsWith('http')) return true;
+        manualNodesContent += sub.url + '\n';
+        return false;
+    });
 
-    for (const sub of enabledMisubs) {
-        if (sub.url.toLowerCase().startsWith('http')) {
-            httpSubs.push(sub);
-        } else {
-            manualEntries.push(sub);
-        }
-    }
-
-    let processedManualNodes = [];
-    for (const entry of manualEntries) {
-        let content = entry.url;
-        try {
-            const cleaned = content.replace(/\s/g, '');
-            if (cleaned.length > 20 && /^[A-Za-z0-9+/=]{20,}$/.test(cleaned)) {
-                content = atob(cleaned);
-            }
-        } catch (e) {}
-
-        const nodes = content.split('\n')
-            .map(line => line.trim())
-            .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line))
-            .map(node => normalizeVmessLink(node))
-            .map(node => prependNodeName(node, entry.name || '手动节点'));
-        
-        processedManualNodes.push(...nodes);
-    }
+    const processedManualNodes = manualNodesContent.split('\n')
+        .map(line => line.trim()).filter(line => nodeRegex.test(line))
+        .map(node => (config.prependSubName) ? prependNodeName(node, '手动节点') : node)
+        .join('\n');
 
     const subPromises = httpSubs.map(async (sub) => {
         try {
-            const response = await fetch(new Request(sub.url, { headers: { 'User-Agent': userAgent }, redirect: "follow", cf: { insecureSkipVerify: true } }));
-            if (!response.ok) return '';
+            const requestHeaders = { 'User-Agent': userAgent };
+            const response = await Promise.race([
+                fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
+            ]);
+            if (!response.ok) {
+                console.error(`Failed to fetch sub: ${sub.url}, status: ${response.status}`);
+                return '';
+            }
+            
             let text = await response.text();
             
             try {
                 const cleanedText = text.replace(/\s/g, '');
                 if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
-                    text = atob(cleanedText);
+                    const binaryString = atob(cleanedText);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                    text = new TextDecoder('utf-8').decode(bytes);
                 }
             } catch (e) {}
             
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
-                .map(line => line.trim())
-                .filter(line => line && new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/').test(line))
-                .map(node => normalizeVmessLink(node));
+                .map(line => line.trim()).filter(line => nodeRegex.test(line));
 
-            validNodes = validNodes.filter(nodeLink => !nodeLink.includes('ERROR_NORMALIZING_LINK'));
+            // --- 更安全的过滤逻辑 ---
+            validNodes = validNodes.filter(nodeLink => {
+                try {
+                    const hashIndex = nodeLink.lastIndexOf('#');
+                    if (hashIndex === -1) return true;
+                    const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
+                    return !nodeName.includes('https://');
+                } catch (e) {
+                    console.error(`Failed to decode node name, filtering it out: ${nodeLink}`, e);
+                    return false;
+                }
+            });
 
             return (config.prependSubName && sub.name) 
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
+
         } catch (e) { 
             console.error(`Failed to fetch sub: ${sub.url}`, e);
             return ''; 
@@ -322,8 +175,7 @@ async function generateCombinedNodeList(context, config, userAgent) {
     });
 
     const processedSubContents = await Promise.all(subPromises);
-    const combinedContent = (processedManualNodes.join('\n') + '\n' + processedSubContents.join('\n'));
-
+    const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
     return [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
 }
 
@@ -447,4 +299,20 @@ export async function onRequest(context) {
         console.error("Critical error in onRequest:", e);
         return new Response("Internal Server Error", { status: 500 });
     }
+}
+
+// --- [必需] 名称前缀辅助函数 ---
+function prependNodeName(link, prefix) {
+  if (!prefix) return link;
+  const hashIndex = link.lastIndexOf('#');
+  if (hashIndex === -1) {
+    return `${link}#${encodeURIComponent(prefix)}`;
+  }
+  const baseLink = link.substring(0, hashIndex);
+  const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+  if (originalName.startsWith(prefix)) {
+      return link;
+  }
+  const newName = `${prefix} - ${originalName}`;
+  return `${baseLink}#${encodeURIComponent(newName)}`;
 }
