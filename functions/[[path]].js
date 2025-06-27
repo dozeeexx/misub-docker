@@ -107,40 +107,55 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// --- [优化版] 辅助函数，现在接收misubs作为参数，不再自己查询KV ---
-async function generateCombinedNodeList(context, config, userAgent, misubs) { // 新增了 misubs 参数
+// --- [重构最终版] 辅助函数，现在能正确处理多个、不同格式的手动订阅项 ---
+async function generateCombinedNodeList(context, config, userAgent) {
+    const { env } = context;
+    const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
     const enabledMisubs = misubs.filter(sub => sub.enabled);
-    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
-    let manualNodesContent = '';
+    const nodeRegex = /(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//;
 
-    const httpSubs = enabledMisubs.filter(sub => {
-        if (sub.url.toLowerCase().startsWith('http')) return true;
-        manualNodesContent += sub.url + '\n';
-        return false;
-    });
+    const manualEntries = [];
+    const httpSubs = [];
 
-    // --- [最终修正版] 手动节点处理逻辑 ---
-    let decodedManualContent = manualNodesContent;
-    try {
-        // 尝试将整个手动输入内容作为一个Base64块来解码
-        const cleanedManual = manualNodesContent.replace(/\s/g, '');
-        if (cleanedManual.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedManual)) {
-            const binaryString = atob(cleanedManual);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-            decodedManualContent = new TextDecoder('utf-8').decode(bytes);
+    // 步骤 1: 将启用的订阅区分为“手动输入项”和“HTTP链接项”
+    for (const sub of enabledMisubs) {
+        if (sub.url.toLowerCase().startsWith('http')) {
+            httpSubs.push(sub);
+        } else {
+            manualEntries.push(sub);
         }
-    } catch (e) {
-        // 如果解码失败，说明它不是Base64，就把它当作原始的纯文本处理
-        decodedManualContent = manualNodesContent;
     }
 
-const processedManualNodes = decodedManualContent.split('\n')
-    .map(line => line.trim()).filter(line => line && nodeRegex.test(line))
-    .map(node => (config.prependSubName) ? prependNodeName(node, '手动节点') : node)
-    .join('\n');
-// --- 修正结束 ---
+    // 步骤 2: 独立处理每一个“手动输入项”
+    let processedManualNodes = [];
+    for (const entry of manualEntries) {
+        let content = entry.url; // 这是您在后台文本框里粘贴的完整内容
 
+        // 尝试将当前项的内容作为Base64解码
+        try {
+            const cleaned = content.replace(/\s/g, '');
+            // 增加一个长度判断，避免误判短的纯文本为Base64
+            if (cleaned.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleaned)) {
+                const binaryString = atob(cleaned);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                content = new TextDecoder('utf-8').decode(bytes);
+            }
+        } catch (e) {
+            // 解码失败，说明它本来就是纯文本，无需理会错误，继续使用原始内容
+        }
+
+        // 现在 content 无论是解码来的还是原始的，都是纯文本了
+        const nodes = content.split('\n')
+            .map(line => line.trim())
+            .filter(line => line && nodeRegex.test(line)) // 过滤出有效节点链接
+            .map(node => (config.prependSubName) ? prependNodeName(node, entry.name || '手动节点') : node);
+        
+        // 将处理好的节点添加到最终列表中
+        processedManualNodes.push(...nodes);
+    }
+
+    // 步骤 3: 异步处理所有“HTTP链接项”（这部分逻辑和之前一样）
     const subPromises = httpSubs.map(async (sub) => {
         try {
             const requestHeaders = { 'User-Agent': userAgent };
@@ -148,10 +163,7 @@ const processedManualNodes = decodedManualContent.split('\n')
                 fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
             ]);
-            if (!response.ok) {
-                console.error(`Failed to fetch sub: ${sub.url}, status: ${response.status}`);
-                return '';
-            }
+            if (!response.ok) { return ''; }
             
             let text = await response.text();
             
@@ -166,19 +178,15 @@ const processedManualNodes = decodedManualContent.split('\n')
             } catch (e) {}
             
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
-                .map(line => line.trim()).filter(line => nodeRegex.test(line));
+                .map(line => line.trim()).filter(line => line && nodeRegex.test(line));
 
-            // --- 更安全的过滤逻辑 ---
             validNodes = validNodes.filter(nodeLink => {
                 try {
                     const hashIndex = nodeLink.lastIndexOf('#');
                     if (hashIndex === -1) return true;
                     const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
                     return !nodeName.includes('https://');
-                } catch (e) {
-                    console.error(`Failed to decode node name, filtering it out: ${nodeLink}`, e);
-                    return false;
-                }
+                } catch (e) { return false; }
             });
 
             return (config.prependSubName && sub.name) 
@@ -191,8 +199,11 @@ const processedManualNodes = decodedManualContent.split('\n')
         }
     });
 
+    // 步骤 4: 合并所有结果
     const processedSubContents = await Promise.all(subPromises);
-    const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
+    const combinedContent = (processedManualNodes.join('\n') + '\n' + processedSubContents.join('\n'));
+
+    // 步骤 5: 去重并返回
     return [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
 }
 
