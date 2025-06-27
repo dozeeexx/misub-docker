@@ -64,13 +64,50 @@ async function handleApiRequest(request, env) {
                 headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
-            // --- 请将下面这个完整的 case 代码块添加到您的 switch 语句中 ---
-            case '/debug_manual': {
-                // 仅为调试，临时允许未经认证的访问
-                // if (!await authMiddleware(request, env)) { return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }); }
+            // --- 请将下面这个完整的“终极诊断”代码块添加到您的 switch 语句中 ---
+            case '/debug_final': {
+                // 辅助函数1: 标准化VMess链接
+                function normalizeVmessLink(link) {
+                    if (!link.startsWith('vmess://')) {
+                        return link;
+                    }
+                    try {
+                        const hashIndex = link.lastIndexOf('#');
+                        const hasFragment = hashIndex !== -1;
+                        const linkBody = hasFragment ? link.substring(0, hashIndex) : link;
+                        let fragment = hasFragment ? link.substring(hashIndex) : '';
+                        const base64Part = linkBody.substring(8);
+                        const decodedJson = atob(base64Part);
+                        const parsedJson = JSON.parse(decodedJson);
+                        if (!hasFragment && parsedJson.ps) {
+                            fragment = '#' + encodeURIComponent(parsedJson.ps);
+                        }
+                        const minifiedJson = JSON.stringify(parsedJson);
+                        const newBase64Part = btoa(unescape(encodeURIComponent(minifiedJson)));
+                        return `vmess://${newBase64Part}${fragment}`;
+                    } catch (e) {
+                        return `ERROR_NORMALIZING_LINK: ${e.message}`; // 在出错时返回明确的错误信息
+                    }
+                }
 
+                // 辅助函数2: 添加前缀
+                function prependNodeName(link, prefix) {
+                    if (!prefix || link.startsWith('ERROR')) return link;
+                    const hashIndex = link.lastIndexOf('#');
+                    if (hashIndex === -1) {
+                        return `${link}#${encodeURIComponent(prefix)}`;
+                    }
+                    const baseLink = link.substring(0, hashIndex);
+                    const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+                    if (originalName.startsWith(prefix)) {
+                        return link;
+                    }
+                    const newName = `${prefix} - ${originalName}`;
+                    return `${baseLink}#${encodeURIComponent(newName)}`;
+                }
+
+                // --- 诊断主逻辑 ---
                 const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
-                
                 let manualNodesContent = '';
                 const manualEntries = misubs.filter(sub => sub.enabled && !sub.url.toLowerCase().startsWith('http'));
                 
@@ -78,19 +115,22 @@ async function handleApiRequest(request, env) {
                     manualNodesContent = manualEntries.map(sub => sub.url).join('\n');
                 }
 
-                // 将所有手动输入的内容分割成独立的行
-                const lines = manualNodesContent.split('\n');
+                const lines = manualNodesContent.split('\n').map(line => line.trim()).filter(Boolean);
                 
-                // 对每一行进行诊断
                 const debugOutput = lines.map(line => {
-                    const trimmedLine = line.trim();
-                    const regex = new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/');
-                    const testResult = regex.test(trimmedLine);
-                    
+                    if (!line.startsWith('vmess://')) {
+                        return {
+                            "输入链接 (Input)": line,
+                            "备注 (Note)": "非VMess节点，跳过详细诊断"
+                        };
+                    }
+                    const normalizedLink = normalizeVmessLink(line);
+                    const finalLink = prependNodeName(normalizedLink, '手动节点');
                     return {
-                        "原始行内容 (raw_line)": line,
-                        "去除首尾空格后 (trimmed_line)": trimmedLine,
-                        "是否通过正则检测 (is_valid_by_regex)": testResult
+                        "输入链接 (Input)": line,
+                        "标准化后 (Normalized)": normalizedLink,
+                        "添加前缀后 (Final)": finalLink,
+                        "是否被成功修改 (Was_Modified)": (line !== normalizedLink && !normalizedLink.startsWith('ERROR'))
                     };
                 });
 
@@ -98,7 +138,7 @@ async function handleApiRequest(request, env) {
                     headers: { 'Content-Type': 'application/json; charset=utf-8' }
                 });
             }
-            // --- 调试代码块结束 ---
+            // --- 诊断代码块结束 ---
             case '/data': {
                 const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
                 const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
