@@ -182,22 +182,29 @@ async function handleApiRequest(request, env) {
     return new Response('API route not found', { status: 404 });
 }
 
-// [最终版函数 1/3] 名称前缀辅助函数
+// [最终修正版 - 函数 1/3] 名称前缀辅助函数 (回退到稳定的字符串处理版本)
 function prependNodeName(link, prefix) {
-    if (!prefix || link.startsWith('ERROR')) return link;
-    try {
-        const url = new URL(link);
-        const originalName = url.hash.startsWith('#') ? decodeURIComponent(url.hash.substring(1)) : '';
-        if (originalName && originalName.startsWith(prefix)) {
-            return link;
-        }
-        const newName = prefix + (originalName ? ` - ${originalName}` : '');
-        url.hash = encodeURIComponent(newName);
-        return url.toString();
-    } catch (e) {
-        console.error("为链接添加前缀时出错:", link, e);
-        return link; // 出错时返回原始链接
+    if (!prefix || link.startsWith('ERROR')) {
+        return link;
     }
+    
+    const hashIndex = link.lastIndexOf('#');
+    
+    if (hashIndex === -1) {
+        // 链接没有原始名称，直接添加前缀
+        return `${link}#${encodeURIComponent(prefix)}`;
+    }
+    
+    const baseLink = link.substring(0, hashIndex);
+    const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+    
+    // 如果已包含前缀，则不再重复添加
+    if (originalName.startsWith(prefix)) {
+        return link;
+    }
+    
+    const newName = `${prefix} - ${originalName}`;
+    return `${baseLink}#${encodeURIComponent(newName)}`;
 }
 
 // [最终版函数 2/3] VMess链接标准化辅助函数 (借鉴CF-Workers-SUB思想重写)
