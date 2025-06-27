@@ -64,6 +64,41 @@ async function handleApiRequest(request, env) {
                 headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
+            // --- 请将下面这个完整的 case 代码块添加到您的 switch 语句中 ---
+            case '/debug_manual': {
+                // 仅为调试，临时允许未经认证的访问
+                // if (!await authMiddleware(request, env)) { return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }); }
+
+                const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
+                
+                let manualNodesContent = '';
+                const manualEntries = misubs.filter(sub => sub.enabled && !sub.url.toLowerCase().startsWith('http'));
+                
+                if (manualEntries.length > 0) {
+                    manualNodesContent = manualEntries.map(sub => sub.url).join('\n');
+                }
+
+                // 将所有手动输入的内容分割成独立的行
+                const lines = manualNodesContent.split('\n');
+                
+                // 对每一行进行诊断
+                const debugOutput = lines.map(line => {
+                    const trimmedLine = line.trim();
+                    const regex = new RegExp('(ss|ssr|vmess|vless|trojan|hysteria2?):\\/\\/');
+                    const testResult = regex.test(trimmedLine);
+                    
+                    return {
+                        "原始行内容 (raw_line)": line,
+                        "去除首尾空格后 (trimmed_line)": trimmedLine,
+                        "是否通过正则检测 (is_valid_by_regex)": testResult
+                    };
+                });
+
+                return new Response(JSON.stringify(debugOutput, null, 2), {
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' }
+                });
+            }
+            // --- 调试代码块结束 ---
             case '/data': {
                 const misubs = await env.MISUB_KV.get(KV_KEY_MAIN, 'json') || [];
                 const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
