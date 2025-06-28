@@ -53,7 +53,15 @@ const initializeState = () => {
     const subsData = props.data.misubs || [];
     const subsArray = [], nodesArray = [];
     for (const item of subsData) {
-      const newItem = { ...item, id: crypto.randomUUID(), enabled: item.enabled ?? true, isUpdating: false, };
+      // --- [核心修改] 在此處初始化 userInfo ---
+      const newItem = { 
+        ...item, 
+        id: crypto.randomUUID(), 
+        enabled: item.enabled ?? true, 
+        isUpdating: false,
+        userInfo: item.userInfo || null, // <-- 新增此行
+      };
+      // --- 修改結束 ---
       if (/^https?:\/\//.test(item.url)) {
         subsArray.push({ ...newItem, nodeCount: item.nodeCount || 0 });
       } else {
@@ -63,7 +71,8 @@ const initializeState = () => {
     subscriptions.value = subsArray;
     manualNodes.value = nodesArray;
     config.value = props.data.config || {};
-    subsArray.forEach(sub => handleUpdateNodeCount(sub.id, true));
+    // 更新節點時，會自動帶上 userInfo
+    subsArray.forEach(sub => handleUpdateNodeCount(sub.id, true)); 
   }
   isLoading.value = false;
 };
@@ -93,12 +102,30 @@ const handleDiscard = () => { initializeState(); subsDirty.value = false; showTo
 const handleUpdateNodeCount = async (subId, isInitialLoad = false) => {
     const subToUpdate = subscriptions.value.find(s => s.id === subId);
     if (!subToUpdate || !subToUpdate.url.startsWith('http')) return;
+    
     subToUpdate.isUpdating = true;
     try {
-        const count = await fetchNodeCount(subToUpdate.url);
-        subToUpdate.nodeCount = typeof count === 'number' ? count : 0;
-        if (!isInitialLoad) { showToast(`${subToUpdate.name} 更新成功！`, 'success'); markDirty(); }
-    } catch (error) { if (!isInitialLoad) showToast(`${subToUpdate.name} 更新失败`, 'error'); } finally { subToUpdate.isUpdating = false; }
+        // [核心修改] API 不再直接回傳數字，而是回傳一個物件
+        const res = await fetch('/api/node_count', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: subToUpdate.url })
+        });
+        const data = await res.json();
+        
+        // 將回傳的節點數和用戶資訊賦值給訂閱物件
+        subToUpdate.nodeCount = data.count || 0;
+        subToUpdate.userInfo = data.userInfo || null; // 新增 userInfo 屬性
+
+        if (!isInitialLoad) { 
+            showToast(`${subToUpdate.name || '訂閱'} 更新成功！`, 'success'); 
+            markDirty(); 
+        }
+    } catch (error) { 
+        if (!isInitialLoad) showToast(`${subToUpdate.name || '訂閱'} 更新失敗`, 'error'); 
+    } finally { 
+        subToUpdate.isUpdating = false; 
+    }
 };
 const handleSave = async () => {
   saveState.value = 'saving';

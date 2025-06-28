@@ -1,10 +1,11 @@
+import yaml from 'js-yaml';
+
 // --- 全局常量 ---
 const KV_KEY_MAIN = 'misub_data_v1';
 const KV_KEY_SETTINGS = 'worker_settings_v1';
 const COOKIE_NAME = 'auth_session';
 const SESSION_DURATION = 8 * 60 * 60 * 1000;
 
-// [最终版] 默认设置
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
@@ -12,6 +13,31 @@ const defaultSettings = {
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true
 };
+
+// --- [新增] TG 通知函式 ---
+async function sendTgNotification(settings, message) {
+  if (!settings.BotToken || !settings.ChatID) {
+    console.log("TG BotToken or ChatID not set, skipping notification.");
+    return;
+  }
+  const url = `https://api.telegram.org/bot${settings.BotToken}/sendMessage`;
+  const payload = { chat_id: settings.ChatID, text: message, parse_mode: 'Markdown' };
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) {
+      console.log("TG notification sent successfully.");
+    } else {
+      const errorData = await response.json();
+      console.error("Failed to send TG notification:", errorData);
+    }
+  } catch (error) {
+    console.error("Error sending TG notification:", error);
+  }
+}
 
 // --- 认证与API处理的核心函数 (无修改) ---
 async function createSignedToken(key, data) {
@@ -40,38 +66,8 @@ async function authMiddleware(request, env) {
     const verifiedData = await verifySignedToken(env.COOKIE_SECRET, token);
     return verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
 }
-async function sendTgNotification(settings, message) {
-  if (!settings.BotToken || !settings.ChatID) {
-    console.log("TG BotToken or ChatID not set, skipping notification.");
-    return;
-  }
 
-  const url = `https://api.telegram.org/bot${settings.BotToken}/sendMessage`;
-  const payload = {
-    chat_id: settings.ChatID,
-    text: message,
-    parse_mode: 'Markdown'
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (response.ok) {
-      console.log("TG notification sent successfully.");
-    } else {
-      const errorData = await response.json();
-      console.error("Failed to send TG notification:", errorData);
-    }
-  } catch (error) {
-    console.error("Error sending TG notification:", error);
-  }
-}
+// --- 主要 API 請求處理 ---
 async function handleApiRequest(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
@@ -109,18 +105,65 @@ async function handleApiRequest(request, env) {
                 await env.MISUB_KV.put(KV_KEY_MAIN, JSON.stringify(misubs));
                 return new Response(JSON.stringify({ success: true, message: '订阅源已保存' }));
             }
+            
+            // --- [終極版本] 節點計數邏輯 ---
             case '/node_count': {
                 if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
                 const { url: subUrl } = await request.json();
-                if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) { return new Response(JSON.stringify({ error: 'Invalid or missing url' }), { status: 400 });}
-                const response = await fetch(new Request(subUrl, { headers: {'User-Agent': 'MiSub-Node-Counter'}, redirect: "follow" }));
-                if (!response.ok) return new Response(JSON.stringify({ count: 0 }));
-                const text = await response.text();
-                let decoded = '';
-                try { decoded = atob(text.replace(/\s/g, '')); } catch (e) { decoded = text; }
-                let count = (decoded.match(/^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//gm) || []).length;
-                return new Response(JSON.stringify({ count }), { headers: { 'Content-Type': 'application/json' } });
+                if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) { 
+                    return new Response(JSON.stringify({ error: 'Invalid or missing url' }), { status: 400 });
+                }
+
+                const result = { count: 0, userInfo: null };
+                
+                try {
+                    // --- [終極方案] 分兩次請求，獲取不同資訊 ---
+
+                    // 1. 第一次請求：使用Clash User-Agent，專門獲取 subscription-userinfo
+                    const trafficRequest = fetch(new Request(subUrl, { headers: { 'User-Agent': 'Clash for Windows/0.20.39' }, redirect: "follow" }));
+
+                    // 2. 第二次請求：使用通用 User-Agent，專門獲取節點列表內容
+                    const nodeCountRequest = fetch(new Request(subUrl, { headers: { 'User-Agent': 'MiSub-Node-Counter/2.0' }, redirect: "follow" }));
+
+                    // 並行發送兩個請求
+                    const [trafficResponse, nodeCountResponse] = await Promise.all([trafficRequest, nodeCountRequest]);
+
+                    // --- 處理第一次請求的結果 (流量) ---
+                    if (trafficResponse.ok) {
+                        const userInfoHeader = trafficResponse.headers.get('subscription-userinfo');
+                        if (userInfoHeader) {
+                            const info = {};
+                            userInfoHeader.split(';').forEach(part => {
+                                const [key, value] = part.trim().split('='); 
+                                if (key && value) info[key] = /^\d+$/.test(value) ? Number(value) : value;
+                            });
+                            result.userInfo = info;
+                        }
+                    }
+
+                    // --- 處理第二次請求的結果 (節點數) ---
+                    if (nodeCountResponse.ok) {
+                        const text = await nodeCountResponse.text();
+                        // 這次我們只處理 Base64 或純文字，因為這是通用身份拿到的格式
+                        let decoded = '';
+                        try { 
+                            decoded = atob(text.replace(/\s/g, '')); 
+                        } catch { 
+                            decoded = text; 
+                        }
+                        const lineMatches = decoded.match(/^(ss|ssr|vmess|vless|trojan|hysteria2?):\/\//gm);
+                        if (lineMatches) {
+                            result.count = lineMatches.length;
+                        }
+                    }
+
+                } catch (e) {
+                    console.error('Failed to fetch subscription with dual-request method:', e);
+                }
+                
+                return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
             }
+            
             case '/settings': {
                 if (request.method === 'GET') {
                     const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
@@ -129,7 +172,12 @@ async function handleApiRequest(request, env) {
                 if (request.method === 'POST') {
                     const newSettings = await request.json();
                     const oldSettings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
-                    await env.MISUB_KV.put(KV_KEY_SETTINGS, JSON.stringify({ ...oldSettings, ...newSettings }));
+                    const finalSettings = { ...oldSettings, ...newSettings };
+                    await env.MISUB_KV.put(KV_KEY_SETTINGS, JSON.stringify(finalSettings));
+                    
+                    const message = `🎉 MiSub 設定已成功更新！`;
+                    await sendTgNotification(finalSettings, message);
+                    
                     return new Response(JSON.stringify({ success: true, message: '设置已保存' }));
                 }
                 return new Response('Method Not Allowed', { status: 405 });
@@ -138,7 +186,6 @@ async function handleApiRequest(request, env) {
     } catch (e) { return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 }); }
     return new Response('API route not found', { status: 404 });
 }
-
 // --- [必需] 名称前缀辅助函数 (最终修正乱码版) ---
 function prependNodeName(link, prefix) {
   if (!prefix) return link;
@@ -413,6 +460,7 @@ export async function onRequest(context) {
     try {
         if (url.pathname.startsWith('/api/')) return handleApiRequest(request, env);
         if (url.pathname.startsWith('/sub') || (url.pathname !== '/' && !url.pathname.includes('.') && !url.pathname.startsWith('/assets'))) {
+            // ... handleMisubRequest 的呼叫邏輯 ...
             return handleMisubRequest(context);
         }
         return next();
