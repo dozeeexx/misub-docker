@@ -40,6 +40,38 @@ async function authMiddleware(request, env) {
     const verifiedData = await verifySignedToken(env.COOKIE_SECRET, token);
     return verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
 }
+async function sendTgNotification(settings, message) {
+  if (!settings.BotToken || !settings.ChatID) {
+    console.log("TG BotToken or ChatID not set, skipping notification.");
+    return;
+  }
+
+  const url = `https://api.telegram.org/bot${settings.BotToken}/sendMessage`;
+  const payload = {
+    chat_id: settings.ChatID,
+    text: message,
+    parse_mode: 'Markdown'
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+      console.log("TG notification sent successfully.");
+    } else {
+      const errorData = await response.json();
+      console.error("Failed to send TG notification:", errorData);
+    }
+  } catch (error) {
+    console.error("Error sending TG notification:", error);
+  }
+}
 async function handleApiRequest(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
@@ -295,6 +327,16 @@ async function handleMisubRequest(context) {
         if (ua.includes('clash')) targetFormat = 'clash';
         if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
+
+    // --- [核心修改] 在此處新增TG通知邏輯 ---
+    // 只有在不是由subconverter回呼自身時才發送通知，避免重複
+    if (!url.searchParams.has('callback_token')) {
+        const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+        const message = `🚀 *MiSub 訂閱被存取* 🚀\n\n*客戶端 (User-Agent):*\n\`${userAgentHeader}\`\n\n*請求 IP:*\n\`${clientIp}\`\n*請求格式:*\n\`${targetFormat}\``;
+        // 使用 await 確保通知發送，但不必等待其完成，讓主要邏輯繼續
+        context.waitUntil(sendTgNotification(config, message));
+    }
+    // --- 修改結束 ---
 
     // 将已读取的 misubs 列表传递给处理函数
     const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, misubs);
