@@ -12,7 +12,7 @@ const { showToast } = useToast();
 const copied = ref(false);
 let copyTimeout = null;
 
-const formats = ['自适应', 'Base64', 'Clash', 'Sing-Box', 'Surge', 'Loon', 'QuanX', 'Snell'];
+const formats = ['自适应', 'Base64', 'Clash', 'Sing-Box', 'Surge', 'Loon'];
 const selectedFormat = ref('自适应');
 
 const subLink = computed(() => {
@@ -65,7 +65,7 @@ onUnmounted(() => {
   <div class="sticky top-24">
     <div class="bg-white/50 dark:bg-gray-900/60 backdrop-blur-sm p-5 rounded-2xl shadow-lg dark:shadow-2xl ring-1 ring-black/5">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">订阅链接</h3>
-      <div class="grid grid-cols-4 gap-2 mb-4">
+      <div class="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
         <button
           v-for="format in formats"
           :key="format"
