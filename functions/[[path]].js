@@ -1,22 +1,48 @@
 import yaml from 'js-yaml';
 
-// --- 全局常量 ---
-const KV_KEY_SUBS = 'misub_subscriptions_v1';
-const KV_KEY_PROFILES = 'misub_profiles_v1';
-const KV_KEY_SETTINGS = 'worker_settings_v1';
 const OLD_KV_KEY = 'misub_data_v1';
+// --- 全局常量 ---
+// [修改] 将主数据键拆分，为订阅组（profiles）预留空间
+const KV_KEY_SUBS = 'misub_subscriptions_v1';
+const KV_KEY_PROFILES = 'misub_profiles_v1'; // 新增：用于存储订阅组
+const KV_KEY_SETTINGS = 'worker_settings_v1';
 const COOKIE_NAME = 'auth_session';
 const SESSION_DURATION = 8 * 60 * 60 * 1000;
 
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
-  subConverter: 'subapi.cmliussss.net', 
+  subConverter: 'subapi.cmliussss.net',
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true
 };
 
-// --- [核心] 认证相关辅助函数 ---
+// --- TG 通知函式 (无修改) ---
+async function sendTgNotification(settings, message) {
+  if (!settings.BotToken || !settings.ChatID) {
+    console.log("TG BotToken or ChatID not set, skipping notification.");
+    return;
+  }
+  const url = `https://api.telegram.org/bot${settings.BotToken}/sendMessage`;
+  const payload = { chat_id: settings.ChatID, text: message, parse_mode: 'Markdown' };
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) {
+      console.log("TG notification sent successfully.");
+    } else {
+      const errorData = await response.json();
+      console.error("Failed to send TG notification:", errorData);
+    }
+  } catch (error) {
+    console.error("Error sending TG notification:", error);
+  }
+}
+
+// --- 认证与API处理的核心函数 (无修改) ---
 async function createSignedToken(key, data) {
     if (!key || !data) throw new Error("Key and data are required for signing.");
     const encoder = new TextEncoder();
@@ -26,7 +52,6 @@ async function createSignedToken(key, data) {
     const signature = await crypto.subtle.sign('HMAC', cryptoKey, dataToSign);
     return `${data}.${Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('')}`;
 }
-
 async function verifySignedToken(key, token) {
     if (!key || !token) return null;
     const parts = token.split('.');
@@ -35,7 +60,6 @@ async function verifySignedToken(key, token) {
     const expectedToken = await createSignedToken(key, data);
     return token === expectedToken ? data : null;
 }
-
 async function authMiddleware(request, env) {
     if (!env.COOKIE_SECRET) return false;
     const cookie = request.headers.get('Cookie');
@@ -46,30 +70,39 @@ async function authMiddleware(request, env) {
     return verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
 }
 
-// --- 主要 API 请求处理 ---
+// --- 主要 API 請求處理 ---
 async function handleApiRequest(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
-
+    // [新增] 安全的、可重复执行的迁移接口
     if (path === '/migrate') {
         if (!await authMiddleware(request, env)) { return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }); }
         try {
             const oldData = await env.MISUB_KV.get(OLD_KV_KEY, 'json');
             const newDataExists = await env.MISUB_KV.get(KV_KEY_SUBS) !== null;
 
-            if (newDataExists) return new Response(JSON.stringify({ success: true, message: '无需迁移，数据已是最新结构。' }), { status: 200 });
-            if (!oldData) return new Response(JSON.stringify({ success: false, message: '未找到需要迁移的旧数据。' }), { status: 404 });
+            if (newDataExists) {
+                return new Response(JSON.stringify({ success: true, message: '无需迁移，数据已是最新结构。' }), { status: 200 });
+            }
+
+            if (!oldData) {
+                return new Response(JSON.stringify({ success: false, message: '未找到需要迁移的旧数据。' }), { status: 404 });
+            }
             
             await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(oldData));
             await env.MISUB_KV.put(KV_KEY_PROFILES, JSON.stringify([]));
+            
+            // 将旧键重命名，防止重复迁移
             await env.MISUB_KV.put(OLD_KV_KEY + '_migrated_on_' + new Date().toISOString(), JSON.stringify(oldData));
             await env.MISUB_KV.delete(OLD_KV_KEY);
 
             return new Response(JSON.stringify({ success: true, message: '数据迁移成功！' }), { status: 200 });
+
         } catch (e) {
             return new Response(JSON.stringify({ success: false, message: `迁移失败: ${e.message}` }), { status: 500 });
         }
     }
+
 
     if (path !== '/login') {
         if (!await authMiddleware(request, env)) { return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }); }
@@ -93,7 +126,9 @@ async function handleApiRequest(request, env) {
                 headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
+            // [修改] /data 接口，现在需要读取多个KV值
             case '/data': {
+                // [最终修正] 如果 KV.get 返回 null (键不存在), 则使用 `|| []` 来确保得到的是一个空数组，防止崩溃
                 const [misubs, profiles, settings] = await Promise.all([
                     env.MISUB_KV.get(KV_KEY_SUBS, 'json').then(res => res || []),
                     env.MISUB_KV.get(KV_KEY_PROFILES, 'json').then(res => res || []),
@@ -169,13 +204,9 @@ async function handleApiRequest(request, env) {
                 }
                 return new Response('Method Not Allowed', { status: 405 });
             }
-            default:
-                return new Response('API route not found', { status: 404 });
         }
-    } catch (e) { 
-        console.error("API Error:", e);
-        return new Response(JSON.stringify({ error: 'Internal Server Error', details: e.message }), { status: 500 });
-    }
+    } catch (e) { return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 }); }
+    return new Response('API route not found', { status: 404 });
 }
 
 // --- 名称前缀辅助函数 (无修改) ---
@@ -305,60 +336,69 @@ async function handleMisubRequest(context) {
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
+    // 并行读取所有需要的数据
     const [settingsData, misubsData, profilesData] = await Promise.all([
-        env.MISUB_KV.get(KV_KEY_SETTINGS, 'json').then(res => res || {}),
-        env.MISUB_KV.get(KV_KEY_SUBS, 'json').then(res => res || []),
-        env.MISUB_KV.get(KV_KEY_PROFILES, 'json').then(res => res || [])
+        env.MISUB_KV.get(KV_KEY_SETTINGS, 'json'),
+        env.MISUB_KV.get(KV_KEY_SUBS, 'json'),
+        env.MISUB_KV.get(KV_KEY_PROFILES, 'json')
     ]);
-    const settings = settingsData;
-    const allMisubs = misubsData;
-    const allProfiles = profilesData;
-    
+    const settings = settingsData || {};
+    const allMisubs = misubsData || [];
+    const allProfiles = profilesData || [];
+
     const config = { ...defaultSettings, ...settings };
 
     // --- [核心修改] 订阅链接解析逻辑 ---
     let token = '';
     let profileId = null;
-    const pathSegments = url.pathname.split('/').filter(Boolean);
+    const pathSegments = url.pathname.split('/').filter(Boolean); // e.g., ['sub', 'my_token', 'profile_123']
 
+    // 格式: /sub/{token} 或 /sub/{token}/{profileId}
     if (pathSegments.length > 1 && pathSegments[0] === 'sub') {
         token = pathSegments[1];
-        if (pathSegments.length > 2) profileId = pathSegments[2];
+        if (pathSegments.length > 2) {
+            profileId = pathSegments[2];
+        }
     } else {
+         // 兼容旧格式 ?token=...
         token = url.searchParams.get('token');
     }
 
+    // 验证 Token
     if (!token || token !== config.mytoken) {
+        // ... (省略了 callback_token 逻辑，因为它与新功能无关)
         return new Response('Invalid token', { status: 403 });
     }
+    // --- 链接解析结束 ---
 
     let targetMisubs;
-    let subName = config.FileName; 
+    let subName = config.FileName; // 默认文件名
 
+    // 如果有 profileId，则根据 profile 筛选节点
     if (profileId) {
         const profile = allProfiles.find(p => p.id === profileId && p.enabled);
         if (profile) {
-            subName = profile.name;
+            subName = profile.name; // 使用订阅组的名称作为文件名
             const profileSubIds = new Set(profile.subscriptions);
             const profileNodeIds = new Set(profile.manualNodes);
-            targetMisubs = allMisubs.filter(item => 
-                (item.url.startsWith('http') ? profileSubIds.has(item.id) : profileNodeIds.has(item.id))
-            );
+
+            targetMisubs = allMisubs.filter(item => {
+                return (item.url.startsWith('http') ? profileSubIds.has(item.id) : profileNodeIds.has(item.id));
+            });
         } else {
             return new Response('Profile not found or disabled', { status: 404 });
         }
     } else {
+        // 如果没有 profileId，则使用所有启用的节点
         targetMisubs = allMisubs.filter(s => s.enabled);
     }
-    
+
+
     let targetFormat = url.searchParams.get('target') || 'base64';
     if (!url.searchParams.has('target')) {
         const ua = userAgentHeader.toLowerCase();
-        if (ua.includes('clash')) {
-            targetFormat = 'clash';
-        } else if (ua.includes('sing-box')) {
-            targetFormat = 'singbox';
-        }
+        if (ua.includes('clash')) targetFormat = 'clash';
+        if (ua.includes('sing-box')) targetFormat = 'singbox';
     }
 
     if (!url.searchParams.has('callback_token')) {
@@ -367,48 +407,56 @@ async function handleMisubRequest(context) {
         context.waitUntil(sendTgNotification(config, message));
     }
 
+    // 将筛选后的列表传递给处理函数
     const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs);
     const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     if (targetFormat === 'base64') {
-        return new Response(base64Content, { headers: { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' } });
+        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
+        return new Response(base64Content, { headers });
     }
-    
+
     const callbackToken = await getCallbackToken(env);
+    // [重要修改] 回调 URL 现在也需要包含 profileId (如果存在)
     const callbackPath = profileId ? `/sub/${token}/${profileId}` : `/sub/${token}`;
     const callbackUrl = `${url.protocol}//${url.host}${callbackPath}?target=base64&callback_token=${callbackToken}`;
     
+    // 如果是 subconverter 的回调请求，直接返回 base64 内容
     if (url.searchParams.get('callback_token') === callbackToken) {
-        return new Response(base64Content, { headers: { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' } });
+         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
+        return new Response(base64Content, { headers });
     }
-    
+
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', callbackUrl);
-    
-    // [最终修正] 健壮地选择 subconverter 配置
-    // 如果用户设置的 config 为空字符串或 null, 则强制回退到默认的 config
-    const subconverterConfigUrl = config.subConfig || defaultSettings.subConfig;
-    subconverterUrl.searchParams.set('config', subconverterConfigUrl);
-    
+    subconverterUrl.searchParams.set('config', config.subConfig);
     subconverterUrl.searchParams.set('new_name', 'true');
 
     try {
-        const subconverterResponse = await fetch(subconverterUrl.toString(), { method: 'GET', headers: { 'User-Agent': 'Mozilla/5.0' } });
-        if (!subconverterResponse.ok) throw new Error(`Subconverter service returned status: ${subconverterResponse.status}`);
-        
-        let responseText = await subconverterResponse.text();
-        
-        if (targetFormat === 'clash') {
-            responseText = responseText.replace(/^Proxy:/m, 'proxies:').replace(/^Proxy Group:/m, 'proxy-groups:').replace(/^Rule:/m, 'rules:');
+        const subconverterResponse = await fetch(subconverterUrl.toString(), {
+            method: 'GET',
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+        });
+        if (!subconverterResponse.ok) {
+            const errorBody = await subconverterResponse.text();
+            throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
-
+        let originalText = await subconverterResponse.text();
+        const correctedText = originalText
+            .replace(/^Proxy:/m, 'proxies:')
+            .replace(/^Proxy Group:/m, 'proxy-groups:')
+            .replace(/^Rule:/m, 'rules:');
         const responseHeaders = new Headers(subconverterResponse.headers);
+        // [重要修改] 文件名现在是动态的 (订阅组名或默认名)
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
-
-        return new Response(responseText, { status: subconverterResponse.status, statusText: subconverterResponse.statusText, headers: responseHeaders });
+        return new Response(correctedText, {
+            status: subconverterResponse.status,
+            statusText: subconverterResponse.statusText,
+            headers: responseHeaders
+        });
     } catch (error) {
         console.error(`[MiSub Final Error] ${error.message}`);
         return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
