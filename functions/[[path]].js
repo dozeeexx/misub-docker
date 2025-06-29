@@ -367,56 +367,48 @@ async function handleMisubRequest(context) {
         context.waitUntil(sendTgNotification(config, message));
     }
 
-    // 将筛选后的列表传递给处理函数
     const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs);
     const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     if (targetFormat === 'base64') {
-        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
-        return new Response(base64Content, { headers });
+        return new Response(base64Content, { headers: { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' } });
     }
-
+    
     const callbackToken = await getCallbackToken(env);
-    // [重要修改] 回调 URL 现在也需要包含 profileId (如果存在)
     const callbackPath = profileId ? `/sub/${token}/${profileId}` : `/sub/${token}`;
     const callbackUrl = `${url.protocol}//${url.host}${callbackPath}?target=base64&callback_token=${callbackToken}`;
     
-    // 如果是 subconverter 的回调请求，直接返回 base64 内容
     if (url.searchParams.get('callback_token') === callbackToken) {
-         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
-        return new Response(base64Content, { headers });
+        return new Response(base64Content, { headers: { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' } });
     }
-
+    
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', callbackUrl);
-    subconverterUrl.searchParams.set('config', config.subConfig);
+    
+    // [最终修正] 健壮地选择 subconverter 配置
+    // 如果用户设置的 config 为空字符串或 null, 则强制回退到默认的 config
+    const subconverterConfigUrl = config.subConfig || defaultSettings.subConfig;
+    subconverterUrl.searchParams.set('config', subconverterConfigUrl);
+    
     subconverterUrl.searchParams.set('new_name', 'true');
 
     try {
-        const subconverterResponse = await fetch(subconverterUrl.toString(), {
-            method: 'GET',
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-        });
-        if (!subconverterResponse.ok) {
-            const errorBody = await subconverterResponse.text();
-            throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
+        const subconverterResponse = await fetch(subconverterUrl.toString(), { method: 'GET', headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (!subconverterResponse.ok) throw new Error(`Subconverter service returned status: ${subconverterResponse.status}`);
+        
+        let responseText = await subconverterResponse.text();
+        
+        if (targetFormat === 'clash') {
+            responseText = responseText.replace(/^Proxy:/m, 'proxies:').replace(/^Proxy Group:/m, 'proxy-groups:').replace(/^Rule:/m, 'rules:');
         }
-        let originalText = await subconverterResponse.text();
-        const correctedText = originalText
-            .replace(/^Proxy:/m, 'proxies:')
-            .replace(/^Proxy Group:/m, 'proxy-groups:')
-            .replace(/^Rule:/m, 'rules:');
+
         const responseHeaders = new Headers(subconverterResponse.headers);
-        // [重要修改] 文件名现在是动态的 (订阅组名或默认名)
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
-        return new Response(correctedText, {
-            status: subconverterResponse.status,
-            statusText: subconverterResponse.statusText,
-            headers: responseHeaders
-        });
+
+        return new Response(responseText, { status: subconverterResponse.status, statusText: subconverterResponse.statusText, headers: responseHeaders });
     } catch (error) {
         console.error(`[MiSub Final Error] ${error.message}`);
         return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
