@@ -3,59 +3,61 @@ import { ref, computed, onUnmounted } from 'vue';
 import { useToast } from '../lib/stores.js';
 
 const props = defineProps({
-  config: Object
+  config: Object,
+  profiles: Array,
 });
 
 const { showToast } = useToast();
 
-// --- 新增状态，用于追踪复制操作 ---
 const copied = ref(false);
 let copyTimeout = null;
 
+// 恢复客户端格式选择的状态
 const formats = ['自适应', 'Base64', 'Clash', 'Sing-Box', 'Surge', 'Loon'];
 const selectedFormat = ref('自适应');
+// 订阅组选择的状态
+const selectedId = ref('default');
 
 const subLink = computed(() => {
-  const token = props.config?.mytoken === 'auto' ? 'auto' : props.config?.mytoken;
-  if (!token) return '请先在设置中配置 Token';
-  
-  const baseUrl = `${window.location.protocol}//${window.location.host}/sub?token=${token}`;
-  
-  const format = selectedFormat.value;
+  const token = props.config?.mytoken;
+  if (!token) return 'Token 未在设置中配置';
 
-  if (format === '自适应') {
+  const origin = window.location.origin;
+  let baseUrl = '';
+
+  // 1. 构建基础路径 (e.g. /sub/your-token/profile-id)
+  if (selectedId.value === 'default') {
+    baseUrl = `${origin}/sub/${token}`;
+  } else {
+    baseUrl = `${origin}/sub/${token}/${selectedId.value}`;
+  }
+
+  // 2. 如果选择的不是“自适应”，则附加 target 参数
+  if (selectedFormat.value === '自适应') {
     return baseUrl;
   }
 
-  // 将格式名转为小写以用作URL参数
   const targetMapping = {
     'Sing-Box': 'singbox',
     'QuanX': 'quanx',
   };
-  const target = targetMapping[format] || format.toLowerCase();
-  
-  return `${baseUrl}&target=${target}`;
+  const target = targetMapping[selectedFormat.value] || selectedFormat.value.toLowerCase();
+
+  return `${baseUrl}?target=${target}`;
 });
 
 const copyToClipboard = () => {
-  if (!subLink.value || subLink.value.startsWith('请先')) {
-    showToast('链接无效，无法复制', 'error');
-    return;
-  }
-  navigator.clipboard.writeText(subLink.value);
-  showToast('已复制到剪贴板', 'success');
-  
-  // 更新状态以提供即时视觉反馈
-  copied.value = true;
-  // 清除上一个定时器（以防用户快速连续点击）
-  clearTimeout(copyTimeout);
-  // 设置一个定时器，在2秒后将图标恢复原状
-  copyTimeout = setTimeout(() => {
-    copied.value = false;
-  }, 2000);
+    if (!subLink.value || subLink.value.includes('未在设置中配置')) {
+        showToast('链接无效，无法复制', 'error');
+        return;
+    }
+    navigator.clipboard.writeText(subLink.value);
+    showToast('已复制到剪贴板', 'success');
+    copied.value = true;
+    clearTimeout(copyTimeout);
+    copyTimeout = setTimeout(() => { copied.value = false; }, 2000);
 };
 
-// 【重要】组件卸载时清除定时器，防止内存泄漏和报错
 onUnmounted(() => {
   clearTimeout(copyTimeout);
 });
@@ -64,22 +66,37 @@ onUnmounted(() => {
 <template>
   <div class="sticky top-24">
     <div class="bg-white/50 dark:bg-gray-900/60 backdrop-blur-sm p-5 rounded-2xl shadow-lg dark:shadow-2xl ring-1 ring-black/5">
-      <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">订阅链接</h3>
-      <div class="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
-        <button
-          v-for="format in formats"
-          :key="format"
-          @click="selectedFormat = format"
-          class="px-3 py-1.5 text-xs font-medium rounded-full transition-colors flex justify-center"
-          :class="[
-            selectedFormat === format
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'bg-gray-200/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-300/50 dark:hover:bg-gray-600/50'
-          ]"
-        >
-          {{ format }}
-        </button>
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">生成订阅链接</h3>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">1. 选择订阅内容</label>
+        <select v-model="selectedId" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">
+            <option value="default">默认订阅 (全部启用节点)</option>
+            <option v-for="profile in profiles" :key="profile.id" :value="profile.id">
+                {{ profile.name }}
+            </option>
+        </select>
       </div>
+
+      <div class="mb-5">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">2. 选择格式</label>
+        <div class="grid grid-cols-3 gap-2">
+            <button
+              v-for="format in formats"
+              :key="format"
+              @click="selectedFormat = format"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex justify-center items-center"
+              :class="[
+                selectedFormat === format
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-gray-200/80 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-300/80 dark:hover:bg-gray-600/50'
+              ]"
+            >
+              {{ format }}
+            </button>
+        </div>
+      </div>
+
       <div class="relative">
         <input
           type="text"
@@ -98,18 +115,15 @@ onUnmounted(() => {
             </Transition>
         </button>
       </div>
+
+       <p v-if="config?.mytoken === 'auto'" class="text-xs text-yellow-600 dark:text-yellow-500 mt-2">
+           提示：当前为自动Token，链接可能会变化。为确保链接稳定，推荐在 "设置" 中配置一个固定Token。
+       </p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
