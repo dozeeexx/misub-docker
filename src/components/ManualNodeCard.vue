@@ -14,7 +14,8 @@ const getProtocol = (url) => {
   try {
     if (!url) return 'unknown';
     const lowerUrl = url.toLowerCase();
-    // [更新] 增加 hysteria, hy, hy2, ssr, tuic
+    // [更新] 新增 anytls 支援
+    if (lowerUrl.startsWith('anytls://')) return 'anytls';
     if (lowerUrl.startsWith('hysteria2://') || lowerUrl.startsWith('hy2://')) return 'hysteria2';
     if (lowerUrl.startsWith('hysteria://') || lowerUrl.startsWith('hy://')) return 'hysteria';
     if (lowerUrl.startsWith('ssr://')) return 'ssr';
@@ -35,7 +36,9 @@ const protocol = computed(() => getProtocol(props.node.url));
 const protocolStyle = computed(() => {
   const p = protocol.value;
   switch (p) {
-    // [更新] 增加 hysteria, hy2, ssr, tuic 的樣式
+    // [更新] 新增 anytls 的樣式
+    case 'anytls':
+      return { text: 'AnyTLS', style: 'bg-slate-500/20 text-slate-500 dark:text-slate-400' };
     case 'vless':
       return { text: 'VLESS', style: 'bg-blue-500/20 text-blue-500 dark:text-blue-400' };
     case 'hysteria2':

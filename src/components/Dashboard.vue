@@ -157,17 +157,21 @@ const handleBulkImport = (importText) => {
   const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
   const newSubs = [], newNodes = [];
   for (const line of lines) {
-      const newItem = { id: crypto.randomUUID(), name: extractNodeName(line) || '未命名', url: line, enabled: true, isUpdating: false };
+      const newItem = { id: crypto.randomUUID(), name: extractNodeName(line) || '未命名', url: line, enabled: true, status: 'unchecked' };
       if (/^https?:\/\//.test(line)) {
-          newSubs.push({ ...newItem, nodeCount: 0 });
-      } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic):\/\//.test(line)) {
+          newSubs.push(newItem);
+      // [更新] 新增 anytls 支援
+      } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls):\/\//.test(line)) {
           newNodes.push(newItem);
       }
   }
-  subscriptions.value = [...newSubs, ...subscriptions.value]; manualNodes.value = [...newNodes, ...manualNodes.value];
-  subsCurrentPage.value = 1; manualNodesCurrentPage.value = 1; markDirty();
+  subscriptions.value = [...newSubs, ...subscriptions.value];
+  manualNodes.value = [...newNodes, ...manualNodes.value];
+  subsCurrentPage.value = 1;
+  manualNodesCurrentPage.value = 1;
+  markDirty();
   showToast(`成功导入 ${newSubs.length} 条订阅和 ${newNodes.length} 个手动节点，请点击保存`, 'success');
-  newSubs.forEach(sub => handleUpdateNodeCount(sub.id));
+  newSubs.forEach(sub => handleTestSubscription(sub.id));
 };
 const handleProfileToggle = (updatedProfile) => {
     const index = profiles.value.findIndex(p => p.id === updatedProfile.id);

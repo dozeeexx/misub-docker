@@ -248,8 +248,8 @@ function prependNodeName(link, prefix) {
 
 // --- 节点列表生成函数 ---
 async function generateCombinedNodeList(context, config, userAgent, misubs) {
-    // [更新] 支援 ssr, hy, hy2, tuic
-    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic):\/\//;
+    // [更新] 新增 anytls 支援
+    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls):\/\//;
     let manualNodesContent = '';
     const normalizeVmessLink = (link) => {
         if (!link.startsWith('vmess://')) {
@@ -432,21 +432,62 @@ async function handleMisubRequest(context) {
             method: 'GET',
             headers: { 'User-Agent': 'Mozilla/5.0' },
         });
+
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
-        let originalText = await subconverterResponse.text();
-        const correctedText = originalText.replace(/^Proxy:/m, 'proxies:').replace(/^Proxy Group:/m, 'proxy-groups:').replace(/^Rule:/m, 'rules:');
+
+        const originalText = await subconverterResponse.text();
+        let correctedText;
+
+        // --- [核心修改] 使用 YAML 解析和序列化來淨化設定檔 ---
+        try {
+            // 1. 將從 subconverter 收到的文字載入為 JS 物件
+            const parsedYaml = yaml.load(originalText);
+
+            // 2. （可選）在這裡可以對物件進行更細微的修正，但通常 js-yaml 已處理好相容性
+            // 例如，手動修正關鍵字大小寫
+            const keyMappings = {
+                'Proxy': 'proxies',
+                'Proxy Group': 'proxy-groups',
+                'Rule': 'rules'
+            };
+            for (const oldKey in keyMappings) {
+                if (parsedYaml[oldKey]) {
+                    const newKey = keyMappings[oldKey];
+                    parsedYaml[newKey] = parsedYaml[oldKey];
+                    delete parsedYaml[oldKey];
+                }
+            }
+            
+            // 3. 將乾淨的 JS 物件重新序列化為標準格式的 YAML 字串
+            correctedText = yaml.dump(parsedYaml, {
+                indent: 2,          // 標準縮排
+                noArrayIndent: true // 陣列格式更美觀
+            });
+
+        } catch (e) {
+            console.error("YAML parsing/dumping failed, falling back to original text.", e);
+            // 如果解析失敗（極端情況），則退回使用原始的文字和替換邏輯，確保服務不中斷
+            correctedText = originalText
+                .replace(/^Proxy:/m, 'proxies:')
+                .replace(/^Proxy Group:/m, 'proxy-groups:')
+                .replace(/^Rule:/m, 'rules:');
+        }
+        // --- 修改結束 ---
+        
         const responseHeaders = new Headers(subconverterResponse.headers);
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
+        
         return new Response(correctedText, {
             status: subconverterResponse.status,
             statusText: subconverterResponse.statusText,
             headers: responseHeaders
         });
+
     } catch (error) {
         console.error(`[MiSub Final Error] ${error.message}`);
         return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
