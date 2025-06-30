@@ -349,7 +349,6 @@ async function handleMisubRequest(context) {
     let token = '';
     let profileIdentifier = null;
     
-    // 移除開頭的 /sub/ (如果存在，為了舊版相容性)，然後按 / 分割
     const pathSegments = url.pathname.replace(/^\/sub\//, '/').split('/').filter(Boolean);
 
     if (pathSegments.length > 0) {
@@ -389,11 +388,28 @@ async function handleMisubRequest(context) {
         targetMisubs = allMisubs.filter(s => s.enabled);
     }
 
-    let targetFormat = url.searchParams.get('target') || 'base64';
-    if (!url.searchParams.has('target')) {
+    let targetFormat = url.searchParams.get('target');
+
+    if (!targetFormat) {
+        // 如果沒有 ?target=... ，則檢查 ?clash, ?singbox 這類參數
+        const supportedFormats = ['clash', 'singbox', 'surge', 'loon', 'base64'];
+        for (const format of supportedFormats) {
+            if (url.searchParams.has(format)) {
+                targetFormat = format;
+                break;
+            }
+        }
+    }
+
+    if (!targetFormat) {
+        // 如果還沒有，則透過 User-Agent 嗅探
         const ua = userAgentHeader.toLowerCase();
-        if (ua.includes('clash')) targetFormat = 'clash';
-        if (ua.includes('sing-box')) targetFormat = 'singbox';
+        if (ua.includes('sing-box')) {
+            targetFormat = 'singbox';
+        } else {
+            // 所有其他情況（包括 clash 和未知 UA）都預設為 clash
+            targetFormat = 'clash';
+        }
     }
 
     if (!url.searchParams.has('callback_token')) {

@@ -67,7 +67,7 @@ const handleDeselectAll = (listName) => {
                 class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
               >
             </div>
-             <div>
+            <div>
               <label for="profile-custom-id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 自定义 ID (可选)
               </label>
@@ -83,6 +83,7 @@ const handleDeselectAll = (listName) => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
             <div v-if="allSubscriptions.length > 0" class="space-y-2">
               <div class="flex justify-between items-center">
                 <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">选择机场订阅</h4>
@@ -91,7 +92,7 @@ const handleDeselectAll = (listName) => {
                     <button @click="handleDeselectAll('subscriptions')" class="text-xs text-indigo-600 hover:underline">全不选</button>
                 </div>
               </div>
-              <div class="max-h-64 overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border dark:border-gray-700">
+              <div class="max-h-32 overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border dark:border-gray-700">
                 <div v-for="sub in allSubscriptions" :key="sub.id">
                   <label class="flex items-center space-x-3 cursor-pointer">
                     <input
@@ -117,7 +118,7 @@ const handleDeselectAll = (listName) => {
                     <button @click="handleDeselectAll('manualNodes')" class="text-xs text-indigo-600 hover:underline">全不选</button>
                 </div>
               </div>
-              <div class="max-h-64 overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border dark:border-gray-700">
+               <div class="max-h-64 overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border dark:border-gray-700">
                 <div v-for="node in allManualNodes" :key="node.id">
                   <label class="flex items-center space-x-3 cursor-pointer">
                     <input
