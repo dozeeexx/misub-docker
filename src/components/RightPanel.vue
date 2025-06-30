@@ -39,7 +39,7 @@ const subLink = computed(() => {
     'Sing-Box': 'singbox',
     'QuanX': 'quanx',
   };
-  const target = targetMapping[selectedFormat.value] || selectedFormat.value.toLowerCase();
+  const formatKey = (targetMapping[selectedFormat.value] || selectedFormat.value.toLowerCase());
 
   return `${baseUrl}?target=${target}`;
 });
