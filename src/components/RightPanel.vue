@@ -14,7 +14,6 @@ let copyTimeout = null;
 
 const formats = ['自适应', 'Base64', 'Clash', 'Sing-Box', 'Surge', 'Loon'];
 const selectedFormat = ref('自适应');
-// [修改] selectedId 現在代表 profile 的識別碼 (可能是 customId 或 id)
 const selectedId = ref('default'); 
 
 const subLink = computed(() => {
@@ -24,24 +23,26 @@ const subLink = computed(() => {
   const origin = window.location.origin;
   let baseUrl = '';
 
-  // [核心修改] 建立新的 URL 結構
   if (selectedId.value === 'default') {
     baseUrl = `${origin}/${token}`;
   } else {
     baseUrl = `${origin}/${token}/${selectedId.value}`;
   }
 
+  // 如果選擇「自適應」，則不添加任何參數
   if (selectedFormat.value === '自适应') {
     return baseUrl;
   }
 
+  // --- [核心修改] 採用新的精簡化 URL 格式 ---
   const targetMapping = {
     'Sing-Box': 'singbox',
     'QuanX': 'quanx',
   };
   const formatKey = (targetMapping[selectedFormat.value] || selectedFormat.value.toLowerCase());
 
-  return `${baseUrl}?target=${target}`;
+  // 將格式直接作為參數鍵，例如：.../ss?clash
+  return `${baseUrl}?${formatKey}`;
 });
 
 const copyToClipboard = () => {
