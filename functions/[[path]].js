@@ -18,6 +18,16 @@ const defaultSettings = {
   NotifyThresholdPercent: 90 
 };
 
+const formatBytes = (bytes, decimals = 2) => {
+  if (!+bytes || bytes < 0) return '0 B';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  // toFixed(dm) after dividing by pow(k, i) was producing large decimal numbers
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  if (i < 0) return '0 B'; // Handle log(0) case
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+};
 
 // --- TG 通知函式 (无修改) ---
 async function sendTgNotification(settings, message) {
@@ -357,21 +367,16 @@ function prependNodeName(link, prefix) {
 }
 
 // --- 节点列表生成函数 ---
-async function generateCombinedNodeList(context, config, userAgent, misubs) {
-    // [更新] 新增 anytls 支援
+async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '') {
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls):\/\//;
     let manualNodesContent = '';
     const normalizeVmessLink = (link) => {
-        if (!link.startsWith('vmess://')) {
-            return link;
-        }
+        if (!link.startsWith('vmess://')) return link;
         try {
             const base64Part = link.substring('vmess://'.length);
             const binaryString = atob(base64Part);
             const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
+            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
             const jsonString = new TextDecoder('utf-8').decode(bytes);
             const compactJsonString = JSON.stringify(JSON.parse(jsonString));
             const newBase64Part = btoa(unescape(encodeURIComponent(compactJsonString)));
@@ -399,10 +404,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs) {
                 fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
             ]);
-            if (!response.ok) {
-                console.error(`Failed to fetch sub: ${sub.url}, status: ${response.status}`);
-                return '';
-            }
+            if (!response.ok) return '';
             let text = await response.text();
             try {
                 const cleanedText = text.replace(/\s/g, '');
@@ -421,22 +423,22 @@ async function generateCombinedNodeList(context, config, userAgent, misubs) {
                     if (hashIndex === -1) return true;
                     const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
                     return !nodeName.includes('https://');
-                } catch (e) {
-                    console.error(`Failed to decode node name, filtering it out: ${nodeLink}`, e);
-                    return false;
-                }
+                } catch (e) { return false; }
             });
             return (config.prependSubName && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
-        } catch (e) {
-            console.error(`Failed to fetch sub: ${sub.url}`, e);
-            return '';
-        }
+        } catch (e) { return ''; }
     });
     const processedSubContents = await Promise.all(subPromises);
     const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
-    return [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
+    const uniqueNodesString = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
+
+    // 将虚假节点（如果存在）插入到列表最前面
+    if (prependedContent) {
+        return `${prependedContent}\n${uniqueNodesString}`;
+    }
+    return uniqueNodesString;
 }
 
 // --- [核心修改] 订阅处理函数 ---
@@ -553,7 +555,25 @@ async function handleMisubRequest(context) {
         context.waitUntil(sendTgNotification(config, message));
     }
 
-    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs);
+    // 1. 计算当前请求的总剩余流量
+    const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
+        if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
+            const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
+            const remaining = sub.userInfo.total - used;
+            return acc + Math.max(0, remaining);
+        }
+        return acc;
+    }, 0);
+
+    // 2. 创建虚假节点字符串
+    const formattedTraffic = formatBytes(totalRemainingBytes);
+    const fakeNodeName = `总剩余流量: ${formattedTraffic}`;
+    // 使用一个无效的UUID和地址来创建节点，因为它只用于显示名称
+    const fakeNodeString = `vless://00000000-0000-0000-0000-000000000000@traffic.info:443?type=ws&path=%2F&security=tls#${encodeURIComponent(fakeNodeName)}`;
+
+
+    // --- [优化] 调用 generateCombinedNodeList 时传入虚假节点 ---
+    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
     const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     if (targetFormat === 'base64') {
