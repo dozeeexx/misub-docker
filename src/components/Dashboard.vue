@@ -296,7 +296,15 @@ const paginatedManualNodes = computed(() => { const start = (manualNodesCurrentP
   </div>
   <div v-else class="w-full max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
     <div class="flex justify-between items-center mb-8">
-      <h1 class="text-2xl font-bold text-gray-800 dark:text-white">仪表盘</h1>
+      <div class="flex items-center gap-4">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">仪表盘</h1>
+        <span 
+          v-if="totalRemainingTraffic !== '0 B'"
+          class="px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-500/20 rounded-full"
+        >
+          剩余总流量: {{ totalRemainingTraffic }}
+        </span>
+      </div>
       <div class="flex items-center gap-2">
         <button @click="showBulkImportModal = true" class="text-sm font-semibold px-4 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 border-2 border-indigo-500/50 hover:bg-indigo-500/10 transition-colors">批量导入</button>
       </div>
