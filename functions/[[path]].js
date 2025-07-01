@@ -569,7 +569,7 @@ async function handleMisubRequest(context) {
     const formattedTraffic = formatBytes(totalRemainingBytes);
     const fakeNodeName = `总剩余流量: ${formattedTraffic}`;
     // 使用一个无效的UUID和地址来创建节点，因为它只用于显示名称
-    const fakeNodeString = `vless://792b3cac-e3d9-440b-9681-847034a7cb87@github.com:443?type=ws&path=%2F&security=tls#${encodeURIComponent(fakeNodeName)}`;
+    const fakeNodeString = `vless://792b3cac-e3d9-440b-9681-847034a7cb87@104.20.30.149:443?type=ws&path=%2F&security=tls#${encodeURIComponent(fakeNodeName)}`;
 
 
     // --- [优化] 调用 generateCombinedNodeList 时传入虚假节点 ---
