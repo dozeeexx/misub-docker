@@ -606,9 +606,8 @@ async function handleMisubRequest(context) {
         let responseText = await subconverterResponse.text();
 
         // --- [新功能] 如果是 Clash 订阅，注入流量信息代理组 ---
-        if (targetFormat === 'clash') {
+        if (targetFormat === 'clash' && responseText) {
             try {
-                // 1. 计算总剩余流量 (代码与上次相同)
                 const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
                     if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
                         const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
@@ -621,25 +620,26 @@ async function handleMisubRequest(context) {
                 // 只有在有剩余流量时才添加
                 if (totalRemainingBytes > 0) {
                     const formattedTraffic = formatBytes(totalRemainingBytes);
-                    
-                    // 2. 创建虚假的流量展示组
                     const trafficGroup = {
                         name: `流量信息 剩余: ${formattedTraffic}`,
                         type: 'select',
-                        proxies: ['DIRECT', 'REJECT'] // 必须包含至少一个有效策略
+                        proxies: ['DIRECT', 'REJECT']
                     };
 
-                    // 3. 解析 YAML，注入代理组，然后重新生成
                     const parsedYaml = yaml.load(responseText);
-                    if (parsedYaml && Array.isArray(parsedYaml['proxy-groups'])) {
-                        // 在代理组列表的开头插入我们的流量组
+                
+                    // 核心防御性检查：必须是对象，且必须有 proxy-groups 键，且该键的值必须是数组
+                    if (parsedYaml && typeof parsedYaml === 'object' && Array.isArray(parsedYaml['proxy-groups'])) {
                         parsedYaml['proxy-groups'].unshift(trafficGroup);
                         responseText = yaml.dump(parsedYaml, { indent: 2, noArrayIndent: true });
+                    } else {
+                         // 如果 subconverter 返回的 YAML 不规范，打印日志但不要崩溃
+                        console.log("Skipping traffic injection: 'proxy-groups' not found or not an array in the YAML from subconverter.");
                     }
                 }
             } catch (e) {
-                console.error("Failed to inject traffic info into Clash config:", e);
-                // 如果注入失败，继续使用原始文本，保证订阅可用
+                // 如果在解析或注入过程中发生任何错误，打印日志并退回使用原始文本
+                console.error("Failed to inject traffic info into Clash config, returning original content. Error:", e);
             }
         }
         
