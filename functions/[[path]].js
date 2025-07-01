@@ -567,9 +567,13 @@ async function handleMisubRequest(context) {
 
     // 2. 创建虚假节点字符串
     const formattedTraffic = formatBytes(totalRemainingBytes);
+    const fakeNodeName = `总剩余流量: ${formattedTraffic}`;
+    // 使用一个无效的UUID和地址来创建节点，因为它只用于显示名称
+    const fakeNodeString = `vless://00000000-0000-0000-0000-000000000000@traffic.info:443?type=ws&path=%2F&security=tls#${encodeURIComponent(fakeNodeName)}`;
+
 
     // --- [优化] 调用 generateCombinedNodeList 时传入虚假节点 ---
-    const combinedNodeList = await generateCombinedNodeList(context, config, userAgent, targetMisubs);
+    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
     const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     if (targetFormat === 'base64') {
@@ -597,50 +601,29 @@ async function handleMisubRequest(context) {
             method: 'GET',
             headers: { 'User-Agent': 'Mozilla/5.0' },
         });
-    
+
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
-    
-        let responseText = await subconverterResponse.text();
 
-        // --- [新功能] 如果是 Clash 订阅，注入流量信息代理组 ---
-        if (targetFormat === 'clash' && responseText) {
-            try {
-                const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
-                    if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
-                        const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
-                        const remaining = sub.userInfo.total - used;
-                        return acc + Math.max(0, remaining);
-                    }
-                    return acc;
-                }, 0);
+        const originalText = await subconverterResponse.text();
+        let correctedText;
 
-                // 只有在有剩余流量时才添加
-                if (totalRemainingBytes > 0) {
-                    const formattedTraffic = formatBytes(totalRemainingBytes);
-                    const trafficGroup = {
-                        name: `流量信息 剩余: ${formattedTraffic}`,
-                        type: 'select',
-                        proxies: ['DIRECT', 'REJECT']
-                    };
-
-                    const parsedYaml = yaml.load(responseText);
-                
-                    // 核心防御性检查：必须是对象，且必须有 proxy-groups 键，且该键的值必须是数组
-                    if (parsedYaml && typeof parsedYaml === 'object' && Array.isArray(parsedYaml['proxy-groups'])) {
-                        parsedYaml['proxy-groups'].unshift(trafficGroup);
-                        responseText = yaml.dump(parsedYaml, { indent: 2, noArrayIndent: true });
-                    } else {
-                         // 如果 subconverter 返回的 YAML 不规范，打印日志但不要崩溃
-                        console.log("Skipping traffic injection: 'proxy-groups' not found or not an array in the YAML from subconverter.");
-                    }
+        try {
+            const parsedYaml = yaml.load(originalText);
+            const keyMappings = { 'Proxy': 'proxies', 'Proxy Group': 'proxy-groups', 'Rule': 'rules' };
+            for (const oldKey in keyMappings) {
+                if (parsedYaml[oldKey]) {
+                    const newKey = keyMappings[oldKey];
+                    parsedYaml[newKey] = parsedYaml[oldKey];
+                    delete parsedYaml[oldKey];
                 }
-            } catch (e) {
-                // 如果在解析或注入过程中发生任何错误，打印日志并退回使用原始文本
-                console.error("Failed to inject traffic info into Clash config, returning original content. Error:", e);
             }
+            correctedText = yaml.dump(parsedYaml, { indent: 2, noArrayIndent: true });
+        } catch (e) {
+            console.error("YAML parsing/dumping failed, falling back to original text.", e);
+            correctedText = originalText.replace(/^Proxy:/m, 'proxies:').replace(/^Proxy Group:/m, 'proxy-groups:').replace(/^Rule:/m, 'rules:');
         }
         
         const responseHeaders = new Headers(subconverterResponse.headers);
