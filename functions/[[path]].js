@@ -11,6 +11,7 @@ const SESSION_DURATION = 8 * 60 * 60 * 1000;
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
+  profileToken: 'profiles',
   subConverter: 'url.v1.mk',
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
   prependSubName: true,
@@ -65,6 +66,46 @@ async function sendTgNotification(settings, message) {
     console.error("Error sending TG notification:", error);
     return false;
   }
+}
+
+async function handleCronTrigger(env) {
+    console.log("Cron trigger fired. Checking all subscriptions...");
+    const allSubs = await env.MISUB_KV.get(KV_KEY_SUBS, 'json') || [];
+    const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || defaultSettings;
+    let changesMade = false;
+
+    for (const sub of allSubs) {
+        if (sub.url.startsWith('http') && sub.enabled) {
+            // 複用 /api/node_count 的流量獲取邏輯
+            try {
+                const trafficRequest = fetch(new Request(sub.url, { headers: { 'User-Agent': 'Clash for Windows/0.20.39' }, redirect: "follow" }));
+                const response = await Promise.race([trafficRequest, new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))]);
+
+                if (response.ok) {
+                    const userInfoHeader = response.headers.get('subscription-userinfo');
+                    if (userInfoHeader) {
+                        const info = {};
+                        userInfoHeader.split(';').forEach(part => {
+                            const [key, value] = part.trim().split('=');
+                            if (key && value) info[key] = /^\d+$/.test(value) ? Number(value) : value;
+                        });
+                        sub.userInfo = info; // 更新流量信息
+                        await checkAndNotify(sub, settings, env); // 檢查並發送通知
+                        changesMade = true;
+                    }
+                }
+            } catch(e) {
+                console.error(`Cron: Failed to update ${sub.name}`, e.message);
+            }
+        }
+    }
+
+    // 如果有任何通知時間戳被更新，則保存回 KV
+    if (changesMade) {
+        await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(allSubs));
+        console.log("Subscription notification timestamps updated.");
+    }
+    return new Response("Cron job finished.", { status: 200 });
 }
 
 // --- 认证与API处理的核心函数 (无修改) ---
@@ -215,8 +256,12 @@ async function handleApiRequest(request, env) {
                     env.MISUB_KV.get(KV_KEY_PROFILES, 'json').then(res => res || []),
                     env.MISUB_KV.get(KV_KEY_SETTINGS, 'json').then(res => res || {})
                 ]);
-                const config = { FileName: settings.FileName || 'MISUB', mytoken: settings.mytoken || 'auto' };
-                return new Response(JSON.stringify({ misubs, profiles, config }), { headers: { 'Content-Type': 'application/json' } });
+                const config = { 
+                    FileName: settings.FileName || 'MISUB', 
+                    mytoken: settings.mytoken || 'auto',
+                    profileToken: settings.profileToken || 'profiles' // 將 profileToken 也返回給前端
+                };
+                  return new Response(JSON.stringify({ misubs, profiles, config }), { headers: { 'Content-Type': 'application/json' } });
             }
             case '/misubs': {
                 // [优化] 保存数据后，触发一次全面的检查
@@ -282,24 +327,9 @@ async function handleApiRequest(request, env) {
                         }
                     }
                 } catch (e) {
-                    console.error('Failed to fetch subscription with dual-request method:', e);
+                    console.error('Failed to fetch subscription:', e);
                 }
                 
-                // 如果成功获取到 userInfo，则进行检查
-                if(result.userInfo) {
-                    const allSubs = await env.MISUB_KV.get(KV_KEY_SUBS, 'json') || [];
-                    const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || defaultSettings;
-                    const subToUpdate = allSubs.find(s => s.url === subUrl);
-
-                    if (subToUpdate) {
-                        // 将新的 userInfo 合并到订阅对象中
-                        subToUpdate.userInfo = result.userInfo;
-                        // 检查并发送通知
-                        await checkAndNotify(subToUpdate, settings, env);
-                        // 保存更新了 `lastNotified` 时间戳的订阅列表
-                        await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(allSubs));
-                    }
-                }
                 
                 return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
             }
@@ -457,10 +487,8 @@ async function handleMisubRequest(context) {
     const allProfiles = profilesData || [];
     const config = { ...defaultSettings, ...settings };
 
-    // --- [核心修改] 新的 URL 解析邏輯 ---
     let token = '';
     let profileIdentifier = null;
-    
     const pathSegments = url.pathname.replace(/^\/sub\//, '/').split('/').filter(Boolean);
 
     if (pathSegments.length > 0) {
@@ -469,17 +497,33 @@ async function handleMisubRequest(context) {
             profileIdentifier = pathSegments[1];
         }
     } else {
-        // 從查詢參數中取得 token 作為備用
         token = url.searchParams.get('token');
     }
 
-    if (!token || token !== config.mytoken) {
-        return new Response('Invalid token', { status: 403 });
-    }
-    // --- URL 解析結束 ---
-
     let targetMisubs;
     let subName = config.FileName;
+
+    if (profileIdentifier) {
+        // 如果 URL 包含 Profile ID，則 Token 必須匹配 profileToken
+        if (!token || token !== config.profileToken) {
+            return new Response('Invalid Profile Token', { status: 403 });
+        }
+        const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
+        if (profile && profile.enabled) {
+            subName = profile.name;
+            const profileSubIds = new Set(profile.subscriptions);
+            const profileNodeIds = new Set(profile.manualNodes);
+            targetMisubs = allMisubs.filter(item => (item.url.startsWith('http') ? profileSubIds.has(item.id) : profileNodeIds.has(item.id)));
+        } else {
+            return new Response('Profile not found or disabled', { status: 404 });
+        }
+    } else {
+        // 如果 URL 不包含 Profile ID，則 Token 必須匹配主 mytoken
+        if (!token || token !== config.mytoken) {
+            return new Response('Invalid Token', { status: 403 });
+        }
+        targetMisubs = allMisubs.filter(s => s.enabled);
+    }
 
     // 如果有 profileIdentifier，則根據 profile 篩選節點
     if (profileIdentifier) {
@@ -657,6 +701,12 @@ async function getCallbackToken(env) {
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
+
+    // **核心修改：判斷是否為定時觸發**
+    if (request.headers.get("cf-cron")) {
+        return handleCronTrigger(env);
+    }
+
     if (url.pathname.startsWith('/api/')) {
         return handleApiRequest(request, env);
     }

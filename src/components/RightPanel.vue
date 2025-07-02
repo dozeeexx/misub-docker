@@ -17,31 +17,30 @@ const selectedFormat = ref('自适应');
 const selectedId = ref('default'); 
 
 const subLink = computed(() => {
-  const token = props.config?.mytoken;
-  if (!token) return 'Token 未在设置中配置';
-
   const origin = window.location.origin;
+  let token = '';
   let baseUrl = '';
 
+  // --- [修改] ---
   if (selectedId.value === 'default') {
+    // 選擇“默認訂閱”，使用主 Token
+    token = props.config?.mytoken;
+    if (!token) return '主Token未在设置中配置';
     baseUrl = `${origin}/${token}`;
   } else {
+    // 選擇“訂閱組”，使用分享 Token
+    token = props.config?.profileToken;
+    if (!token) return '分享Token未在设置中配置';
     baseUrl = `${origin}/${token}/${selectedId.value}`;
   }
+  // ---
 
-  // 如果選擇「自適應」，則不添加任何參數
   if (selectedFormat.value === '自适应') {
     return baseUrl;
   }
-
-  // --- [核心修改] 採用新的精簡化 URL 格式 ---
-  const targetMapping = {
-    'Sing-Box': 'singbox',
-    'QuanX': 'quanx',
-  };
+  
+  const targetMapping = { 'Sing-Box': 'singbox', 'QuanX': 'quanx' };
   const formatKey = (targetMapping[selectedFormat.value] || selectedFormat.value.toLowerCase());
-
-  // 將格式直接作為參數鍵，例如：.../ss?clash
   return `${baseUrl}?${formatKey}`;
 });
 

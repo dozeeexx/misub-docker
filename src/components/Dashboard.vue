@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import draggable from 'vuedraggable';
 import { saveMisubs, fetchNodeCount } from '../lib/api.js';
 import { extractNodeName } from '../lib/utils.js';
@@ -12,6 +12,23 @@ import RightPanel from './RightPanel.vue';
 import Modal from './Modal.vue';
 import ProfileCard from './ProfileCard.vue';
 import ProfileModal from './ProfileModal.vue';
+
+const handleBeforeUnload = (event) => {
+  if (dirty.value) {
+    event.preventDefault();
+    // 大多數現代瀏覽器會忽略自定義消息，顯示標準提示
+    event.returnValue = '您有未保存的更改，確定要離開嗎？';
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  initializeState(); // 您原有的 onMounted 邏輯
+});
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+});
 
 const props = defineProps({
   data: Object,
@@ -113,19 +130,32 @@ const handleSave = async () => {
 const handleUpdateNodeCount = async (subId, isInitialLoad = false) => {
     const subToUpdate = subscriptions.value.find(s => s.id === subId);
     if (!subToUpdate || !subToUpdate.url.startsWith('http')) return;
-    subToUpdate.isUpdating = true;
+
+    // 在非初始化加载时，才显示“更新中”的动画，避免页面加载时所有图标一起转
+    if (!isInitialLoad) {
+        subToUpdate.isUpdating = true;
+    }
+
     try {
         const data = await fetchNodeCount(subToUpdate.url);
         subToUpdate.nodeCount = data.count || 0;
         subToUpdate.userInfo = data.userInfo || null;
+        
+        // 只有在用户手动点击更新时，才弹出提示并标记为“未保存”
         if (!isInitialLoad) {
             showToast(`${subToUpdate.name || '订阅'} 更新成功！`, 'success');
             markDirty();
         }
     } catch (error) {
-        if (!isInitialLoad) showToast(`${subToUpdate.name || '订阅'} 更新失败`, 'error');
+        if (!isInitialLoad) {
+            showToast(`${subToUpdate.name || '订阅'} 更新失败`, 'error');
+        }
+        // 即使初始化加载失败，也打印日志
+        console.error(`Failed to fetch node count for ${subToUpdate.name}:`, error);
     } finally {
-        subToUpdate.isUpdating = false;
+        if (!isInitialLoad) {
+            subToUpdate.isUpdating = false;
+        }
     }
 };
 const handleAddSubscription = () => { isNewSubscription.value = true; editingSubscription.value = { name: '', url: '', enabled: true }; showSubModal.value = true; };
@@ -227,19 +257,23 @@ const handleDeleteProfile = (profileId) => { profiles.value = profiles.value.fil
 const handleDeleteAllProfiles = () => { profiles.value = []; markDirty(); showDeleteProfilesModal.value = false; };
 // [修改] 複製連結的邏輯
 const copyProfileLink = (profileId) => {
-    const token = config.value?.mytoken;
-    if (!token || token === 'auto') {
-        showToast('请在设置中配置固定Token', 'error');
+    // 關鍵修改：從 mytoken 改為 profileToken
+    const token = config.value?.profileToken; 
+
+    if (!token || token === 'auto' || !token.trim()) {
+        showToast('请在设置中配置一个固定的“订阅组分享Token”', 'error');
         return;
     }
+    
     const profile = profiles.value.find(p => p.id === profileId);
     if (!profile) return;
     
+    // 如果设置了自定义ID，优先使用它
     const identifier = profile.customId || profile.id;
     const link = `${window.location.origin}/${token}/${identifier}`;
     
     navigator.clipboard.writeText(link);
-    showToast('订阅组链接已复制！', 'success');
+    showToast('订阅组分享链接已复制！', 'success');
 };
 const handleAutoSortNodes = () => {
     const regionKeywords = { HK: [/香港/,/HK/,/Hong Kong/i], TW: [/台湾/,/TW/,/Taiwan/i], SG: [/新加坡/,/SG/,/Singapore/i], JP: [/日本/,/JP/,/Japan/i], US: [/美国/,/US/,/United States/i], KR: [/韩国/,/KR/,/Korea/i], GB: [/英国/,/GB/,/UK/,/United Kingdom/i], DE: [/德国/,/DE/,/Germany/i], FR: [/法国/,/FR/,/France/i], CA: [/加拿大/,/CA/,/Canada/i], AU: [/澳大利亚/,/AU/,/Australia/i], };

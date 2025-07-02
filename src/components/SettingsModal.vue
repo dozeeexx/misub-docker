@@ -83,6 +83,15 @@ watch(() => props.show, (newValue) => {
           >
         </div>
         <div>
+          <label for="profileToken" class="block text-sm font-medium text-gray-700 dark:text-gray-300">订阅组分享Token</label>
+          <input 
+            type="text" id="profileToken" v-model="settings.profileToken"
+            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+            placeholder="用於分享訂閱組的專用Token"
+          >
+          <p class="text-xs text-gray-400 mt-1">此Token專門用於生成和訪問訂閱組鏈接，與主Token區分，增強安全性。</p>
+        </div>
+        <div>
           <label for="subConverter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">SubConverter后端地址</label>
           <input 
             type="text" id="subConverter" v-model="settings.subConverter" 

@@ -13,3 +13,9 @@ preview_id = "db1e91b764d14234b38c0a233878b040" # 请确保这里是你正确的
 [vars]
 ADMIN_PASSWORD = "admin"
 COOKIE_SECRET = "a_very_long_random_secret_string"
+
+[triggers]
+# "*/30" 表示每30分鐘
+# "0 */6 * * *" 表示每6小時
+# 根據您的需要調整 cron 表達式
+crons = ["0 */6 * * *"] 
