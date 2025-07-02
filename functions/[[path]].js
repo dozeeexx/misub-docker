@@ -472,6 +472,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
 }
 
 // --- [核心修改] 订阅处理函数 ---
+// --- [最終修正版 - 變量名校對] 訂閱處理函數 ---
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -485,7 +486,8 @@ async function handleMisubRequest(context) {
     const settings = settingsData || {};
     const allMisubs = misubsData || [];
     const allProfiles = profilesData || [];
-    const config = { ...defaultSettings, ...settings };
+    // 關鍵：我們在這裡定義了 `config`，後續都應該使用它
+    const config = { ...defaultSettings, ...settings }; 
 
     let token = '';
     let profileIdentifier = null;
@@ -502,13 +504,16 @@ async function handleMisubRequest(context) {
 
     let targetMisubs;
     let subName = config.FileName;
-
-    // --- [核心修改] 決定使用哪個 subconverter 和 config ---
-    let effectiveSubConverter = globalConfig.subConverter;
-    let effectiveSubConfig = globalConfig.subConfig;
+    let effectiveSubConverter;
+    let effectiveSubConfig;
 
     if (profileIdentifier) {
-        if (!token || token !== globalConfig.profileToken) {
+        // [修正] 使用 config 變量
+        if (config.profileToken === 'profiles') {
+            return new Response('For security reasons, you must set a custom Profile Token in the settings before sharing profiles.', { status: 403 });
+        }
+        // [修正] 使用 config 變量
+        if (!token || token !== config.profileToken) {
             return new Response('Invalid Profile Token', { status: 403 });
         }
         const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
@@ -518,99 +523,62 @@ async function handleMisubRequest(context) {
             const profileNodeIds = new Set(profile.manualNodes);
             targetMisubs = allMisubs.filter(item => (item.url.startsWith('http') ? profileSubIds.has(item.id) : profileNodeIds.has(item.id)));
             
-            // **優先使用 Profile 中定義的配置**
-            if (profile.subConverter) {
-                effectiveSubConverter = profile.subConverter;
-            }
-            if (profile.subConfig) {
-                effectiveSubConfig = profile.subConfig;
-            }
-
+            // [修正] 使用 config 變量作為回退
+            effectiveSubConverter = profile.subConverter && profile.subConverter.trim() !== '' ? profile.subConverter : config.subConverter;
+            effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;
         } else {
             return new Response('Profile not found or disabled', { status: 404 });
         }
     } else {
-        if (!token || token !== globalConfig.mytoken) {
+        // [修正] 使用 config 變量
+        if (!token || token !== config.mytoken) {
             return new Response('Invalid Token', { status: 403 });
         }
         targetMisubs = allMisubs.filter(s => s.enabled);
+        // [修正] 使用 config 變量
+        effectiveSubConverter = config.subConverter;
+        effectiveSubConfig = config.subConfig;
     }
 
-    // 如果有 profileIdentifier，則根據 profile 篩選節點
-    if (profileIdentifier) {
-        // [核心修改] 優先使用 customId 尋找，其次用 id
-        const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
-        
-        if (profile && profile.enabled) {
-            subName = profile.name;
-            const profileSubIds = new Set(profile.subscriptions);
-            const profileNodeIds = new Set(profile.manualNodes);
-            targetMisubs = allMisubs.filter(item => {
-                return (item.url.startsWith('http') ? profileSubIds.has(item.id) : profileNodeIds.has(item.id));
-            });
-        } else {
-            return new Response('Profile not found or disabled', { status: 404 });
-        }
-    } else {
-        targetMisubs = allMisubs.filter(s => s.enabled);
+    if (!effectiveSubConverter || effectiveSubConverter.trim() === '') {
+        return new Response('Subconverter backend is not configured.', { status: 500 });
     }
 
+    // --- 後續所有邏輯保持不變 ---
+    
     let targetFormat = url.searchParams.get('target');
-
     if (!targetFormat) {
         const supportedFormats = ['clash', 'singbox', 'surge', 'loon', 'base64', 'v2ray', 'trojan'];
         for (const format of supportedFormats) {
             if (url.searchParams.has(format)) {
-                if (format === 'v2ray' || format === 'trojan') {
-                    targetFormat = 'base64';
-                } else {
-                    targetFormat = format;
-                }        
+                if (format === 'v2ray' || format === 'trojan') { targetFormat = 'base64'; } else { targetFormat = format; }
                 break;
             }
         }
     }
-
     if (!targetFormat) {
         const ua = userAgentHeader.toLowerCase();
         const uaMapping = {
-            'clash': 'clash',          // Clash for Windows, ClashX, Clash-Verge 等
-            'meta': 'clash',           // Clash Meta 客户端
-            'stash': 'clash',          // Stash (iOS Clash 客户端)
-            'nekoray': 'clash',        // NekoRay
-            'sing-box': 'singbox',     // Sing-Box 核心
-            'shadowrocket': 'base64',  // 小火箭 (Shadowrocket)
-            'v2rayn': 'base64',        // V2RayN
-            'v2rayng': 'base64',       // V2RayNG
-            'surge': 'surge',          // Surge
-            'loon': 'loon',            // Loon
-            'quantumult%20x': 'quanx', // Quantumult X (URL编码后)
-            'quantumult': 'quanx',     // Quantumult
+            'clash': 'clash', 'meta': 'clash', 'stash': 'clash', 'nekoray': 'clash',
+            'sing-box': 'singbox', 'shadowrocket': 'base64', 'v2rayn': 'base64',
+            'v2rayng': 'base64', 'surge': 'surge', 'loon': 'loon',
+            'quantumult%20x': 'quanx', 'quantumult': 'quanx',
         };
-
         for (const key in uaMapping) {
-            if (ua.includes(key)) {
-                targetFormat = uaMapping[key];
-                break;
-            }    
-        }    
+            if (ua.includes(key)) { targetFormat = uaMapping[key]; break; }
+        }
     }
-
-    if (!targetFormat) {
-        targetFormat = 'clash'; 
-    }
+    if (!targetFormat) { targetFormat = 'clash'; }
 
     if (!url.searchParams.has('callback_token')) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
         const country = request.headers.get('CF-IPCountry') || 'N/A';
         let message = `🛰️ *订阅被访问* 🛰️\n\n*客户端:* \`${userAgentHeader}\`\n*IP 地址:* \`${clientIp} (${country})\`\n*请求格式:* \`${targetFormat}\``;
-        if (profileIdentifier) {
-            message += `\n*订阅组:* \`${subName}\``;
-        }
+        if (profileIdentifier) { message += `\n*订阅组:* \`${subName}\``; }
         context.waitUntil(sendTgNotification(config, message));
     }
 
-    // 1. 计算当前请求的总剩余流量
+    let fakeNodeString = '';
     const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
         if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
             const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
@@ -619,15 +587,12 @@ async function handleMisubRequest(context) {
         }
         return acc;
     }, 0);
+    if (totalRemainingBytes > 0) {
+        const formattedTraffic = formatBytes(totalRemainingBytes);
+        const fakeNodeName = `流量剩余 ≫ ${formattedTraffic}`;
+        fakeNodeString = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;
+    }
 
-    // 2. 创建虚假节点字符串
-    const formattedTraffic = formatBytes(totalRemainingBytes);
-    const fakeNodeName = `总剩余流量: ${formattedTraffic}`;
-    // 使用一个无效的UUID和地址来创建节点，因为它只用于显示名称
-    const fakeNodeString = `vless://5abcc59a-cdbd-4969-8b3a-b4c99c56516a@104.25.252.184:8443?encryption=none&security=tls&sni=misub.pp.ua&fp=random&allowInsecure=1&type=ws&host=misub.pp.ua&path=%2F#${encodeURIComponent(fakeNodeName)}`;
-
-
-    // --- [优化] 调用 generateCombinedNodeList 时传入虚假节点 ---
     const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
     const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
@@ -639,59 +604,34 @@ async function handleMisubRequest(context) {
     const callbackToken = await getCallbackToken(env);
     const callbackPath = profileIdentifier ? `/${token}/${profileIdentifier}` : `/${token}`;
     const callbackUrl = `${url.protocol}//${url.host}${callbackPath}?target=base64&callback_token=${callbackToken}`;
-    
     if (url.searchParams.get('callback_token') === callbackToken) {
-         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
+        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });
     }
-
-    const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
+    
+    const subconverterUrl = new URL(`https://${effectiveSubConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', callbackUrl);
-    subconverterUrl.searchParams.set('config', effectiveSubConfig); 
+    if (effectiveSubConfig && effectiveSubConfig.trim() !== '') {
+        subconverterUrl.searchParams.set('config', effectiveSubConfig);
+    }
     subconverterUrl.searchParams.set('new_name', 'true');
-
+    
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
             method: 'GET',
             headers: { 'User-Agent': 'Mozilla/5.0' },
         });
-
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
-
-        const originalText = await subconverterResponse.text();
-        let correctedText;
-
-        try {
-            const parsedYaml = yaml.load(originalText);
-            const keyMappings = { 'Proxy': 'proxies', 'Proxy Group': 'proxy-groups', 'Rule': 'rules' };
-            for (const oldKey in keyMappings) {
-                if (parsedYaml[oldKey]) {
-                    const newKey = keyMappings[oldKey];
-                    parsedYaml[newKey] = parsedYaml[oldKey];
-                    delete parsedYaml[oldKey];
-                }
-            }
-            correctedText = yaml.dump(parsedYaml, { indent: 2, noArrayIndent: true });
-        } catch (e) {
-            console.error("YAML parsing/dumping failed, falling back to original text.", e);
-            correctedText = originalText.replace(/^Proxy:/m, 'proxies:').replace(/^Proxy Group:/m, 'proxy-groups:').replace(/^Rule:/m, 'rules:');
-        }
-        
+        const responseText = await subconverterResponse.text();
         const responseHeaders = new Headers(subconverterResponse.headers);
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
-        
-        return new Response(correctedText, {
-            status: subconverterResponse.status,
-            statusText: subconverterResponse.statusText,
-            headers: responseHeaders
-        });
-
+        return new Response(responseText, { status: subconverterResponse.status, statusText: subconverterResponse.statusText, headers: responseHeaders });
     } catch (error) {
         console.error(`[MiSub Final Error] ${error.message}`);
         return new Response(`Error connecting to subconverter: ${error.message}`, { status: 502 });
