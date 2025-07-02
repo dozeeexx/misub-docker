@@ -20,9 +20,9 @@
 
 ### MiSub 应用截图
 
-![登录界面](/images/image-1.png)
+![登录界面](/images/1.png)
 
-![管理界面](images/image-2.png)
+![管理界面](images/2.png)
 
 ---
 
@@ -81,7 +81,7 @@ MiSub 不仅仅是一个简单的订阅转换工具，它经过了深度的架�
   * **构建命令**: `npm run build`
   * **构建输出目录**: `dist`
 
-![KV](image-1.png)
+![KV](images/3.png)
 
 #### 3. 绑定 KV 命名空间
 
@@ -100,7 +100,7 @@ MiSub 不仅仅是一个简单的订阅转换工具，它经过了深度的架�
 * `COOKIE_SECRET`
   * **值**: 设定一个用于加密 Cookie 的、足够长且随机的字串（例如，你可以使用密码产生器生成一个64位的随机字串）。
 
-![变量](image.png)
+![变量](images/4.png)
 
 #### 5. 部署！
 
