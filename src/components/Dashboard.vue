@@ -213,7 +213,7 @@ const handleProfileToggle = (updatedProfile) => {
 // [修改] 建立新訂閱組時，加入 customId
 const handleAddProfile = () => {
     isNewProfile.value = true;
-    editingProfile.value = { name: '', enabled: true, subscriptions: [], manualNodes: [], customId: '' };
+    editingProfile.value = { name: '', enabled: true, subscriptions: [], manualNodes: [], customId: '', subConverter: '', subConfig: ''};
     showProfileModal.value = true;
 };
 const handleEditProfile = (profileId) => {

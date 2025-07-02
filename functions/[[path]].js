@@ -503,9 +503,12 @@ async function handleMisubRequest(context) {
     let targetMisubs;
     let subName = config.FileName;
 
+    // --- [核心修改] 決定使用哪個 subconverter 和 config ---
+    let effectiveSubConverter = globalConfig.subConverter;
+    let effectiveSubConfig = globalConfig.subConfig;
+
     if (profileIdentifier) {
-        // 如果 URL 包含 Profile ID，則 Token 必須匹配 profileToken
-        if (!token || token !== config.profileToken) {
+        if (!token || token !== globalConfig.profileToken) {
             return new Response('Invalid Profile Token', { status: 403 });
         }
         const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
@@ -514,12 +517,20 @@ async function handleMisubRequest(context) {
             const profileSubIds = new Set(profile.subscriptions);
             const profileNodeIds = new Set(profile.manualNodes);
             targetMisubs = allMisubs.filter(item => (item.url.startsWith('http') ? profileSubIds.has(item.id) : profileNodeIds.has(item.id)));
+            
+            // **優先使用 Profile 中定義的配置**
+            if (profile.subConverter) {
+                effectiveSubConverter = profile.subConverter;
+            }
+            if (profile.subConfig) {
+                effectiveSubConfig = profile.subConfig;
+            }
+
         } else {
             return new Response('Profile not found or disabled', { status: 404 });
         }
     } else {
-        // 如果 URL 不包含 Profile ID，則 Token 必須匹配主 mytoken
-        if (!token || token !== config.mytoken) {
+        if (!token || token !== globalConfig.mytoken) {
             return new Response('Invalid Token', { status: 403 });
         }
         targetMisubs = allMisubs.filter(s => s.enabled);
@@ -637,7 +648,7 @@ async function handleMisubRequest(context) {
     const subconverterUrl = new URL(`https://${config.subConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', callbackUrl);
-    subconverterUrl.searchParams.set('config', config.subConfig);
+    subconverterUrl.searchParams.set('config', effectiveSubConfig); 
     subconverterUrl.searchParams.set('new_name', 'true');
 
     try {
