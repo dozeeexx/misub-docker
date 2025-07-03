@@ -508,10 +508,10 @@ async function handleMisubRequest(context) {
     let effectiveSubConfig;
 
     if (profileIdentifier) {
-        // [修正] 使用 config 變量
-        //if (config.profileToken === 'profiles') {
-        //    return new Response('For security reasons, you must set a custom Profile Token in the settings before sharing profiles.', { status: 403 });
-        //}
+         [修正] 使用 config 變量
+        if (config.profileToken === 'profiles') {
+            return new Response('For security reasons, you must set a custom Profile Token in the settings before sharing profiles.', { status: 403 });
+        }
         // [修正] 使用 config 變量
         if (!token || token !== config.profileToken) {
             return new Response('Invalid Profile Token', { status: 403 });
