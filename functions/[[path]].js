@@ -212,7 +212,7 @@ async function handleApiRequest(request, env) {
             }
             
             await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(oldData));
-            await env.MISUB_KV.put(KV_KEY_PROFILES, JSON.stringify([]));
+            await env.MISUB_KV.put(KV_KEY_, JSON.stringify([]));
             
             // 将旧键重命名，防止重复迁移
             await env.MISUB_KV.put(OLD_KV_KEY + '_migrated_on_' + new Date().toISOString(), JSON.stringify(oldData));
@@ -251,17 +251,17 @@ async function handleApiRequest(request, env) {
             // [修改] /data 接口，现在需要读取多个KV值
             case '/data': {
                 // [最终修正] 如果 KV.get 返回 null (键不存在), 则使用 `|| []` 来确保得到的是一个空数组，防止崩溃
-                const [misubs, profiles, settings] = await Promise.all([
+                const [misubs, , settings] = await Promise.all([
                     env.MISUB_KV.get(KV_KEY_SUBS, 'json').then(res => res || []),
-                    env.MISUB_KV.get(KV_KEY_PROFILES, 'json').then(res => res || []),
+                    env.MISUB_KV.get(KV_KEY_, 'json').then(res => res || []),
                     env.MISUB_KV.get(KV_KEY_SETTINGS, 'json').then(res => res || {})
                 ]);
                 const config = { 
                     FileName: settings.FileName || 'MISUB', 
                     mytoken: settings.mytoken || 'auto',
-                    profileToken: settings.profileToken || 'profiles' // 將 profileToken 也返回給前端
+                    profileToken: settings.profileToken || '' // 將 profileToken 也返回給前端
                 };
-                  return new Response(JSON.stringify({ misubs, profiles, config }), { headers: { 'Content-Type': 'application/json' } });
+                  return new Response(JSON.stringify({ misubs, , config }), { headers: { 'Content-Type': 'application/json' } });
             }
             case '/misubs': {
                 // [优化] 保存数据后，触发一次全面的检查
@@ -509,9 +509,9 @@ async function handleMisubRequest(context) {
 
     if (profileIdentifier) {
         // [修正] 使用 config 變量
-        if (config.profileToken === 'profiles') {
-            return new Response('For security reasons, you must set a custom Profile Token in the settings before sharing profiles.', { status: 403 });
-        }
+        //if (config.profileToken === 'profiles') {
+        //    return new Response('For security reasons, you must set a custom Profile Token in the settings before sharing profiles.', { status: 403 });
+        //}
         // [修正] 使用 config 變量
         if (!token || token !== config.profileToken) {
             return new Response('Invalid Profile Token', { status: 403 });
