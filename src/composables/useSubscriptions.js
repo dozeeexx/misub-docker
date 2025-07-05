@@ -7,24 +7,34 @@ export function useSubscriptions(initialSubsRef, markDirty) {
   const { showToast } = useToast();
   const subscriptions = ref([]);
   const subsCurrentPage = ref(1);
-  const subsItemsPerPage = 3;
-
-  // 【关键修正】: 将内部所有辅助函数从 'const' 改为 'function' 声明
+  const subsItemsPerPage = 6;
 
   function initializeSubscriptions(subsData) {
     subscriptions.value = (subsData || []).map(sub => ({
-      ...sub, id: crypto.randomUUID(), enabled: sub.enabled ?? true, nodeCount: sub.nodeCount || 0, isUpdating: false,
+      ...sub,
+      id: sub.id || crypto.randomUUID(),
+      enabled: sub.enabled ?? true,
+      nodeCount: sub.nodeCount || 0,
+      isUpdating: false,
+      userInfo: sub.userInfo || null,
     }));
-    subscriptions.value.forEach(sub => handleUpdateNodeCount(sub.id, true));
+    // [最終修正] 移除此處的自動更新迴圈，以防止本地開發伺服器因併發請求過多而崩潰。
+    // subscriptions.value.forEach(sub => handleUpdateNodeCount(sub.id, true)); 
   }
 
   const enabledSubscriptions = computed(() => subscriptions.value.filter(s => s.enabled));
-  const nodesFromSubs = computed(() =>
-    enabledSubscriptions.value.reduce((acc, sub) => {
-      const count = parseInt(sub.nodeCount, 10);
-      return acc + (isNaN(count) ? 0 : count);
-    }, 0)
-  );
+  
+  const totalRemainingTraffic = computed(() => {
+    return subscriptions.value.reduce((acc, sub) => {
+      if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
+        const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
+        const remaining = sub.userInfo.total - used;
+        return acc + Math.max(0, remaining);
+      }
+      return acc;
+    }, 0);
+  });
+
   const subsTotalPages = computed(() => Math.ceil(subscriptions.value.length / subsItemsPerPage));
   const paginatedSubscriptions = computed(() => {
     const start = (subsCurrentPage.value - 1) * subsItemsPerPage;
@@ -40,16 +50,23 @@ export function useSubscriptions(initialSubsRef, markDirty) {
   async function handleUpdateNodeCount(subId, isInitialLoad = false) {
     const subToUpdate = subscriptions.value.find(s => s.id === subId);
     if (!subToUpdate || !subToUpdate.url.startsWith('http')) return;
-    subToUpdate.isUpdating = true;
+    
+    if (!isInitialLoad) {
+        subToUpdate.isUpdating = true;
+    }
+
     try {
-      const count = await fetchNodeCount(subToUpdate.url);
-      subToUpdate.nodeCount = typeof count === 'number' ? count : 0;
+      const data = await fetchNodeCount(subToUpdate.url);
+      subToUpdate.nodeCount = data.count || 0;
+      subToUpdate.userInfo = data.userInfo || null;
+      
       if (!isInitialLoad) {
         showToast(`${subToUpdate.name || '订阅'} 更新成功！`, 'success');
         markDirty();
       }
     } catch (error) {
       if (!isInitialLoad) showToast(`${subToUpdate.name || '订阅'} 更新失败`, 'error');
+      console.error(`Failed to fetch node count for ${subToUpdate.name}:`, error);
     } finally {
       subToUpdate.isUpdating = false;
     }
@@ -58,7 +75,7 @@ export function useSubscriptions(initialSubsRef, markDirty) {
   function addSubscription(sub) {
     subscriptions.value.unshift(sub);
     subsCurrentPage.value = 1;
-    handleUpdateNodeCount(sub.id);
+    handleUpdateNodeCount(sub.id); // 新增時自動更新單個
     markDirty();
   }
 
@@ -67,7 +84,7 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     if (index !== -1) {
       if (subscriptions.value[index].url !== updatedSub.url) {
         updatedSub.nodeCount = 0;
-        handleUpdateNodeCount(updatedSub.id);
+        handleUpdateNodeCount(updatedSub.id); // URL 變更時自動更新單個
       }
       subscriptions.value[index] = updatedSub;
       markDirty();
@@ -87,15 +104,35 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     subsCurrentPage.value = 1;
     markDirty();
   }
+  
+  // [修正] 批量導入後也逐個更新，防止併發問題
+  async function addSubscriptionsFromBulk(subs) {
+    subscriptions.value.unshift(...subs);
+    markDirty();
+    showToast('正在後台逐一更新導入的訂閱...', 'success');
+    for(const sub of subs) {
+        await handleUpdateNodeCount(sub.id);
+    }
+    showToast('批量導入的訂閱已全部更新完畢!', 'success');
+  }
 
   watch(initialSubsRef, (newInitialSubs) => {
     initializeSubscriptions(newInitialSubs);
   }, { immediate: true, deep: true });
 
   return {
-    subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions,
-    nodesFromSubs, enabledSubscriptionsCount: computed(() => enabledSubscriptions.value.length),
-    changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
-    handleUpdateNodeCount, // <-- 【关键修正】在这里加上它
+    subscriptions,
+    subsCurrentPage,
+    subsTotalPages,
+    paginatedSubscriptions,
+    totalRemainingTraffic,
+    enabledSubscriptionsCount: computed(() => enabledSubscriptions.value.length),
+    changeSubsPage,
+    addSubscription,
+    updateSubscription,
+    deleteSubscription,
+    deleteAllSubscriptions,
+    addSubscriptionsFromBulk,
+    handleUpdateNodeCount,
   };
 }

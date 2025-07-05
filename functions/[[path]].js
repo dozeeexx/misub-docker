@@ -13,7 +13,7 @@ const defaultSettings = {
   mytoken: 'auto',
   profileToken: 'profiles',
   subConverter: 'url.v1.mk',
-  subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini',
+  subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full.ini',
   prependSubName: true,
   NotifyThresholdDays: 3, 
   NotifyThresholdPercent: 90 
@@ -55,15 +55,15 @@ async function sendTgNotification(settings, message) {
       body: JSON.stringify(payload)
     });
     if (response.ok) {
-      console.log("TG notification sent successfully.");
+      console.log("TG 通知已成功发送。");
       return true;
     } else {
       const errorData = await response.json();
-      console.error("Failed to send TG notification:", response.status, errorData);
+      console.error("发送 TG 通知失败：", response.status, errorData);
       return false;
     }
   } catch (error) {
-    console.error("Error sending TG notification:", error);
+    console.error("发送 TG 通知时出错：", error);
     return false;
   }
 }
@@ -78,7 +78,11 @@ async function handleCronTrigger(env) {
         if (sub.url.startsWith('http') && sub.enabled) {
             // 複用 /api/node_count 的流量獲取邏輯
             try {
-                const trafficRequest = fetch(new Request(sub.url, { headers: { 'User-Agent': 'Clash for Windows/0.20.39' }, redirect: "follow" }));
+                const trafficRequest = fetch(new Request(sub.url, { 
+                    headers: { 'User-Agent': 'Clash for Windows/0.20.39' }, 
+                    redirect: "follow",
+                    cf: { insecureSkipVerify: true } 
+                }));
                 const response = await Promise.race([trafficRequest, new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))]);
 
                 if (response.ok) {
@@ -103,9 +107,9 @@ async function handleCronTrigger(env) {
     // 如果有任何通知時間戳被更新，則保存回 KV
     if (changesMade) {
         await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(allSubs));
-        console.log("Subscription notification timestamps updated.");
+        console.log("订阅通知时间戳已更新。");
     }
-    return new Response("Cron job finished.", { status: 200 });
+    return new Response("Cron 作业完成。", { status: 200 });
 }
 
 // --- 认证与API处理的核心函数 (无修改) ---
@@ -206,51 +210,51 @@ async function handleApiRequest(request, env) {
             if (newDataExists) {
                 return new Response(JSON.stringify({ success: true, message: '无需迁移，数据已是最新结构。' }), { status: 200 });
             }
-
             if (!oldData) {
                 return new Response(JSON.stringify({ success: false, message: '未找到需要迁移的旧数据。' }), { status: 404 });
             }
             
             await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(oldData));
             await env.MISUB_KV.put(KV_KEY_PROFILES, JSON.stringify([]));
-            
-            // 将旧键重命名，防止重复迁移
             await env.MISUB_KV.put(OLD_KV_KEY + '_migrated_on_' + new Date().toISOString(), JSON.stringify(oldData));
             await env.MISUB_KV.delete(OLD_KV_KEY);
 
             return new Response(JSON.stringify({ success: true, message: '数据迁移成功！' }), { status: 200 });
-
         } catch (e) {
+            console.error('[API Error /migrate]', e);
             return new Response(JSON.stringify({ success: false, message: `迁移失败: ${e.message}` }), { status: 500 });
         }
     }
 
-
-    if (path !== '/login') {
-        if (!await authMiddleware(request, env)) { return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }); }
-    }
-
-    try {
-        switch (path) {
-            case '/login': {
-                if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-                const { password } = await request.json();
-                if (password === env.ADMIN_PASSWORD) {
-                    const token = await createSignedToken(env.COOKIE_SECRET, String(Date.now()));
-                    const headers = new Headers({ 'Content-Type': 'application/json' });
-                    headers.append('Set-Cookie', `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_DURATION / 1000}`);
-                    return new Response(JSON.stringify({ success: true }), { headers });
-                }
-                return new Response(JSON.stringify({ error: '密码错误' }), { status: 401 });
-            }
-            case '/logout': {
+    if (path === '/login') {
+        if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+        try {
+            const { password } = await request.json();
+            if (password === env.ADMIN_PASSWORD) {
+                const token = await createSignedToken(env.COOKIE_SECRET, String(Date.now()));
                 const headers = new Headers({ 'Content-Type': 'application/json' });
-                headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
+                headers.append('Set-Cookie', `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_DURATION / 1000}`);
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
-            // [修改] /data 接口，现在需要读取多个KV值
-            case '/data': {
-                // [最终修正] 如果 KV.get 返回 null (键不存在), 则使用 `|| []` 来确保得到的是一个空数组，防止崩溃
+            return new Response(JSON.stringify({ error: '密码错误' }), { status: 401 });
+        } catch (e) {
+            console.error('[API Error /login]', e);
+            return new Response(JSON.stringify({ error: '请求体解析失败' }), { status: 400 });
+        }
+    }
+    if (!await authMiddleware(request, env)) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    }
+
+    switch (path) {
+        case '/logout': {
+            const headers = new Headers({ 'Content-Type': 'application/json' });
+            headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
+            return new Response(JSON.stringify({ success: true }), { headers });
+        }
+        
+        case '/data': {
+            try {
                 const [misubs, profiles, settings] = await Promise.all([
                     env.MISUB_KV.get(KV_KEY_SUBS, 'json').then(res => res || []),
                     env.MISUB_KV.get(KV_KEY_PROFILES, 'json').then(res => res || []),
@@ -259,50 +263,71 @@ async function handleApiRequest(request, env) {
                 const config = { 
                     FileName: settings.FileName || 'MISUB', 
                     mytoken: settings.mytoken || 'auto',
-                    profileToken: settings.profileToken || 'profiles' // 將 profileToken 也返回給前端
+                    profileToken: settings.profileToken || 'profiles'
                 };
-                  return new Response(JSON.stringify({ misubs, profiles, config }), { headers: { 'Content-Type': 'application/json' } });
+                return new Response(JSON.stringify({ misubs, profiles, config }), { headers: { 'Content-Type': 'application/json' } });
+            } catch(e) {
+                console.error('[API Error /data]', 'Failed to read from KV:', e);
+                return new Response(JSON.stringify({ error: '读取初始数据失败' }), { status: 500 });
             }
-            case '/misubs': {
-                // [优化] 保存数据后，触发一次全面的检查
+        }
+
+        case '/misubs': {
+            try {
                 const { misubs, profiles } = await request.json();
                 if (typeof misubs === 'undefined' || typeof profiles === 'undefined') {
                     return new Response(JSON.stringify({ success: false, message: '请求体中缺少 misubs 或 profiles 字段' }), { status: 400 });
                 }
                 
-                // 获取最新设置用于通知
                 const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || defaultSettings;
-
-                // 遍历所有订阅进行检查
                 for (const sub of misubs) {
                     if (sub.url.startsWith('http')) {
                         await checkAndNotify(sub, settings, env);
                     }
                 }
 
-                // 保存更新后的数据（包含了 lastNotified 时间戳）
                 await Promise.all([
                     env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(misubs)),
                     env.MISUB_KV.put(KV_KEY_PROFILES, JSON.stringify(profiles))
                 ]);
                 
                 return new Response(JSON.stringify({ success: true, message: '订阅源及订阅组已保存' }));
+            } catch (e) {
+                console.error('[API Error /misubs]', 'Failed to parse request or write to KV:', e);
+                return new Response(JSON.stringify({ error: '保存数据失败' }), { status: 500 });
             }
+        }
+
             case '/node_count': {
-                // [优化] 更新单个订阅后，立即检查并通知
                 if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
                 const { url: subUrl } = await request.json();
                 if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
                     return new Response(JSON.stringify({ error: 'Invalid or missing url' }), { status: 400 });
                 }
-                const result = { count: 0, userInfo: null };
                 
-                 try {
-                    // ... (获取流量和节点数的逻辑无变化)
-                    const trafficRequest = fetch(new Request(subUrl, { headers: { 'User-Agent': 'Clash for Windows/0.20.39' }, redirect: "follow" }));
-                    const nodeCountRequest = fetch(new Request(subUrl, { headers: { 'User-Agent': 'MiSub-Node-Counter/2.0' }, redirect: "follow" }));
-                    const [trafficResponse, nodeCountResponse] = await Promise.all([trafficRequest, nodeCountRequest]);
-                    if (trafficResponse.ok) {
+                const result = { count: 0, userInfo: null };
+
+                try {
+                    const fetchOptions = {
+                        headers: { 'User-Agent': 'MiSub-Node-Counter/2.0' },
+                        redirect: "follow",
+                        cf: { insecureSkipVerify: true }
+                    };
+                    const trafficFetchOptions = {
+                        headers: { 'User-Agent': 'Clash for Windows/0.20.39' },
+                        redirect: "follow",
+                        cf: { insecureSkipVerify: true }
+                    };
+
+                    const trafficRequest = fetch(new Request(subUrl, trafficFetchOptions));
+                    const nodeCountRequest = fetch(new Request(subUrl, fetchOptions));
+
+                    // --- [核心修正] 使用 Promise.allSettled 替换 Promise.all ---
+                    const responses = await Promise.allSettled([trafficRequest, nodeCountRequest]);
+
+                    // 1. 处理流量请求的结果
+                    if (responses[0].status === 'fulfilled' && responses[0].value.ok) {
+                        const trafficResponse = responses[0].value;
                         const userInfoHeader = trafficResponse.headers.get('subscription-userinfo');
                         if (userInfoHeader) {
                             const info = {};
@@ -312,50 +337,73 @@ async function handleApiRequest(request, env) {
                             });
                             result.userInfo = info;
                         }
+                    } else if (responses[0].status === 'rejected') {
+                        console.error(`Traffic request for ${subUrl} rejected:`, responses[0].reason);
                     }
-                    if (nodeCountResponse.ok) {
+
+                    // 2. 处理节点数请求的结果
+                    if (responses[1].status === 'fulfilled' && responses[1].value.ok) {
+                        const nodeCountResponse = responses[1].value;
                         const text = await nodeCountResponse.text();
                         let decoded = '';
-                        try {
-                            decoded = atob(text.replace(/\s/g, ''));
-                        } catch {
-                            decoded = text;
-                        }
-                        const lineMatches = decoded.match(/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic):\/\//gm);
+                        try { decoded = atob(text.replace(/\s/g, '')); } catch { decoded = text; }
+                        const lineMatches = decoded.match(/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls):\/\//gm);
                         if (lineMatches) {
                             result.count = lineMatches.length;
                         }
+                    } else if (responses[1].status === 'rejected') {
+                        console.error(`Node count request for ${subUrl} rejected:`, responses[1].reason);
                     }
+                    
+                    // 只有在至少获取到一个有效信息时，才更新数据库
+                    if (result.userInfo || result.count > 0) {
+                        const allSubs = await env.MISUB_KV.get(KV_KEY_SUBS, 'json') || [];
+                        const subToUpdate = allSubs.find(s => s.url === subUrl);
+
+                        if (subToUpdate) {
+                            subToUpdate.nodeCount = result.count;
+                            subToUpdate.userInfo = result.userInfo;
+                            await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(allSubs));
+                        }
+                    }
+                    
                 } catch (e) {
-                    console.error('Failed to fetch subscription:', e);
+                    console.error(`[API Error /node_count] Unhandled exception for URL: ${subUrl}`, e);
                 }
-                
                 
                 return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
             }
-            case '/settings': {
-                // [优化] 保存设置后，发送一条通知
-                if (request.method === 'GET') {
+
+        case '/settings': {
+            if (request.method === 'GET') {
+                try {
                     const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
                     return new Response(JSON.stringify({ ...defaultSettings, ...settings }), { headers: { 'Content-Type': 'application/json' } });
+                } catch (e) {
+                    console.error('[API Error /settings GET]', 'Failed to read settings from KV:', e);
+                    return new Response(JSON.stringify({ error: '读取设置失败' }), { status: 500 });
                 }
-                if (request.method === 'POST') {
+            }
+            if (request.method === 'POST') {
+                try {
                     const newSettings = await request.json();
                     const oldSettings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || {};
                     const finalSettings = { ...oldSettings, ...newSettings };
                     await env.MISUB_KV.put(KV_KEY_SETTINGS, JSON.stringify(finalSettings));
-                    // 构造更丰富的通知消息
+                    
                     const message = `⚙️ *MiSub 设置更新* ⚙️\n\n您的 MiSub 应用设置已成功更新。`;
                     await sendTgNotification(finalSettings, message);
+                    
                     return new Response(JSON.stringify({ success: true, message: '设置已保存' }));
+                } catch (e) {
+                    console.error('[API Error /settings POST]', 'Failed to parse request or write settings to KV:', e);
+                    return new Response(JSON.stringify({ error: '保存设置失败' }), { status: 500 });
                 }
-                return new Response('Method Not Allowed', { status: 405 });
             }
+            return new Response('Method Not Allowed', { status: 405 });
         }
-    } catch (e) { 
-        console.error("API Error:", e);
-        return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 });
     }
+    
     return new Response('API route not found', { status: 404 });
 }
 // --- 名称前缀辅助函数 (无修改) ---

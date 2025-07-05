@@ -1,121 +1,128 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
 import draggable from 'vuedraggable';
-import { saveMisubs, fetchNodeCount } from '../lib/api.js';
+import { saveMisubs } from '../lib/api.js';
 import { extractNodeName } from '../lib/utils.js';
 import { useToast, showSettingsModal } from '../lib/stores.js';
-import SettingsModal from './SettingsModal.vue';
+import { useSubscriptions } from '../composables/useSubscriptions.js';
+import { useManualNodes } from '../composables/useManualNodes.js';
+
+// --- 元件導入 ---
 import Card from './Card.vue';
 import ManualNodeCard from './ManualNodeCard.vue';
-import BulkImportModal from './BulkImportModal.vue';
 import RightPanel from './RightPanel.vue';
-import Modal from './Modal.vue';
 import ProfileCard from './ProfileCard.vue';
-import ProfileModal from './ProfileModal.vue';
 
-const handleBeforeUnload = (event) => {
-  if (dirty.value) {
-    event.preventDefault();
-    // 大多數現代瀏覽器會忽略自定義消息，顯示標準提示
-    event.returnValue = '您有未保存的更改，確定要離開嗎？';
-  }
-};
+const SettingsModal = defineAsyncComponent(() => import('./SettingsModal.vue'));
+const BulkImportModal = defineAsyncComponent(() => import('./BulkImportModal.vue'));
+const Modal = defineAsyncComponent(() => import('./Modal.vue'));
+const ProfileModal = defineAsyncComponent(() => import('./ProfileModal.vue'));
 
-onMounted(() => {
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  initializeState(); // 您原有的 onMounted 邏輯
-});
-
-onUnmounted(() => {
-  window.removeEventListener('beforeunload', handleBeforeUnload);
-});
-
-const props = defineProps({
-  data: Object,
-});
+// --- 基礎 Props 和狀態 ---
+const props = defineProps({ data: Object });
 const { showToast } = useToast();
-
-const subscriptions = ref([]);
-const manualNodes = ref([]);
-const profiles = ref([]);
-const config = ref({});
 const isLoading = ref(true);
 const dirty = ref(false);
 const saveState = ref('idle');
+
+// --- 將狀態和邏輯委託給 Composables ---
+const markDirty = () => { dirty.value = true; saveState.value = 'idle'; };
+const initialSubs = ref([]);
+const initialNodes = ref([]);
+
+const {
+  subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions, totalRemainingTraffic,
+  changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
+  addSubscriptionsFromBulk, handleUpdateNodeCount,
+} = useSubscriptions(initialSubs, markDirty);
+
+const {
+  manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes,
+  changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
+  addNodesFromBulk, autoSortNodes,
+} = useManualNodes(initialNodes, markDirty);
+
+// --- 訂閱組 (Profile) 相關狀態 ---
+const profiles = ref([]);
+const config = ref({});
+const isNewProfile = ref(false);
+const editingProfile = ref(null);
+const showProfileModal = ref(false);
+const showDeleteProfilesModal = ref(false);
+
+// --- 排序狀態 ---
 const isSortingSubs = ref(false);
 const isSortingNodes = ref(false);
-const subsCurrentPage = ref(1);
-const manualNodesCurrentPage = ref(1);
-const subsItemsPerPage = 6;
-const manualNodesPerPage = 24;
+
+// --- 編輯專用模態框狀態 ---
+const editingSubscription = ref(null);
+const isNewSubscription = ref(false);
+const showSubModal = ref(false);
+
+const editingNode = ref(null);
+const isNewNode = ref(false);
+const showNodeModal = ref(false);
+
+// --- 其他模態框和菜單狀態 ---
 const showBulkImportModal = ref(false);
 const showDeleteSubsModal = ref(false);
 const showDeleteNodesModal = ref(false);
-const showDeleteProfilesModal = ref(false);
-const showSubModal = ref(false);
-const showNodeModal = ref(false);
-const showProfileModal = ref(false);
-const editingSubscription = ref(null);
-const isNewSubscription = ref(false);
-const editingNode = ref(null);
-const isNewNode = ref(false);
-const editingProfile = ref(null);
-const isNewProfile = ref(false);
-
 const showSubsMoreMenu = ref(false);
 const showNodesMoreMenu = ref(false);
 const showProfilesMoreMenu = ref(false);
 
-
+// --- 初始化與生命週期 ---
 const initializeState = () => {
   isLoading.value = true;
   if (props.data) {
     const subsData = props.data.misubs || [];
-    const subsArray = [], nodesArray = [];
-    for (const item of subsData) {
-      const newItem = {
-        ...item,
-        id: item.id || crypto.randomUUID(),
-        enabled: item.enabled ?? true,
-        isUpdating: false,
-        userInfo: item.userInfo || null,
-      };
-      if (/^https?:\/\//.test(item.url)) {
-        subsArray.push({ ...newItem, nodeCount: item.nodeCount || 0 });
-      } else {
-        nodesArray.push({ ...newItem, nodeCount: 1 });
-      }
-    }
-    subscriptions.value = subsArray;
-    manualNodes.value = nodesArray;
-    // [修改] 初始化時確保 customId 存在
+    initialSubs.value = subsData.filter(item => /^https?:\/\//.test(item.url));
+    initialNodes.value = subsData.filter(item => !/^https?:\/\//.test(item.url));
+    
     profiles.value = (props.data.profiles || []).map(p => ({
         ...p,
         id: p.id || crypto.randomUUID(),
         enabled: p.enabled ?? true,
         subscriptions: p.subscriptions || [],
         manualNodes: p.manualNodes || [],
-        customId: p.customId || '' 
+        customId: p.customId || ''
     }));
     config.value = props.data.config || {};
-    subsArray.forEach(sub => handleUpdateNodeCount(sub.id, true));
   }
   isLoading.value = false;
   dirty.value = false;
 };
-onMounted(initializeState);
 
-const markDirty = () => { dirty.value = true; saveState.value = 'idle'; };
-const handleDiscard = () => { initializeState(); showToast('已放弃所有未保存的更改'); };
+const handleBeforeUnload = (event) => {
+  if (dirty.value) {
+    event.preventDefault();
+    event.returnValue = '您有未保存的更改，確定要離開嗎？';
+  }
+};
+
+onMounted(() => {
+  initializeState();
+  window.addEventListener('beforeunload', handleBeforeUnload);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+});
+
+// --- 核心操作方法 ---
+const handleDiscard = () => {
+  initializeState();
+  showToast('已放弃所有未保存的更改');
+};
+
 const handleSave = async () => {
   saveState.value = 'saving';
   const combinedMisubs = [
       ...subscriptions.value.map(sub => ({ ...sub, isUpdating: undefined })),
       ...manualNodes.value.map(node => ({ ...node, isUpdating: undefined }))
   ];
-  const profilesToSave = profiles.value;
   try {
-    const result = await saveMisubs(combinedMisubs, profilesToSave);
+    const result = await saveMisubs(combinedMisubs, profiles.value);
     if (result.success) {
         saveState.value = 'success';
         setTimeout(() => { dirty.value = false; saveState.value = 'idle'; }, 1500);
@@ -127,61 +134,59 @@ const handleSave = async () => {
     saveState.value = 'idle';
   }
 };
-const handleUpdateNodeCount = async (subId, isInitialLoad = false) => {
-    const subToUpdate = subscriptions.value.find(s => s.id === subId);
-    if (!subToUpdate || !subToUpdate.url.startsWith('http')) return;
 
-    // 在非初始化加载时，才显示“更新中”的动画，避免页面加载时所有图标一起转
-    if (!isInitialLoad) {
-        subToUpdate.isUpdating = true;
-    }
+// 刪除單個訂閱
+const handleDeleteSubscriptionWithCleanup = (subId) => {
+  // 1. 從主列表中刪除
+  deleteSubscription(subId);
+  // 2. 遍歷所有分組，清理被刪除的 ID
+  profiles.value.forEach(p => {
+    p.subscriptions = p.subscriptions.filter(id => id !== subId);
+  });
+  // 3. 標記為需要保存 (deleteSubscription 內部已處理)
+};
 
-    try {
-        const data = await fetchNodeCount(subToUpdate.url);
-        subToUpdate.nodeCount = data.count || 0;
-        subToUpdate.userInfo = data.userInfo || null;
-        
-        // 只有在用户手动点击更新时，才弹出提示并标记为“未保存”
-        if (!isInitialLoad) {
-            showToast(`${subToUpdate.name || '订阅'} 更新成功！`, 'success');
-            markDirty();
-        }
-    } catch (error) {
-        if (!isInitialLoad) {
-            showToast(`${subToUpdate.name || '订阅'} 更新失败`, 'error');
-        }
-        // 即使初始化加载失败，也打印日志
-        console.error(`Failed to fetch node count for ${subToUpdate.name}:`, error);
-    } finally {
-        if (!isInitialLoad) {
-            subToUpdate.isUpdating = false;
-        }
-    }
+// 刪除單個手動節點
+const handleDeleteNodeWithCleanup = (nodeId) => {
+  // 1. 從主列表中刪除
+  deleteNode(nodeId);
+  // 2. 遍歷所有分組，清理被刪除的 ID
+  profiles.value.forEach(p => {
+    p.manualNodes = p.manualNodes.filter(id => id !== nodeId);
+  });
 };
-const handleAddSubscription = () => { isNewSubscription.value = true; editingSubscription.value = { name: '', url: '', enabled: true }; showSubModal.value = true; };
-const handleEditSubscription = (subId) => { const sub = subscriptions.value.find(s => s.id === subId); if (sub) { isNewSubscription.value = false; editingSubscription.value = { ...sub }; showSubModal.value = true; }};
-const handleSaveSubscription = () => {
-  if (!editingSubscription.value || !editingSubscription.value.url) { showToast('订阅链接不能为空', 'error'); return; }
-  if (!/^https?:\/\//.test(editingSubscription.value.url)) { showToast('请输入有效的 http:// 或 https:// 订阅链接', 'error'); return; }
-  if (isNewSubscription.value) { const subToAdd = { ...editingSubscription.value, id: crypto.randomUUID(), nodeCount: 0, isUpdating: false }; subscriptions.value.unshift(subToAdd); subsCurrentPage.value = 1; handleUpdateNodeCount(subToAdd.id);
-  } else { const index = subscriptions.value.findIndex(s => s.id === editingSubscription.value.id); if (index !== -1) { if (subscriptions.value[index].url !== editingSubscription.value.url) { editingSubscription.value.nodeCount = 0; handleUpdateNodeCount(editingSubscription.value.id); } subscriptions.value[index] = editingSubscription.value; }}
-  markDirty(); showSubModal.value = false;
+
+// 清空所有訂閱
+const handleDeleteAllSubscriptionsWithCleanup = () => {
+  // 1. 清空主列表
+  deleteAllSubscriptions();
+  // 2. 清空所有分組中的訂閱 ID
+  profiles.value.forEach(p => {
+    p.subscriptions = [];
+  });
+  // 3. 關閉確認彈窗
+  showDeleteSubsModal.value = false;
 };
-const handleDeleteSubscription = (id) => { subscriptions.value = subscriptions.value.filter((s) => s.id !== id); markDirty(); };
-const handleDeleteAllSubscriptions = () => { subscriptions.value = []; subsCurrentPage.value = 1; markDirty(); showDeleteSubsModal.value = false; };
-const changeSubsPage = (page) => { if (page < 1 || page > subsTotalPages.value) return; subsCurrentPage.value = page; };
-const handleAddNode = () => { isNewNode.value = true; editingNode.value = { id: crypto.randomUUID(), name: '', url: '', enabled: true }; showNodeModal.value = true; };
-const handleEditNode = (nodeId) => { const node = manualNodes.value.find(n => n.id === nodeId); if (node) { isNewNode.value = false; editingNode.value = { ...node }; showNodeModal.value = true; }};
-const handleNodeUrlInput = (event) => { if (!editingNode.value) return; const newUrl = event.target.value; if (newUrl) { const extractedName = extractNodeName(newUrl); if (extractedName) { editingNode.value.name = extractedName; }}};
-const handleSaveNode = () => {
-    if (!editingNode.value || !editingNode.value.url) { showToast('节点链接不能为空', 'error'); return; }
-    if (isNewNode.value) { manualNodes.value.unshift(editingNode.value); manualNodesCurrentPage.value = 1; }
-    else { manualNodes.value = manualNodes.value.map(n => n.id === editingNode.value.id ? editingNode.value : n); }
-    markDirty(); showNodeModal.value = false;
+
+// 清空所有手動節點
+const handleDeleteAllNodesWithCleanup = () => {
+  // 1. 清空主列表
+  deleteAllNodes();
+  // 2. 清空所有分組中的節點 ID
+  profiles.value.forEach(p => {
+    p.manualNodes = [];
+  });
+  // 3. 關閉確認彈窗
+  showDeleteNodesModal.value = false;
 };
-const handleDeleteNode = (nodeId) => { manualNodes.value = manualNodes.value.filter(n => n.id !== nodeId); markDirty(); };
-const handleDeleteAllNodes = () => { manualNodes.value = []; manualNodesCurrentPage.value = 1; markDirty(); showDeleteNodesModal.value = false; };
-const changeManualNodesPage = (page) => { if (page < 1 || page > manualNodesTotalPages.value) return; manualNodesCurrentPage.value = page; };
+// [修正] 此函數現在先調用 composable 的排序，再調用 handleSave
+const handleAutoSortNodes = () => {
+    autoSortNodes();
+    showToast('已按地区排序！正在为您自动保存...', 'success');
+    handleSave();
+};
+
+// --- 批量導入 ---
 const handleBulkImport = (importText) => {
   if (!importText) return;
   const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
@@ -190,19 +195,75 @@ const handleBulkImport = (importText) => {
       const newItem = { id: crypto.randomUUID(), name: extractNodeName(line) || '未命名', url: line, enabled: true, status: 'unchecked' };
       if (/^https?:\/\//.test(line)) {
           newSubs.push(newItem);
-      // [更新] 新增 anytls 支援
       } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls):\/\//.test(line)) {
           newNodes.push(newItem);
       }
   }
-  subscriptions.value = [...newSubs, ...subscriptions.value];
-  manualNodes.value = [...newNodes, ...manualNodes.value];
-  subsCurrentPage.value = 1;
-  manualNodesCurrentPage.value = 1;
-  markDirty();
+  if (newSubs.length > 0) addSubscriptionsFromBulk(newSubs);
+  if (newNodes.length > 0) addNodesFromBulk(newNodes);
   showToast(`成功导入 ${newSubs.length} 条订阅和 ${newNodes.length} 个手动节点，请点击保存`, 'success');
-  newSubs.forEach(sub => handleTestSubscription(sub.id));
 };
+
+// --- 訂閱編輯 ---
+const handleAddSubscription = () => {
+  isNewSubscription.value = true;
+  editingSubscription.value = { name: '', url: '', enabled: true };
+  showSubModal.value = true;
+};
+// [修正] 傳入 ID，並從 subscriptions.value 中查找
+const handleEditSubscription = (subId) => {
+  const sub = subscriptions.value.find(s => s.id === subId);
+  if (sub) {
+    isNewSubscription.value = false;
+    editingSubscription.value = { ...sub };
+    showSubModal.value = true;
+  }
+};
+const handleSaveSubscription = () => {
+  if (!editingSubscription.value || !editingSubscription.value.url) { showToast('订阅链接不能为空', 'error'); return; }
+  if (!/^https?:\/\//.test(editingSubscription.value.url)) { showToast('请输入有效的 http:// 或 https:// 订阅链接', 'error'); return; }
+  
+  if (isNewSubscription.value) {
+    addSubscription({ ...editingSubscription.value, id: crypto.randomUUID() });
+  } else {
+    updateSubscription(editingSubscription.value);
+  }
+  showSubModal.value = false;
+};
+
+// --- 節點編輯 ---
+const handleAddNode = () => {
+  isNewNode.value = true;
+  editingNode.value = { id: crypto.randomUUID(), name: '', url: '', enabled: true };
+  showNodeModal.value = true;
+};
+// [修正] 傳入 ID，並從 manualNodes.value 中查找
+const handleEditNode = (nodeId) => {
+  const node = manualNodes.value.find(n => n.id === nodeId);
+  if (node) {
+    isNewNode.value = false;
+    editingNode.value = { ...node };
+    showNodeModal.value = true;
+  }
+};
+const handleNodeUrlInput = (event) => {
+  if (!editingNode.value) return;
+  const newUrl = event.target.value;
+  if (newUrl && !editingNode.value.name) {
+    editingNode.value.name = extractNodeName(newUrl);
+  }
+};
+const handleSaveNode = () => {
+    if (!editingNode.value || !editingNode.value.url) { showToast('节点链接不能为空', 'error'); return; }
+    if (isNewNode.value) {
+        addNode(editingNode.value);
+    } else {
+        updateNode(editingNode.value);
+    }
+    showNodeModal.value = false;
+};
+
+// --- 訂閱組 (Profile) 編輯 ---
 const handleProfileToggle = (updatedProfile) => {
     const index = profiles.value.findIndex(p => p.id === updatedProfile.id);
     if (index !== -1) {
@@ -210,7 +271,6 @@ const handleProfileToggle = (updatedProfile) => {
         markDirty();
     }
 };
-// [修改] 建立新訂閱組時，加入 customId
 const handleAddProfile = () => {
     isNewProfile.value = true;
     editingProfile.value = { name: '', enabled: true, subscriptions: [], manualNodes: [], customId: '', subConverter: '', subConfig: ''};
@@ -224,81 +284,48 @@ const handleEditProfile = (profileId) => {
         showProfileModal.value = true;
     }
 };
-// [修改] 儲存訂閱組時，增加驗證
 const handleSaveProfile = (profileData) => {
-    if (!profileData || !profileData.name) {
-        showToast('订阅组名称不能为空', 'error');
-        return;
-    }
-    
-    // 清理並驗證 customId
+    if (!profileData || !profileData.name) { showToast('订阅组名称不能为空', 'error'); return; }
     if (profileData.customId) {
         profileData.customId = profileData.customId.replace(/[^a-zA-Z0-9-_]/g, '');
-        if (profileData.customId) {
-            const isDuplicate = profiles.value.some(p => p.id !== profileData.id && p.customId === profileData.customId);
-            if (isDuplicate) {
-                showToast(`自定义 ID "${profileData.customId}" 已存在，请使用其他 ID`, 'error');
-                return;
-            }
+        if (profileData.customId && profiles.value.some(p => p.id !== profileData.id && p.customId === profileData.customId)) {
+            showToast(`自定义 ID "${profileData.customId}" 已存在`, 'error');
+            return;
         }
     }
-
     if (isNewProfile.value) {
-        const profileToAdd = { ...profileData, id: crypto.randomUUID() };
-        profiles.value.unshift(profileToAdd);
+        profiles.value.unshift({ ...profileData, id: crypto.randomUUID() });
     } else {
         const index = profiles.value.findIndex(p => p.id === profileData.id);
-        if (index !== -1) { profiles.value[index] = profileData; }
+        if (index !== -1) profiles.value[index] = profileData;
     }
     markDirty();
     showProfileModal.value = false;
 };
-const handleDeleteProfile = (profileId) => { profiles.value = profiles.value.filter(p => p.id !== profileId); markDirty(); };
-const handleDeleteAllProfiles = () => { profiles.value = []; markDirty(); showDeleteProfilesModal.value = false; };
-// [修改] 複製連結的邏輯
+const handleDeleteProfile = (profileId) => {
+    profiles.value = profiles.value.filter(p => p.id !== profileId);
+    markDirty();
+};
+const handleDeleteAllProfiles = () => {
+    profiles.value = [];
+    markDirty();
+    showDeleteProfilesModal.value = false;
+};
 const copyProfileLink = (profileId) => {
-    // 關鍵修改：從 mytoken 改為 profileToken
-    const token = config.value?.profileToken; 
-
+    const token = config.value?.profileToken;
     if (!token || token === 'auto' || !token.trim()) {
         showToast('请在设置中配置一个固定的“订阅组分享Token”', 'error');
         return;
     }
-    
     const profile = profiles.value.find(p => p.id === profileId);
     if (!profile) return;
-    
-    // 如果设置了自定义ID，优先使用它
     const identifier = profile.customId || profile.id;
     const link = `${window.location.origin}/${token}/${identifier}`;
-    
     navigator.clipboard.writeText(link);
     showToast('订阅组分享链接已复制！', 'success');
 };
-const handleAutoSortNodes = () => { // Remove 'async' from the function definition
-  const regionKeywords = { HK: [/香港/,/HK/,/Hong Kong/i], TW: [/台湾/,/TW/,/Taiwan/i], SG: [/新加坡/,/SG/,/狮城/,/Singapore/i], JP: [/日本/,/JP/,/Japan/i], US: [/美国/,/US/,/United States/i], KR: [/韩国/,/KR/,/Korea/i], GB: [/英国/,/GB/,/UK/,/United Kingdom/i], DE: [/德国/,/DE/,/Germany/i], FR: [/法国/,/FR/,/France/i], CA: [/加拿大/,/CA/,/Canada/i], AU: [/澳大利亚/,/AU/,/Australia/i], };
-  const regionOrder = ['HK', 'TW', 'SG', 'JP', 'US', 'KR', 'GB', 'DE', 'FR', 'CA', 'AU'];
-  const getRegionCode = (name) => { for (const code in regionKeywords) { for (const keyword of regionKeywords[code]) { if (keyword.test(name)) return code; } } return 'ZZ'; };
-  
-  manualNodes.value.sort((a, b) => {
-      const regionA = getRegionCode(a.name);
-      const regionB = getRegionCode(b.name);
-      const indexA = regionOrder.indexOf(regionA);
-      const indexB = regionOrder.indexOf(regionB);
-      const effectiveIndexA = indexA === -1 ? Infinity : indexA;
-      const effectiveIndexB = indexB === -1 ? Infinity : indexB;
-      if (effectiveIndexA !== effectiveIndexB) return effectiveIndexA - effectiveIndexB;
-      return a.name.localeCompare(b.name, 'zh-CN');
-  });
 
-  showToast('已按地区排序！正在为您自动保存...', 'success');
-  
-  // Call handleSave() without 'await'. It will run asynchronously.
-  handleSave(); 
-};
-
-const subsTotalPages = computed(() => Math.ceil(subscriptions.value.length / subsItemsPerPage));
-// 流量格式化函数，将字节转换为 GB/TB
+// --- 格式化 Bytes ---
 const formatBytes = (bytes, decimals = 2) => {
   if (!+bytes || bytes < 0) return '0 B';
   const k = 1024;
@@ -308,24 +335,8 @@ const formatBytes = (bytes, decimals = 2) => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
 
-// 计算总剩余流量
-const totalRemainingTraffic = computed(() => {
-  const total = subscriptions.value.reduce((acc, sub) => {
-    // 只计算已启用且包含有效流量信息的订阅
-    if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
-      const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
-      const remaining = sub.userInfo.total - used;
-      // 剩余流量不能为负数
-      return acc + Math.max(0, remaining);
-    }
-    return acc;
-  }, 0);
+const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemainingTraffic.value));
 
-  return formatBytes(total);
-});
-const paginatedSubscriptions = computed(() => { const start = (subsCurrentPage.value - 1) * subsItemsPerPage; return subscriptions.value.slice(start, start + subsItemsPerPage); });
-const manualNodesTotalPages = computed(() => Math.ceil(manualNodes.value.length / manualNodesPerPage));
-const paginatedManualNodes = computed(() => { const start = (manualNodesCurrentPage.value - 1) * manualNodesPerPage; return manualNodes.value.slice(start, start + manualNodesPerPage); });
 </script>
 
 <template>
@@ -337,10 +348,10 @@ const paginatedManualNodes = computed(() => { const start = (manualNodesCurrentP
       <div class="flex items-center gap-4">
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white">仪表盘</h1>
         <span 
-          v-if="totalRemainingTraffic !== '0 B'"
+          v-if="formattedTotalRemainingTraffic !== '0 B'"
           class="px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-500/20 rounded-full"
         >
-          剩余总流量: {{ totalRemainingTraffic }}
+          剩余总流量: {{ formattedTotalRemainingTraffic }}
         </span>
       </div>
       <div class="flex items-center gap-2">
@@ -393,9 +404,16 @@ const paginatedManualNodes = computed(() => { const start = (manualNodesCurrentP
             </div>
           </div>
           <div v-if="subscriptions.length > 0">
-            <draggable tag="div" class="grid grid-cols-1 md:grid-cols-2 gap-5" :list="isSortingSubs ? subscriptions : paginatedSubscriptions" :item-key="item => item.id" :disabled="!isSortingSubs" animation="300">
+            <draggable tag="div" class="grid grid-cols-1 md:grid-cols-2 gap-5" v-model="subscriptions" :item-key="item => item.id" :disabled="!isSortingSubs" animation="300" @end="markDirty">
               <template #item="{ element: subscription }">
-                <div :class="{'cursor-move': isSortingSubs}"><Card :misub="subscription" @delete="handleDeleteSubscription(subscription.id)" @change="markDirty" @update="handleUpdateNodeCount(subscription.id)" @edit="handleEditSubscription(subscription.id)" /></div>
+                <div :class="{'cursor-move': isSortingSubs}">
+                    <Card 
+                        :misub="subscription" 
+                        @delete="handleDeleteSubscriptionWithCleanup(subscription.id)" 
+                        @change="markDirty" 
+                        @update="handleUpdateNodeCount(subscription.id)" 
+                        @edit="handleEditSubscription(subscription.id)" />
+                </div>
               </template>
             </draggable>
             <div v-if="subsTotalPages > 1 && !isSortingSubs" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
@@ -437,9 +455,14 @@ const paginatedManualNodes = computed(() => { const start = (manualNodesCurrentP
             </div>
           </div>
           <div v-if="manualNodes.length > 0">
-            <draggable tag="div" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" :list="isSortingNodes ? manualNodes : paginatedManualNodes" :item-key="item => item.id" :disabled="!isSortingNodes" animation="300">
+            <draggable tag="div" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" v-model="manualNodes" :item-key="item => item.id" :disabled="!isSortingNodes" animation="300" @end="markDirty">
               <template #item="{ element: node }">
-                <div :class="{'cursor-move': isSortingNodes}"><ManualNodeCard :node="node" @edit="handleEditNode(node.id)" @delete="handleDeleteNode(node.id)" /></div>
+                 <div :class="{'cursor-move': isSortingNodes}">
+                    <ManualNodeCard 
+                        :node="node" 
+                        @edit="handleEditNode(node.id)" 
+                        @delete="handleDeleteNodeWithCleanup(node.id)" />
+                </div>
               </template>
             </draggable>
             <div v-if="manualNodesTotalPages > 1 && !isSortingNodes" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
@@ -499,10 +522,11 @@ const paginatedManualNodes = computed(() => { const start = (manualNodesCurrentP
   </div>
 
   <BulkImportModal v-model:show="showBulkImportModal" @import="handleBulkImport" />
-  <Modal v-model:show="showDeleteSubsModal" @confirm="handleDeleteAllSubscriptions"><template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**订阅**吗？此操作将标记为待保存，不会影响手动节点。</p></template></Modal>
-  <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodes"><template #title><h3 class="text-lg font-bold text-red-500">确认清空节点</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**手动节点**吗？此操作将标记为待保存，不会影响订阅。</p></template></Modal>
+  <Modal v-model:show="showDeleteSubsModal" @confirm="handleDeleteAllSubscriptionsWithCleanup"><template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**订阅**吗？此操作将标记为待保存，不会影响手动节点。</p></template></Modal>
+  <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodesWithCleanup"><template #title><h3 class="text-lg font-bold text-red-500">确认清空节点</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**手动节点**吗？此操作将标记为待保存，不会影响订阅。</p></template></Modal>
   <Modal v-model:show="showDeleteProfilesModal" @confirm="handleDeleteAllProfiles"><template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅组</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**订阅组**吗？此操作不可逆。</p></template></Modal>
-  <ProfileModal v-model:show="showProfileModal" :profile="editingProfile" :is-new="isNewProfile" :all-subscriptions="subscriptions" :all-manual-nodes="manualNodes" @save="handleSaveProfile" size="2xl" />
+  
+  <ProfileModal v-if="showProfileModal" v-model:show="showProfileModal" :profile="editingProfile" :is-new="isNewProfile" :all-subscriptions="subscriptions" :all-manual-nodes="manualNodes" @save="handleSaveProfile" size="2xl" />
   
   <Modal v-if="editingNode" v-model:show="showNodeModal" @confirm="handleSaveNode">
     <template #title><h3 class="text-lg font-bold text-gray-800 dark:text-white">{{ isNewNode ? '新增手动节点' : '编辑手动节点' }}</h3></template>
