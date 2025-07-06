@@ -495,6 +495,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             } catch (e) {}
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
+            /*
             validNodes = validNodes.filter(nodeLink => {
                 try {
                     const hashIndex = nodeLink.lastIndexOf('#');
@@ -503,6 +504,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
                     return !nodeName.includes('https://');
                 } catch (e) { return false; }
             });
+            */
             return (config.prependSubName && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
