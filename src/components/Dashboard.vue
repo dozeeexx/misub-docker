@@ -74,6 +74,14 @@ const showSubsMoreMenu = ref(false);
 const showNodesMoreMenu = ref(false);
 const showProfilesMoreMenu = ref(false);
 
+// [修改] 為下拉菜單增加 ref 和點擊外部的處理邏輯
+const nodesMoreMenuRef = ref(null);
+const handleClickOutside = (event) => {
+  if (showNodesMoreMenu.value && nodesMoreMenuRef.value && !nodesMoreMenuRef.value.contains(event.target)) {
+    showNodesMoreMenu.value = false;
+  }
+};
+
 // --- 初始化與生命週期 ---
 const initializeState = () => {
   isLoading.value = true;
@@ -110,10 +118,14 @@ onMounted(() => {
   if (savedViewMode) {
     manualNodeViewMode.value = savedViewMode;
   }
+  // [修改] 添加事件監聽
+  document.addEventListener('click', handleClickOutside);
 });
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
+  // [修改] 移除事件監聽
+  document.removeEventListener('click', handleClickOutside);
 });
 
 const setViewMode = (mode) => {
@@ -121,7 +133,7 @@ const setViewMode = (mode) => {
     localStorage.setItem('manualNodeViewMode', mode);
 };
 
-// --- 核心操作方法 ---
+// --- 省略其他 JS 邏輯 (與上次相同) ---
 const handleDiscard = () => {
   initializeState();
   showToast('已放弃所有未保存的更改');
@@ -337,6 +349,7 @@ const formatBytes = (bytes, decimals = 2) => {
 };
 
 const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemainingTraffic.value));
+
 </script>
 
 <template>
@@ -440,8 +453,10 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
                   </button>
               </div>
+
+              <button @click="handleAddNode" class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm">新增</button>
               
-              <div class="relative" v-on:mouseleave="showNodesMoreMenu = false">
+              <div class="relative" ref="nodesMoreMenuRef">
                 <button @click="showNodesMoreMenu = !showNodesMoreMenu" class="p-2.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-300" viewBox="0 0 20 20" fill="currentColor"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
                 </button>
@@ -455,8 +470,6 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
                   </div>
                 </Transition>
               </div>
-
-              <button @click="handleAddNode" class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm">新增</button>
             </div>
           </div>
           <div v-if="manualNodes.length > 0">
@@ -550,6 +563,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
             <p class="mt-1 text-sm text-gray-500">创建一个订阅组来组合你的节点吧！</p>
           </div>
         </div>
+
       </div>
     </div>
   </div>
