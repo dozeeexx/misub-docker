@@ -368,7 +368,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
       <div class="lg:col-span-2 space-y-12">
         
         <div>
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
             <div class="flex items-center gap-3">
               <h2 class="text-xl font-bold text-gray-900 dark:text-white">机场订阅</h2>
               <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ subscriptions.length }}</span>
@@ -430,7 +430,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
         </div>
 
         <div>
-           <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
+           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
              <div class="flex items-center gap-3">
               <h2 class="text-xl font-bold text-gray-900 dark:text-white">手动节点</h2>
               <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ manualNodes.length }}</span>
