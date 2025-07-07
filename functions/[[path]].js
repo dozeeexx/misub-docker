@@ -523,6 +523,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
     return btoa(unescape(encodeURIComponent(finalContent)));
 }
 
+
 // --- [核心修改] 订阅处理函数 ---
 // --- [最終修正版 - 變量名校對] 訂閱處理函數 ---
 async function handleMisubRequest(context) {
@@ -672,6 +673,7 @@ async function handleMisubRequest(context) {
         fakeNodeString = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;
     }
 
+// ...
     let base64Content = cachedContent; // 優先使用快取
 
     // 如果快取不存在，則重新生成
@@ -684,10 +686,10 @@ async function handleMisubRequest(context) {
 
     if (targetFormat === 'base64') {
         const headers = { "Content-Type": "text/plain; charset=utf-8" };
-        // 如果是直接返回 base64，可以設定一個較短的瀏覽器快取
         headers['Cache-Control'] = 'public, max-age=60'; 
-        return new Response(atob(base64Content), { headers }); // 注意：此處需要解碼後再返回
+        return new Response(base64Content, { headers }); // 已移除 atob()
     }
+// ...
 
     const callbackToken = await getCallbackToken(env);
     const callbackPath = profileIdentifier ? `/${token}/${profileIdentifier}` : `/${token}`;
