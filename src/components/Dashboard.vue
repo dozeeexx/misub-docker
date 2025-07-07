@@ -12,6 +12,8 @@ import Card from './Card.vue';
 import ManualNodeCard from './ManualNodeCard.vue';
 import RightPanel from './RightPanel.vue';
 import ProfileCard from './ProfileCard.vue';
+// [新增] 引入新的列表元件
+import ManualNodeList from './ManualNodeList.vue'; 
 
 const SettingsModal = defineAsyncComponent(() => import('./SettingsModal.vue'));
 const BulkImportModal = defineAsyncComponent(() => import('./BulkImportModal.vue'));
@@ -53,6 +55,9 @@ const showDeleteProfilesModal = ref(false);
 // --- 排序狀態 ---
 const isSortingSubs = ref(false);
 const isSortingNodes = ref(false);
+
+// [新增] 手动节点视图模式
+const manualNodeViewMode = ref('card'); // 'card' or 'list'
 
 // --- 編輯專用模態框狀態 ---
 const editingSubscription = ref(null);
@@ -103,11 +108,22 @@ const handleBeforeUnload = (event) => {
 onMounted(() => {
   initializeState();
   window.addEventListener('beforeunload', handleBeforeUnload);
+  // [新增] 从 localStorage 读取视图模式
+  const savedViewMode = localStorage.getItem('manualNodeViewMode');
+  if (savedViewMode) {
+    manualNodeViewMode.value = savedViewMode;
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });
+
+// [新增] 切换视图并保存到 localStorage
+const setViewMode = (mode) => {
+    manualNodeViewMode.value = mode;
+    localStorage.setItem('manualNodeViewMode', mode);
+};
 
 // --- 核心操作方法 ---
 const handleDiscard = () => {
@@ -416,61 +432,71 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           <div v-else class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg><h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">没有机场订阅</h3><p class="mt-1 text-sm text-gray-500">从添加你的第一个订阅开始。</p></div>
         </div>
 
-<div>
-           <div class="flex items-center justify-between mb-4">
+        <div>
+           <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
              <div class="flex items-center gap-3">
               <h2 class="text-xl font-bold text-gray-900 dark:text-white">手动节点</h2>
               <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ manualNodes.length }}</span>
             </div>
-            <div class="flex items-center gap-2">
-              <div class="hidden md:flex items-center gap-2">
-                 <button @click="handleAutoSortNodes" class="text-sm font-medium px-3 py-1.5 rounded-lg text-green-500 border-2 border-green-500/60 hover:bg-green-500/10 transition-all">一键排序</button>
-                <button v-if="!isSortingNodes" @click="isSortingNodes = true" class="text-sm font-medium px-3 py-1.5 rounded-lg text-blue-500 border-2 border-blue-500/60 hover:bg-blue-500/10 transition-all">手动排序</button>
-                <button v-else @click="() => { isSortingNodes = false; markDirty(); }" class="text-sm font-medium px-3 py-1.5 rounded-lg bg-blue-500 text-white transition-all">完成</button>
-                <button @click="showDeleteNodesModal = true" class="text-sm font-medium px-3 py-1.5 rounded-lg text-red-500 border-2 border-red-500/60 hover:bg-red-500 hover:text-white dark:text-red-400 dark:border-red-400/60 dark:hover:bg-red-400 dark:hover:text-white transition-all">清空</button>
+            <div class="flex items-center gap-2 flex-grow sm:flex-grow-0">
+              <div class="relative flex-grow">
+                <input 
+                  type="text" 
+                  v-model="searchTerm"
+                  placeholder="搜索节点..."
+                  class="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <div class="p-0.5 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center">
+                  <button @click="setViewMode('card')" class="p-1 rounded-md transition-colors" :class="manualNodeViewMode === 'card' ? 'bg-white dark:bg-gray-900 text-indigo-600' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                  </button>
+                  <button @click="setViewMode('list')" class="p-1 rounded-md transition-colors" :class="manualNodeViewMode === 'list' ? 'bg-white dark:bg-gray-900 text-indigo-600' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+                  </button>
               </div>
               <button @click="handleAddNode" class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm">新增</button>
-              <div class="relative md:hidden" v-on:mouseleave="showNodesMoreMenu = false">
-                <button @click="showNodesMoreMenu = !showNodesMoreMenu" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
-                </button>
-                 <Transition name="slide-fade-sm">
-                  <div v-if="showNodesMoreMenu" class="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 ring-1 ring-black ring-opacity-5">
-                    <button @click="handleAutoSortNodes(); showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键排序</button>
-                    <button v-if="!isSortingNodes" @click="isSortingNodes = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">手动排序</button>
-                    <button v-else @click="() => { isSortingNodes = false; markDirty(); showNodesMoreMenu=false; }" class="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">完成排序</button>
-                    <button @click="showDeleteNodesModal = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700">清空</button>
-                  </div>
-                </Transition>
-              </div>
             </div>
           </div>
           <div v-if="manualNodes.length > 0">
-            <draggable 
-              v-if="isSortingNodes"
-              tag="div" 
-              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
-              v-model="manualNodes" 
-              :item-key="item => item.id" 
-              animation="300" 
-              @end="markDirty"
-            >
-              <template #item="{ element: node }">
-                 <div class="cursor-move">
-                    <ManualNodeCard 
-                        :node="node" 
-                        @edit="handleEditNode(node.id)" 
-                        @delete="handleDeleteNodeWithCleanup(node.id)" />
+            <div v-if="manualNodeViewMode === 'card'">
+              <draggable 
+                v-if="isSortingNodes"
+                tag="div" 
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
+                v-model="manualNodes" 
+                :item-key="item => item.id" 
+                animation="300" 
+                @end="markDirty"
+              >
+                <template #item="{ element: node }">
+                   <div class="cursor-move">
+                      <ManualNodeCard 
+                          :node="node" 
+                          @edit="handleEditNode(node.id)" 
+                          @delete="handleDeleteNodeWithCleanup(node.id)" />
+                  </div>
+                </template>
+              </draggable>
+              <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+                <div v-for="node in paginatedManualNodes" :key="node.id">
+                  <ManualNodeCard 
+                    :node="node" 
+                    @edit="handleEditNode(node.id)" 
+                    @delete="handleDeleteNodeWithCleanup(node.id)" />
                 </div>
-              </template>
-            </draggable>
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-              <div v-for="node in paginatedManualNodes" :key="node.id">
-                <ManualNodeCard 
-                  :node="node" 
-                  @edit="handleEditNode(node.id)" 
-                  @delete="handleDeleteNodeWithCleanup(node.id)" />
               </div>
+            </div>
+
+            <div v-if="manualNodeViewMode === 'list'" class="space-y-2">
+                <ManualNodeList
+                    v-for="node in paginatedManualNodes"
+                    :key="node.id"
+                    :node="node"
+                    @edit="handleEditNode(node.id)"
+                    @delete="handleDeleteNodeWithCleanup(node.id)"
+                />
             </div>
             
             <div v-if="manualNodesTotalPages > 1 && !isSortingNodes" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
@@ -481,7 +507,6 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           </div>
           <div v-else class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l-4 4-4-4M6 16l-4-4 4-4" /></svg><h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">没有手动节点</h3><p class="mt-1 text-sm text-gray-500">添加分享链接或单个节点。</p></div>
         </div>
-
       </div>
       
       <div class="lg:col-span-1 space-y-8">

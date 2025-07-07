@@ -58,6 +58,7 @@ export function extractNodeName(url) {
     } catch (e) { return url.substring(0, 50); }
 }
 
+
 /**
  * 为节点链接添加名称前缀
  * @param {string} link - 原始节点链接
@@ -84,4 +85,65 @@ export function prependNodeName(link, prefix) {
 
   const newName = `${prefix} - ${originalName}`;
   return `${baseLink}#${encodeURIComponent(newName)}`;
+}
+
+/**
+ * [新增] 从节点链接中提取主机和端口
+ * @param {string} url - 节点链接
+ * @returns {{host: string, port: string}}
+ */
+export function extractHostAndPort(url) {
+    if (!url) return { host: '', port: '' };
+    try {
+        const urlObj = new URL(url);
+        const protocol = urlObj.protocol.slice(0, -1);
+        
+        if (['http', 'https', 'ws', 'wss'].includes(protocol)) {
+            return { host: urlObj.hostname, port: urlObj.port || (protocol.endsWith('s') ? '443' : '80') };
+        }
+
+        let host = '', port = '';
+        
+        switch (protocol) {
+            case 'vmess':
+            case 'vless': {
+                if (url.startsWith('vmess://')) {
+                    const jsonStr = atob(url.substring(8));
+                    const config = JSON.parse(jsonStr);
+                    host = config.add || '';
+                    port = config.port || '';
+                } else { // vless
+                    host = urlObj.hostname;
+                    port = urlObj.port;
+                }
+                break;
+            }
+            case 'ss':
+            case 'ssr': {
+                 const mainPart = urlObj.host;
+                 const atIndex = mainPart.indexOf('@');
+                 const serverPart = atIndex !== -1 ? mainPart.substring(atIndex + 1) : mainPart;
+                 [host, port] = serverPart.split(':');
+                 break;
+            }
+            case 'trojan':
+            case 'tuic':
+            case 'hysteria':
+            case 'hysteria2':
+            case 'hy2':
+            case 'hy':
+            case 'anytls':
+                host = urlObj.hostname;
+                port = urlObj.port;
+                break;
+        }
+        return { host: host || '', port: port || '' };
+    } catch (e) {
+        // Fallback for non-URL compliant strings
+        const match = url.match(/(?:@)?([^:]+):(\d+)/);
+        if (match) {
+            return { host: match[1], port: match[2] };
+        }
+        return { host: '', port: '' };
+    }
 }
