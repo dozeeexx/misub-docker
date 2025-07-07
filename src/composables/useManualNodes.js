@@ -8,6 +8,21 @@ export function useManualNodes(initialNodesRef, markDirty) {
 
   const searchTerm = ref('');
 
+  // 国家/地区代码到旗帜和中文名称的映射
+  const countryCodeMap = {
+    'hk': ['🇭🇰', '香港'],
+    'tw': ['🇹🇼', '台湾', '臺灣'],
+    'sg': ['🇸🇬', '新加坡'],
+    'jp': ['🇯🇵', '日本'],
+    'us': ['🇺🇸', '美国', '美國'],
+    'kr': ['🇰🇷', '韩国', '韓國'],
+    'gb': ['🇬🇧', '英国', '英國'],
+    'de': ['🇩🇪', '德国', '德國'],
+    'fr': ['🇫🇷', '法国', '法國'],
+    'ca': ['🇨🇦', '加拿大'],
+    'au': ['🇦🇺', '澳大利亚', '澳洲', '澳大利亞'],
+  };
+
   function initializeManualNodes(nodesData) {
     manualNodes.value = (nodesData || []).map(node => ({
       ...node,
@@ -22,9 +37,27 @@ export function useManualNodes(initialNodesRef, markDirty) {
       return manualNodes.value;
     }
     const lowerCaseSearch = searchTerm.value.toLowerCase();
-    return manualNodes.value.filter(node => 
-      (node.name && node.name.toLowerCase().includes(lowerCaseSearch))
-    );
+    
+    // 获取可能的替代搜索词
+    const alternativeTerms = countryCodeMap[lowerCaseSearch] || [];
+    
+    return manualNodes.value.filter(node => {
+      const nodeNameLower = node.name ? node.name.toLowerCase() : '';
+      
+      // 检查节点名称是否包含原始搜索词
+      if (nodeNameLower.includes(lowerCaseSearch)) {
+        return true;
+      }
+      
+      // 检查节点名称是否包含任何替代词
+      for (const altTerm of alternativeTerms) {
+        if (nodeNameLower.includes(altTerm.toLowerCase())) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
   });
   const manualNodesTotalPages = computed(() => Math.ceil(filteredManualNodes.value.length / manualNodesPerPage));
 

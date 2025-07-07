@@ -16,15 +16,42 @@ const localProfile = ref({});
 const subscriptionSearchTerm = ref('');
 const nodeSearchTerm = ref('');
 
+// 国家/地区代码到旗帜和中文名称的映射
+const countryCodeMap = {
+  'hk': ['🇭🇰', '香港'],
+  'tw': ['🇹🇼', '台湾', '臺灣'],
+  'sg': ['🇸🇬', '新加坡'],
+  'jp': ['🇯🇵', '日本'],
+  'us': ['🇺🇸', '美国', '美國'],
+  'kr': ['🇰🇷', '韩国', '韓國'],
+  'gb': ['🇬🇧', '英国', '英國'],
+  'de': ['🇩🇪', '德国', '德國'],
+  'fr': ['🇫🇷', '法国', '法國'],
+  'ca': ['🇨🇦', '加拿大'],
+  'au': ['🇦🇺', '澳大利亚', '澳洲', '澳大利亞'],
+};
+
 const filteredSubscriptions = computed(() => {
   if (!subscriptionSearchTerm.value) {
     return props.allSubscriptions;
   }
   const lowerCaseSearchTerm = subscriptionSearchTerm.value.toLowerCase();
-  return props.allSubscriptions.filter(sub => 
-    (sub.name && sub.name.toLowerCase().includes(lowerCaseSearchTerm)) ||
-    (sub.url && sub.url.toLowerCase().includes(lowerCaseSearchTerm))
-  );
+  const alternativeTerms = countryCodeMap[lowerCaseSearchTerm] || [];
+
+  return props.allSubscriptions.filter(sub => {
+    const subNameLower = sub.name ? sub.name.toLowerCase() : '';
+
+    if (subNameLower.includes(lowerCaseSearchTerm)) {
+      return true;
+    }
+
+    for (const altTerm of alternativeTerms) {
+      if (subNameLower.includes(altTerm.toLowerCase())) {
+        return true;
+      }
+    }
+    return false;
+  });
 });
 
 const filteredManualNodes = computed(() => {
@@ -32,10 +59,22 @@ const filteredManualNodes = computed(() => {
     return props.allManualNodes;
   }
   const lowerCaseSearchTerm = nodeSearchTerm.value.toLowerCase();
-  return props.allManualNodes.filter(node => 
-    (node.name && node.name.toLowerCase().includes(lowerCaseSearchTerm)) ||
-    (node.url && node.url.toLowerCase().includes(lowerCaseSearchTerm))
-  );
+  const alternativeTerms = countryCodeMap[lowerCaseSearchTerm] || [];
+
+  return props.allManualNodes.filter(node => {
+    const nodeNameLower = node.name ? node.name.toLowerCase() : '';
+
+    if (nodeNameLower.includes(lowerCaseSearchTerm)) {
+      return true;
+    }
+
+    for (const altTerm of alternativeTerms) {
+      if (nodeNameLower.includes(altTerm.toLowerCase())) {
+        return true;
+      }
+    }
+    return false;
+  });
 });
 
 watch(() => props.profile, (newProfile) => {
