@@ -12,7 +12,6 @@ import Card from './Card.vue';
 import ManualNodeCard from './ManualNodeCard.vue';
 import RightPanel from './RightPanel.vue';
 import ProfileCard from './ProfileCard.vue';
-// [新增] 引入新的列表元件
 import ManualNodeList from './ManualNodeList.vue'; 
 
 const SettingsModal = defineAsyncComponent(() => import('./SettingsModal.vue'));
@@ -39,7 +38,7 @@ const {
 } = useSubscriptions(initialSubs, markDirty);
 
 const {
-  manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes,
+  manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes,
 } = useManualNodes(initialNodes, markDirty);
@@ -56,8 +55,7 @@ const showDeleteProfilesModal = ref(false);
 const isSortingSubs = ref(false);
 const isSortingNodes = ref(false);
 
-// [新增] 手动节点视图模式
-const manualNodeViewMode = ref('card'); // 'card' or 'list'
+const manualNodeViewMode = ref('card');
 
 // --- 編輯專用模態框狀態 ---
 const editingSubscription = ref(null);
@@ -108,7 +106,6 @@ const handleBeforeUnload = (event) => {
 onMounted(() => {
   initializeState();
   window.addEventListener('beforeunload', handleBeforeUnload);
-  // [新增] 从 localStorage 读取视图模式
   const savedViewMode = localStorage.getItem('manualNodeViewMode');
   if (savedViewMode) {
     manualNodeViewMode.value = savedViewMode;
@@ -119,7 +116,6 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 
-// [新增] 切换视图并保存到 localStorage
 const setViewMode = (mode) => {
     manualNodeViewMode.value = mode;
     localStorage.setItem('manualNodeViewMode', mode);
@@ -151,58 +147,42 @@ const handleSave = async () => {
   }
 };
 
-// 刪除單個訂閱
 const handleDeleteSubscriptionWithCleanup = (subId) => {
-  // 1. 從主列表中刪除
   deleteSubscription(subId);
-  // 2. 遍歷所有分組，清理被刪除的 ID
   profiles.value.forEach(p => {
     p.subscriptions = p.subscriptions.filter(id => id !== subId);
   });
-  // 3. 標記為需要保存 (deleteSubscription 內部已處理)
 };
 
-// 刪除單個手動節點
 const handleDeleteNodeWithCleanup = (nodeId) => {
-  // 1. 從主列表中刪除
   deleteNode(nodeId);
-  // 2. 遍歷所有分組，清理被刪除的 ID
   profiles.value.forEach(p => {
     p.manualNodes = p.manualNodes.filter(id => id !== nodeId);
   });
 };
 
-// 清空所有訂閱
 const handleDeleteAllSubscriptionsWithCleanup = () => {
-  // 1. 清空主列表
   deleteAllSubscriptions();
-  // 2. 清空所有分組中的訂閱 ID
   profiles.value.forEach(p => {
     p.subscriptions = [];
   });
-  // 3. 關閉確認彈窗
   showDeleteSubsModal.value = false;
 };
 
-// 清空所有手動節點
 const handleDeleteAllNodesWithCleanup = () => {
-  // 1. 清空主列表
   deleteAllNodes();
-  // 2. 清空所有分組中的節點 ID
   profiles.value.forEach(p => {
     p.manualNodes = [];
   });
-  // 3. 關閉確認彈窗
   showDeleteNodesModal.value = false;
 };
-// [修正] 此函數現在先調用 composable 的排序，再調用 handleSave
+
 const handleAutoSortNodes = () => {
     autoSortNodes();
     showToast('已按地区排序！正在为您自动保存...', 'success');
     handleSave();
 };
 
-// --- 批量導入 ---
 const handleBulkImport = (importText) => {
   if (!importText) return;
   const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
@@ -220,13 +200,12 @@ const handleBulkImport = (importText) => {
   showToast(`成功导入 ${newSubs.length} 条订阅和 ${newNodes.length} 个手动节点，请点击保存`, 'success');
 };
 
-// --- 訂閱編輯 ---
 const handleAddSubscription = () => {
   isNewSubscription.value = true;
   editingSubscription.value = { name: '', url: '', enabled: true };
   showSubModal.value = true;
 };
-// [修正] 傳入 ID，並從 subscriptions.value 中查找
+
 const handleEditSubscription = (subId) => {
   const sub = subscriptions.value.find(s => s.id === subId);
   if (sub) {
@@ -235,6 +214,7 @@ const handleEditSubscription = (subId) => {
     showSubModal.value = true;
   }
 };
+
 const handleSaveSubscription = () => {
   if (!editingSubscription.value || !editingSubscription.value.url) { showToast('订阅链接不能为空', 'error'); return; }
   if (!/^https?:\/\//.test(editingSubscription.value.url)) { showToast('请输入有效的 http:// 或 https:// 订阅链接', 'error'); return; }
@@ -247,13 +227,12 @@ const handleSaveSubscription = () => {
   showSubModal.value = false;
 };
 
-// --- 節點編輯 ---
 const handleAddNode = () => {
   isNewNode.value = true;
   editingNode.value = { id: crypto.randomUUID(), name: '', url: '', enabled: true };
   showNodeModal.value = true;
 };
-// [修正] 傳入 ID，並從 manualNodes.value 中查找
+
 const handleEditNode = (nodeId) => {
   const node = manualNodes.value.find(n => n.id === nodeId);
   if (node) {
@@ -262,6 +241,7 @@ const handleEditNode = (nodeId) => {
     showNodeModal.value = true;
   }
 };
+
 const handleNodeUrlInput = (event) => {
   if (!editingNode.value) return;
   const newUrl = event.target.value;
@@ -269,6 +249,7 @@ const handleNodeUrlInput = (event) => {
     editingNode.value.name = extractNodeName(newUrl);
   }
 };
+
 const handleSaveNode = () => {
     if (!editingNode.value || !editingNode.value.url) { showToast('节点链接不能为空', 'error'); return; }
     if (isNewNode.value) {
@@ -279,7 +260,6 @@ const handleSaveNode = () => {
     showNodeModal.value = false;
 };
 
-// --- 訂閱組 (Profile) 編輯 ---
 const handleProfileToggle = (updatedProfile) => {
     const index = profiles.value.findIndex(p => p.id === updatedProfile.id);
     if (index !== -1) {
@@ -287,11 +267,13 @@ const handleProfileToggle = (updatedProfile) => {
         markDirty();
     }
 };
+
 const handleAddProfile = () => {
     isNewProfile.value = true;
     editingProfile.value = { name: '', enabled: true, subscriptions: [], manualNodes: [], customId: '', subConverter: '', subConfig: ''};
     showProfileModal.value = true;
 };
+
 const handleEditProfile = (profileId) => {
     const profile = profiles.value.find(p => p.id === profileId);
     if (profile) {
@@ -300,6 +282,7 @@ const handleEditProfile = (profileId) => {
         showProfileModal.value = true;
     }
 };
+
 const handleSaveProfile = (profileData) => {
     if (!profileData || !profileData.name) { showToast('订阅组名称不能为空', 'error'); return; }
     if (profileData.customId) {
@@ -318,15 +301,18 @@ const handleSaveProfile = (profileData) => {
     markDirty();
     showProfileModal.value = false;
 };
+
 const handleDeleteProfile = (profileId) => {
     profiles.value = profiles.value.filter(p => p.id !== profileId);
     markDirty();
 };
+
 const handleDeleteAllProfiles = () => {
     profiles.value = [];
     markDirty();
     showDeleteProfilesModal.value = false;
 };
+
 const copyProfileLink = (profileId) => {
     const token = config.value?.profileToken;
     if (!token || token === 'auto' || !token.trim()) {
@@ -341,7 +327,6 @@ const copyProfileLink = (profileId) => {
     showToast('订阅组分享链接已复制！', 'success');
 };
 
-// --- 格式化 Bytes ---
 const formatBytes = (bytes, decimals = 2) => {
   if (!+bytes || bytes < 0) return '0 B';
   const k = 1024;
@@ -352,7 +337,6 @@ const formatBytes = (bytes, decimals = 2) => {
 };
 
 const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemainingTraffic.value));
-
 </script>
 
 <template>
@@ -456,6 +440,22 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
                   </button>
               </div>
+              
+              <div class="relative" v-on:mouseleave="showNodesMoreMenu = false">
+                <button @click="showNodesMoreMenu = !showNodesMoreMenu" class="p-2.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-300" viewBox="0 0 20 20" fill="currentColor"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
+                </button>
+                 <Transition name="slide-fade-sm">
+                  <div v-if="showNodesMoreMenu" class="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 ring-1 ring-black ring-opacity-5">
+                    <button @click="handleAutoSortNodes(); showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键排序</button>
+                    <button v-if="!isSortingNodes" @click="isSortingNodes = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">手动排序</button>
+                    <button v-else @click="() => { isSortingNodes = false; markDirty(); showNodesMoreMenu=false; }" class="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">完成排序</button>
+                    <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                    <button @click="showDeleteNodesModal = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10">清空所有</button>
+                  </div>
+                </Transition>
+              </div>
+
               <button @click="handleAddNode" class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm">新增</button>
             </div>
           </div>
