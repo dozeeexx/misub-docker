@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import Modal from './Modal.vue';
 
 const props = defineProps({
@@ -13,6 +13,30 @@ const props = defineProps({
 const emit = defineEmits(['update:show', 'save']);
 
 const localProfile = ref({});
+const subscriptionSearchTerm = ref('');
+const nodeSearchTerm = ref('');
+
+const filteredSubscriptions = computed(() => {
+  if (!subscriptionSearchTerm.value) {
+    return props.allSubscriptions;
+  }
+  const lowerCaseSearchTerm = subscriptionSearchTerm.value.toLowerCase();
+  return props.allSubscriptions.filter(sub => 
+    (sub.name && sub.name.toLowerCase().includes(lowerCaseSearchTerm)) ||
+    (sub.url && sub.url.toLowerCase().includes(lowerCaseSearchTerm))
+  );
+});
+
+const filteredManualNodes = computed(() => {
+  if (!nodeSearchTerm.value) {
+    return props.allManualNodes;
+  }
+  const lowerCaseSearchTerm = nodeSearchTerm.value.toLowerCase();
+  return props.allManualNodes.filter(node => 
+    (node.name && node.name.toLowerCase().includes(lowerCaseSearchTerm)) ||
+    (node.url && node.url.toLowerCase().includes(lowerCaseSearchTerm))
+  );
+});
 
 watch(() => props.profile, (newProfile) => {
   if (newProfile) {
@@ -111,15 +135,24 @@ const handleDeselectAll = (listName) => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             <div v-if="allSubscriptions.length > 0" class="space-y-2">
-              <div class="flex justify-between items-center">
+              <div class="flex justify-between items-center mb-2">
                 <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">选择机场订阅</h4>
                 <div class="space-x-2">
                     <button @click="handleSelectAll('subscriptions', allSubscriptions)" class="text-xs text-indigo-600 hover:underline">全选</button>
                     <button @click="handleDeselectAll('subscriptions')" class="text-xs text-indigo-600 hover:underline">全不选</button>
                 </div>
               </div>
-              <div class="overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border dark:border-gray-700">
-                <div v-for="sub in allSubscriptions" :key="sub.id">
+              <div class="relative mb-2">
+                <input
+                  type="text"
+                  v-model="subscriptionSearchTerm"
+                  placeholder="搜索订阅..."
+                  class="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <div class="overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border dark:border-gray-700 h-48">
+                <div v-for="sub in filteredSubscriptions" :key="sub.id">
                   <label class="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -130,6 +163,9 @@ const handleDeselectAll = (listName) => {
                     <span class="text-sm text-gray-800 dark:text-gray-200 truncate" :title="sub.name">{{ sub.name || '未命名订阅' }}</span>
                   </label>
                 </div>
+                <div v-if="filteredSubscriptions.length === 0" class="text-center text-gray-500 text-sm py-4">
+                  没有找到匹配的订阅。
+                </div>
               </div>
             </div>
             <div v-else class="text-center text-sm text-gray-500 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center h-full">
@@ -137,15 +173,24 @@ const handleDeselectAll = (listName) => {
             </div>
 
             <div v-if="allManualNodes.length > 0" class="space-y-2">
-              <div class="flex justify-between items-center">
+              <div class="flex justify-between items-center mb-2">
                 <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">选择手动节点</h4>
                  <div class="space-x-2">
                     <button @click="handleSelectAll('manualNodes', allManualNodes)" class="text-xs text-indigo-600 hover:underline">全选</button>
                     <button @click="handleDeselectAll('manualNodes')" class="text-xs text-indigo-600 hover:underline">全不选</button>
                 </div>
               </div>
-               <div class="overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border dark:border-gray-700">
-                <div v-for="node in allManualNodes" :key="node.id">
+              <div class="relative mb-2">
+                <input
+                  type="text"
+                  v-model="nodeSearchTerm"
+                  placeholder="搜索节点..."
+                  class="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+               <div class="overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border dark:border-gray-700 h-48">
+                <div v-for="node in filteredManualNodes" :key="node.id">
                   <label class="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -155,6 +200,9 @@ const handleDeselectAll = (listName) => {
                     />
                     <span class="text-sm text-gray-800 dark:text-gray-200 truncate" :title="node.name">{{ node.name || '未命名节点' }}</span>
                   </label>
+                </div>
+                <div v-if="filteredManualNodes.length === 0" class="text-center text-gray-500 text-sm py-4">
+                  没有找到匹配的节点。
                 </div>
               </div>
             </div>

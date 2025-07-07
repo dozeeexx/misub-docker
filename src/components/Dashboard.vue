@@ -3,7 +3,8 @@ import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue
 import draggable from 'vuedraggable';
 import { saveMisubs } from '../lib/api.js';
 import { extractNodeName } from '../lib/utils.js';
-import { useToast, showSettingsModal } from '../lib/stores.js';
+import { useToastStore } from '../stores/toast.js';
+import { useUIStore } from '../stores/ui.js';
 import { useSubscriptions } from '../composables/useSubscriptions.js';
 import { useManualNodes } from '../composables/useManualNodes.js';
 
@@ -21,7 +22,8 @@ const ProfileModal = defineAsyncComponent(() => import('./ProfileModal.vue'));
 
 // --- 基礎 Props 和狀態 ---
 const props = defineProps({ data: Object });
-const { showToast } = useToast();
+const { showToast } = useToastStore();
+const uiStore = useUIStore();
 const isLoading = ref(true);
 const dirty = ref(false);
 const saveState = ref('idle');
@@ -90,8 +92,8 @@ const initializeState = () => {
   isLoading.value = true;
   if (props.data) {
     const subsData = props.data.misubs || [];
-    initialSubs.value = subsData.filter(item => /^https?:\/\//.test(item.url));
-    initialNodes.value = subsData.filter(item => !/^https?:\/\//.test(item.url));
+    initialSubs.value = subsData.filter(item => item.url && /^https?:\/\//.test(item.url));
+    initialNodes.value = subsData.filter(item => !item.url || !/^https?:\/\//.test(item.url));
     
     profiles.value = (props.data.profiles || []).map(p => ({
         ...p,
@@ -595,7 +597,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
     </template>
   </Modal>
   
-  <SettingsModal v-model:show="showSettingsModal" />
+  <SettingsModal v-model:show="uiStore.isSettingsModalVisible" />
 </template>
 
 <style scoped>

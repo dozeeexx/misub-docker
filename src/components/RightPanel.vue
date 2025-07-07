@@ -1,13 +1,13 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue';
-import { useToast } from '../lib/stores.js';
+import { useToastStore } from '../stores/toast.js';
 
 const props = defineProps({
   config: Object,
   profiles: Array,
 });
 
-const { showToast } = useToast();
+const { showToast } = useToastStore();
 
 const copied = ref(false);
 let copyTimeout = null;
