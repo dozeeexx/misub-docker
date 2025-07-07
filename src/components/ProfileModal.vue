@@ -82,29 +82,29 @@ const handleDeselectAll = (listName) => {
             </div>
             <div>
               <label for="profile-subconverter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                自定義後端 (可選)
+                自定义后端 (可选)
               </label>
               <input
                 type="text"
                 id="profile-subconverter"
                 v-model="localProfile.subConverter"
-                placeholder="留空則使用全局設置"
+                placeholder="留空则使用全局设置"
                 class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
               >
-              <p class="text-xs text-gray-400 mt-1">為此訂閱組指定一個獨立的 SubConverter 後端地址。</p>
+              <p class="text-xs text-gray-400 mt-1">为此订阅组指定一个独立的 SubConverter 后端地址。</p>
             </div>
             <div>
               <label for="profile-subconfig" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                自定義遠程配置 (可選)
+                自定义远程配置 (可选)
               </label>
               <input
                 type="text"
                 id="profile-subconfig"
                 v-model="localProfile.subConfig"
-                placeholder="留空則使用全局設置"
+                placeholder="留空则使用全局设置"
                 class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
               >
-              <p class="text-xs text-gray-400 mt-1">為此訂閱組指定一個獨立的 Subconverter 配置文件。</p>
+              <p class="text-xs text-gray-400 mt-1">为此订阅组指定一个独立的 Subconverter 配置文件。</p>
             </div>
         </div>
 
