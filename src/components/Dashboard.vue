@@ -76,9 +76,13 @@ const showProfilesMoreMenu = ref(false);
 
 // [修改] 為下拉菜單增加 ref 和點擊外部的處理邏輯
 const nodesMoreMenuRef = ref(null);
+const subsMoreMenuRef = ref(null);
 const handleClickOutside = (event) => {
   if (showNodesMoreMenu.value && nodesMoreMenuRef.value && !nodesMoreMenuRef.value.contains(event.target)) {
     showNodesMoreMenu.value = false;
+  }
+  if (showSubsMoreMenu.value && subsMoreMenuRef.value && !subsMoreMenuRef.value.contains(event.target)) {
+    showSubsMoreMenu.value = false;
   }
 };
 
@@ -118,13 +122,11 @@ onMounted(() => {
   if (savedViewMode) {
     manualNodeViewMode.value = savedViewMode;
   }
-  // [修改] 添加事件監聽
   document.addEventListener('click', handleClickOutside);
 });
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
-  // [修改] 移除事件監聽
   document.removeEventListener('click', handleClickOutside);
 });
 
@@ -133,12 +135,11 @@ const setViewMode = (mode) => {
     localStorage.setItem('manualNodeViewMode', mode);
 };
 
-// --- 省略其他 JS 邏輯 (與上次相同) ---
+// --- 其他 JS 邏輯 (省略) ---
 const handleDiscard = () => {
   initializeState();
   showToast('已放弃所有未保存的更改');
 };
-
 const handleSave = async () => {
   saveState.value = 'saving';
   const combinedMisubs = [
@@ -158,21 +159,18 @@ const handleSave = async () => {
     saveState.value = 'idle';
   }
 };
-
 const handleDeleteSubscriptionWithCleanup = (subId) => {
   deleteSubscription(subId);
   profiles.value.forEach(p => {
     p.subscriptions = p.subscriptions.filter(id => id !== subId);
   });
 };
-
 const handleDeleteNodeWithCleanup = (nodeId) => {
   deleteNode(nodeId);
   profiles.value.forEach(p => {
     p.manualNodes = p.manualNodes.filter(id => id !== nodeId);
   });
 };
-
 const handleDeleteAllSubscriptionsWithCleanup = () => {
   deleteAllSubscriptions();
   profiles.value.forEach(p => {
@@ -180,7 +178,6 @@ const handleDeleteAllSubscriptionsWithCleanup = () => {
   });
   showDeleteSubsModal.value = false;
 };
-
 const handleDeleteAllNodesWithCleanup = () => {
   deleteAllNodes();
   profiles.value.forEach(p => {
@@ -188,13 +185,11 @@ const handleDeleteAllNodesWithCleanup = () => {
   });
   showDeleteNodesModal.value = false;
 };
-
 const handleAutoSortNodes = () => {
     autoSortNodes();
     showToast('已按地区排序！正在为您自动保存...', 'success');
     handleSave();
 };
-
 const handleBulkImport = (importText) => {
   if (!importText) return;
   const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
@@ -211,13 +206,11 @@ const handleBulkImport = (importText) => {
   if (newNodes.length > 0) addNodesFromBulk(newNodes);
   showToast(`成功导入 ${newSubs.length} 条订阅和 ${newNodes.length} 个手动节点，请点击保存`, 'success');
 };
-
 const handleAddSubscription = () => {
   isNewSubscription.value = true;
   editingSubscription.value = { name: '', url: '', enabled: true };
   showSubModal.value = true;
 };
-
 const handleEditSubscription = (subId) => {
   const sub = subscriptions.value.find(s => s.id === subId);
   if (sub) {
@@ -226,7 +219,6 @@ const handleEditSubscription = (subId) => {
     showSubModal.value = true;
   }
 };
-
 const handleSaveSubscription = () => {
   if (!editingSubscription.value || !editingSubscription.value.url) { showToast('订阅链接不能为空', 'error'); return; }
   if (!/^https?:\/\//.test(editingSubscription.value.url)) { showToast('请输入有效的 http:// 或 https:// 订阅链接', 'error'); return; }
@@ -238,13 +230,11 @@ const handleSaveSubscription = () => {
   }
   showSubModal.value = false;
 };
-
 const handleAddNode = () => {
   isNewNode.value = true;
   editingNode.value = { id: crypto.randomUUID(), name: '', url: '', enabled: true };
   showNodeModal.value = true;
 };
-
 const handleEditNode = (nodeId) => {
   const node = manualNodes.value.find(n => n.id === nodeId);
   if (node) {
@@ -253,7 +243,6 @@ const handleEditNode = (nodeId) => {
     showNodeModal.value = true;
   }
 };
-
 const handleNodeUrlInput = (event) => {
   if (!editingNode.value) return;
   const newUrl = event.target.value;
@@ -261,7 +250,6 @@ const handleNodeUrlInput = (event) => {
     editingNode.value.name = extractNodeName(newUrl);
   }
 };
-
 const handleSaveNode = () => {
     if (!editingNode.value || !editingNode.value.url) { showToast('节点链接不能为空', 'error'); return; }
     if (isNewNode.value) {
@@ -271,7 +259,6 @@ const handleSaveNode = () => {
     }
     showNodeModal.value = false;
 };
-
 const handleProfileToggle = (updatedProfile) => {
     const index = profiles.value.findIndex(p => p.id === updatedProfile.id);
     if (index !== -1) {
@@ -279,13 +266,11 @@ const handleProfileToggle = (updatedProfile) => {
         markDirty();
     }
 };
-
 const handleAddProfile = () => {
     isNewProfile.value = true;
     editingProfile.value = { name: '', enabled: true, subscriptions: [], manualNodes: [], customId: '', subConverter: '', subConfig: ''};
     showProfileModal.value = true;
 };
-
 const handleEditProfile = (profileId) => {
     const profile = profiles.value.find(p => p.id === profileId);
     if (profile) {
@@ -294,7 +279,6 @@ const handleEditProfile = (profileId) => {
         showProfileModal.value = true;
     }
 };
-
 const handleSaveProfile = (profileData) => {
     if (!profileData || !profileData.name) { showToast('订阅组名称不能为空', 'error'); return; }
     if (profileData.customId) {
@@ -313,18 +297,15 @@ const handleSaveProfile = (profileData) => {
     markDirty();
     showProfileModal.value = false;
 };
-
 const handleDeleteProfile = (profileId) => {
     profiles.value = profiles.value.filter(p => p.id !== profileId);
     markDirty();
 };
-
 const handleDeleteAllProfiles = () => {
     profiles.value = [];
     markDirty();
     showDeleteProfilesModal.value = false;
 };
-
 const copyProfileLink = (profileId) => {
     const token = config.value?.profileToken;
     if (!token || token === 'auto' || !token.trim()) {
@@ -338,7 +319,6 @@ const copyProfileLink = (profileId) => {
     navigator.clipboard.writeText(link);
     showToast('订阅组分享链接已复制！', 'success');
 };
-
 const formatBytes = (bytes, decimals = 2) => {
   if (!+bytes || bytes < 0) return '0 B';
   const k = 1024;
@@ -347,7 +327,6 @@ const formatBytes = (bytes, decimals = 2) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
-
 const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemainingTraffic.value));
 
 </script>
@@ -390,6 +369,28 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
       <div class="lg:col-span-2 space-y-12">
         
         <div>
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white">机场订阅</h2>
+              <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ subscriptions.length }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="relative" ref="subsMoreMenuRef">
+                <button @click="showSubsMoreMenu = !showSubsMoreMenu" class="p-2.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-300" viewBox="0 0 20 20" fill="currentColor"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
+                </button>
+                <Transition name="slide-fade-sm">
+                  <div v-if="showSubsMoreMenu" class="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 ring-1 ring-black ring-opacity-5">
+                    <button v-if="!isSortingSubs" @click="isSortingSubs = true; showSubsMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">手动排序</button>
+                    <button v-else @click="() => { isSortingSubs = false; markDirty(); showSubsMoreMenu=false; }" class="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">完成排序</button>
+                    <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                    <button @click="showDeleteSubsModal = true; showSubsMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10">清空所有</button>
+                  </div>
+                </Transition>
+              </div>
+              <button @click="handleAddSubscription" class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm">新增</button>
+            </div>
+          </div>
           <div v-if="subscriptions.length > 0">
             <draggable 
               v-if="isSortingSubs" 
@@ -474,7 +475,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           </div>
           <div v-if="manualNodes.length > 0">
             <div v-if="manualNodeViewMode === 'card'">
-              <draggable 
+               <draggable 
                 v-if="isSortingNodes"
                 tag="div" 
                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
