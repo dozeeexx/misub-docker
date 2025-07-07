@@ -23,11 +23,9 @@ export function useManualNodes(initialNodesRef, markDirty) {
     }
     const lowerCaseSearch = searchTerm.value.toLowerCase();
     return manualNodes.value.filter(node => 
-      (node.name && node.name.toLowerCase().includes(lowerCaseSearch)) ||
-      (node.url && node.url.toLowerCase().includes(lowerCaseSearch))
+      (node.name && node.name.toLowerCase().includes(lowerCaseSearch))
     );
   });
-
   const manualNodesTotalPages = computed(() => Math.ceil(filteredManualNodes.value.length / manualNodesPerPage));
 
   // [修改] 分页使用过滤后的节点
