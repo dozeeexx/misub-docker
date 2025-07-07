@@ -514,17 +514,26 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
     const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
     const uniqueNodesString = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
 
-    // 将虚假节点（如果存在）插入到列表最前面
+    let finalContent = uniqueNodesString;
     if (prependedContent) {
-        return `${prependedContent}\n${uniqueNodesString}`;
+        finalContent = `${prependedContent}\n${uniqueNodesString}`;
     }
-    return uniqueNodesString;
+    
+    // 返回 Base64 編碼後的內容
+    return btoa(unescape(encodeURIComponent(finalContent)));
 }
 
 // --- [核心修改] 订阅处理函数 ---
 // --- [最終修正版 - 變量名校對] 訂閱處理函數 ---
 async function handleMisubRequest(context) {
     const { request, env } = context;
+    const cacheKey = `sub_cache_b64_${profileIdentifier || 'default'}`;
+    const cachedContent = await env.MISUB_KV.get(cacheKey);
+    if (cachedContent) {
+        // 如果快取命中，可以直接跳到 subconverter 請求的步驟
+        // (我們將在後面重構程式碼來利用這一點)
+        console.log(`Cache hit for key: ${cacheKey}`);
+    }
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
@@ -604,16 +613,38 @@ async function handleMisubRequest(context) {
             }
         }
     }
-    if (!targetFormat) {
+        if (!targetFormat) {
         const ua = userAgentHeader.toLowerCase();
-        const uaMapping = {
-            'clash': 'clash', 'meta': 'clash', 'stash': 'clash', 'nekoray': 'clash',
-            'sing-box': 'singbox', 'shadowrocket': 'base64', 'v2rayn': 'base64',
-            'v2rayng': 'base64', 'surge': 'surge', 'loon': 'loon',
-            'quantumult%20x': 'quanx', 'quantumult': 'quanx',
-        };
-        for (const key in uaMapping) {
-            if (ua.includes(key)) { targetFormat = uaMapping[key]; break; }
+        // 使用陣列來保證比對的優先順序
+        const uaMapping = [
+            // 優先匹配 Mihomo/Meta 核心的客戶端
+            ['flyclash', 'clash'],
+            ['mihomo', 'clash'],
+            ['clash.meta', 'clash'],
+            ['clash-verge', 'clash'],
+            ['meta', 'clash'],
+            
+            // 其他客戶端
+            ['stash', 'clash'],
+            ['nekoray', 'clash'],
+            ['sing-box', 'singbox'],
+            ['shadowrocket', 'base64'],
+            ['v2rayn', 'base64'],
+            ['v2rayng', 'base64'],
+            ['surge', 'surge'],
+            ['loon', 'loon'],
+            ['quantumult%20x', 'quanx'],
+            ['quantumult', 'quanx'],
+
+            // 最後才匹配通用的 clash，作為向下相容
+            ['clash', 'clash']
+        ];
+
+        for (const [keyword, format] of uaMapping) {
+            if (ua.includes(keyword)) {
+                targetFormat = format;
+                break; // 找到第一個符合的就停止
+            }
         }
     }
     if (!targetFormat) { targetFormat = 'clash'; }
@@ -641,12 +672,21 @@ async function handleMisubRequest(context) {
         fakeNodeString = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;
     }
 
-    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
-    const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
+    let base64Content = cachedContent; // 優先使用快取
+
+    // 如果快取不存在，則重新生成
+    if (!base64Content) {
+        console.log(`Cache miss for key: ${cacheKey}. Generating new content.`);
+        base64Content = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
+        // 將新生成的內容存入KV，並設定300秒（5分鐘）的過期時間
+        context.waitUntil(env.MISUB_KV.put(cacheKey, base64Content, { expirationTtl: 300 }));
+    }
 
     if (targetFormat === 'base64') {
-        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
-        return new Response(base64Content, { headers });
+        const headers = { "Content-Type": "text/plain; charset=utf-8" };
+        // 如果是直接返回 base64，可以設定一個較短的瀏覽器快取
+        headers['Cache-Control'] = 'public, max-age=60'; 
+        return new Response(atob(base64Content), { headers }); // 注意：此處需要解碼後再返回
     }
 
     const callbackToken = await getCallbackToken(env);
