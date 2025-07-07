@@ -6,6 +6,8 @@ export function useManualNodes(initialNodesRef, markDirty) {
   const manualNodesCurrentPage = ref(1);
   const manualNodesPerPage = 24;
 
+  const searchTerm = ref('');
+
   function initializeManualNodes(nodesData) {
     manualNodes.value = (nodesData || []).map(node => ({
       ...node,
@@ -14,18 +16,33 @@ export function useManualNodes(initialNodesRef, markDirty) {
     }));
   }
 
-  const manualNodesTotalPages = computed(() => Math.ceil(manualNodes.value.length / manualNodesPerPage));
+  // [新增] 根据搜索词过滤节点
+  const filteredManualNodes = computed(() => {
+    if (!searchTerm.value) {
+      return manualNodes.value;
+    }
+    const lowerCaseSearch = searchTerm.value.toLowerCase();
+    return manualNodes.value.filter(node => 
+      (node.name && node.name.toLowerCase().includes(lowerCaseSearch)) ||
+      (node.url && node.url.toLowerCase().includes(lowerCaseSearch))
+    );
+  });
+
+  const manualNodesTotalPages = computed(() => Math.ceil(filteredManualNodes.value.length / manualNodesPerPage));
+
+  // [修改] 分页使用过滤后的节点
   const paginatedManualNodes = computed(() => {
     const start = (manualNodesCurrentPage.value - 1) * manualNodesPerPage;
     const end = start + manualNodesPerPage;
-    return manualNodes.value.slice(start, end);
+    return filteredManualNodes.value.slice(start, end);
   });
+  
   const enabledManualNodes = computed(() => manualNodes.value.filter(n => n.enabled));
 
   function changeManualNodesPage(page) {
     if (page < 1 || page > manualNodesTotalPages.value) return;
     manualNodesCurrentPage.value = page;
-  }
+  }  
 
   function addNode(node) {
     manualNodes.value.unshift(node);
@@ -79,6 +96,11 @@ export function useManualNodes(initialNodesRef, markDirty) {
     markDirty();
   }
 
+    // [新增] 监听搜索词变化，重置分页
+  watch(searchTerm, () => {
+    manualNodesCurrentPage.value = 1;
+  });
+
   watch(initialNodesRef, (newInitialNodes) => {
     initializeManualNodes(newInitialNodes);
   }, { immediate: true, deep: true });
@@ -89,6 +111,7 @@ export function useManualNodes(initialNodesRef, markDirty) {
     manualNodesTotalPages,
     paginatedManualNodes,
     enabledManualNodesCount: computed(() => enabledManualNodes.value.length),
+    searchTerm, // [新增] 导出搜索词
     changeManualNodesPage,
     addNode,
     updateNode,

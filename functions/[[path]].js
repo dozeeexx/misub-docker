@@ -660,7 +660,7 @@ async function handleMisubRequest(context) {
     const subconverterUrl = new URL(`https://${effectiveSubConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', callbackUrl);
-    if (targetFormat === 'clash' && effectiveSubConfig && effectiveSubConfig.trim() !== '') {
+    if ((targetFormat === 'clash' || targetFormat === 'loon') && effectiveSubConfig && effectiveSubConfig.trim() !== '') {
         subconverterUrl.searchParams.set('config', effectiveSubConfig);
     }
     subconverterUrl.searchParams.set('new_name', 'true');

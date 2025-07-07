@@ -12,6 +12,7 @@ import Card from './Card.vue';
 import ManualNodeCard from './ManualNodeCard.vue';
 import RightPanel from './RightPanel.vue';
 import ProfileCard from './ProfileCard.vue';
+import ManualNodeList from './ManualNodeList.vue'; 
 
 const SettingsModal = defineAsyncComponent(() => import('./SettingsModal.vue'));
 const BulkImportModal = defineAsyncComponent(() => import('./BulkImportModal.vue'));
@@ -37,7 +38,7 @@ const {
 } = useSubscriptions(initialSubs, markDirty);
 
 const {
-  manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes,
+  manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes,
 } = useManualNodes(initialNodes, markDirty);
@@ -53,6 +54,8 @@ const showDeleteProfilesModal = ref(false);
 // --- 排序狀態 ---
 const isSortingSubs = ref(false);
 const isSortingNodes = ref(false);
+
+const manualNodeViewMode = ref('card');
 
 // --- 編輯專用模態框狀態 ---
 const editingSubscription = ref(null);
@@ -70,6 +73,17 @@ const showDeleteNodesModal = ref(false);
 const showSubsMoreMenu = ref(false);
 const showNodesMoreMenu = ref(false);
 const showProfilesMoreMenu = ref(false);
+
+const nodesMoreMenuRef = ref(null);
+const subsMoreMenuRef = ref(null);
+const handleClickOutside = (event) => {
+  if (showNodesMoreMenu.value && nodesMoreMenuRef.value && !nodesMoreMenuRef.value.contains(event.target)) {
+    showNodesMoreMenu.value = false;
+  }
+  if (showSubsMoreMenu.value && subsMoreMenuRef.value && !subsMoreMenuRef.value.contains(event.target)) {
+    showSubsMoreMenu.value = false;
+  }
+};
 
 // --- 初始化與生命週期 ---
 const initializeState = () => {
@@ -103,18 +117,28 @@ const handleBeforeUnload = (event) => {
 onMounted(() => {
   initializeState();
   window.addEventListener('beforeunload', handleBeforeUnload);
+  const savedViewMode = localStorage.getItem('manualNodeViewMode');
+  if (savedViewMode) {
+    manualNodeViewMode.value = savedViewMode;
+  }
+  document.addEventListener('click', handleClickOutside);
 });
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
+  document.removeEventListener('click', handleClickOutside);
 });
 
-// --- 核心操作方法 ---
+const setViewMode = (mode) => {
+    manualNodeViewMode.value = mode;
+    localStorage.setItem('manualNodeViewMode', mode);
+};
+
+// --- 其他 JS 邏輯 (省略) ---
 const handleDiscard = () => {
   initializeState();
   showToast('已放弃所有未保存的更改');
 };
-
 const handleSave = async () => {
   saveState.value = 'saving';
   const combinedMisubs = [
@@ -134,59 +158,37 @@ const handleSave = async () => {
     saveState.value = 'idle';
   }
 };
-
-// 刪除單個訂閱
 const handleDeleteSubscriptionWithCleanup = (subId) => {
-  // 1. 從主列表中刪除
   deleteSubscription(subId);
-  // 2. 遍歷所有分組，清理被刪除的 ID
   profiles.value.forEach(p => {
     p.subscriptions = p.subscriptions.filter(id => id !== subId);
   });
-  // 3. 標記為需要保存 (deleteSubscription 內部已處理)
 };
-
-// 刪除單個手動節點
 const handleDeleteNodeWithCleanup = (nodeId) => {
-  // 1. 從主列表中刪除
   deleteNode(nodeId);
-  // 2. 遍歷所有分組，清理被刪除的 ID
   profiles.value.forEach(p => {
     p.manualNodes = p.manualNodes.filter(id => id !== nodeId);
   });
 };
-
-// 清空所有訂閱
 const handleDeleteAllSubscriptionsWithCleanup = () => {
-  // 1. 清空主列表
   deleteAllSubscriptions();
-  // 2. 清空所有分組中的訂閱 ID
   profiles.value.forEach(p => {
     p.subscriptions = [];
   });
-  // 3. 關閉確認彈窗
   showDeleteSubsModal.value = false;
 };
-
-// 清空所有手動節點
 const handleDeleteAllNodesWithCleanup = () => {
-  // 1. 清空主列表
   deleteAllNodes();
-  // 2. 清空所有分組中的節點 ID
   profiles.value.forEach(p => {
     p.manualNodes = [];
   });
-  // 3. 關閉確認彈窗
   showDeleteNodesModal.value = false;
 };
-// [修正] 此函數現在先調用 composable 的排序，再調用 handleSave
 const handleAutoSortNodes = () => {
     autoSortNodes();
     showToast('已按地区排序！正在为您自动保存...', 'success');
     handleSave();
 };
-
-// --- 批量導入 ---
 const handleBulkImport = (importText) => {
   if (!importText) return;
   const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
@@ -203,14 +205,11 @@ const handleBulkImport = (importText) => {
   if (newNodes.length > 0) addNodesFromBulk(newNodes);
   showToast(`成功导入 ${newSubs.length} 条订阅和 ${newNodes.length} 个手动节点，请点击保存`, 'success');
 };
-
-// --- 訂閱編輯 ---
 const handleAddSubscription = () => {
   isNewSubscription.value = true;
   editingSubscription.value = { name: '', url: '', enabled: true };
   showSubModal.value = true;
 };
-// [修正] 傳入 ID，並從 subscriptions.value 中查找
 const handleEditSubscription = (subId) => {
   const sub = subscriptions.value.find(s => s.id === subId);
   if (sub) {
@@ -230,14 +229,11 @@ const handleSaveSubscription = () => {
   }
   showSubModal.value = false;
 };
-
-// --- 節點編輯 ---
 const handleAddNode = () => {
   isNewNode.value = true;
   editingNode.value = { id: crypto.randomUUID(), name: '', url: '', enabled: true };
   showNodeModal.value = true;
 };
-// [修正] 傳入 ID，並從 manualNodes.value 中查找
 const handleEditNode = (nodeId) => {
   const node = manualNodes.value.find(n => n.id === nodeId);
   if (node) {
@@ -262,8 +258,6 @@ const handleSaveNode = () => {
     }
     showNodeModal.value = false;
 };
-
-// --- 訂閱組 (Profile) 編輯 ---
 const handleProfileToggle = (updatedProfile) => {
     const index = profiles.value.findIndex(p => p.id === updatedProfile.id);
     if (index !== -1) {
@@ -324,8 +318,6 @@ const copyProfileLink = (profileId) => {
     navigator.clipboard.writeText(link);
     showToast('订阅组分享链接已复制！', 'success');
 };
-
-// --- 格式化 Bytes ---
 const formatBytes = (bytes, decimals = 2) => {
   if (!+bytes || bytes < 0) return '0 B';
   const k = 1024;
@@ -334,7 +326,6 @@ const formatBytes = (bytes, decimals = 2) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
-
 const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemainingTraffic.value));
 
 </script>
@@ -377,6 +368,28 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
       <div class="lg:col-span-2 space-y-12">
         
         <div>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white">机场订阅</h2>
+              <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ subscriptions.length }}</span>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
+              <button @click="handleAddSubscription" class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm flex-shrink-0">新增</button>
+              <div class="relative flex-shrink-0" ref="subsMoreMenuRef">
+                <button @click="showSubsMoreMenu = !showSubsMoreMenu" class="p-2.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-300" viewBox="0 0 20 20" fill="currentColor"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
+                </button>
+                <Transition name="slide-fade-sm">
+                  <div v-if="showSubsMoreMenu" class="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 ring-1 ring-black ring-opacity-5">
+                    <button v-if="!isSortingSubs" @click="isSortingSubs = true; showSubsMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">手动排序</button>
+                    <button v-else @click="() => { isSortingSubs = false; markDirty(); showSubsMoreMenu=false; }" class="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">完成排序</button>
+                    <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                    <button @click="showDeleteSubsModal = true; showSubsMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10">清空所有</button>
+                  </div>
+                </Transition>
+              </div>
+            </div>
+          </div>
           <div v-if="subscriptions.length > 0">
             <draggable 
               v-if="isSortingSubs" 
@@ -416,61 +429,87 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           <div v-else class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg><h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">没有机场订阅</h3><p class="mt-1 text-sm text-gray-500">从添加你的第一个订阅开始。</p></div>
         </div>
 
-<div>
-           <div class="flex items-center justify-between mb-4">
+        <div>
+           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
              <div class="flex items-center gap-3">
               <h2 class="text-xl font-bold text-gray-900 dark:text-white">手动节点</h2>
               <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ manualNodes.length }}</span>
             </div>
-            <div class="flex items-center gap-2">
-              <div class="hidden md:flex items-center gap-2">
-                 <button @click="handleAutoSortNodes" class="text-sm font-medium px-3 py-1.5 rounded-lg text-green-500 border-2 border-green-500/60 hover:bg-green-500/10 transition-all">一键排序</button>
-                <button v-if="!isSortingNodes" @click="isSortingNodes = true" class="text-sm font-medium px-3 py-1.5 rounded-lg text-blue-500 border-2 border-blue-500/60 hover:bg-blue-500/10 transition-all">手动排序</button>
-                <button v-else @click="() => { isSortingNodes = false; markDirty(); }" class="text-sm font-medium px-3 py-1.5 rounded-lg bg-blue-500 text-white transition-all">完成</button>
-                <button @click="showDeleteNodesModal = true" class="text-sm font-medium px-3 py-1.5 rounded-lg text-red-500 border-2 border-red-500/60 hover:bg-red-500 hover:text-white dark:text-red-400 dark:border-red-400/60 dark:hover:bg-red-400 dark:hover:text-white transition-all">清空</button>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <div class="relative flex-grow">
+                <input 
+                  type="text" 
+                  v-model="searchTerm"
+                  placeholder="搜索节点..."
+                  class="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
-              <button @click="handleAddNode" class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm">新增</button>
-              <div class="relative md:hidden" v-on:mouseleave="showNodesMoreMenu = false">
-                <button @click="showNodesMoreMenu = !showNodesMoreMenu" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
+              <div class="p-0.5 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center flex-shrink-0">
+                  <button @click="setViewMode('card')" class="p-1 rounded-md transition-colors" :class="manualNodeViewMode === 'card' ? 'bg-white dark:bg-gray-900 text-indigo-600' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                  </button>
+                  <button @click="setViewMode('list')" class="p-1 rounded-md transition-colors" :class="manualNodeViewMode === 'list' ? 'bg-white dark:bg-gray-900 text-indigo-600' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+                  </button>
+              </div>
+
+              <button @click="handleAddNode" class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm flex-shrink-0">新增</button>
+              
+              <div class="relative flex-shrink-0" ref="nodesMoreMenuRef">
+                <button @click="showNodesMoreMenu = !showNodesMoreMenu" class="p-2.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-300" viewBox="0 0 20 20" fill="currentColor"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
                 </button>
                  <Transition name="slide-fade-sm">
-                  <div v-if="showNodesMoreMenu" class="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 ring-1 ring-black ring-opacity-5">
+                  <div v-if="showNodesMoreMenu" class="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 ring-1 ring-black ring-opacity-5">
                     <button @click="handleAutoSortNodes(); showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键排序</button>
                     <button v-if="!isSortingNodes" @click="isSortingNodes = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">手动排序</button>
                     <button v-else @click="() => { isSortingNodes = false; markDirty(); showNodesMoreMenu=false; }" class="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">完成排序</button>
-                    <button @click="showDeleteNodesModal = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700">清空</button>
+                    <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                    <button @click="showDeleteNodesModal = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10">清空所有</button>
                   </div>
                 </Transition>
               </div>
             </div>
           </div>
           <div v-if="manualNodes.length > 0">
-            <draggable 
-              v-if="isSortingNodes"
-              tag="div" 
-              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
-              v-model="manualNodes" 
-              :item-key="item => item.id" 
-              animation="300" 
-              @end="markDirty"
-            >
-              <template #item="{ element: node }">
-                 <div class="cursor-move">
-                    <ManualNodeCard 
-                        :node="node" 
-                        @edit="handleEditNode(node.id)" 
-                        @delete="handleDeleteNodeWithCleanup(node.id)" />
+            <div v-if="manualNodeViewMode === 'card'">
+               <draggable 
+                v-if="isSortingNodes"
+                tag="div" 
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
+                v-model="manualNodes" 
+                :item-key="item => item.id" 
+                animation="300" 
+                @end="markDirty"
+              >
+                <template #item="{ element: node }">
+                   <div class="cursor-move">
+                      <ManualNodeCard 
+                          :node="node" 
+                          @edit="handleEditNode(node.id)" 
+                          @delete="handleDeleteNodeWithCleanup(node.id)" />
+                  </div>
+                </template>
+              </draggable>
+              <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+                <div v-for="node in paginatedManualNodes" :key="node.id">
+                  <ManualNodeCard 
+                    :node="node" 
+                    @edit="handleEditNode(node.id)" 
+                    @delete="handleDeleteNodeWithCleanup(node.id)" />
                 </div>
-              </template>
-            </draggable>
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-              <div v-for="node in paginatedManualNodes" :key="node.id">
-                <ManualNodeCard 
-                  :node="node" 
-                  @edit="handleEditNode(node.id)" 
-                  @delete="handleDeleteNodeWithCleanup(node.id)" />
               </div>
+            </div>
+
+            <div v-if="manualNodeViewMode === 'list'" class="space-y-2">
+                <ManualNodeList
+                    v-for="node in paginatedManualNodes"
+                    :key="node.id"
+                    :node="node"
+                    @edit="handleEditNode(node.id)"
+                    @delete="handleDeleteNodeWithCleanup(node.id)"
+                />
             </div>
             
             <div v-if="manualNodesTotalPages > 1 && !isSortingNodes" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
@@ -481,7 +520,6 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           </div>
           <div v-else class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l-4 4-4-4M6 16l-4-4 4-4" /></svg><h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">没有手动节点</h3><p class="mt-1 text-sm text-gray-500">添加分享链接或单个节点。</p></div>
         </div>
-
       </div>
       
       <div class="lg:col-span-1 space-y-8">
@@ -525,6 +563,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
             <p class="mt-1 text-sm text-gray-500">创建一个订阅组来组合你的节点吧！</p>
           </div>
         </div>
+
       </div>
     </div>
   </div>
