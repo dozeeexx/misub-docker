@@ -1,10 +1,10 @@
 // FILE: src/composables/useSubscriptions.js
 import { ref, computed, watch } from 'vue';
 import { fetchNodeCount } from '../lib/api.js';
-import { useToast } from '../lib/stores.js';
+import { useToastStore } from '../stores/toast.js';
 
 export function useSubscriptions(initialSubsRef, markDirty) {
-  const { showToast } = useToast();
+  const { showToast } = useToastStore();
   const subscriptions = ref([]);
   const subsCurrentPage = ref(1);
   const subsItemsPerPage = 6;

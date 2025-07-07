@@ -1,59 +1,26 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useTheme } from './lib/stores.js';
-import { fetchInitialData, login as apiLogin } from './lib/api.js';
+import { onMounted } from 'vue';
+import { useThemeStore } from './stores/theme';
+import { useSessionStore } from './stores/session';
+import { useToastStore } from './stores/toast';
+import { storeToRefs } from 'pinia';
+
 import Dashboard from './components/Dashboard.vue';
 import Login from './components/Login.vue';
 import Header from './components/Header.vue';
 import Toast from './components/Toast.vue';
 import Footer from './components/Footer.vue';
-import { useToast } from './lib/stores.js';
 
-const { initTheme, theme } = useTheme();
-const { toast: toastState } = useToast();
+const themeStore = useThemeStore();
+const { theme } = storeToRefs(themeStore);
+const { initTheme } = themeStore;
 
-const sessionState = ref('loading');
-const initialData = ref(null);
+const sessionStore = useSessionStore();
+const { sessionState, initialData } = storeToRefs(sessionStore);
+const { checkSession, login, logout } = sessionStore;
 
-const checkSession = async () => {
-  try {
-    const data = await fetchInitialData();
-    if (data) {
-      initialData.value = data;
-      sessionState.value = 'loggedIn';
-    } else {
-      sessionState.value = 'loggedOut';
-    }
-  } catch (error) {
-    console.error("Session check failed:", error);
-    sessionState.value = 'loggedOut';
-  }
-};
-
-const login = async (password) => {
-  try {
-    const response = await apiLogin(password);
-    if (response.ok) {
-      handleLoginSuccess();
-    } else {
-      const errData = await response.json();
-      throw new Error(errData.error || '登录失败');
-    }
-  } catch(e) {
-    throw e;
-  }
-};
-
-const handleLoginSuccess = () => {
-  sessionState.value = 'loading';
-  checkSession();
-};
-
-const handleLogout = async () => {
-  await fetch('/api/logout');
-  sessionState.value = 'loggedOut';
-  initialData.value = null;
-};
+const toastStore = useToastStore();
+const { toast: toastState } = storeToRefs(toastStore);
 
 onMounted(() => {
   initTheme();
@@ -66,7 +33,7 @@ onMounted(() => {
     :class="theme" 
     class="min-h-screen flex flex-col text-gray-800 dark:text-gray-200 transition-colors duration-300 bg-gray-100 dark:bg-gray-950"
   >
-    <Header :is-logged-in="sessionState === 'loggedIn'" @logout="handleLogout" />
+    <Header :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
 
     <main 
       class="flex-grow"

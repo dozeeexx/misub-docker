@@ -1,8 +1,8 @@
 <script setup>
 import { ref, watch } from 'vue';
-import { useToast } from '../lib/stores.js';
+import { useToastStore } from '../stores/toast.js';
 
-const { toast } = useToast();
+const { toast } = useToastStore();
 const isVisible = ref(false);
 
 watch(() => toast.id, () => {
@@ -22,7 +22,8 @@ watch(() => toast.id, () => {
       class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-lg shadow-lg text-white font-semibold text-sm"
       :class="{
         'bg-green-500': toast.type === 'success',
-        'bg-red-500': toast.type === 'error'
+        'bg-red-500': toast.type === 'error',
+        'bg-blue-500': toast.type === 'info'
       }"
     >
       {{ toast.message }}

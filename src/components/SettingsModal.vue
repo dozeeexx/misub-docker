@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue';
 import Modal from './Modal.vue';
 import { fetchSettings, saveSettings } from '../lib/api.js';
-import { useToast } from '../lib/stores.js';
+import { useToastStore } from '../stores/toast.js';
 
 const props = defineProps({
   show: Boolean
@@ -10,7 +10,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:show']);
 
-const { showToast } = useToast();
+const { showToast } = useToastStore();
 const isLoading = ref(false);
 const isSaving = ref(false);
 const settings = ref({});
