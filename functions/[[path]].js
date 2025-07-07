@@ -514,27 +514,17 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
     const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
     const uniqueNodesString = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
 
-    let finalContent = uniqueNodesString;
+    // 将虚假节点（如果存在）插入到列表最前面
     if (prependedContent) {
-        finalContent = `${prependedContent}\n${uniqueNodesString}`;
+        return `${prependedContent}\n${uniqueNodesString}`;
     }
-    
-    // 返回 Base64 編碼後的內容
-    return btoa(unescape(encodeURIComponent(finalContent)));
+    return uniqueNodesString;
 }
-
 
 // --- [核心修改] 订阅处理函数 ---
 // --- [最終修正版 - 變量名校對] 訂閱處理函數 ---
 async function handleMisubRequest(context) {
     const { request, env } = context;
-    const cacheKey = `sub_cache_b64_${profileIdentifier || 'default'}`;
-    const cachedContent = await env.MISUB_KV.get(cacheKey);
-    if (cachedContent) {
-        // 如果快取命中，可以直接跳到 subconverter 請求的步驟
-        // (我們將在後面重構程式碼來利用這一點)
-        console.log(`Cache hit for key: ${cacheKey}`);
-    }
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
@@ -614,7 +604,7 @@ async function handleMisubRequest(context) {
             }
         }
     }
-        if (!targetFormat) {
+    if (!targetFormat) {
         const ua = userAgentHeader.toLowerCase();
         // 使用陣列來保證比對的優先順序
         const uaMapping = [
@@ -673,23 +663,13 @@ async function handleMisubRequest(context) {
         fakeNodeString = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;
     }
 
-// ...
-    let base64Content = cachedContent; // 優先使用快取
-
-    // 如果快取不存在，則重新生成
-    if (!base64Content) {
-        console.log(`Cache miss for key: ${cacheKey}. Generating new content.`);
-        base64Content = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
-        // 將新生成的內容存入KV，並設定300秒（5分鐘）的過期時間
-        context.waitUntil(env.MISUB_KV.put(cacheKey, base64Content, { expirationTtl: 300 }));
-    }
+    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
+    const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     if (targetFormat === 'base64') {
-        const headers = { "Content-Type": "text/plain; charset=utf-8" };
-        headers['Cache-Control'] = 'public, max-age=60'; 
-        return new Response(base64Content, { headers }); // 已移除 atob()
+        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
+        return new Response(base64Content, { headers });
     }
-// ...
 
     const callbackToken = await getCallbackToken(env);
     const callbackPath = profileIdentifier ? `/${token}/${profileIdentifier}` : `/${token}`;
