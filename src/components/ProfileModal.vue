@@ -143,10 +143,14 @@ const toggleSelection = (listName, id) => {
 };
 
 const handleSelectAll = (listName, sourceArray) => {
-    localProfile.value[listName] = sourceArray.map(item => item.id);
+    const currentSelection = new Set(localProfile.value[listName]);
+    sourceArray.forEach(item => currentSelection.add(item.id));
+    localProfile.value[listName] = Array.from(currentSelection);
 };
-const handleDeselectAll = (listName) => {
-    localProfile.value[listName] = [];
+
+const handleDeselectAll = (listName, sourceArray) => {
+    const sourceIds = sourceArray.map(item => item.id);
+    localProfile.value[listName] = localProfile.value[listName].filter(id => !sourceIds.includes(id));
 };
 
 </script>
@@ -220,8 +224,8 @@ const handleDeselectAll = (listName) => {
               <div class="flex justify-between items-center mb-2">
                 <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">选择机场订阅</h4>
                 <div class="space-x-2">
-                    <button @click="handleSelectAll('subscriptions', allSubscriptions)" class="text-xs text-indigo-600 hover:underline">全选</button>
-                    <button @click="handleDeselectAll('subscriptions')" class="text-xs text-indigo-600 hover:underline">全不选</button>
+                    <button @click="handleSelectAll('subscriptions', filteredSubscriptions)" class="text-xs text-indigo-600 hover:underline">全选</button>
+                    <button @click="handleDeselectAll('subscriptions', filteredSubscriptions)" class="text-xs text-indigo-600 hover:underline">全不选</button>
                 </div>
               </div>
               <div class="relative mb-2">
@@ -258,8 +262,8 @@ const handleDeselectAll = (listName) => {
               <div class="flex justify-between items-center mb-2">
                 <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">选择手动节点</h4>
                  <div class="space-x-2">
-                    <button @click="handleSelectAll('manualNodes', allManualNodes)" class="text-xs text-indigo-600 hover:underline">全选</button>
-                    <button @click="handleDeselectAll('manualNodes')" class="text-xs text-indigo-600 hover:underline">全不选</button>
+                    <button @click="handleSelectAll('manualNodes', filteredManualNodes)" class="text-xs text-indigo-600 hover:underline">全选</button>
+                    <button @click="handleDeselectAll('manualNodes', filteredManualNodes)" class="text-xs text-indigo-600 hover:underline">全不选</button>
                 </div>
               </div>
               <div class="relative mb-2">
