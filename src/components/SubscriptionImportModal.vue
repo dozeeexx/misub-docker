@@ -112,9 +112,15 @@ const importSubscription = async () => {
 
   isLoading.value = true;
   try {
-    const response = await fetch(subscriptionUrl.value);
+    const response = await fetch('/api/fetch_external_url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: subscriptionUrl.value })
+    });
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
     const content = await response.text();
     const newNodes = parseNodes(content);
