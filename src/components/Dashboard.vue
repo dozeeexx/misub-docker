@@ -14,10 +14,11 @@ import ManualNodeCard from './ManualNodeCard.vue';
 import RightPanel from './RightPanel.vue';
 import ProfileCard from './ProfileCard.vue';
 import ManualNodeList from './ManualNodeList.vue'; 
+import SubscriptionImportModal from './SubscriptionImportModal.vue'; 
 
 const SettingsModal = defineAsyncComponent(() => import('./SettingsModal.vue'));
 const BulkImportModal = defineAsyncComponent(() => import('./BulkImportModal.vue'));
-const Modal = defineAsyncComponent(() => import('./Modal.vue'));
+import Modal from './Modal.vue';
 const ProfileModal = defineAsyncComponent(() => import('./ProfileModal.vue'));
 
 // --- 基礎 Props 和狀態 ---
@@ -75,6 +76,7 @@ const showDeleteNodesModal = ref(false);
 const showSubsMoreMenu = ref(false);
 const showNodesMoreMenu = ref(false);
 const showProfilesMoreMenu = ref(false);
+const showSubscriptionImportModal = ref(false);
 
 const nodesMoreMenuRef = ref(null);
 const subsMoreMenuRef = ref(null);
@@ -464,6 +466,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
                 </button>
                  <Transition name="slide-fade-sm">
                   <div v-if="showNodesMoreMenu" class="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 ring-1 ring-black ring-opacity-5">
+                    <button @click="showSubscriptionImportModal = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">导入订阅</button>
                     <button @click="handleAutoSortNodes(); showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键排序</button>
                     <button v-if="!isSortingNodes" @click="isSortingNodes = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">手动排序</button>
                     <button v-else @click="() => { isSortingNodes = false; markDirty(); showNodesMoreMenu=false; }" class="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">完成排序</button>
@@ -598,6 +601,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
   </Modal>
   
   <SettingsModal v-model:show="uiStore.isSettingsModalVisible" />
+  <SubscriptionImportModal :show="showSubscriptionImportModal" @update:show="showSubscriptionImportModal = $event" :add-nodes-from-bulk="addNodesFromBulk" />
 </template>
 
 <style scoped>
