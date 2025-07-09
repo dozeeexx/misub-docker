@@ -1,7 +1,9 @@
 // FILE: src/composables/useManualNodes.js
 import { ref, computed, watch } from 'vue';
+import { useToastStore } from '../stores/toast'; // 引入 Toast
 
 export function useManualNodes(initialNodesRef, markDirty) {
+  const { showToast } = useToastStore(); // 获取 showToast 函数
   const manualNodes = ref([]);
   const manualNodesCurrentPage = ref(1);
   const manualNodesPerPage = 24;
@@ -151,6 +153,29 @@ export function useManualNodes(initialNodesRef, markDirty) {
     markDirty();
   }
   
+    function deduplicateNodes() {
+    const originalCount = manualNodes.value.length;
+    const seenUrls = new Set();
+    const uniqueNodes = [];
+
+    for (const node of manualNodes.value) {
+      if (!seenUrls.has(node.url)) {
+        seenUrls.add(node.url);
+        uniqueNodes.push(node);
+      }
+    }
+    
+    manualNodes.value = uniqueNodes;
+    const removedCount = originalCount - uniqueNodes.length;
+
+    if (removedCount > 0) {
+      showToast(`成功移除 ${removedCount} 个重复节点，请记得保存。`, 'success');
+      markDirty();
+    } else {
+      showToast('没有发现重复的节点。', 'info');
+    }
+  }
+
   function autoSortNodes() {
     const regionKeywords = { HK: [/香港/,/HK/,/Hong Kong/i], TW: [/台湾/,/TW/,/Taiwan/i], SG: [/新加坡/,/SG/,/狮城/,/Singapore/i], JP: [/日本/,/JP/,/Japan/i], US: [/美国/,/US/,/United States/i], KR: [/韩国/,/KR/,/Korea/i], GB: [/英国/,/GB/,/UK/,/United Kingdom/i], DE: [/德国/,/DE/,/Germany/i], FR: [/法国/,/FR/,/France/i], CA: [/加拿大/,/CA/,/Canada/i], AU: [/澳大利亚/,/AU/,/Australia/i], };
     const regionOrder = ['HK', 'TW', 'SG', 'JP', 'US', 'KR', 'GB', 'DE', 'FR', 'CA', 'AU'];
@@ -193,5 +218,6 @@ export function useManualNodes(initialNodesRef, markDirty) {
     deleteAllNodes,
     addNodesFromBulk,
     autoSortNodes,
+    deduplicateNodes, // 导出新函数
   };
 }

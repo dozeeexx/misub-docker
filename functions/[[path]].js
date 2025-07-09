@@ -495,16 +495,21 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             } catch (e) {}
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
-            /*
-            validNodes = validNodes.filter(nodeLink => {
+            // 新增：根据 exclude 规则过滤节点
+            if (sub.exclude && sub.exclude.trim() !== '') {
                 try {
-                    const hashIndex = nodeLink.lastIndexOf('#');
-                    if (hashIndex === -1) return true;
-                    const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
-                    return !nodeName.includes('https://');
-                } catch (e) { return false; }
-            });
-            */
+                    const regex = new RegExp(sub.exclude.trim(), 'i');
+                    validNodes = validNodes.filter(nodeLink => {
+                        const hashIndex = nodeLink.lastIndexOf('#');
+                        if (hashIndex === -1) return true; // 没有节点名称，无法过滤，保留
+                        const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
+                        return !regex.test(nodeName);
+                    });
+                } catch (e) {
+                    console.error(`Invalid regex for subscription ${sub.name}: ${sub.exclude}`, e);
+                    // 正则表达式无效时，不进行过滤，保留所有节点
+                }
+            }
             return (config.prependSubName && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');

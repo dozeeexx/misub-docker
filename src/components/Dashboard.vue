@@ -42,7 +42,7 @@ const {
 const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
-  addNodesFromBulk, autoSortNodes,
+  addNodesFromBulk, autoSortNodes, deduplicateNodes,
 } = useManualNodes(initialNodes, markDirty);
 
 // --- 訂閱組 (Profile) 相關狀態 ---
@@ -86,7 +86,11 @@ const handleClickOutside = (event) => {
     showSubsMoreMenu.value = false;
   }
 };
-
+// 新增一个处理函数来调用去重逻辑
+const handleDeduplicateNodes = () => {
+    deduplicateNodes();
+    showNodesMoreMenu.value = false; // 操作后关闭菜单
+};
 // --- 初始化與生命週期 ---
 const initializeState = () => {
   isLoading.value = true;
@@ -112,7 +116,7 @@ const initializeState = () => {
 const handleBeforeUnload = (event) => {
   if (dirty.value) {
     event.preventDefault();
-    event.returnValue = '您有未保存的更改，確定要離開嗎？';
+    event.returnValue = '您有未保存的更改，確定要离开嗎？';
   }
 };
 
@@ -136,7 +140,7 @@ const setViewMode = (mode) => {
     localStorage.setItem('manualNodeViewMode', mode);
 };
 
-// --- 其他 JS 邏輯 (省略) ---
+// --- 其他 JS 逻辑 (省略) ---
 const handleDiscard = () => {
   initializeState();
   showToast('已放弃所有未保存的更改');
@@ -209,7 +213,7 @@ const handleBulkImport = (importText) => {
 };
 const handleAddSubscription = () => {
   isNewSubscription.value = true;
-  editingSubscription.value = { name: '', url: '', enabled: true };
+  editingSubscription.value = { name: '', url: '', enabled: true, exclude: '' }; // 新增 exclude
   showSubModal.value = true;
 };
 const handleEditSubscription = (subId) => {
@@ -465,6 +469,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
                  <Transition name="slide-fade-sm">
                   <div v-if="showNodesMoreMenu" class="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 ring-1 ring-black ring-opacity-5">
                     <button @click="handleAutoSortNodes(); showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键排序</button>
+                    <button @click="handleDeduplicateNodes" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键去重</button>
                     <button v-if="!isSortingNodes" @click="isSortingNodes = true; showNodesMoreMenu=false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">手动排序</button>
                     <button v-else @click="() => { isSortingNodes = false; markDirty(); showNodesMoreMenu=false; }" class="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">完成排序</button>
                     <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
@@ -593,6 +598,10 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
       <div class="space-y-4">
         <div><label for="sub-edit-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">订阅名称</label><input type="text" id="sub-edit-name" v-model="editingSubscription.name" placeholder="（可选）不填将自动获取" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"></div>
         <div><label for="sub-edit-url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">订阅链接</label><input type="text" id="sub-edit-url" v-model="editingSubscription.url" placeholder="https://..." class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono dark:text-white"></div>
+        <div>
+          <label for="sub-edit-exclude" class="block text-sm font-medium text-gray-700 dark:text-gray-300">排除节点 (正则表达式)</label>
+          <textarea id="sub-edit-exclude" v-model="editingSubscription.exclude" placeholder="输入需要排除的节点名称的正则表达式，例如：(过期|官网)" rows="3" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono dark:text-white"></textarea>
+        </div>
       </div>
     </template>
   </Modal>
