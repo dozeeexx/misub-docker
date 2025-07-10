@@ -589,6 +589,8 @@ async function handleMisubRequest(context) {
     let effectiveSubConverter;
     let effectiveSubConfig;
 
+    const DEFAULT_EXPIRED_VLESS_NODE = "vless://88888888-8888-8888-8888-888888888888@127.0.0.1:1234?encryption=none&security=tls&sni=daoqi.chaoqi.com&fp=random&allowInsecure=1&type=ws&host=daoqi.chaoqi.com&path=%2F%3Fed%3D2560#%E6%82%A8%E7%9A%84%E8%AE%A2%E9%98%85%E5%B7%B2%E5%88%B0%E6%9C%9F";
+
     if (profileIdentifier) {
 
         // [修正] 使用 config 變量
@@ -597,14 +599,31 @@ async function handleMisubRequest(context) {
         }
         const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
         if (profile && profile.enabled) {
+            // Check if the profile has an expiration date and if it's expired
+            if (profile.expiresAt) {
+                const expiryDate = new Date(profile.expiresAt);
+                const now = new Date();
+                if (now > expiryDate) {
+                    console.log(`Profile ${profile.name} (ID: ${profile.id}) has expired.`);
+                    return new Response(DEFAULT_EXPIRED_VLESS_NODE, {
+                        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+                    });
+                }
+            }
+
             subName = profile.name;
             const profileSubIds = new Set(profile.subscriptions);
             const profileNodeIds = new Set(profile.manualNodes);
             targetMisubs = allMisubs.filter(item => {
-                if (item.url.startsWith('http')) {
-                    return item.enabled && profileSubIds.has(item.id);
+                const isSubscription = item.url.startsWith('http');
+                const isManualNode = !isSubscription;
+
+                // Check if the item belongs to the current profile and is enabled
+                const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) || (isManualNode && profileNodeIds.has(item.id));
+                if (!item.enabled || !belongsToProfile) {
+                    return false;
                 }
-                return item.enabled && profileNodeIds.has(item.id);    
+                return true;
             });
             effectiveSubConverter = profile.subConverter && profile.subConverter.trim() !== '' ? profile.subConverter : config.subConverter;
             effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;
