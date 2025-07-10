@@ -156,10 +156,13 @@ export function useManualNodes(initialNodesRef, markDirty) {
     try {
       if (url.startsWith('vmess://')) {
         const base64Part = url.substring('vmess://'.length);
-        const decodedString = atob(base64Part);
-        const nodeConfig = JSON.parse(decodedString);
         
-        // 删除 ps (节点名称) 和 remark 字段，它们不影响连接性
+        // 关键步骤：解码后，移除所有空白字符，解决格式不一致问题
+        const decodedString = atob(base64Part);
+        const cleanedString = decodedString.replace(/\s/g, ''); // 移除所有空格、换行等
+        
+        const nodeConfig = JSON.parse(cleanedString);
+        
         delete nodeConfig.ps;
         delete nodeConfig.remark;
         
