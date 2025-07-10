@@ -473,7 +473,7 @@ function prependNodeName(link, prefix) {
 
 // --- 节点列表生成函数 ---
 async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '') {
-    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls):\/\//;
+    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//;
     let manualNodesContent = '';
     const normalizeVmessLink = (link) => {
         if (!link.startsWith('vmess://')) return link;

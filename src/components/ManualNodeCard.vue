@@ -24,6 +24,7 @@ const getProtocol = (url) => {
     if (lowerUrl.startsWith('vmess://')) return 'vmess';
     if (lowerUrl.startsWith('vless://')) return 'vless';
     if (lowerUrl.startsWith('trojan://')) return 'trojan';
+    if (lowerUrl.startsWith('socks5://')) return 'socks5';
     if (lowerUrl.startsWith('http')) return 'http';
   } catch { 
     return 'unknown';
@@ -55,6 +56,8 @@ const protocolStyle = computed(() => {
       return { text: 'SS', style: 'bg-orange-500/20 text-orange-500 dark:text-orange-400' };
     case 'vmess':
       return { text: 'VMESS', style: 'bg-teal-500/20 text-teal-500 dark:text-teal-400' };
+    case 'socks5':
+      return { text: 'SOCKS5', style: 'bg-lime-500/20 text-lime-500 dark:text-lime-400' };
     case 'http':
       return { text: 'HTTP', style: 'bg-green-500/20 text-green-500 dark:text-green-400' };
     default:

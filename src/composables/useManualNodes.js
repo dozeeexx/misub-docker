@@ -158,9 +158,19 @@ export function useManualNodes(initialNodesRef, markDirty) {
     const seenUrls = new Set();
     const uniqueNodes = [];
 
+    const getBaseUrl = (url) => {
+        try {
+            const hashIndex = url.indexOf('#');
+            return hashIndex !== -1 ? url.substring(0, hashIndex) : url;
+        } catch {
+            return url;
+        }
+    };
+
     for (const node of manualNodes.value) {
-      if (!seenUrls.has(node.url)) {
-        seenUrls.add(node.url);
+      const baseUrl = getBaseUrl(node.url);
+      if (!seenUrls.has(baseUrl)) {
+        seenUrls.add(baseUrl);
         uniqueNodes.push(node);
       }
     }

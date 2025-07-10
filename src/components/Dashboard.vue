@@ -205,7 +205,7 @@ const handleBulkImport = (importText) => {
       const newItem = { id: crypto.randomUUID(), name: extractNodeName(line) || '未命名', url: line, enabled: true, status: 'unchecked' };
       if (/^https?:\/\//.test(line)) {
           newSubs.push(newItem);
-      } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls):\/\//.test(line)) {
+      } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line)) {
           newNodes.push(newItem);
       }
   }
