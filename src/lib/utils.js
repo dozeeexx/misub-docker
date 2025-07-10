@@ -94,56 +94,59 @@ export function prependNodeName(link, prefix) {
  */
 export function extractHostAndPort(url) {
     if (!url) return { host: '', port: '' };
-    try {
-        const urlObj = new URL(url);
-        const protocol = urlObj.protocol.slice(0, -1);
-        
-        if (['http', 'https', 'ws', 'wss'].includes(protocol)) {
-            return { host: urlObj.hostname, port: urlObj.port || (protocol.endsWith('s') ? '443' : '80') };
-        }
 
-        let host = '', port = '';
+    try {
+        const protocolEndIndex = url.indexOf('://');
+        if (protocolEndIndex === -1) return { host: '', port: '' };
+
+        const protocol = url.substring(0, protocolEndIndex);
+
+        const fragmentStartIndex = url.indexOf('#');
+        const mainPartEndIndex = fragmentStartIndex === -1 ? url.length : fragmentStartIndex;
         
-        switch (protocol) {
-            case 'vmess':
-            case 'vless': {
-                if (url.startsWith('vmess://')) {
-                    const jsonStr = atob(url.substring(8));
-                    const config = JSON.parse(jsonStr);
-                    host = config.add || '';
-                    port = config.port || '';
-                } else { // vless
-                    host = urlObj.hostname;
-                    port = urlObj.port;
-                }
-                break;
-            }
-            case 'ss':
-            case 'ssr': {
-                 const mainPart = urlObj.host;
-                 const atIndex = mainPart.indexOf('@');
-                 const serverPart = atIndex !== -1 ? mainPart.substring(atIndex + 1) : mainPart;
-                 [host, port] = serverPart.split(':');
-                 break;
-            }
-            case 'trojan':
-            case 'tuic':
-            case 'hysteria':
-            case 'hysteria2':
-            case 'hy2':
-            case 'hy':
-            case 'anytls':
-                host = urlObj.hostname;
-                port = urlObj.port;
-                break;
+        let mainPart = url.substring(protocolEndIndex + 3, mainPartEndIndex);
+
+        if (protocol === 'ss' || protocol === 'ssr') {
+             if (mainPart.indexOf('@') === -1) {
+                try {
+                    mainPart = atob(mainPart);
+                } catch(e) { /* 不是有效的 Base64，按原样处理 */ }
+             }
         }
-        return { host: host || '', port: port || '' };
+        
+        const atIndex = mainPart.lastIndexOf('@');
+        let serverPart = atIndex !== -1 ? mainPart.substring(atIndex + 1) : mainPart;
+
+        // [关键修改] 先移除查询参数，再移除路径，确保得到纯净的 "host:port" 部分
+        const queryIndex = serverPart.indexOf('?');
+        if (queryIndex !== -1) {
+            serverPart = serverPart.substring(0, queryIndex);
+        }
+        const pathIndex = serverPart.indexOf('/');
+        if (pathIndex !== -1) {
+            serverPart = serverPart.substring(0, pathIndex);
+        }
+        
+        const lastColonIndex = serverPart.lastIndexOf(':');
+        const lastBracketIndex = serverPart.lastIndexOf(']');
+
+        let host = '';
+        let port = '';
+
+        if (serverPart.startsWith('[') && lastBracketIndex > 0 && lastColonIndex > lastBracketIndex) {
+            host = serverPart.substring(1, lastBracketIndex);
+            port = serverPart.substring(lastColonIndex + 1);
+        } else if (lastColonIndex !== -1) {
+            host = serverPart.substring(0, lastColonIndex);
+            port = serverPart.substring(lastColonIndex + 1);
+        } else {
+            host = serverPart;
+        }
+        
+        return { host, port };
+
     } catch (e) {
-        // Fallback for non-URL compliant strings
-        const match = url.match(/(?:@)?([^:]+):(\d+)/);
-        if (match) {
-            return { host: match[1], port: match[2] };
-        }
+        console.error("提取主机和端口失败:", url, e);
         return { host: '', port: '' };
     }
 }
