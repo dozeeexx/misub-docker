@@ -152,25 +152,48 @@ export function useManualNodes(initialNodesRef, markDirty) {
     manualNodes.value.unshift(...nodes);
     markDirty();
   }
-  
-    function deduplicateNodes() {
+  const getUniqueKey = (url) => {
+    try {
+      if (url.startsWith('vmess://')) {
+        const base64Part = url.substring('vmess://'.length);
+        const decodedString = atob(base64Part);
+        const nodeConfig = JSON.parse(decodedString);
+        
+        // 删除 ps (节点名称) 和 remark 字段，它们不影响连接性
+        delete nodeConfig.ps;
+        delete nodeConfig.remark;
+        
+        // 重新序列化对象，并以此作为唯一键
+        // 通过排序键来确保即使字段顺序不同也能得到相同的结果
+        return 'vmess://' + JSON.stringify(Object.keys(nodeConfig).sort().reduce(
+          (obj, key) => { 
+            obj[key] = nodeConfig[key]; 
+            return obj;
+          }, 
+          {}
+        ));
+      }
+      // 对于其他协议，简单地移除 # 后面的部分
+      const hashIndex = url.indexOf('#');
+      return hashIndex !== -1 ? url.substring(0, hashIndex) : url;
+    } catch (e) {
+      console.error('生成节点唯一键失败，将使用原始URL:', url, e);
+      // 如果解析失败，回退到使用原始URL，避免程序崩溃
+      return url;
+    }
+  };
+
+  function deduplicateNodes() {
     const originalCount = manualNodes.value.length;
-    const seenUrls = new Set();
+    const seenKeys = new Set();
     const uniqueNodes = [];
 
-    const getBaseUrl = (url) => {
-        try {
-            const hashIndex = url.indexOf('#');
-            return hashIndex !== -1 ? url.substring(0, hashIndex) : url;
-        } catch {
-            return url;
-        }
-    };
-
     for (const node of manualNodes.value) {
-      const baseUrl = getBaseUrl(node.url);
-      if (!seenUrls.has(baseUrl)) {
-        seenUrls.add(baseUrl);
+      // 使用新的、更智能的函数来生成唯一键
+      const uniqueKey = getUniqueKey(node.url);
+      
+      if (!seenKeys.has(uniqueKey)) {
+        seenKeys.add(uniqueKey);
         uniqueNodes.push(node);
       }
     }
