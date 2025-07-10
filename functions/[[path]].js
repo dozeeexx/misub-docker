@@ -69,37 +69,68 @@ async function sendTgNotification(settings, message) {
 }
 
 async function handleCronTrigger(env) {
-    console.log("Cron trigger fired. Checking all subscriptions...");
+    console.log("Cron trigger fired. Checking all subscriptions for traffic and node count...");
     const allSubs = await env.MISUB_KV.get(KV_KEY_SUBS, 'json') || [];
     const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || defaultSettings;
     let changesMade = false;
 
+    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//gm;
+
     for (const sub of allSubs) {
         if (sub.url.startsWith('http') && sub.enabled) {
-            // 複用 /api/node_count 的流量獲取邏輯
             try {
+                // --- 並行請求流量和節點內容 ---
                 const trafficRequest = fetch(new Request(sub.url, { 
                     headers: { 'User-Agent': 'Clash for Windows/0.20.39' }, 
                     redirect: "follow",
                     cf: { insecureSkipVerify: true } 
                 }));
-                const response = await Promise.race([trafficRequest, new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))]);
+                const nodeCountRequest = fetch(new Request(sub.url, { 
+                    headers: { 'User-Agent': 'MiSub-Cron-Updater/1.0' }, 
+                    redirect: "follow",
+                    cf: { insecureSkipVerify: true } 
+                }));
+                const [trafficResult, nodeCountResult] = await Promise.allSettled([
+                    Promise.race([trafficRequest, new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))]),
+                    Promise.race([nodeCountRequest, new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))])
+                ]);   
 
-                if (response.ok) {
-                    const userInfoHeader = response.headers.get('subscription-userinfo');
+                if (trafficResult.status === 'fulfilled' && trafficResult.value.ok) {
+                    const userInfoHeader = trafficResult.value.headers.get('subscription-userinfo');
                     if (userInfoHeader) {
                         const info = {};
                         userInfoHeader.split(';').forEach(part => {
                             const [key, value] = part.trim().split('=');
                             if (key && value) info[key] = /^\d+$/.test(value) ? Number(value) : value;
                         });
-                        sub.userInfo = info; // 更新流量信息
+                        sub.userInfo = info; // 更新流量資訊
                         await checkAndNotify(sub, settings, env); // 檢查並發送通知
                         changesMade = true;
                     }
+                } else if (trafficResult.status === 'rejected') {
+                     console.error(`Cron: Failed to fetch traffic for ${sub.name}:`, trafficResult.reason.message);
                 }
+
+                if (nodeCountResult.status === 'fulfilled' && nodeCountResult.value.ok) {
+                    const text = await nodeCountResult.value.text();
+                    let decoded = '';
+                    try { 
+                        // 嘗試 Base64 解碼
+                        decoded = atob(text.replace(/\s/g, '')); 
+                    } catch { 
+                        decoded = text; 
+                    }
+                    const matches = decoded.match(nodeRegex);
+                    if (matches) {
+                        sub.nodeCount = matches.length; // 更新節點數量
+                        changesMade = true;
+                    }
+                } else if (nodeCountResult.status === 'rejected') {
+                    console.error(`Cron: Failed to fetch node list for ${sub.name}:`, nodeCountResult.reason.message);
+                }
+
             } catch(e) {
-                console.error(`Cron: Failed to update ${sub.name}`, e.message);
+                console.error(`Cron: Unhandled error while updating ${sub.name}`, e.message);
             }
         }
     }
@@ -107,9 +138,11 @@ async function handleCronTrigger(env) {
     // 如果有任何通知時間戳被更新，則保存回 KV
     if (changesMade) {
         await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(allSubs));
-        console.log("订阅通知时间戳已更新。");
+        console.log("Subscriptions updated with new traffic info and node counts.");
+    } else {
+        console.log("Cron job finished. No changes detected.");
     }
-    return new Response("Cron 作业完成。", { status: 200 });
+    return new Response("Cron job completed successfully.", { status: 200 });
 }
 
 // --- 认证与API处理的核心函数 (无修改) ---
