@@ -374,6 +374,33 @@ async function handleApiRequest(request, env) {
                 return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
             }
 
+        case '/fetch_external_url': { // New case
+            if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+            const { url: externalUrl } = await request.json();
+            if (!externalUrl || typeof externalUrl !== 'string' || !/^https?:\/\//.test(externalUrl)) {
+                return new Response(JSON.stringify({ error: 'Invalid or missing url' }), { status: 400 });
+            }
+
+            try {
+                const response = await fetch(new Request(externalUrl, {
+                    headers: { 'User-Agent': 'MiSub-Proxy/1.0' }, // Identify as proxy
+                    redirect: "follow",
+                    cf: { insecureSkipVerify: true } // Allow insecure SSL for flexibility
+                }));
+
+                if (!response.ok) {
+                    return new Response(JSON.stringify({ error: `Failed to fetch external URL: ${response.status} ${response.statusText}` }), { status: response.status });
+                }
+
+                const content = await response.text();
+                return new Response(content, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+
+            } catch (e) {
+                console.error(`[API Error /fetch_external_url] Failed to fetch ${externalUrl}:`, e);
+                return new Response(JSON.stringify({ error: `Failed to fetch external URL: ${e.message}` }), { status: 500 });
+            }
+        }
+
         case '/settings': {
             if (request.method === 'GET') {
                 try {

@@ -5,6 +5,14 @@ import { Transition } from 'vue';
 const props = defineProps({
   show: Boolean,
   confirmKeyword: String,
+  confirmText: { // New prop
+    type: String,
+    default: '确认',
+  },
+  confirmDisabled: { // New prop
+    type: Boolean,
+    default: false,
+  },
   // [新增] 尺寸属性，'sm' 为小，'2xl' 为大
   size: {
     type: String,
@@ -64,9 +72,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
             <button @click="emit('update:show', false)" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm rounded-lg transition-colors">取消</button>
             <button 
                 @click="handleConfirm" 
-                :disabled="confirmKeyword && confirmInput !== confirmKeyword"
+                :disabled="(confirmKeyword && confirmInput !== confirmKeyword) || confirmDisabled"
                 class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
-            >确认</button>
+            >{{ confirmText }}</button>
           </div>
         </div>
       </Transition>
