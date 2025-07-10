@@ -17,6 +17,7 @@ export function useSubscriptions(initialSubsRef, markDirty) {
       nodeCount: sub.nodeCount || 0,
       isUpdating: false,
       userInfo: sub.userInfo || null,
+      exclude: sub.exclude || '', // 新增 exclude 属性
     }));
     // [最終修正] 移除此處的自動更新迴圈，以防止本地開發伺服器因併發請求過多而崩潰。
     // subscriptions.value.forEach(sub => handleUpdateNodeCount(sub.id, true)); 
