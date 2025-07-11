@@ -106,6 +106,29 @@ export function extractHostAndPort(url) {
         
         let mainPart = url.substring(protocolEndIndex + 3, mainPartEndIndex);
 
+        // --- VMESS 专用处理逻辑 ---
+        if (protocol === 'vmess') {
+            try {
+                // 移除可能存在的查询参数
+                const queryIndexVmess = mainPart.indexOf('?');
+                const base64Part = queryIndexVmess !== -1 ? mainPart.substring(0, queryIndexVmess) : mainPart;
+
+                // 解码并解析 JSON
+                const decodedString = atob(base64Part);
+                const nodeConfig = JSON.parse(decodedString);
+
+                const host = nodeConfig.add || '';
+                // 确保端口是字符串格式
+                const port = nodeConfig.port ? String(nodeConfig.port) : '';
+                return { host, port };
+            } catch (e) {
+                console.error("Failed to decode VMess URL:", url, e);
+                // 解码失败时的回退显示（与截图中看到的一致）
+                return { host: mainPart.substring(0, 30) + '...', port: 'N/A' }; 
+            }
+        }
+
+        // --- SS/SSR Base64 处理 ---
         if (protocol === 'ss' || protocol === 'ssr') {
              if (mainPart.indexOf('@') === -1) {
                 try {
@@ -114,10 +137,13 @@ export function extractHostAndPort(url) {
              }
         }
         
+        // --- 通用解析逻辑 (适用于 VLESS, Trojan, Socks5, SS/SSR 等) ---
+
+        // 1. 分离用户认证信息和服务器信息
         const atIndex = mainPart.lastIndexOf('@');
         let serverPart = atIndex !== -1 ? mainPart.substring(atIndex + 1) : mainPart;
 
-        // [关键修改] 先移除查询参数，再移除路径，确保得到纯净的 "host:port" 部分
+        // 2. 移除查询参数 (?...) 和路径 (/...)
         const queryIndex = serverPart.indexOf('?');
         if (queryIndex !== -1) {
             serverPart = serverPart.substring(0, queryIndex);
@@ -127,19 +153,21 @@ export function extractHostAndPort(url) {
             serverPart = serverPart.substring(0, pathIndex);
         }
         
+        // 3. 解析 Host 和 Port，兼容 IPv6
         const lastColonIndex = serverPart.lastIndexOf(':');
         const lastBracketIndex = serverPart.lastIndexOf(']');
 
         let host = '';
         let port = '';
 
+        // 处理 IPv6 地址 [address]:port
         if (serverPart.startsWith('[') && lastBracketIndex > 0 && lastColonIndex > lastBracketIndex) {
             host = serverPart.substring(1, lastBracketIndex);
             port = serverPart.substring(lastColonIndex + 1);
-        } else if (lastColonIndex !== -1) {
+        } else if (lastColonIndex !== -1) { // 处理 IPv4 或域名 host:port
             host = serverPart.substring(0, lastColonIndex);
             port = serverPart.substring(lastColonIndex + 1);
-        } else {
+        } else { // 只有 Host，没有 Port
             host = serverPart;
         }
         
