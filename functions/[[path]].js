@@ -825,17 +825,12 @@ async function handleMisubRequest(context) {
         return new Response(base64Content, { headers });
     }
 
-    const callbackToken = await getCallbackToken(env);
-    const callbackPath = profileIdentifier ? `/${token}/${profileIdentifier}` : `/${token}`;
-    const callbackUrl = `${url.protocol}//${url.host}${callbackPath}?target=base64&callback_token=${callbackToken}`;
-    if (url.searchParams.get('callback_token') === callbackToken) {
-        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
-        return new Response(base64Content, { headers });
-    }
-    
+    const dataUri = `data:text/plain;base64,${base64Content}`;
+
     const subconverterUrl = new URL(`https://${effectiveSubConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
-    subconverterUrl.searchParams.set('url', callbackUrl);
+    // 將 url 參數的值從回呼 URL 改為直接包含所有節點內容的 data URI
+    subconverterUrl.searchParams.set('url', dataUri);
     if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') && effectiveSubConfig && effectiveSubConfig.trim() !== '') {
         subconverterUrl.searchParams.set('config', effectiveSubConfig);
     }
