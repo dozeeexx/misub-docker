@@ -603,8 +603,15 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
         <div><label for="sub-edit-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">订阅名称</label><input type="text" id="sub-edit-name" v-model="editingSubscription.name" placeholder="（可选）不填将自动获取" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"></div>
         <div><label for="sub-edit-url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">订阅链接</label><input type="text" id="sub-edit-url" v-model="editingSubscription.url" placeholder="https://..." class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono dark:text-white"></div>
         <div>
-          <label for="sub-edit-exclude" class="block text-sm font-medium text-gray-700 dark:text-gray-300">排除节点 (正则表达式)</label>
-          <textarea id="sub-edit-exclude" v-model="editingSubscription.exclude" placeholder="输入需要排除的节点名称的正则表达式，例如：(过期|官网)" rows="3" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono dark:text-white"></textarea>
+          <label for="sub-edit-exclude" class="block text-sm font-medium text-gray-700 dark:text-gray-300">排除节点</label>
+          <textarea 
+            id="sub-edit-exclude" 
+            v-model="editingSubscription.exclude"
+            placeholder="按名称排除 (正则)，如: (过期|官网)&#10;按协议排除，如: proto:vless,trojan"
+            rows="4" 
+            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono dark:text-white">
+          </textarea>
+          <p class="text-xs text-gray-400 mt-1">每行一条规则，可混合使用协议和名称规则。</p>
         </div>
       </div>
     </template>

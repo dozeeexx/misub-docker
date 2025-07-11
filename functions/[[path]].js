@@ -556,19 +556,50 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
             // 新增：根据 exclude 规则过滤节点
+            // [核心修改] 增强的排除逻辑，支持按协议和名称
             if (sub.exclude && sub.exclude.trim() !== '') {
-                try {
-                    const regex = new RegExp(sub.exclude.trim(), 'i');
-                    validNodes = validNodes.filter(nodeLink => {
+                const excludeRules = sub.exclude.trim().split('\n').map(r => r.trim());
+                const protocolsToExclude = new Set();
+                const nameRegexParts = [];
+
+                // 1. 解析所有规则，分离出协议规则和名称规则
+                excludeRules.forEach(rule => {
+                    if (rule.toLowerCase().startsWith('proto:')) {
+                        const protocols = rule.substring('proto:'.length).split(',').map(p => p.trim().toLowerCase());
+                        protocols.forEach(p => protocolsToExclude.add(p));
+                    } else if (rule) {
+                        nameRegexParts.push(rule);
+                    }
+                });
+
+                const nameRegex = nameRegexParts.length > 0 ? new RegExp(nameRegexParts.join('|'), 'i') : null;
+
+                // 2. 过滤节点列表
+                validNodes = validNodes.filter(nodeLink => {
+                    // 按协议过滤
+                    const protocolMatch = nodeLink.match(/^(.*?):\/\//);
+                    const protocol = protocolMatch ? protocolMatch[1].toLowerCase() : '';
+                    if (protocolsToExclude.has(protocol)) {
+                        return false; // 如果协议在排除列表中，则移除该节点
+                    }
+
+                    // 按名称 (正则表达式) 过滤
+                    if (nameRegex) {
                         const hashIndex = nodeLink.lastIndexOf('#');
-                        if (hashIndex === -1) return true; // 没有节点名称，无法过滤，保留
-                        const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
-                        return !regex.test(nodeName);
-                    });
-                } catch (e) {
-                    console.error(`Invalid regex for subscription ${sub.name}: ${sub.exclude}`, e);
-                    // 正则表达式无效时，不进行过滤，保留所有节点
-                }
+                        if (hashIndex !== -1) {
+                           try {
+                                const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
+                                if (nameRegex.test(nodeName)) {
+                                    return false; // 如果节点名称匹配正则，则移除
+                                }
+                            } catch (e) {
+                                // 忽略解码失败的节点名称
+                            }
+                        }
+                    }
+
+                    return true; // 如果所有规则都未匹配，则保留该节点
+                });
             }
             return (config.prependSubName && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
