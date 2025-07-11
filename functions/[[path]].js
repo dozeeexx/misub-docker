@@ -555,51 +555,90 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             } catch (e) {}
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
-            // 新增：根据 exclude 规则过滤节点
-            // [核心修改] 增强的排除逻辑，支持按协议和名称
+
+            // [核心重構] 引入白名單 (keep:) 和黑名單 (exclude) 模式
             if (sub.exclude && sub.exclude.trim() !== '') {
-                const excludeRules = sub.exclude.trim().split('\n').map(r => r.trim());
-                const protocolsToExclude = new Set();
-                const nameRegexParts = [];
+                const rules = sub.exclude.trim().split('\n').map(r => r.trim()).filter(Boolean);
+                
+                const keepRules = rules.filter(r => r.toLowerCase().startsWith('keep:'));
 
-                // 1. 解析所有规则，分离出协议规则和名称规则
-                excludeRules.forEach(rule => {
-                    if (rule.toLowerCase().startsWith('proto:')) {
-                        const protocols = rule.substring('proto:'.length).split(',').map(p => p.trim().toLowerCase());
-                        protocols.forEach(p => protocolsToExclude.add(p));
-                    } else if (rule) {
-                        nameRegexParts.push(rule);
-                    }
-                });
+                if (keepRules.length > 0) {
+                    // --- 白名單模式 (Inclusion Mode) ---
+                    const nameRegexParts = [];
+                    const protocolsToKeep = new Set();
 
-                const nameRegex = nameRegexParts.length > 0 ? new RegExp(nameRegexParts.join('|'), 'i') : null;
+                    keepRules.forEach(rule => {
+                        const content = rule.substring('keep:'.length).trim();
+                        if (content.toLowerCase().startsWith('proto:')) {
+                            const protocols = content.substring('proto:'.length).split(',').map(p => p.trim().toLowerCase());
+                            protocols.forEach(p => protocolsToKeep.add(p));
+                        } else {
+                            nameRegexParts.push(content);
+                        }
+                    });
 
-                // 2. 过滤节点列表
-                validNodes = validNodes.filter(nodeLink => {
-                    // 按协议过滤
-                    const protocolMatch = nodeLink.match(/^(.*?):\/\//);
-                    const protocol = protocolMatch ? protocolMatch[1].toLowerCase() : '';
-                    if (protocolsToExclude.has(protocol)) {
-                        return false; // 如果协议在排除列表中，则移除该节点
-                    }
+                    const nameRegex = nameRegexParts.length > 0 ? new RegExp(nameRegexParts.join('|'), 'i') : null;
+                    
+                    validNodes = validNodes.filter(nodeLink => {
+                        // 檢查協議是否匹配
+                        const protocolMatch = nodeLink.match(/^(.*?):\/\//);
+                        const protocol = protocolMatch ? protocolMatch[1].toLowerCase() : '';
+                        if (protocolsToKeep.has(protocol)) {
+                            return true;
+                        }
 
-                    // 按名称 (正则表达式) 过滤
-                    if (nameRegex) {
-                        const hashIndex = nodeLink.lastIndexOf('#');
-                        if (hashIndex !== -1) {
-                           try {
-                                const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
-                                if (nameRegex.test(nodeName)) {
-                                    return false; // 如果节点名称匹配正则，则移除
-                                }
-                            } catch (e) {
-                                // 忽略解码失败的节点名称
+                        // 檢查名稱是否匹配
+                        if (nameRegex) {
+                            const hashIndex = nodeLink.lastIndexOf('#');
+                            if (hashIndex !== -1) {
+                                try {
+                                    const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
+                                    if (nameRegex.test(nodeName)) {
+                                        return true;
+                                    }
+                                } catch (e) { /* 忽略解碼錯誤 */ }
                             }
                         }
-                    }
+                        return false; // 白名單模式下，不匹配任何規則則排除
+                    });
 
-                    return true; // 如果所有规则都未匹配，则保留该节点
-                });
+                } else {
+                    // --- 黑名單模式 (Exclusion Mode) ---
+                    const protocolsToExclude = new Set();
+                    const nameRegexParts = [];
+
+                    rules.forEach(rule => {
+                        if (rule.toLowerCase().startsWith('proto:')) {
+                            const protocols = rule.substring('proto:'.length).split(',').map(p => p.trim().toLowerCase());
+                            protocols.forEach(p => protocolsToExclude.add(p));
+                        } else {
+                            nameRegexParts.push(rule);
+                        }
+                    });
+                    
+                    const nameRegex = nameRegexParts.length > 0 ? new RegExp(nameRegexParts.join('|'), 'i') : null;
+
+                    validNodes = validNodes.filter(nodeLink => {
+                        const protocolMatch = nodeLink.match(/^(.*?):\/\//);
+                        const protocol = protocolMatch ? protocolMatch[1].toLowerCase() : '';
+                        if (protocolsToExclude.has(protocol)) {
+                            return false;
+                        }
+
+                        if (nameRegex) {
+                            const hashIndex = nodeLink.lastIndexOf('#');
+                            if (hashIndex !== -1) {
+                                try {
+                                    const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
+                                    if (nameRegex.test(nodeName)) {
+                                        return false;
+                                    }
+                                } catch (e) { /* 忽略解碼錯誤 */ }
+                            }
+                        }
+                        return true;
+                    });
+                }
             }
             return (config.prependSubName && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
