@@ -792,7 +792,7 @@ async function handleMisubRequest(context) {
             }
         }
     }
-    if (!targetFormat) { targetFormat = 'clash'; }
+    if (!targetFormat) { targetFormat = 'base64'; }
 
     if (!url.searchParams.has('callback_token')) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
