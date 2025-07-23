@@ -544,6 +544,18 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             ]);
             if (!response.ok) return '';
             let text = await response.text();
+            let validNodes = [];
+            if (text.trim().startsWith('proxies:') || text.trim().startsWith('proxy-groups:')) {
+                try {
+                    const parsedYaml = yaml.load(text);
+                    if (parsedYaml && Array.isArray(parsedYaml.proxies)) {
+                        return sub.url;
+                    }
+                } catch (e) {
+                    console.error("YAML parsing failed for", sub.name, "falling back to text processing.", e);
+                }
+            }
+
             try {
                 const cleanedText = text.replace(/\s/g, '');
                 if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
@@ -553,7 +565,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
                     text = new TextDecoder('utf-8').decode(bytes);
                 }
             } catch (e) {}
-            let validNodes = text.replace(/\r\n/g, '\n').split('\n')
+            validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
 
             // [核心重構] 引入白名單 (keep:) 和黑名單 (exclude) 模式
@@ -817,8 +829,49 @@ async function handleMisubRequest(context) {
         fakeNodeString = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;
     }
 
-    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
-    const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
+    const subContents = await Promise.all(
+        targetMisubs.map(sub => generateCombinedNodeList(context, config, userAgentHeader, [sub], fakeNodeString))
+    );    
+    const directNodes = [];
+    const converterUrls = [];
+
+    subContents.forEach(content => {
+        if (content.startsWith('http')) {
+            converterUrls.push(content);
+        } else {
+            directNodes.push(content);
+        }
+    });
+    
+    const combinedUrls = converterUrls.join('|');
+    const directNodesContent = directNodes.join('\n');
+
+    let finalUrl;
+
+    if (combinedUrls) {
+        const callbackToken = await getCallbackToken(env);
+        const callbackPath = profileIdentifier ? `/${token}/${profileIdentifier}` : `/${token}`;
+
+        const directNodesCallbackUrl = `${url.protocol}//${url.host}${callbackPath}/direct_nodes?callback_token=${callbackToken}`;
+
+        let combinedUrlForConverter = combinedUrls;
+        if(directNodesContent.trim()){
+            combinedUrlForConverter += '|' + directNodesCallbackUrl;
+        }
+        
+        finalUrl = `https://${effectiveSubConverter}/sub?target=${targetFormat}&url=${encodeURIComponent(combinedUrlForConverter)}&new_name=true`;
+        if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') && effectiveSubConfig && effectiveSubConfig.trim() !== '') {
+            finalUrl += `&config=${encodeURIComponent(effectiveSubConfig)}`;
+        }  
+    } else {
+        const base64Content = btoa(unescape(encodeURIComponent(directNodesContent)));
+        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
+        return new Response(base64Content, { headers });
+    }
+    
+    if (url.pathname.endsWith('/direct_nodes') && url.searchParams.get('callback_token') === await getCallbackToken(env)) {
+        return new Response(directNodesContent);
+    }    
 
     if (targetFormat === 'base64') {
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
