@@ -307,27 +307,88 @@ async function handleApiRequest(request, env) {
 
         case '/misubs': {
             try {
-                const { misubs, profiles } = await request.json();
-                if (typeof misubs === 'undefined' || typeof profiles === 'undefined') {
-                    return new Response(JSON.stringify({ success: false, message: '请求体中缺少 misubs 或 profiles 字段' }), { status: 400 });
-                }
-                
-                const settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || defaultSettings;
-                for (const sub of misubs) {
-                    if (sub.url.startsWith('http')) {
-                        await checkAndNotify(sub, settings, env);
-                    }
+                // 步骤1: 解析请求体
+                let requestData;
+                try {
+                    requestData = await request.json();
+                } catch (parseError) {
+                    console.error('[API Error /misubs] JSON解析失败:', parseError);
+                    return new Response(JSON.stringify({
+                        success: false,
+                        message: '请求数据格式错误，请检查数据格式'
+                    }), { status: 400 });
                 }
 
-                await Promise.all([
-                    env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(misubs)),
-                    env.MISUB_KV.put(KV_KEY_PROFILES, JSON.stringify(profiles))
-                ]);
-                
-                return new Response(JSON.stringify({ success: true, message: '订阅源及订阅组已保存' }));
+                const { misubs, profiles } = requestData;
+
+                // 步骤2: 验证必需字段
+                if (typeof misubs === 'undefined' || typeof profiles === 'undefined') {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        message: '请求体中缺少 misubs 或 profiles 字段'
+                    }), { status: 400 });
+                }
+
+                // 步骤3: 验证数据类型
+                if (!Array.isArray(misubs) || !Array.isArray(profiles)) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        message: 'misubs 和 profiles 必须是数组格式'
+                    }), { status: 400 });
+                }
+
+                // 步骤4: 获取设置（带错误处理）
+                let settings;
+                try {
+                    settings = await env.MISUB_KV.get(KV_KEY_SETTINGS, 'json') || defaultSettings;
+                } catch (settingsError) {
+                    console.error('[API Error /misubs] 获取设置失败:', settingsError);
+                    settings = defaultSettings; // 使用默认设置继续
+                }
+
+                // 步骤5: 处理通知（非阻塞，错误不影响保存）
+                try {
+                    const notificationPromises = misubs
+                        .filter(sub => sub && sub.url && sub.url.startsWith('http'))
+                        .map(sub => checkAndNotify(sub, settings, env).catch(notifyError => {
+                            console.error(`[API Warning /misubs] 通知处理失败 for ${sub.url}:`, notifyError);
+                            // 通知失败不影响保存流程
+                        }));
+
+                    // 并行处理通知，但不等待完成
+                    Promise.all(notificationPromises).catch(e => {
+                        console.error('[API Warning /misubs] 部分通知处理失败:', e);
+                    });
+                } catch (notificationError) {
+                    console.error('[API Warning /misubs] 通知系统错误:', notificationError);
+                    // 继续保存流程
+                }
+
+                // 步骤6: 保存数据到KV存储
+                try {
+                    await Promise.all([
+                        env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(misubs)),
+                        env.MISUB_KV.put(KV_KEY_PROFILES, JSON.stringify(profiles))
+                    ]);
+                } catch (kvError) {
+                    console.error('[API Error /misubs] KV存储写入失败:', kvError);
+                    return new Response(JSON.stringify({
+                        success: false,
+                        message: `数据保存失败: ${kvError.message || '存储服务暂时不可用，请稍后重试'}`
+                    }), { status: 500 });
+                }
+
+                return new Response(JSON.stringify({
+                    success: true,
+                    message: '订阅源及订阅组已保存'
+                }));
+
             } catch (e) {
-                console.error('[API Error /misubs]', 'Failed to parse request or write to KV:', e);
-                return new Response(JSON.stringify({ error: '保存数据失败' }), { status: 500 });
+                console.error('[API Error /misubs] 未预期的错误:', e);
+                return new Response(JSON.stringify({
+                    success: false,
+                    message: `保存失败: ${e.message || '服务器内部错误，请稍后重试'}`
+                }), { status: 500 });
             }
         }
 
