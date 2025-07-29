@@ -123,7 +123,6 @@ export async function saveSettings(settings) {
     }
 }
 
-// {{ AURA-X: Add - 批量节点更新API函数. Approval: 寸止(ID:1735459200). }}
 /**
  * 批量更新订阅的节点信息
  * @param {string[]} subscriptionIds - 要更新的订阅ID数组
