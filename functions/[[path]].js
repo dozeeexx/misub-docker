@@ -704,7 +704,7 @@ async function handleMisubRequest(context) {
         const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
         if (profile && profile.enabled) {
             // Check if the profile has an expiration date and if it's expired
-            let isProfileExpired = false;
+
             if (profile.expiresAt) {
                 const expiryDate = new Date(profile.expiresAt);
                 const now = new Date();
@@ -811,7 +811,7 @@ async function handleMisubRequest(context) {
     let prependedContentForSubconverter = '';
 
     if (isProfileExpired) { // Use the flag set earlier
-        prependedContentForSubconverter = DEFAULT_EXPIRED_VLESS_NODE;
+        prependedContentForSubconverter = DEFAULT_EXPIRED_NODE;
     } else {
         // Otherwise, add traffic remaining info if applicable
         const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
