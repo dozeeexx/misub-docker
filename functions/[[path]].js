@@ -824,34 +824,15 @@ function prependNodeName(link, prefix) {
 // --- 节点列表生成函数 ---
 async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '') {
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//;
-    let manualNodesContent = '';
-    const normalizeVmessLink = (link) => {
-        if (!link.startsWith('vmess://')) return link;
-        try {
-            const base64Part = link.substring('vmess://'.length);
-            const binaryString = atob(base64Part);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-            const jsonString = new TextDecoder('utf-8').decode(bytes);
-            const compactJsonString = JSON.stringify(JSON.parse(jsonString));
-            const newBase64Part = btoa(unescape(encodeURIComponent(compactJsonString)));
-            return 'vmess://' + newBase64Part;
-        } catch (e) {
-            console.error("标准化 vmess 链接失败，将使用原始链接:", link, e);
-            return link;
+    const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
+        if (node.isExpiredNode) {
+            return node.url; // Directly use the URL for expired node
+        } else {
+            return (config.prependSubName) ? prependNodeName(node.url, '手动节点') : node.url;
         }
-    };
-    const httpSubs = misubs.filter(sub => {
-        if (sub.url.toLowerCase().startsWith('http')) return true;
-        manualNodesContent += sub.url + '\n';
-        return false;
-    });
-    const processedManualNodes = manualNodesContent.split('\n')
-        .map(line => line.trim())
-        .filter(line => nodeRegex.test(line))
-        .map(normalizeVmessLink)
-        .map(node => (config.prependSubName) ? prependNodeName(node, '手动节点') : node)
-        .join('\n');
+    }).join('\n');
+
+    const httpSubs = misubs.filter(sub => sub.url.toLowerCase().startsWith('http'));
     const subPromises = httpSubs.map(async (sub) => {
         try {
             const requestHeaders = { 'User-Agent': userAgent };
@@ -863,7 +844,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             let text = await response.text();
             try {
                 const cleanedText = text.replace(/\s/g, '');
-                if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
+                if (cleanedText.length > 20 && /^[A-Za-z0-9+\/=]+$/.test(cleanedText)) {
                     const binaryString = atob(cleanedText);
                     const bytes = new Uint8Array(binaryString.length);
                     for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
@@ -966,11 +947,17 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
     const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
     const uniqueNodesString = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
 
+    // 确保最终的字符串在非空时以换行符结束，以兼容 subconverter
+    let finalNodeList = uniqueNodesString;
+    if (finalNodeList.length > 0 && !finalNodeList.endsWith('\n')) {
+        finalNodeList += '\n';
+    }
+
     // 将虚假节点（如果存在）插入到列表最前面
     if (prependedContent) {
-        return `${prependedContent}\n${uniqueNodesString}`;
+        return `${prependedContent}\n${finalNodeList}`;
     }
-    return uniqueNodesString;
+    return finalNodeList;
 }
 
 // --- [核心修改] 订阅处理函数 ---
@@ -1008,8 +995,9 @@ async function handleMisubRequest(context) {
     let subName = config.FileName;
     let effectiveSubConverter;
     let effectiveSubConfig;
+    let isProfileExpired = false; // Moved declaration here
 
-    const DEFAULT_EXPIRED_VLESS_NODE = "vless://88888888-8888-8888-8888-888888888888@127.0.0.1:1234?encryption=none&security=tls&sni=daoqi.chaoqi.com&fp=random&allowInsecure=1&type=ws&host=daoqi.chaoqi.com&path=%2F%3Fed%3D2560#%E6%82%A8%E7%9A%84%E8%AE%A2%E9%98%85%E5%B7%B2%E5%88%B0%E6%9C%9F";
+    const DEFAULT_EXPIRED_NODE = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent('您的订阅已失效')}`;
 
     if (profileIdentifier) {
 
@@ -1020,31 +1008,35 @@ async function handleMisubRequest(context) {
         const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
         if (profile && profile.enabled) {
             // Check if the profile has an expiration date and if it's expired
+
             if (profile.expiresAt) {
                 const expiryDate = new Date(profile.expiresAt);
                 const now = new Date();
                 if (now > expiryDate) {
                     console.log(`Profile ${profile.name} (ID: ${profile.id}) has expired.`);
-                    return new Response(DEFAULT_EXPIRED_VLESS_NODE, {
-                        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-                    });
+                    isProfileExpired = true;
                 }
             }
 
-            subName = profile.name;
-            const profileSubIds = new Set(profile.subscriptions);
-            const profileNodeIds = new Set(profile.manualNodes);
-            targetMisubs = allMisubs.filter(item => {
-                const isSubscription = item.url.startsWith('http');
-                const isManualNode = !isSubscription;
+            if (isProfileExpired) {
+                subName = profile.name; // Still use profile name for filename
+                targetMisubs = [{ id: 'expired-node', url: DEFAULT_EXPIRED_NODE, name: '您的订阅已到期', isExpiredNode: true }]; // Set expired node as the only targetMisub
+            } else {
+                subName = profile.name;
+                const profileSubIds = new Set(profile.subscriptions);
+                const profileNodeIds = new Set(profile.manualNodes);
+                targetMisubs = allMisubs.filter(item => {
+                    const isSubscription = item.url.startsWith('http');
+                    const isManualNode = !isSubscription;
 
-                // Check if the item belongs to the current profile and is enabled
-                const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) || (isManualNode && profileNodeIds.has(item.id));
-                if (!item.enabled || !belongsToProfile) {
-                    return false;
-                }
-                return true;
-            });
+                    // Check if the item belongs to the current profile and is enabled
+                    const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) || (isManualNode && profileNodeIds.has(item.id));
+                    if (!item.enabled || !belongsToProfile) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
             effectiveSubConverter = profile.subConverter && profile.subConverter.trim() !== '' ? profile.subConverter : config.subConverter;
             effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;
         } else {
@@ -1114,33 +1106,56 @@ async function handleMisubRequest(context) {
     if (!url.searchParams.has('callback_token')) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
         const country = request.headers.get('CF-IPCountry') || 'N/A';
-        let message = `🛰️ *订阅被访问* 🛰️\n\n*客户端:* \`${userAgentHeader}\`\n*IP 地址:* \`${clientIp} (${country})\`\n*请求格式:* \`${targetFormat}\``;
-        if (profileIdentifier) { message += `\n*订阅组:* \`${subName}\``; }
+        const domain = url.hostname;
+        let message = `🛰️ *订阅被访问* 🛰️\n\n*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*IP 地址:* \`${clientIp} (${country})\`\n*请求格式:* \`${targetFormat}\``;
+        
+        if (profileIdentifier) {
+            message += `\n*订阅组:* \`${subName}\``;
+            const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
+            if (profile && profile.expiresAt) {
+                const expiryDateStr = new Date(profile.expiresAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+                message += `\n*到期时间:* \`${expiryDateStr}\``;
+            }
+        }
+        
         context.waitUntil(sendTgNotification(config, message));
     }
 
-    let fakeNodeString = '';
-    const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
-        if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
-            const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
-            const remaining = sub.userInfo.total - used;
-            return acc + Math.max(0, remaining);
+    let prependedContentForSubconverter = '';
+
+    if (isProfileExpired) { // Use the flag set earlier
+        prependedContentForSubconverter = ''; // Expired node is now in targetMisubs
+    } else {
+        // Otherwise, add traffic remaining info if applicable
+        const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
+            if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
+                const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
+                const remaining = sub.userInfo.total - used;
+                return acc + Math.max(0, remaining);
+            }
+            return acc;
+        }, 0);
+        if (totalRemainingBytes > 0) {
+            const formattedTraffic = formatBytes(totalRemainingBytes);
+            const fakeNodeName = `流量剩余 ≫ ${formattedTraffic}`;
+            prependedContentForSubconverter = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;
         }
-        return acc;
-    }, 0);
-    if (totalRemainingBytes > 0) {
-        const formattedTraffic = formatBytes(totalRemainingBytes);
-        const fakeNodeName = `流量剩余 ≫ ${formattedTraffic}`;
-        fakeNodeString = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;
     }
 
-    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
-    const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
+    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, prependedContentForSubconverter);
 
     if (targetFormat === 'base64') {
+        let contentToEncode;
+        if (isProfileExpired) {
+            contentToEncode = DEFAULT_EXPIRED_NODE + '\n'; // Return the expired node link for base64 clients
+        } else {
+            contentToEncode = combinedNodeList;
+        }
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
-        return new Response(base64Content, { headers });
+        return new Response(btoa(unescape(encodeURIComponent(contentToEncode))), { headers });
     }
+
+    const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     const callbackToken = await getCallbackToken(env);
     const callbackPath = profileIdentifier ? `/${token}/${profileIdentifier}` : `/${token}`;
@@ -1212,7 +1227,7 @@ export async function onRequest(context) {
 
         return response;
     }
-    const isStaticAsset = /^\/(assets|@vite|src)\//.test(url.pathname) || /\.\w+$/.test(url.pathname);
+    const isStaticAsset = /^\/(assets|@vite|src)\/./.test(url.pathname) || /\.\w+$/.test(url.pathname);
     if (!isStaticAsset && url.pathname !== '/') {
         return handleMisubRequest(context);
     }
