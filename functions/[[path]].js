@@ -630,11 +630,17 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
     const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
     const uniqueNodesString = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
 
+    // 确保最终的字符串在非空时以换行符结束，以兼容 subconverter
+    let finalNodeList = uniqueNodesString;
+    if (finalNodeList.length > 0 && !finalNodeList.endsWith('\n')) {
+        finalNodeList += '\n';
+    }
+
     // 将虚假节点（如果存在）插入到列表最前面
     if (prependedContent) {
-        return `${prependedContent}\n${uniqueNodesString}`;
+        return `${prependedContent}\n${finalNodeList}`;
     }
-    return uniqueNodesString;
+    return finalNodeList;
 }
 
 // --- [核心修改] 订阅处理函数 ---
@@ -810,7 +816,6 @@ async function handleMisubRequest(context) {
     }
 
     const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, prependedContentForSubconverter);
-    const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     if (targetFormat === 'base64') {
         let contentToEncode;
@@ -822,6 +827,8 @@ async function handleMisubRequest(context) {
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(btoa(unescape(encodeURIComponent(contentToEncode))), { headers });
     }
+
+    const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     const callbackToken = await getCallbackToken(env);
     const callbackPath = profileIdentifier ? `/${token}/${profileIdentifier}` : `/${token}`;
