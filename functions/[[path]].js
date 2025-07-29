@@ -691,6 +691,7 @@ async function handleMisubRequest(context) {
     let subName = config.FileName;
     let effectiveSubConverter;
     let effectiveSubConfig;
+    let isProfileExpired = false; // Moved declaration here
 
     const DEFAULT_EXPIRED_VLESS_NODE = "vless://88888888-8888-8888-8888-888888888888@127.0.0.1:1234?encryption=none&security=tls&sni=daoqi.chaoqi.com&fp=random&allowInsecure=1&type=ws&host=daoqi.chaoqi.com&path=%2F%3Fed%3D2560#%E6%82%A8%E7%9A%84%E8%AE%A2%E9%98%85%E5%B7%B2%E5%88%B0%E6%9C%9F";
 
@@ -733,21 +734,6 @@ async function handleMisubRequest(context) {
                     return true;
                 });
             }
-
-            subName = profile.name;
-            const profileSubIds = new Set(profile.subscriptions);
-            const profileNodeIds = new Set(profile.manualNodes);
-            targetMisubs = allMisubs.filter(item => {
-                const isSubscription = item.url.startsWith('http');
-                const isManualNode = !isSubscription;
-
-                // Check if the item belongs to the current profile and is enabled
-                const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) || (isManualNode && profileNodeIds.has(item.id));
-                if (!item.enabled || !belongsToProfile) {
-                    return false;
-                }
-                return true;
-            });
             effectiveSubConverter = profile.subConverter && profile.subConverter.trim() !== '' ? profile.subConverter : config.subConverter;
             effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;
         } else {
@@ -824,14 +810,7 @@ async function handleMisubRequest(context) {
 
     let prependedContentForSubconverter = '';
 
-    // If profile is expired, set the expired node as prepended content
-    // The `isProfileExpired` variable is set within the `if (profileIdentifier)` block above.
-    // We need to ensure it's accessible here, or re-evaluate the condition.
-    // Given the previous change, `targetMisubs` will be empty if expired.
-    // So, we can check if `targetMisubs` is empty and if a profile was identified.
-    const isProfileExpired = profileIdentifier && targetMisubs.length === 0 && allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier)?.expiresAt && (new Date() > new Date(allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier).expiresAt));
-
-    if (isProfileExpired) {
+    if (isProfileExpired) { // Use the flag set earlier
         prependedContentForSubconverter = DEFAULT_EXPIRED_VLESS_NODE;
     } else {
         // Otherwise, add traffic remaining info if applicable
