@@ -787,12 +787,13 @@ async function handleMisubRequest(context) {
     if (!targetFormat) { targetFormat = 'base64'; }
 
     if (!url.searchParams.has('callback_token')) {
-        const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
-        const country = request.headers.get('CF-IPCountry') || 'N/A';
-        const domain = url.hostname;
-        let message = `🛰️ *订阅被访问* 🛰️\n\n*域名:* `${domain}`\n*客户端:* `${userAgentHeader}`\n*IP 地址:* `${clientIp} (${country})`\n*请求格式:* `${targetFormat}``;
-        if (profileIdentifier) { message += `\n*订阅组:* `${subName}``; }
-        context.waitUntil(sendTgNotification(config, message));
+        const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';        const country = request.headers.get('CF-IPCountry') || 'N/A';        const domain = url.hostname;        let message = `🛰️ *订阅被访问* 🛰️
+
+*域名:* `${domain}`
+*客户端:* `${userAgentHeader}`
+*IP 地址:* `${clientIp} (${country})`
+*请求格式:* `${targetFormat}``;        if (profileIdentifier) { message += `
+*订阅组:* `${subName}``; }        context.waitUntil(sendTgNotification(config, message));
     }
 
     let prependedContentForSubconverter = '';
