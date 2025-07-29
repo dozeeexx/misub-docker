@@ -527,7 +527,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             let text = await response.text();
             try {
                 const cleanedText = text.replace(/\s/g, '');
-                if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
+                if (cleanedText.length > 20 && /^[A-Za-z0-9+\/=]+$/.test(cleanedText)) {
                     const binaryString = atob(cleanedText);
                     const bytes = new Uint8Array(binaryString.length);
                     for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
@@ -787,13 +787,21 @@ async function handleMisubRequest(context) {
     if (!targetFormat) { targetFormat = 'base64'; }
 
     if (!url.searchParams.has('callback_token')) {
-        const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';        const country = request.headers.get('CF-IPCountry') || 'N/A';        const domain = url.hostname;        let message = `🛰️ *订阅被访问* 🛰️
-
-*域名:* `${domain}`
-*客户端:* `${userAgentHeader}`
-*IP 地址:* `${clientIp} (${country})`
-*请求格式:* `${targetFormat}``;        if (profileIdentifier) { message += `
-*订阅组:* `${subName}``; }        context.waitUntil(sendTgNotification(config, message));
+        const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+        const country = request.headers.get('CF-IPCountry') || 'N/A';
+        const domain = url.hostname;
+        let message = `🛰️ *订阅被访问* 🛰️\n\n*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*IP 地址:* \`${clientIp} (${country})\`\n*请求格式:* \`${targetFormat}\``;
+        
+        if (profileIdentifier) {
+            message += `\n*订阅组:* \`${subName}\``;
+            const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
+            if (profile && profile.expiresAt) {
+                const expiryDateStr = new Date(profile.expiresAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+                message += `\n*到期时间:* \`${expiryDateStr}\``;
+            }
+        }
+        
+        context.waitUntil(sendTgNotification(config, message));
     }
 
     let prependedContentForSubconverter = '';
@@ -892,7 +900,7 @@ export async function onRequest(context) {
     if (url.pathname.startsWith('/api/')) {
         return handleApiRequest(request, env);
     }
-    const isStaticAsset = /^\/(assets|@vite|src)\//.test(url.pathname) || /\.\w+$/.test(url.pathname);
+    const isStaticAsset = /^\/(assets|@vite|src)\/./.test(url.pathname) || /\.\w+$/.test(url.pathname);
     if (!isStaticAsset && url.pathname !== '/') {
         return handleMisubRequest(context);
     }
