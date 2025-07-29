@@ -789,8 +789,9 @@ async function handleMisubRequest(context) {
     if (!url.searchParams.has('callback_token')) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
         const country = request.headers.get('CF-IPCountry') || 'N/A';
-        let message = `🛰️ *订阅被访问* 🛰️\n\n*客户端:* \`${userAgentHeader}\`\n*IP 地址:* \`${clientIp} (${country})\`\n*请求格式:* \`${targetFormat}\``;
-        if (profileIdentifier) { message += `\n*订阅组:* \`${subName}\``; }
+        const domain = url.hostname;
+        let message = `🛰️ *订阅被访问* 🛰️\n\n*域名:* `${domain}`\n*客户端:* `${userAgentHeader}`\n*IP 地址:* `${clientIp} (${country})`\n*请求格式:* `${targetFormat}``;
+        if (profileIdentifier) { message += `\n*订阅组:* `${subName}``; }
         context.waitUntil(sendTgNotification(config, message));
     }
 
