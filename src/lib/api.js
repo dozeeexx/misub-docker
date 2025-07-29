@@ -122,3 +122,31 @@ export async function saveSettings(settings) {
         }
     }
 }
+
+// {{ AURA-X: Add - 批量节点更新API函数. Approval: 寸止(ID:1735459200). }}
+/**
+ * 批量更新订阅的节点信息
+ * @param {string[]} subscriptionIds - 要更新的订阅ID数组
+ * @returns {Promise<Object>} - 更新结果
+ */
+export async function batchUpdateNodes(subscriptionIds) {
+    try {
+        const response = await fetch('/api/batch_update_nodes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscriptionIds })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.message || errorData.error || `服务器错误 (${response.status})`;
+            return { success: false, message: errorMessage };
+        }
+
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error("Failed to batch update nodes:", error);
+        return { success: false, message: '网络请求失败，请检查网络连接' };
+    }
+}
