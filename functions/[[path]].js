@@ -507,34 +507,15 @@ function prependNodeName(link, prefix) {
 // --- 节点列表生成函数 ---
 async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '') {
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//;
-    let manualNodesContent = '';
-    const normalizeVmessLink = (link) => {
-        if (!link.startsWith('vmess://')) return link;
-        try {
-            const base64Part = link.substring('vmess://'.length);
-            const binaryString = atob(base64Part);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-            const jsonString = new TextDecoder('utf-8').decode(bytes);
-            const compactJsonString = JSON.stringify(JSON.parse(jsonString));
-            const newBase64Part = btoa(unescape(encodeURIComponent(compactJsonString)));
-            return 'vmess://' + newBase64Part;
-        } catch (e) {
-            console.error("标准化 vmess 链接失败，将使用原始链接:", link, e);
-            return link;
+    const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
+        if (node.isExpiredNode) {
+            return node.url; // Directly use the URL for expired node
+        } else {
+            return (config.prependSubName) ? prependNodeName(node.url, '手动节点') : node.url;
         }
-    };
-    const httpSubs = misubs.filter(sub => {
-        if (sub.url.toLowerCase().startsWith('http')) return true;
-        manualNodesContent += sub.url + '\n';
-        return false;
-    });
-    const processedManualNodes = manualNodesContent.split('\n')
-        .map(line => line.trim())
-        .filter(line => nodeRegex.test(line))
-        .map(normalizeVmessLink)
-        .map(node => (config.prependSubName) ? prependNodeName(node, '手动节点') : node)
-        .join('\n');
+    }).join('\n');
+
+    const httpSubs = misubs.filter(sub => sub.url.toLowerCase().startsWith('http'));
     const subPromises = httpSubs.map(async (sub) => {
         try {
             const requestHeaders = { 'User-Agent': userAgent };
@@ -716,8 +697,7 @@ async function handleMisubRequest(context) {
 
             if (isProfileExpired) {
                 subName = profile.name; // Still use profile name for filename
-                targetMisubs = []; // No real nodes for expired profile
-                // The expired node will be prepended later
+                targetMisubs = [{ id: 'expired-node', url: DEFAULT_EXPIRED_NODE, name: '您的订阅已到期', isExpiredNode: true }]; // Set expired node as the only targetMisub
             } else {
                 subName = profile.name;
                 const profileSubIds = new Set(profile.subscriptions);
@@ -811,7 +791,7 @@ async function handleMisubRequest(context) {
     let prependedContentForSubconverter = '';
 
     if (isProfileExpired) { // Use the flag set earlier
-        prependedContentForSubconverter = DEFAULT_EXPIRED_NODE;
+        prependedContentForSubconverter = ''; // Expired node is now in targetMisubs
     } else {
         // Otherwise, add traffic remaining info if applicable
         const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
@@ -833,8 +813,14 @@ async function handleMisubRequest(context) {
     const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     if (targetFormat === 'base64') {
+        let contentToEncode;
+        if (isProfileExpired) {
+            contentToEncode = DEFAULT_EXPIRED_NODE + '\n'; // Return the expired node link for base64 clients
+        } else {
+            contentToEncode = combinedNodeList;
+        }
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
-        return new Response(base64Content, { headers });
+        return new Response(btoa(unescape(encodeURIComponent(contentToEncode))), { headers });
     }
 
     const callbackToken = await getCallbackToken(env);
