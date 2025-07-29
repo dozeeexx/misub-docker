@@ -693,7 +693,7 @@ async function handleMisubRequest(context) {
     let effectiveSubConfig;
     let isProfileExpired = false; // Moved declaration here
 
-    const DEFAULT_EXPIRED_VLESS_NODE = "vless://88888888-8888-8888-8888-888888888888@127.0.0.1:1234?encryption=none&security=tls&sni=daoqi.chaoqi.com&fp=random&allowInsecure=1&type=ws&host=daoqi.chaoqi.com&path=%2F%3Fed%3D2560#%E6%82%A8%E7%9A%84%E8%AE%A2%E9%98%85%E5%B7%B2%E5%88%B0%E6%9C%9F";
+    const DEFAULT_EXPIRED_NODE = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent('您的订阅已到期')}`;
 
     if (profileIdentifier) {
 
