@@ -527,7 +527,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             let text = await response.text();
             try {
                 const cleanedText = text.replace(/\s/g, '');
-                if (cleanedText.length > 20 && /^[A-Za-z0-9+/=]+$/.test(cleanedText)) {
+                if (cleanedText.length > 20 && /^[A-Za-z0-9+\/=]+$/.test(cleanedText)) {
                     const binaryString = atob(cleanedText);
                     const bytes = new Uint8Array(binaryString.length);
                     for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
@@ -789,8 +789,16 @@ async function handleMisubRequest(context) {
     if (!url.searchParams.has('callback_token')) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
         const country = request.headers.get('CF-IPCountry') || 'N/A';
-        let message = `🛰️ *订阅被访问* 🛰️\n\n*客户端:* \`${userAgentHeader}\`\n*IP 地址:* \`${clientIp} (${country})\`\n*请求格式:* \`${targetFormat}\``;
-        if (profileIdentifier) { message += `\n*订阅组:* \`${subName}\``; }
+        const accessedDomain = url.host; // 获取访问域名
+        let message = `🛰️ *订阅被访问* 🛰️\n\n*域名:* \`${accessedDomain}\`\n*客户端:* \`${userAgentHeader}\`\n*IP 地址:* \`${clientIp} (${country})\`\n*请求格式:* \`${targetFormat}\``;
+        if (profileIdentifier) { 
+            message += `\n*订阅组:* \`${subName}\``; 
+            // 检查 profile.expiresAt 是否存在且未过期
+            if (profile && profile.expiresAt && !isProfileExpired) {
+                const expiryDate = new Date(profile.expiresAt);
+                message += `\n*到期时间:* \`${expiryDate.toLocaleDateString('zh-CN')}\``;
+            }
+        }
         context.waitUntil(sendTgNotification(config, message));
     }
 
@@ -890,7 +898,7 @@ export async function onRequest(context) {
     if (url.pathname.startsWith('/api/')) {
         return handleApiRequest(request, env);
     }
-    const isStaticAsset = /^\/(assets|@vite|src)\//.test(url.pathname) || /\.\w+$/.test(url.pathname);
+    const isStaticAsset = /^\/(assets|@vite|src)\/./.test(url.pathname) || /\.\w+$/.test(url.pathname);
     if (!isStaticAsset && url.pathname !== '/') {
         return handleMisubRequest(context);
     }
