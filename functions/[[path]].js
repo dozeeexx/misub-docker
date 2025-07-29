@@ -703,15 +703,35 @@ async function handleMisubRequest(context) {
         const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
         if (profile && profile.enabled) {
             // Check if the profile has an expiration date and if it's expired
+            let isProfileExpired = false;
             if (profile.expiresAt) {
                 const expiryDate = new Date(profile.expiresAt);
                 const now = new Date();
                 if (now > expiryDate) {
                     console.log(`Profile ${profile.name} (ID: ${profile.id}) has expired.`);
-                    return new Response(DEFAULT_EXPIRED_VLESS_NODE, {
-                        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-                    });
+                    isProfileExpired = true;
                 }
+            }
+
+            if (isProfileExpired) {
+                subName = profile.name; // Still use profile name for filename
+                targetMisubs = []; // No real nodes for expired profile
+                // The expired node will be prepended later
+            } else {
+                subName = profile.name;
+                const profileSubIds = new Set(profile.subscriptions);
+                const profileNodeIds = new Set(profile.manualNodes);
+                targetMisubs = allMisubs.filter(item => {
+                    const isSubscription = item.url.startsWith('http');
+                    const isManualNode = !isSubscription;
+
+                    // Check if the item belongs to the current profile and is enabled
+                    const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) || (isManualNode && profileNodeIds.has(item.id));
+                    if (!item.enabled || !belongsToProfile) {
+                        return false;
+                    }
+                    return true;
+                });
             }
 
             subName = profile.name;
@@ -802,22 +822,35 @@ async function handleMisubRequest(context) {
         context.waitUntil(sendTgNotification(config, message));
     }
 
-    let fakeNodeString = '';
-    const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
-        if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
-            const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
-            const remaining = sub.userInfo.total - used;
-            return acc + Math.max(0, remaining);
+    let prependedContentForSubconverter = '';
+
+    // If profile is expired, set the expired node as prepended content
+    // The `isProfileExpired` variable is set within the `if (profileIdentifier)` block above.
+    // We need to ensure it's accessible here, or re-evaluate the condition.
+    // Given the previous change, `targetMisubs` will be empty if expired.
+    // So, we can check if `targetMisubs` is empty and if a profile was identified.
+    const isProfileExpired = profileIdentifier && targetMisubs.length === 0 && allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier)?.expiresAt && (new Date() > new Date(allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier).expiresAt));
+
+    if (isProfileExpired) {
+        prependedContentForSubconverter = DEFAULT_EXPIRED_VLESS_NODE;
+    } else {
+        // Otherwise, add traffic remaining info if applicable
+        const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
+            if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
+                const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
+                const remaining = sub.userInfo.total - used;
+                return acc + Math.max(0, remaining);
+            }
+            return acc;
+        }, 0);
+        if (totalRemainingBytes > 0) {
+            const formattedTraffic = formatBytes(totalRemainingBytes);
+            const fakeNodeName = `流量剩余 ≫ ${formattedTraffic}`;
+            prependedContentForSubconverter = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;
         }
-        return acc;
-    }, 0);
-    if (totalRemainingBytes > 0) {
-        const formattedTraffic = formatBytes(totalRemainingBytes);
-        const fakeNodeName = `流量剩余 ≫ ${formattedTraffic}`;
-        fakeNodeString = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;
     }
 
-    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, fakeNodeString);
+    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, prependedContentForSubconverter);
     const base64Content = btoa(unescape(encodeURIComponent(combinedNodeList)));
 
     if (targetFormat === 'base64') {
