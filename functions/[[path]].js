@@ -277,14 +277,11 @@ async function handleCronTrigger(env) {
         }
     }
 
-    // {{ AURA-X: Modify - 使用条件写入替代无条件写入. Approval: 寸止(ID:1735459200). }}
-    // 使用条件写入，只在数据真正变更时写入KV
-    const wasWritten = await conditionalKVPut(env, KV_KEY_SUBS, allSubs, originalSubs);
-
-    if (wasWritten) {
+    if (changesMade) {
+        await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(allSubs));
         console.log("Subscriptions updated with new traffic info and node counts.");
     } else {
-        console.log("Cron job finished. No changes detected, KV write skipped.");
+        console.log("Cron job finished. No changes detected.");
     }
     return new Response("Cron job completed successfully.", { status: 200 });
 }
@@ -511,19 +508,10 @@ async function handleApiRequest(request, env) {
                 // {{ AURA-X: Modify - 使用条件写入优化数据保存. Approval: 寸止(ID:1735459200). }}
                 // 步骤6: 保存数据到KV存储（使用条件写入）
                 try {
-                    // 并行读取当前数据用于比较
-                    const [currentSubs, currentProfiles] = await Promise.all([
-                        env.MISUB_KV.get(KV_KEY_SUBS, 'json').then(res => res || []),
-                        env.MISUB_KV.get(KV_KEY_PROFILES, 'json').then(res => res || [])
-                    ]);
-
-                    // 并行执行条件写入
-                    const [subsWritten, profilesWritten] = await Promise.all([
-                        conditionalKVPut(env, KV_KEY_SUBS, misubs, currentSubs),
-                        conditionalKVPut(env, KV_KEY_PROFILES, profiles, currentProfiles)
-                    ]);
-
-                    console.log(`[KV Optimized] Subs written: ${subsWritten}, Profiles written: ${profilesWritten}`);
+                    await Promise.all([
+                    env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(misubs)),
+                    env.MISUB_KV.put(KV_KEY_PROFILES, JSON.stringify(profiles))
+                ]);
                 } catch (kvError) {
                     console.error('[API Error /misubs] KV存储写入失败:', kvError);
                     return new Response(JSON.stringify({
@@ -614,8 +602,7 @@ async function handleApiRequest(request, env) {
                             subToUpdate.nodeCount = result.count;
                             subToUpdate.userInfo = result.userInfo;
 
-                            // 使用条件写入，只在数据真正变更时写入
-                            await conditionalKVPut(env, KV_KEY_SUBS, allSubs, originalSubs);
+                            await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(allSubs));
                         }
                     }
                     
@@ -760,16 +747,10 @@ async function handleApiRequest(request, env) {
                     const finalSettings = { ...oldSettings, ...newSettings };
 
                     // {{ AURA-X: Modify - 使用条件写入优化设置保存. Approval: 寸止(ID:1735459200). }}
-                    // 使用条件写入，只在设置真正变更时写入
-                    const wasWritten = await conditionalKVPut(env, KV_KEY_SETTINGS, finalSettings, oldSettings);
-
-                    if (wasWritten) {
-                        const message = `⚙️ *MiSub 设置更新* ⚙️\n\n您的 MiSub 应用设置已成功更新。`;
-                        await sendTgNotification(finalSettings, message);
-                        console.log('[KV Optimized] Settings updated and notification sent.');
-                    } else {
-                        console.log('[KV Optimized] Settings unchanged, no notification sent.');
-                    }
+                    await env.MISUB_KV.put(KV_KEY_SETTINGS, JSON.stringify(finalSettings));
+                    
+                    const message = `⚙️ *MiSub 设置更新* ⚙️\n\n您的 MiSub 应用设置已成功更新。`;
+                    await sendTgNotification(finalSettings, message);
 
                     return new Response(JSON.stringify({ success: true, message: '设置已保存' }));
                 } catch (e) {
@@ -1216,15 +1197,6 @@ export async function onRequest(context) {
 
     if (url.pathname.startsWith('/api/')) {
         const response = await handleApiRequest(request, env);
-
-        // {{ AURA-X: Add - 在API请求结束时刷新待写入数据. Approval: 寸止(ID:1735459200). }}
-        // 在API请求结束时，确保所有待写入的数据都被处理
-        try {
-            await batchWriteManager.flushAll(env);
-        } catch (error) {
-            console.warn('[Batch Write] Failed to flush pending writes:', error);
-        }
-
         return response;
     }
     const isStaticAsset = /^\/(assets|@vite|src)\/./.test(url.pathname) || /\.\w+$/.test(url.pathname);
