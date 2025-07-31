@@ -1,4 +1,5 @@
 import yaml from 'js-yaml';
+import { StorageFactory, DataMigrator, STORAGE_TYPES } from './storage-adapter.js';
 
 const OLD_KV_KEY = 'misub_data_v1';
 const KV_KEY_SUBS = 'misub_subscriptions_v1';
@@ -149,7 +150,17 @@ class BatchWriteManager {
 // 全局批量写入管理器实例
 const batchWriteManager = new BatchWriteManager();
 
-// --- [新] 默认设置中增加通知阈值 ---
+/**
+ * 获取存储适配器实例
+ * @param {Object} env - Cloudflare 环境对象
+ * @returns {Promise<Object>} 存储适配器实例
+ */
+async function getStorageAdapter(env) {
+    const storageType = await StorageFactory.getStorageType(env);
+    return StorageFactory.createAdapter(env, storageType);
+}
+
+// --- [新] 默认设置中增加通知阈值和存储类型 ---
 const defaultSettings = {
   FileName: 'MiSub',
   mytoken: 'auto',
@@ -157,8 +168,9 @@ const defaultSettings = {
   subConverter: 'url.v1.mk',
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full.ini',
   prependSubName: true,
-  NotifyThresholdDays: 3, 
-  NotifyThresholdPercent: 90 
+  NotifyThresholdDays: 3,
+  NotifyThresholdPercent: 90,
+  storageType: 'kv' // 新增：数据存储类型，默认 KV，可选 'd1'
 };
 
 const formatBytes = (bytes, decimals = 2) => {
@@ -374,6 +386,45 @@ async function checkAndNotify(sub, settings, env) {
 async function handleApiRequest(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
+    // [新增] 数据存储迁移接口 (KV -> D1)
+    if (path === '/migrate_to_d1') {
+        if (!await authMiddleware(request, env)) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+        }
+        try {
+            if (!env.MISUB_DB) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    message: 'D1 数据库未配置，请检查 wrangler.toml 配置'
+                }), { status: 400 });
+            }
+
+            const migrationResult = await DataMigrator.migrateKVToD1(env);
+
+            if (migrationResult.errors.length > 0) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    message: '迁移过程中出现错误',
+                    details: migrationResult.errors,
+                    partialSuccess: migrationResult
+                }), { status: 500 });
+            }
+
+            return new Response(JSON.stringify({
+                success: true,
+                message: '数据已成功迁移到 D1 数据库',
+                details: migrationResult
+            }), { status: 200 });
+
+        } catch (error) {
+            console.error('[API Error /migrate_to_d1]', error);
+            return new Response(JSON.stringify({
+                success: false,
+                message: `迁移失败: ${error.message}`
+            }), { status: 500 });
+        }
+    }
+
     // [新增] 安全的、可重复执行的迁移接口
     if (path === '/migrate') {
         if (!await authMiddleware(request, env)) { return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }); }
