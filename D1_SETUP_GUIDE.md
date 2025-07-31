@@ -42,7 +42,14 @@ preview_database_id = "your-actual-database-id-here"  # 同样替换为实际的
 
 ```bash
 # 执行数据库初始化脚本
-wrangler d1 execute misub-database --file=schema.sql
+wrangler d1 execute misub --file=schema.sql
+```
+
+**如果您已经创建过数据库但遇到表结构问题，请执行修复脚本：**
+
+```bash
+# 修复现有数据库表结构
+wrangler d1 execute misub --file=fix_d1_schema.sql
 ```
 
 ### 4. 部署应用
@@ -104,6 +111,18 @@ A: 检查 D1 数据库是否正确配置，并查看浏览器控制台的错误�
 
 **Q: 切换存储类型后数据丢失**
 A: 不同存储类型的数据是独立的，切换前请先进行数据迁移
+
+**Q: 数据迁移时出现 "table settings has no column named id" 错误**
+A: 这是数据库表结构问题，请执行修复脚本：
+```bash
+wrangler d1 execute misub --file=fix_d1_schema.sql
+```
+
+**Q: 保存设置时提示 "保存设置失败"**
+A: 这通常是因为 KV 写入限制或存储类型配置问题：
+1. 如果使用 KV 存储，可能遇到写入限制，建议迁移到 D1
+2. 如果已迁移到 D1，请确保数据库表结构正确
+3. 检查浏览器控制台的详细错误信息
 
 ### 验证配置
 

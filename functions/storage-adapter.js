@@ -228,9 +228,34 @@ export class StorageFactory {
      */
     static async getStorageType(env) {
         try {
-            // 先尝试从 KV 读取设置（因为设置可能还在 KV 中）
-            const settings = await env.MISUB_KV.get(DATA_KEYS.SETTINGS, 'json');
-            return settings?.storageType || STORAGE_TYPES.KV;
+            // 先尝试从 KV 读取设置
+            let settings = null;
+            try {
+                settings = await env.MISUB_KV.get(DATA_KEYS.SETTINGS, 'json');
+            } catch (kvError) {
+                console.warn('[Storage] Failed to read from KV:', kvError.message);
+            }
+
+            // 如果 KV 中有设置且指定了存储类型，使用它
+            if (settings?.storageType) {
+                return settings.storageType;
+            }
+
+            // 如果 KV 中没有设置或没有存储类型，尝试从 D1 读取
+            if (env.MISUB_DB) {
+                try {
+                    const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
+                    const d1Settings = await d1Adapter.get(DATA_KEYS.SETTINGS);
+                    if (d1Settings?.storageType) {
+                        return d1Settings.storageType;
+                    }
+                } catch (d1Error) {
+                    console.warn('[Storage] Failed to read from D1:', d1Error.message);
+                }
+            }
+
+            // 默认使用 KV
+            return STORAGE_TYPES.KV;
         } catch (error) {
             console.error('[Storage] Failed to get storage type:', error);
             return STORAGE_TYPES.KV;
