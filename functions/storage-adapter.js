@@ -76,12 +76,12 @@ class D1StorageAdapter {
 
     async get(key, type = 'json') {
         try {
-            // 根据 key 确定查询的表
-            const { table, id } = this._parseKey(key);
-            
+            // 根据 key 确定查询的表和字段
+            const { table, queryField, queryValue } = this._parseKey(key);
+
             const result = await this.db.prepare(
-                `SELECT data FROM ${table} WHERE id = ?`
-            ).bind(id).first();
+                `SELECT ${table === 'settings' ? 'value as data' : 'data'} FROM ${table} WHERE ${queryField} = ?`
+            ).bind(queryValue).first();
 
             if (!result) return null;
 
@@ -94,13 +94,22 @@ class D1StorageAdapter {
 
     async put(key, value) {
         try {
-            const { table, id } = this._parseKey(key);
+            const { table, queryField, queryValue } = this._parseKey(key);
             const data = typeof value === 'string' ? value : JSON.stringify(value);
 
-            await this.db.prepare(`
-                INSERT OR REPLACE INTO ${table} (id, data, updated_at) 
-                VALUES (?, ?, CURRENT_TIMESTAMP)
-            `).bind(id, data).run();
+            if (table === 'settings') {
+                // settings 表使用 key-value 结构
+                await this.db.prepare(`
+                    INSERT OR REPLACE INTO ${table} (key, value, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                `).bind(queryValue, data).run();
+            } else {
+                // subscriptions 和 profiles 表使用 id-data 结构
+                await this.db.prepare(`
+                    INSERT OR REPLACE INTO ${table} (id, data, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                `).bind(queryValue, data).run();
+            }
 
             return true;
         } catch (error) {
@@ -111,11 +120,11 @@ class D1StorageAdapter {
 
     async delete(key) {
         try {
-            const { table, id } = this._parseKey(key);
-            
+            const { table, queryField, queryValue } = this._parseKey(key);
+
             await this.db.prepare(
-                `DELETE FROM ${table} WHERE id = ?`
-            ).bind(id).run();
+                `DELETE FROM ${table} WHERE ${queryField} = ?`
+            ).bind(queryValue).run();
 
             return true;
         } catch (error) {
@@ -127,16 +136,20 @@ class D1StorageAdapter {
     async list(prefix) {
         try {
             // D1 中的 list 操作需要根据前缀查询相应的表
-            const tables = ['subscriptions', 'profiles', 'settings'];
+            const tables = [
+                { name: 'subscriptions', keyField: 'id' },
+                { name: 'profiles', keyField: 'id' },
+                { name: 'settings', keyField: 'key' }
+            ];
             const keys = [];
 
             for (const table of tables) {
                 const results = await this.db.prepare(
-                    `SELECT id FROM ${table}`
+                    `SELECT ${table.keyField} FROM ${table.name}`
                 ).all();
 
                 results.results.forEach(row => {
-                    const key = this._buildKey(table, row.id);
+                    const key = this._buildKey(table.name, row[table.keyField]);
                     if (key.startsWith(prefix)) {
                         keys.push({ name: key });
                     }
@@ -151,33 +164,33 @@ class D1StorageAdapter {
     }
 
     /**
-     * 解析 key，确定对应的表和 ID
+     * 解析 key，确定对应的表、查询字段和查询值
      */
     _parseKey(key) {
         if (key === DATA_KEYS.SUBSCRIPTIONS) {
-            return { table: 'subscriptions', id: 'main' };
+            return { table: 'subscriptions', queryField: 'id', queryValue: 'main' };
         } else if (key === DATA_KEYS.PROFILES) {
-            return { table: 'profiles', id: 'main' };
+            return { table: 'profiles', queryField: 'id', queryValue: 'main' };
         } else if (key === DATA_KEYS.SETTINGS) {
-            return { table: 'settings', id: 'main' };
+            return { table: 'settings', queryField: 'key', queryValue: 'main' };
         } else {
-            // 处理其他格式的 key
-            return { table: 'settings', id: key };
+            // 处理其他格式的 key，默认作为 settings 表的 key
+            return { table: 'settings', queryField: 'key', queryValue: key };
         }
     }
 
     /**
      * 构建 key
      */
-    _buildKey(table, id) {
-        if (table === 'subscriptions' && id === 'main') {
+    _buildKey(table, keyValue) {
+        if (table === 'subscriptions' && keyValue === 'main') {
             return DATA_KEYS.SUBSCRIPTIONS;
-        } else if (table === 'profiles' && id === 'main') {
+        } else if (table === 'profiles' && keyValue === 'main') {
             return DATA_KEYS.PROFILES;
-        } else if (table === 'settings' && id === 'main') {
+        } else if (table === 'settings' && keyValue === 'main') {
             return DATA_KEYS.SETTINGS;
         } else {
-            return id;
+            return keyValue;
         }
     }
 }
