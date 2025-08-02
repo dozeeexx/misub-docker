@@ -36,14 +36,16 @@ onMounted(() => {
   >
     <Header :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
 
-    <main class="flex-grow overflow-y-auto">
+    <main 
+      class="flex-grow"
+      :class="{
+        'flex items-center justify-center': sessionState !== 'loggedIn' && sessionState !== 'loading',
+        'overflow-y-auto': sessionState === 'loggedIn' || sessionState === 'loading'
+      }"
+    >
       <DashboardSkeleton v-if="sessionState === 'loading'" />
-      
       <Dashboard v-else-if="sessionState === 'loggedIn' && initialData" :data="initialData" />
-      
-      <div v-else class="h-full flex items-center justify-center">
-        <Login :login="login" />
-      </div>
+      <Login v-else :login="login" />
     </main>
     
     <Toast :show="toastState.id" :message="toastState.message" :type="toastState.type" />
