@@ -1,7 +1,10 @@
 <script setup>
+import { storeToRefs } from 'pinia';
 import { useThemeStore } from '../stores/theme.js';
 
-const { theme, toggleTheme } = useThemeStore();
+const store = useThemeStore();
+const { theme } = storeToRefs(store);
+const { toggleTheme } = store;
 </script>
 
 <template>
