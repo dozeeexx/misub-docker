@@ -5,7 +5,9 @@ import { fetchSettings, saveSettings, migrateToD1 } from '../lib/api.js';
 import { useToastStore } from '../stores/toast.js';
 
 const props = defineProps({
-  show: Boolean
+  show: Boolean,
+  exportBackup: Function,
+  importBackup: Function,
 });
 
 const emit = defineEmits(['update:show']);
@@ -241,6 +243,29 @@ watch(() => props.show, (newValue) => {
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 将现有 KV 数据迁移到 D1 数据库，解决写入限制问题
               </p>
+            </div>
+          </div>
+        </div>
+        <!-- 数据管理 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">数据管理</label>
+          <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-3">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              将会话数据（订阅、节点、订阅组）导出为 JSON 文件进行备份，或从备份文件中恢复。
+            </p>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button
+                @click="props.exportBackup"
+                class="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors duration-200"
+              >
+                导出备份
+              </button>
+              <button
+                @click="props.importBackup"
+                class="w-full px-4 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-md transition-colors duration-200"
+              >
+                导入备份
+              </button>
             </div>
           </div>
         </div>

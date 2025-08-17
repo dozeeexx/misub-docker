@@ -183,6 +183,70 @@ const handleDeduplicateNodes = () => {
     deduplicateNodes();
     showToast('已完成去重，请手动保存', 'success');
 };
+
+// --- Backup & Restore ---
+const exportBackup = () => {
+  try {
+    const backupData = {
+      subscriptions: subscriptions.value,
+      manualNodes: manualNodes.value,
+      profiles: profiles.value,
+    };
+
+    const jsonString = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+    a.download = `misub-backup-${timestamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('备份已成功导出', 'success');
+  } catch (error) {
+    console.error('Backup export failed:', error);
+    showToast('备份导出失败', 'error');
+  }
+};
+
+const importBackup = () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+
+  input.onchange = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!data || !Array.isArray(data.subscriptions) || !Array.isArray(data.manualNodes) || !Array.isArray(data.profiles)) {
+          throw new Error('无效的备份文件格式');
+        }
+
+        if (confirm('这将覆盖您当前的所有数据（需要手动保存后生效），确定要从备份中恢复吗？')) {
+          subscriptions.value = data.subscriptions;
+          manualNodes.value = data.manualNodes;
+          profiles.value = data.profiles;
+          markDirty();
+          showToast('数据已从备份恢复，请点击“保存更改”以持久化', 'success');
+          uiStore.hide(); // Close settings modal after import
+        }
+      } catch (error) {
+        console.error('Backup import failed:', error);
+        showToast(`备份导入失败: ${error.message}`, 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+};
 const handleBulkImport = (importText) => {
   if (!importText) return;
   const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
@@ -399,7 +463,11 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
     </template>
   </Modal>
   
-  <SettingsModal v-model:show="uiStore.isSettingsModalVisible" />
+  <SettingsModal 
+    v-model:show="uiStore.isSettingsModalVisible" 
+    :export-backup="exportBackup"
+    :import-backup="importBackup"
+  />
   <SubscriptionImportModal :show="showSubscriptionImportModal" @update:show="showSubscriptionImportModal = $event" :add-nodes-from-bulk="addNodesFromBulk" />
 </template>
 
