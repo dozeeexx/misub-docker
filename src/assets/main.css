@@ -71,3 +71,23 @@ button:active {
     /* 点击时轻微缩放，提供物理反馈 */
     transform: scale(0.95);
 }
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  /* 确保移动端的按钮有足够的点击区域 */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* 移动端的卡片按钮组更容易操作 */
+  .shrink-0.flex.items-center.gap-1 {
+    gap: 0.5rem;
+  }
+  
+  /* 移动端的按钮图标稍微大一点 */
+  .shrink-0.flex.items-center.gap-1 svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
