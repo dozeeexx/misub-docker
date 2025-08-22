@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import draggable from 'vuedraggable';
 import Card from './Card.vue';
 
@@ -30,6 +30,21 @@ const handleDeleteAll = () => {
   emit('deleteAll');
   showSubsMoreMenu.value = false;
 }
+
+// 添加点击外部关闭下拉菜单的功能
+const handleClickOutside = (event) => {
+  if (subsMoreMenuRef.value && !subsMoreMenuRef.value.contains(event.target)) {
+    showSubsMoreMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <template>
