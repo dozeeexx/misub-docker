@@ -46,7 +46,16 @@ const formatBytes = (bytes, decimals = 2) => {
 
 const trafficInfo = computed(() => {
   const info = props.misub.userInfo;
-  if (!info || info.total === undefined || info.download === undefined || info.upload === undefined) return null;
+  const REASONABLE_TRAFFIC_LIMIT_BYTES = 10 * 1024 * 1024 * 1024 * 1024 * 1024; // 10 PB
+  if (
+    !info ||
+    info.total === undefined ||
+    info.download === undefined ||
+    info.upload === undefined ||
+    info.total >= REASONABLE_TRAFFIC_LIMIT_BYTES
+  ) {
+    return null;
+  }  
   const total = info.total;
   const used = info.download + info.upload;
   const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
@@ -60,11 +69,15 @@ const trafficInfo = computed(() => {
 const expiryInfo = computed(() => {
     const expireTimestamp = props.misub.userInfo?.expire;
     if (!expireTimestamp) return null;
+    const REASONABLE_EXPIRY_LIMIT_DAYS = 365 * 10;
     const expiryDate = new Date(expireTimestamp * 1000);
     const now = new Date();
     expiryDate.setHours(0, 0, 0, 0);
     now.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+    if (diffDays > REASONABLE_EXPIRY_LIMIT_DAYS) {
+        return null;
+    }  
     let style = 'text-gray-500 dark:text-gray-400';
     if (diffDays < 0) style = 'text-red-500 font-bold';
     else if (diffDays <= 7) style = 'text-yellow-500 font-semibold';
