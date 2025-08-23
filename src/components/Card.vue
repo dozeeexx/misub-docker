@@ -70,7 +70,7 @@ const expiryInfo = computed(() => {
     else if (diffDays <= 7) style = 'text-yellow-500 font-semibold';
     return {
         date: expiryDate.toLocaleDateString(),
-        daysRemaining: diffDays < 0 ? '已過期' : (diffDays === 0 ? '今天到期' : `${diffDays} 天后`),
+        daysRemaining: diffDays < 0 ? '已过期' : (diffDays === 0 ? '今天到期' : `${diffDays} 天后`),
         style: style
     };
 });
