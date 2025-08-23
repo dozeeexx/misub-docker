@@ -26,8 +26,14 @@ export function useSubscriptions(initialSubsRef, markDirty) {
   const enabledSubscriptions = computed(() => subscriptions.value.filter(s => s.enabled));
   
   const totalRemainingTraffic = computed(() => {
+    const REASONABLE_TRAFFIC_LIMIT_BYTES = 10 * 1024 * 1024 * 1024 * 1024 * 1024; // 10 PB in bytes
     return subscriptions.value.reduce((acc, sub) => {
-      if (sub.enabled && sub.userInfo && sub.userInfo.total > 0) {
+      if (
+        sub.enabled &&
+        sub.userInfo &&
+        sub.userInfo.total > 0 &&
+        sub.userInfo.total < REASONABLE_TRAFFIC_LIMIT_BYTES
+      ) {  
         const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
         const remaining = sub.userInfo.total - used;
         return acc + Math.max(0, remaining);
