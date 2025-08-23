@@ -12,17 +12,17 @@
 
 ```bash
 # 创建 D1 数据库
-wrangler d1 create misub-database
+wrangler d1 create misub
 ```
 
 命令执行后，您会看到类似以下的输出：
 ```
-✅ Successfully created DB 'misub-database' in region APAC
+✅ Successfully created DB 'misub' in region APAC
 Created your database using D1's new storage backend. The new storage backend is not yet recommended for production workloads, but backs up your data via point-in-time restore.
 
 [[d1_databases]]
 binding = "MISUB_DB"
-database_name = "misub-database"
+database_name = "misub"
 database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
 
@@ -33,7 +33,7 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```toml
 [[d1_databases]]
 binding = "MISUB_DB"
-database_name = "misub-database"
+database_name = "misub"
 database_id = "your-actual-database-id-here"  # 替换为实际的数据库 ID
 preview_database_id = "your-actual-database-id-here"  # 同样替换为实际的数据库 ID
 ```
@@ -133,7 +133,7 @@ A: 这通常是因为 KV 写入限制或存储类型配置问题：
 wrangler d1 list
 
 # 查询数据库表
-wrangler d1 execute misub-database --command="SELECT name FROM sqlite_master WHERE type='table';"
+wrangler d1 execute misub --command="SELECT name FROM sqlite_master WHERE type='table';"
 ```
 
 ## 📞 支持

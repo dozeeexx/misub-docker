@@ -112,7 +112,7 @@ MiSub 不仅仅是一个简单的订阅转换工具，它经过了深度的架�
 
 **创建 D1 数据库：**
 ```bash
-wrangler d1 create misub-database
+wrangler d1 create misub
 ```
 
 **在项目设定中绑定 D1 数据库：**
@@ -123,10 +123,10 @@ wrangler d1 create misub-database
 
 **初始化数据库表结构：**
 ```bash
-wrangler d1 execute misub-database --file=schema.sql
+wrangler d1 execute misub --file=schema.sql --remote
 ```
 
-> 💡 **提示**: D1 数据库是可选的，如果不配置，系统会默认使用 KV 存储。配置后可在设置中选择存储类型。
+> 💡 **提示**: D1 数据库是可选的，如果不配置，系统会默认使用 KV 存储。配置后可在设置中选择存储类型。（若无法初始化数据库请前往控制台手动执行schema.sql）
 
 #### 4. 设定环境变数
 
