@@ -187,7 +187,7 @@ const handleDeselectAll = (listName, sourceArray) => {
     </template>
     <template #body>
       <div v-if="localProfile" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label for="profile-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 订阅组名称

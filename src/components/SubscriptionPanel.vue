@@ -93,7 +93,12 @@ onUnmounted(() => {
         </template>
       </draggable>
       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div v-for="subscription in paginatedSubscriptions" :key="subscription.id">
+          <div 
+              v-for="(subscription, index) in paginatedSubscriptions"
+              :key="subscription.id"
+              class="list-item-animation"
+              :style="{ '--delay-index': index }"
+          >   
               <Card 
                   :misub="subscription" 
                   @delete="handleDelete(subscription.id)" 
