@@ -51,7 +51,8 @@ async function conditionalKVPut(env, key, newData, oldData = null) {
             oldData = await env.MISUB_KV.get(key, 'json');
         } catch (error) {
             console.warn(`Failed to read old data for key ${key}:`, error);
-            // 读取失败时，为安全起见执行写入
+            // 读取失败时，为安全起见执行写入，但记录警告
+            console.warn(`[KV Optimized] Performing write without comparison due to read failure for key ${key}`);
             await env.MISUB_KV.put(key, JSON.stringify(newData));
             return true;
         }
@@ -121,6 +122,12 @@ class BatchWriteManager {
         const writeTask = this.writeQueue.get(key);
         if (!writeTask) return;
 
+        // 清理定时器
+        if (this.debounceTimers.has(key)) {
+            clearTimeout(this.debounceTimers.get(key));
+            this.debounceTimers.delete(key);
+        }
+
         try {
             const wasWritten = await conditionalKVPut(env, key, writeTask.data, writeTask.oldData);
             writeTask.resolve(wasWritten);
@@ -129,9 +136,8 @@ class BatchWriteManager {
             console.error(`[Batch Write] Failed to write key ${key}:`, error);
             writeTask.reject(error);
         } finally {
-            // 清理
+            // 清理队列
             this.writeQueue.delete(key);
-            this.debounceTimers.delete(key);
         }
     }
 
@@ -230,6 +236,7 @@ async function handleCronTrigger(env) {
     const settings = await storageAdapter.get(KV_KEY_SETTINGS) || defaultSettings;
 
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//gm;
+    let changesMade = false; // 修复: 声明changesMade变量
 
     for (const sub of allSubs) {
         if (sub.url.startsWith('http') && sub.enabled) {
@@ -638,7 +645,7 @@ async function handleApiRequest(request, env) {
                         const text = await nodeCountResponse.text();
                         let decoded = '';
                         try { decoded = atob(text.replace(/\s/g, '')); } catch { decoded = text; }
-                        const lineMatches = decoded.match(/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls):\/\//gm);
+                        const lineMatches = decoded.match(/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//gm);
                         if (lineMatches) {
                             result.count = lineMatches.length;
                         }
