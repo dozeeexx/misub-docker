@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white/60 dark:bg-gray-900/50 rounded-xl p-4 ring-1 ring-inset ring-gray-900/5 dark:ring-white/10">
+  <div class="bg-white/90 dark:bg-gray-900/80 rounded-xl p-4">
     <div class="animate-pulse flex flex-col gap-3">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">

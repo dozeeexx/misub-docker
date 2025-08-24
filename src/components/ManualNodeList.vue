@@ -61,7 +61,7 @@ const protocolStyle = computed(() => {
 
 <template>
   <div
-    class="group w-full bg-white/50 dark:bg-gray-900/60 backdrop-blur-xs rounded-lg shadow-md ring-1 ring-black/5 p-3 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 flex items-center gap-4"
+    class="group w-full bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-lg shadow-md p-3 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 flex items-center gap-4"
     :class="{ 'opacity-50': !node.enabled }"
   >
     <div class="shrink-0 w-6 h-6 flex items-center justify-center bg-gray-200 dark:bg-gray-700/50 rounded-full">

@@ -5,7 +5,7 @@ import SkeletonCard from './SkeletonCard.vue';
 <template>
   <div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div v-for="i in 3" :key="i" class="bg-white/60 dark:bg-gray-900/50 p-5 rounded-xl animate-pulse">
+      <div v-for="i in 3" :key="i" class="bg-white/90 dark:bg-gray-900/80 p-5 rounded-xl animate-pulse">
         <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
         <div class="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded-md mt-2"></div>
       </div>

@@ -39,7 +39,7 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-4 list-item-animation" style="--delay-index: 0">
       <div class="flex items-center gap-3">
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">我的订阅组</h2>
         <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ profiles.length }}</span>
@@ -61,9 +61,11 @@ onUnmounted(() => {
     </div>
     <div v-if="profiles.length > 0" class="space-y-4">
       <ProfileCard
-        v-for="profile in profiles"
+        v-for="(profile, index) in profiles"
         :key="profile.id"
         :profile="profile"
+        class="list-item-animation"
+        :style="{ '--delay-index': index + 1 }"
         @edit="handleEdit(profile.id)"
         @delete="handleDelete(profile.id)"
         @change="handleToggle($event)"

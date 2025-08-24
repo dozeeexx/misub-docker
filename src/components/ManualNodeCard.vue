@@ -68,7 +68,7 @@ const protocolStyle = computed(() => {
 
 <template>
   <div 
-    class="group bg-white/50 dark:bg-gray-900/60 backdrop-blur-xs rounded-xl shadow-lg dark:shadow-2xl ring-1 ring-black/5 p-3 transition-all duration-300 hover:-translate-y-0.5 relative flex items-center justify-between gap-3"
+    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-xl card-shadow hover:card-shadow-hover p-3 smooth-all hover:-translate-y-0.5 relative flex items-center justify-between gap-3"
     :class="{ 'opacity-50': !node.enabled }"
   >
     <div class="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
