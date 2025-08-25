@@ -887,7 +887,7 @@ function getProcessedUserAgent(originalUserAgent) {
 
 // --- 节点列表生成函数 ---
 async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '') {
-    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//g;
+    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//;
     const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
         if (node.isExpiredNode) {
             return node.url; // Directly use the URL for expired node
@@ -1027,7 +1027,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
 }
 
 // --- [核心修改] 订阅处理函数 ---
-// --- [最終修正版 - 變量名校對] 訢閱處理函數 ---
+// --- [最終修正版 - 變量名校對] 訂閱處理函數 ---
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
