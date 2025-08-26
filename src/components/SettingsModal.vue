@@ -19,7 +19,7 @@ const isMigrating = ref(false);
 const settings = ref({});
 
 // 调试相关状态
-const debugUrl = ref('https://qiang0301.xn--chqu2nzsxv3y.com/api/v1/client/subscribe?token=93da06b5cc25ca7172f312245ea77937');
+const debugUrl = ref('');
 const debugLoading = ref(false);
 const debugResult = ref('');
 
