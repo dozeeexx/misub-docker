@@ -874,14 +874,7 @@ function prependNodeName(link, prefix) {
  * @returns {string} - 处理后的用户代理字符串
  */
 function getProcessedUserAgent(originalUserAgent) {
-    const ua = originalUserAgent.toLowerCase();
-    
-    // 检测需要设置为 clash-verge/v2.3.1 的客户端
-    if (ua.includes('clash-verge') || ua.includes('mihomo') || ua.includes('shellcrash')) {
-        return 'clash-verge/v2.3.1';
-    }
-    
-    // 其他客户端保持原始用户代理
+    // 保持原始 User-Agent，移除所有特殊处理
     return originalUserAgent;
 }
 
@@ -1027,7 +1020,6 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
 }
 
 // --- [核心修改] 订阅处理函数 ---
-// --- [最終修正版 - 變量名校對] 訂閱處理函數 ---
 async function handleMisubRequest(context) {
     const { request, env } = context;
     const url = new URL(request.url);
