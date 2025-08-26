@@ -1026,7 +1026,7 @@ function getProcessedUserAgent(originalUserAgent) {
     if (userAgent.includes('clash-verge') || 
         userAgent.includes('mihomo') || 
         userAgent.includes('shellcrash')) {
-        return 'clash-meta/1.17.0';
+        return 'clash-verge/v2.3.1';
     }
     
     // 其他客户端保持原始 User-Agent
