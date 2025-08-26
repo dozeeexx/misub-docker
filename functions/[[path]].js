@@ -1021,11 +1021,11 @@ function getProcessedUserAgent(originalUserAgent) {
     const userAgent = originalUserAgent.toLowerCase();
     
     // 检测是否为clash-verge、mihomo part或shellcrash客户端
-    // 根据测试结果，clash-meta UA可以获取完整节点包括hy2，因此使用clash-meta来绕过机场过滤
+    // 根据实际测试结果，只有v2rayN UA能获取到完整节点包括hy2，因此使用v2rayN来绕过机场过滤
     if (userAgent.includes('clash-verge') || 
         userAgent.includes('mihomo') || 
         userAgent.includes('shellcrash')) {
-        return 'clash-meta/1.17.0';
+        return 'v2rayN/6.45';
     }
     
     // 其他客户端保持原始 User-Agent
