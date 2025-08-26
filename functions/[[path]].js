@@ -1015,16 +1015,21 @@ function isValidBase64(str) {
  * @param {string} originalUserAgent - 原始用户代理字符串
  * @returns {string} - 处理后的用户代理字符串
  */
-function getProcessedUserAgent(originalUserAgent) {
+function getProcessedUserAgent(originalUserAgent, url = '') {
     if (!originalUserAgent) return originalUserAgent;
     
     const userAgent = originalUserAgent.toLowerCase();
     
-    // 检测是否为clash-verge、mihomo part或shellcrash客户端
-    // 根据实际测试结果，只有v2rayN UA能获取到完整节点包括hy2，因此使用v2rayN来绕过机场过滤
+    // 参考CF-Workers-SUB的成功经验：
+    // 对mihomo系列客户端（包括clash-verge、mihomo、meta等）使用v2rayN UA
+    // 这样可以绕过机场对特定客户端的节点过滤，同时保证获取完整节点列表
     if (userAgent.includes('clash-verge') || 
         userAgent.includes('mihomo') || 
-        userAgent.includes('shellcrash')) {
+        userAgent.includes('clash.meta') || 
+        userAgent.includes('meta') ||
+        userAgent.includes('nekobox') ||
+        userAgent.includes('shellcrash') ||
+        userAgent.includes('flyclash')) {
         return 'v2rayN/6.45';
     }
     
@@ -1047,7 +1052,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
     const subPromises = httpSubs.map(async (sub) => {
         try {
             // 使用处理后的用户代理
-            const processedUserAgent = getProcessedUserAgent(userAgent);
+            const processedUserAgent = getProcessedUserAgent(userAgent, sub.url);
             const requestHeaders = { 'User-Agent': processedUserAgent };
             const response = await Promise.race([
                 fetch(new Request(sub.url, { 
@@ -1088,13 +1093,6 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             }
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line));
-
-            // 临时调试: 检查hy2节点识别
-            const hy2Nodes = validNodes.filter(node => /^(hysteria2|hy2):\/\//.test(node));
-            console.log(`[${sub.name}] 原始有效节点: ${validNodes.length}, hy2节点: ${hy2Nodes.length}`);
-            if (hy2Nodes.length > 0) {
-                console.log(`[${sub.name}] hy2节点示例:`, hy2Nodes.slice(0, 3));
-            }
 
             // [核心重構] 引入白名單 (keep:) 和黑名單 (exclude) 模式
             if (sub.exclude && sub.exclude.trim() !== '') {
@@ -1181,13 +1179,6 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
                 }
             }
             
-            // 临时调试: 检查过滤后的hy2节点
-            const finalHy2Nodes = validNodes.filter(node => /^(hysteria2|hy2):\/\//.test(node));
-            console.log(`[${sub.name}] 过滤后有效节点: ${validNodes.length}, hy2节点: ${finalHy2Nodes.length}`);
-            if (sub.exclude && sub.exclude.trim() !== '') {
-                console.log(`[${sub.name}] 使用了过滤规则:`, sub.exclude);
-            }
-            
             return (config.prependSubName && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
@@ -1200,15 +1191,6 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
     const processedSubContents = await Promise.all(subPromises);
     const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
     const uniqueNodesString = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
-    
-    // 最终统计
-    const finalAllNodes = uniqueNodesString.split('\n').filter(line => line.trim());
-    const finalHy2Count = finalAllNodes.filter(node => /^(hysteria2|hy2):\/\//.test(node)).length;
-    console.log(`[最终结果] 总节点: ${finalAllNodes.length}, hy2节点: ${finalHy2Count}`);
-    if (finalHy2Count > 0) {
-        const hy2Examples = finalAllNodes.filter(node => /^(hysteria2|hy2):\/\//.test(node)).slice(0, 3);
-        console.log('[最终结果] hy2节点示例:', hy2Examples);
-    }
 
     // 确保最终的字符串在非空时以换行符结束，以兼容 subconverter
     let finalNodeList = uniqueNodesString;
@@ -1364,17 +1346,6 @@ async function handleMisubRequest(context) {
         }
     }
     if (!targetFormat) { targetFormat = 'base64'; }
-    
-    console.log(`[格式检测] User-Agent: ${userAgentHeader}, 检测到格式: ${targetFormat}`);
-    console.log(`[Subconverter] 使用的后端: ${effectiveSubConverter}`);
-    console.log(`[Subconverter] 使用的配置: ${effectiveSubConfig || '无'}`);
-    
-    // 检查原始节点列表中的hy2节点
-    const originalHy2Count = combinedNodeList.split('\n').filter(line => line.trim() && /^(hysteria2|hy2):\/\//.test(line)).length;
-    console.log(`[原始节点] 发送给subconverter的hy2节点数: ${originalHy2Count}`);
-    if (originalHy2Count > 0) {
-        console.log(`[原始节点] hy2节点示例:`, combinedNodeList.split('\n').filter(line => /^(hysteria2|hy2):\/\//.test(line)).slice(0, 2));
-    }
 
     if (!url.searchParams.has('callback_token')) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
@@ -1458,20 +1429,6 @@ async function handleMisubRequest(context) {
             throw new Error(`Subconverter service returned status: ${subconverterResponse.status}. Body: ${errorBody}`);
         }
         const responseText = await subconverterResponse.text();
-        
-        // 检查转换后的结果
-        if (targetFormat === 'clash') {
-            const hy2CountInResult = (responseText.match(/type: hysteria2/g) || []).length;
-            console.log(`[Subconverter结果] Clash格式中的hy2节点: ${hy2CountInResult}`);
-        } else if (targetFormat === 'base64') {
-            try {
-                const decodedResult = atob(responseText);
-                const hy2CountInResult = decodedResult.split('\n').filter(line => /^(hysteria2|hy2):\/\//.test(line)).length;
-                console.log(`[Subconverter结果] Base64解码后的hy2节点: ${hy2CountInResult}`);
-            } catch (e) {
-                console.log(`[Subconverter结果] 无法解码Base64结果`);
-            }
-        }
         
         const responseHeaders = new Headers(subconverterResponse.headers);
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
