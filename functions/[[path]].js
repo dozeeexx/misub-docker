@@ -992,16 +992,20 @@ function getProcessedUserAgent(originalUserAgent) {
     if (userAgent.includes('clash-verge') || 
         userAgent.includes('mihomo') || 
         userAgent.includes('shellcrash')) {
-        return 'clash-verge/v2.3.1';
+        // 模拟CF-Workers-SUB的处理方式，使用v2rayN前缀
+        const processedUA = `v2rayN/6.45 MiSub/1.0 clash(${originalUserAgent})`;
+        console.log(`[UA处理] 原始: ${originalUserAgent} -> 处理: ${processedUA}`);
+        return processedUA;
     }
     
+    console.log(`[UA处理] 保持原始: ${originalUserAgent}`);
     // 其他客户端保持原始 User-Agent
     return originalUserAgent;
 }
 
 // --- 节点列表生成函数 ---
 async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '') {
-    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//;
+    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//g;
     const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
         if (node.isExpiredNode) {
             return node.url; // Directly use the URL for expired node
@@ -1058,6 +1062,20 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             }
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
+
+            // 调试日志：记录节点过滤前后的数量
+            const totalLines = text.split('\n').length;
+            const hy2NodesCount = validNodes.filter(line => /^(hysteria2|hy2):\/\//.test(line)).length;
+            console.log(`[${sub.url}] 总行数: ${totalLines}, 有效节点: ${validNodes.length}, hy2节点: ${hy2NodesCount}`);
+            
+            // 调试日志：输出用户代理
+            console.log(`[${sub.url}] 使用的User-Agent: ${processedUserAgent}`);
+            
+            // 调试日志：输出hy2节点示例（前3个）
+            const hy2Examples = validNodes.filter(line => /^(hysteria2|hy2):\/\//.test(line)).slice(0, 3);
+            if (hy2Examples.length > 0) {
+                console.log(`[${sub.url}] hy2节点示例:`, hy2Examples);
+            }
 
             // [核心重構] 引入白名單 (keep:) 和黑名單 (exclude) 模式
             if (sub.exclude && sub.exclude.trim() !== '') {
