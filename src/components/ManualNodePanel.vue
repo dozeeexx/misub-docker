@@ -33,7 +33,6 @@ const filteredNodes = computed(() => {
   }
   
   const searchQuery = localSearchTerm.value.toLowerCase().trim();
-  console.log('🔍 组件内搜索:', { searchQuery, totalNodes: props.manualNodes.length });
   
   // 国家/地区代码到中文名称的映射
   const countryCodeMap = {
@@ -100,7 +99,6 @@ const filteredNodes = computed(() => {
     
     // 直接搜索匹配
     if (nodeName.includes(searchQuery)) {
-      console.log('✅ 直接匹配:', node.name);
       return true;
     }
     
@@ -108,7 +106,6 @@ const filteredNodes = computed(() => {
     const alternativeTerms = countryCodeMap[searchQuery] || [];
     for (const altTerm of alternativeTerms) {
       if (nodeName.includes(altTerm.toLowerCase())) {
-        console.log('✅ 地区匹配:', node.name, '匹配词:', altTerm);
         return true;
       }
     }
@@ -116,7 +113,6 @@ const filteredNodes = computed(() => {
     return false;
   });
   
-  console.log('🔍 过滤结果:', { filteredCount: filtered.length, names: filtered.map(n => n.name) });
   return filtered;
 });
 
@@ -198,7 +194,6 @@ onUnmounted(() => {
       <div class="flex items-center gap-3">
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">手动节点</h2>
         <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ manualNodes.length }}</span>
-        <!-- 添加搜索调试信息 -->
         <span v-if="localSearchTerm" class="px-2.5 py-0.5 text-sm font-semibold text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-500/20 rounded-full">
           搜索: "{{ localSearchTerm }}" ({{ filteredNodes.length }}/{{ manualNodes.length }} 结果)
         </span>

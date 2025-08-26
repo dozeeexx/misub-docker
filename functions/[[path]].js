@@ -859,73 +859,6 @@ async function handleApiRequest(request, env) {
             }
         }
 
-        case '/debug_subscription': {
-            if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-            const { url: subUrl, userAgent } = await request.json();
-            if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
-                return new Response(JSON.stringify({ error: 'Invalid or missing url' }), { status: 400 });
-            }
-
-            try {
-                const testUserAgent = userAgent || 'clash-verge/v2.3.1';
-                const response = await fetch(new Request(subUrl, {
-                    headers: { 'User-Agent': testUserAgent },
-                    redirect: "follow",
-                    cf: {
-                        insecureSkipVerify: true,
-                        allowUntrusted: true,
-                        validateCertificate: false
-                    }
-                }));
-
-                if (!response.ok) {
-                    return new Response(JSON.stringify({
-                        error: `HTTP ${response.status}: ${response.statusText}`,
-                        userAgent: testUserAgent
-                    }), { status: response.status });
-                }
-
-                let text = await response.text();
-                let isBase64 = false;
-
-                // 尝试Base64解码
-                try {
-                    const cleanedText = text.replace(/\s/g, '');
-                    if (isValidBase64(cleanedText)) {
-                        const binaryString = atob(cleanedText);
-                        const bytes = new Uint8Array(binaryString.length);
-                        for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-                        text = new TextDecoder('utf-8').decode(bytes);
-                        isBase64 = true;
-                    }
-                } catch (e) {
-                    // 解码失败，使用原始内容
-                }
-
-                const lines = text.split('\n').map(line => line.trim()).filter(line => line);
-                const validNodes = lines.filter(line => /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line));
-                const hy2Nodes = lines.filter(line => /^(hysteria2|hy2):\/\//.test(line));
-
-                return new Response(JSON.stringify({
-                    success: true,
-                    userAgent: testUserAgent,
-                    isBase64: isBase64,
-                    totalLines: lines.length,
-                    validNodes: validNodes.length,
-                    hy2Nodes: hy2Nodes.length,
-                    hy2Examples: hy2Nodes.slice(0, 3),
-                    firstFewLines: lines.slice(0, 5),
-                    firstFewValidNodes: validNodes.slice(0, 5)
-                }), { headers: { 'Content-Type': 'application/json' } });
-
-            } catch (error) {
-                return new Response(JSON.stringify({
-                    error: error.message,
-                    userAgent: testUserAgent || 'clash-verge/v2.3.1'
-                }), { status: 500 });
-            }
-        }
-
         case '/settings': {
             if (request.method === 'GET') {
                 try {
@@ -1012,29 +945,17 @@ function isValidBase64(str) {
 
 /**
  * 根据客户端类型确定合适的用户代理
+ * 参考CF-Workers-SUB的优雅策略：统一使用v2rayN UA获取订阅，简单而有效
  * @param {string} originalUserAgent - 原始用户代理字符串
  * @returns {string} - 处理后的用户代理字符串
  */
 function getProcessedUserAgent(originalUserAgent, url = '') {
     if (!originalUserAgent) return originalUserAgent;
     
-    const userAgent = originalUserAgent.toLowerCase();
-    
-    // 参考CF-Workers-SUB的成功经验：
-    // 对mihomo系列客户端（包括clash-verge、mihomo、meta等）使用v2rayN UA
-    // 这样可以绕过机场对特定客户端的节点过滤，同时保证获取完整节点列表
-    if (userAgent.includes('clash-verge') || 
-        userAgent.includes('mihomo') || 
-        userAgent.includes('clash.meta') || 
-        userAgent.includes('meta') ||
-        userAgent.includes('nekobox') ||
-        userAgent.includes('shellcrash') ||
-        userAgent.includes('flyclash')) {
-        return 'v2rayN/6.45';
-    }
-    
-    // 其他客户端保持原始 User-Agent
-    return originalUserAgent;
+    // CF-Workers-SUB的精华策略：
+    // 统一使用v2rayN UA获取订阅，绕过机场过滤同时保证获取完整节点
+    // 不需要复杂的客户端判断，简单而有效
+    return 'v2rayN/6.45';
 }
 
 // --- 节点列表生成函数 ---

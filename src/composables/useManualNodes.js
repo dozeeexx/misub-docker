@@ -83,14 +83,6 @@ export function useManualNodes(initialNodesRef, markDirty) {
     }
     const searchQuery = searchTerm.value.toLowerCase().trim();
     
-    // 调试信息
-    console.log('🔍 搜索过滤执行:', { 
-      searchTerm: searchTerm.value, 
-      searchQuery, 
-      totalNodes: manualNodes.value.length,
-      sampleNodes: manualNodes.value.slice(0, 3).map(n => n.name)
-    });
-    
     const filtered = manualNodes.value.filter(node => {
       if (!node.name) return false;
       
@@ -98,7 +90,6 @@ export function useManualNodes(initialNodesRef, markDirty) {
       
       // 直接搜索匹配
       if (nodeName.includes(searchQuery)) {
-        console.log('✅ 直接匹配:', node.name);
         return true;
       }
       
@@ -108,18 +99,11 @@ export function useManualNodes(initialNodesRef, markDirty) {
       // 检查节点名称是否包含任何替代词
       for (const altTerm of alternativeTerms) {
         if (nodeName.includes(altTerm.toLowerCase())) {
-          console.log('✅ 替代词匹配:', node.name, '匹配词:', altTerm);
           return true;
         }
       }
       
       return false;
-    });
-    
-    console.log('🔍 搜索结果:', { 
-      filteredCount: filtered.length, 
-      searchQuery,
-      filteredNodes: filtered.map(n => n.name)
     });
     
     return filtered;
