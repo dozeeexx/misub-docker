@@ -1,6 +1,35 @@
 import yaml from 'js-yaml';
 import { StorageFactory, DataMigrator, STORAGE_TYPES } from './storage-adapter.js';
 
+/**
+ * 修复Clash配置中的WireGuard问题
+ * @param {string} content - Clash配置内容
+ * @returns {string} - 修复后的配置内容
+ */
+function clashFix(content) {
+    if (content.includes('wireguard') && !content.includes('remote-dns-resolve')) {
+        let lines;
+        if (content.includes('\r\n')) {
+            lines = content.split('\r\n');
+        } else {
+            lines = content.split('\n');
+        }
+
+        let result = "";
+        for (let line of lines) {
+            if (line.includes('type: wireguard')) {
+                const 备改内容 = `, mtu: 1280, udp: true`;
+                const 正确内容 = `, mtu: 1280, remote-dns-resolve: true, udp: true`;
+                result += line.replace(new RegExp(备改内容, 'g'), 正确内容) + '\n';
+            } else {
+                result += line + '\n';
+            }
+        }
+        return result;
+    }
+    return content;
+}
+
 const OLD_KV_KEY = 'misub_data_v1';
 const KV_KEY_SUBS = 'misub_subscriptions_v1';
 const KV_KEY_PROFILES = 'misub_profiles_v1';
@@ -196,6 +225,7 @@ async function sendTgNotification(settings, message) {
     console.log("TG BotToken or ChatID not set, skipping notification.");
     return false;
   }
+  
   // 为所有消息添加时间戳
   const now = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
   const fullMessage = `${message}\n\n*时间:* \`${now} (UTC+8)\``;
@@ -224,6 +254,73 @@ async function sendTgNotification(settings, message) {
     }
   } catch (error) {
     console.error("发送 TG 通知时出错：", error);
+    return false;
+  }
+}
+
+/**
+ * 增强版TG通知，包含IP地理位置信息
+ * @param {Object} settings - 设置对象
+ * @param {string} type - 通知类型
+ * @param {string} clientIp - 客户端IP
+ * @param {string} additionalData - 额外数据
+ * @returns {Promise<boolean>} - 是否发送成功
+ */
+async function sendEnhancedTgNotification(settings, type, clientIp, additionalData = '') {
+  if (!settings.BotToken || !settings.ChatID) {
+    console.log("TG BotToken or ChatID not set, skipping notification.");
+    return false;
+  }
+  
+  let locationInfo = '';
+  
+  // 尝试获取IP地理位置信息
+  try {
+    const response = await fetch(`http://ip-api.com/json/${clientIp}?lang=zh-CN`, {
+      cf: { 
+        // 设置较短的超时时间，避免影响主请求
+        timeout: 3000 
+      }
+    });
+    
+    if (response.ok) {
+      const ipInfo = await response.json();
+      if (ipInfo.status === 'success') {
+        locationInfo = `\n*国家:* \`${ipInfo.country || 'N/A'}\`\n*城市:* \`${ipInfo.city || 'N/A'}\`\n*ISP:* \`${ipInfo.org || 'N/A'}\`\n*ASN:* \`${ipInfo.as || 'N/A'}\``;
+      }
+    }
+  } catch (error) {
+    console.warn('获取IP位置信息失败:', error.message);
+  }
+  
+  // 构建完整消息
+  const now = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+  const message = `${type}\n\n*IP 地址:* \`${clientIp}\`${locationInfo}\n\n${additionalData}\n\n*时间:* \`${now} (UTC+8)\``;
+  
+  const url = `https://api.telegram.org/bot${settings.BotToken}/sendMessage`;
+  const payload = { 
+    chat_id: settings.ChatID, 
+    text: message, 
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true
+  };
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) {
+      console.log("TG 增强通知已成功发送。");
+      return true;
+    } else {
+      const errorData = await response.json();
+      console.error("发送 TG 增强通知失败：", response.status, errorData);
+      return false;
+    }
+  } catch (error) {
+    console.error("发送 TG 增强通知时出错：", error);
     return false;
   }
 }
@@ -869,12 +966,36 @@ function prependNodeName(link, prefix) {
 }
 
 /**
+ * 检测字符串是否为有效的Base64格式
+ * @param {string} str - 要检测的字符串
+ * @returns {boolean} - 是否为有效Base64
+ */
+function isValidBase64(str) {
+    // 先移除所有空白字符(空格、换行、回车等)
+    const cleanStr = str.replace(/\s/g, '');
+    const base64Regex = /^[A-Za-z0-9+\/=]+$/;
+    return base64Regex.test(cleanStr) && cleanStr.length > 20;
+}
+
+/**
  * 根据客户端类型确定合适的用户代理
  * @param {string} originalUserAgent - 原始用户代理字符串
  * @returns {string} - 处理后的用户代理字符串
  */
 function getProcessedUserAgent(originalUserAgent) {
-    // 保持原始 User-Agent，移除所有特殊处理
+    if (!originalUserAgent) return originalUserAgent;
+    
+    const userAgent = originalUserAgent.toLowerCase();
+    
+    // 检测是否为clash-verge、mihomo part或shellcrash客户端
+    // 根据项目规范，将这些客户端的UA统一设置为clash-verge/v2.3.1
+    if (userAgent.includes('clash-verge') || 
+        userAgent.includes('mihomo') || 
+        userAgent.includes('shellcrash')) {
+        return 'clash-verge/v2.3.1';
+    }
+    
+    // 其他客户端保持原始 User-Agent
     return originalUserAgent;
 }
 
@@ -896,20 +1017,45 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             const processedUserAgent = getProcessedUserAgent(userAgent);
             const requestHeaders = { 'User-Agent': processedUserAgent };
             const response = await Promise.race([
-                fetch(new Request(sub.url, { headers: requestHeaders, redirect: "follow", cf: { insecureSkipVerify: true } })),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 10000))
+                fetch(new Request(sub.url, { 
+                    headers: requestHeaders, 
+                    redirect: "follow", 
+                    cf: { 
+                        insecureSkipVerify: true,
+                        allowUntrusted: true,
+                        validateCertificate: false
+                    } 
+                })),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 8000))
             ]);
-            if (!response.ok) return '';
+            if (!response.ok) {
+                console.warn(`订阅请求失败: ${sub.url}, 状态: ${response.status}`);
+                return '';
+            }
             let text = await response.text();
+            
+            // 智能内容类型检测
+            if (text.includes('proxies:')) {
+                console.log(`检测到Clash配置: ${sub.url}`);
+                // 对于Clash配置，可能需要特殊处理
+                return '';
+            } else if (text.includes('outbounds"') && text.includes('inbounds"')) {
+                console.log(`检测到Singbox配置: ${sub.url}`);
+                // 对于Singbox配置，可能需要特殊处理  
+                return '';
+            }
             try {
                 const cleanedText = text.replace(/\s/g, '');
-                if (cleanedText.length > 20 && /^[A-Za-z0-9+\/=]+$/.test(cleanedText)) {
+                if (isValidBase64(cleanedText)) {
                     const binaryString = atob(cleanedText);
                     const bytes = new Uint8Array(binaryString.length);
                     for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
                     text = new TextDecoder('utf-8').decode(bytes);
+                    console.log(`成功解码Base64订阅: ${sub.url}`);
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn(`Base64解码失败: ${sub.url}`, e);
+            }
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
 
@@ -1000,7 +1146,12 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             return (config.prependSubName && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
-        } catch (e) { return ''; }
+        } catch (e) { 
+            console.error(`订阅处理错误: ${sub.url}`, e.message);
+            // 生成错误节点而不是返回空字符串
+            const errorNodeName = `连接错误-${sub.name || '未知'}`;
+            return `trojan://error@127.0.0.1:8888?security=tls&allowInsecure=1&type=tcp#${encodeURIComponent(errorNodeName)}`;
+        }
     });
     const processedSubContents = await Promise.all(subPromises);
     const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
@@ -1166,18 +1317,20 @@ async function handleMisubRequest(context) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
         const country = request.headers.get('CF-IPCountry') || 'N/A';
         const domain = url.hostname;
-        let message = `🛰️ *订阅被访问* 🛰️\n\n*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*IP 地址:* \`${clientIp} (${country})\`\n*请求格式:* \`${targetFormat}\``;
+        
+        let additionalData = `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`${targetFormat}\``;
         
         if (profileIdentifier) {
-            message += `\n*订阅组:* \`${subName}\``;
+            additionalData += `\n*订阅组:* \`${subName}\``;
             const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
             if (profile && profile.expiresAt) {
                 const expiryDateStr = new Date(profile.expiresAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-                message += `\n*到期时间:* \`${expiryDateStr}\``;
+                additionalData += `\n*到期时间:* \`${expiryDateStr}\``;
             }
         }
         
-        context.waitUntil(sendTgNotification(config, message));
+        // 使用增强版TG通知，包含IP地理位置信息
+        context.waitUntil(sendEnhancedTgNotification(config, '🛰️ *订阅被访问*', clientIp, additionalData));
     }
 
     let prependedContentForSubconverter = '';
