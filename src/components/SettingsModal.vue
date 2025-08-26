@@ -18,6 +18,11 @@ const isSaving = ref(false);
 const isMigrating = ref(false);
 const settings = ref({});
 
+// 临时调试功能状态
+const debugUrl = ref('');
+const debugLoading = ref(false);
+const debugResult = ref('');
+
 const hasWhitespace = computed(() => {
   const fieldsToCkeck = [
     'FileName',
@@ -111,6 +116,54 @@ const handleMigrateToD1 = async () => {
     showToast(`迁移失败: ${error.message}`, 'error');
   } finally {
     isMigrating.value = false;
+  }
+};
+
+// 临时调试功能 - 测试订阅获取
+const testSubscription = async (userAgent) => {
+  if (!debugUrl.value) {
+    showToast('请输入要测试的订阅URL', 'error');
+    return;
+  }
+
+  debugLoading.value = true;
+  debugResult.value = '正在测试...';
+
+  try {
+    const response = await fetch('/api/debug_subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: debugUrl.value,
+        userAgent: userAgent
+      })
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      debugResult.value = `测试结果 (${userAgent}):
+` +
+        `- 总行数: ${result.totalLines}
+` +
+        `- 有效节点: ${result.validNodes}
+` +
+        `- hy2节点: ${result.hy2Nodes}
+` +
+        `- 是否Base64: ${result.isBase64}
+` +
+        `- hy2节点示例:
+${result.hy2Examples?.map(node => '  ' + node).join('\n') || '  无'}
+` +
+        `- 前几行内容:
+${result.firstFewLines?.map(line => '  ' + line).join('\n') || '  无'}`;
+    } else {
+      debugResult.value = `测试失败: ${result.error}`;
+    }
+  } catch (error) {
+    debugResult.value = `请求错误: ${error.message}`;
+  } finally {
+    debugLoading.value = false;
   }
 };
 
@@ -267,6 +320,63 @@ watch(() => props.show, (newValue) => {
               >
                 导入备份
               </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 临时调试工具 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">🔧 节点丢失调试工具</label>
+          <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg space-y-3">
+            <p class="text-xs text-yellow-600 dark:text-yellow-400">
+              ⚠️ 临时调试工具，用于诊断节点丢失问题。测试不同User-Agent对订阅获取的影响。
+            </p>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                测试订阅URL
+              </label>
+              <input
+                v-model="debugUrl"
+                type="url"
+                placeholder="输入要测试的订阅链接"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/90 dark:bg-gray-700/90 text-gray-900 dark:text-white"
+              />
+            </div>
+            
+            <div class="flex flex-wrap gap-2">
+              <button
+                @click="testSubscription('clash-verge/v2.3.1')"
+                :disabled="debugLoading"
+                class="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 text-sm"
+              >
+                测试 Clash-Verge UA
+              </button>
+              <button
+                @click="testSubscription('clash-meta/1.17.0')"
+                :disabled="debugLoading"
+                class="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 text-sm"
+              >
+                测试 Clash-Meta UA (当前使用)
+              </button>
+              <button
+                @click="testSubscription('mihomo/1.8.0')"
+                :disabled="debugLoading"
+                class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm"
+              >
+                测试 Mihomo UA
+              </button>
+              <button
+                @click="testSubscription('v2rayN/6.45')"
+                :disabled="debugLoading"
+                class="px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 text-sm"
+              >
+                测试 v2rayN UA
+              </button>
+            </div>
+            
+            <div v-if="debugResult" class="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm max-h-64 overflow-y-auto">
+              <pre class="whitespace-pre-wrap text-gray-800 dark:text-gray-200">{{ debugResult }}</pre>
             </div>
           </div>
         </div>

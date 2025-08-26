@@ -903,8 +903,7 @@ async function handleApiRequest(request, env) {
                 }
 
                 const lines = text.split('\n').map(line => line.trim()).filter(line => line);
-                const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//g;
-                const validNodes = lines.filter(line => nodeRegex.test(line));
+                const validNodes = lines.filter(line => /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line));
                 const hy2Nodes = lines.filter(line => /^(hysteria2|hy2):\/\//.test(line));
 
                 return new Response(JSON.stringify({
@@ -1026,7 +1025,7 @@ function getProcessedUserAgent(originalUserAgent) {
     if (userAgent.includes('clash-verge') || 
         userAgent.includes('mihomo') || 
         userAgent.includes('shellcrash')) {
-        return 'clash-verge/v2.3.1';
+        return 'clash-meta/1.17.0';
     }
     
     // 其他客户端保持原始 User-Agent
@@ -1068,12 +1067,12 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             }
             let text = await response.text();
             
-            // 智能内容类型检测
-            if (text.includes('proxies:')) {
-                // 对于Clash配置，可能需要特殊处理
+            // 智能内容类型检测 - 更精确的判断条件
+            if (text.includes('proxies:') && text.includes('rules:')) {
+                // 这是完整的Clash配置文件，不是节点列表
                 return '';
-            } else if (text.includes('outbounds"') && text.includes('inbounds"')) {
-                // 对于Singbox配置，可能需要特殊处理  
+            } else if (text.includes('outbounds') && text.includes('inbounds') && text.includes('route')) {
+                // 这是完整的Singbox配置文件，不是节点列表
                 return '';
             }
             try {
@@ -1088,7 +1087,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
                 // Base64解码失败，使用原始内容
             }
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
-                .map(line => line.trim()).filter(line => nodeRegex.test(line));
+                .map(line => line.trim()).filter(line => /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line));
 
             // [核心重構] 引入白名單 (keep:) 和黑名單 (exclude) 模式
             if (sub.exclude && sub.exclude.trim() !== '') {
@@ -1184,8 +1183,13 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
         }
     });
     const processedSubContents = await Promise.all(subPromises);
+    console.log('[DEBUG] 各订阅返回的节点数:', processedSubContents.map((content, i) => `${misubs.filter(sub => sub.url.toLowerCase().startsWith('http'))[i]?.name}: ${content.split('\n').filter(line => line.trim()).length}`));
+    
     const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
+    console.log('[DEBUG] 合并前总节点数:', combinedContent.split('\n').filter(line => line.trim()).length);
+    
     const uniqueNodesString = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
+    console.log('[DEBUG] 去重后节点数:', uniqueNodesString.split('\n').filter(line => line.trim()).length);
 
     // 确保最终的字符串在非空时以换行符结束，以兼容 subconverter
     let finalNodeList = uniqueNodesString;
