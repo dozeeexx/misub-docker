@@ -1236,12 +1236,12 @@ async function handleMisubRequest(context) {
         const ua = userAgentHeader.toLowerCase();
         // 使用陣列來保證比對的優先順序
         const uaMapping = [
-            // 優先匹配 Mihomo/Meta 核心的客戶端
-            ['flyclash', 'base64'],
-            ['mihomo', 'base64'],
-            ['clash.meta', 'base64'],
-            ['clash-verge', 'base64'],
-            ['meta', 'base64'],
+            // Mihomo/Meta 核心的客戶端 - 需要clash格式
+            ['flyclash', 'clash'],
+            ['mihomo', 'clash'],
+            ['clash.meta', 'clash'],
+            ['clash-verge', 'clash'],
+            ['meta', 'clash'],
             
             // 其他客戶端
             ['stash', 'clash'],
