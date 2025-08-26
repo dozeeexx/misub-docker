@@ -891,6 +891,75 @@ async function handleApiRequest(request, env) {
             }
         }
 
+        case '/debug_subscription': {
+            if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+            const { url: subUrl, userAgent } = await request.json();
+            if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
+                return new Response(JSON.stringify({ error: 'Invalid or missing url' }), { status: 400 });
+            }
+
+            try {
+                const testUserAgent = userAgent || 'clash-verge/v2.3.1';
+                const response = await fetch(new Request(subUrl, {
+                    headers: { 'User-Agent': testUserAgent },
+                    redirect: "follow",
+                    cf: {
+                        insecureSkipVerify: true,
+                        allowUntrusted: true,
+                        validateCertificate: false
+                    }
+                }));
+
+                if (!response.ok) {
+                    return new Response(JSON.stringify({
+                        error: `HTTP ${response.status}: ${response.statusText}`,
+                        userAgent: testUserAgent
+                    }), { status: response.status });
+                }
+
+                let text = await response.text();
+                let isBase64 = false;
+
+                // 尝试Base64解码
+                try {
+                    const cleanedText = text.replace(/\s/g, '');
+                    if (isValidBase64(cleanedText)) {
+                        const binaryString = atob(cleanedText);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                        text = new TextDecoder('utf-8').decode(bytes);
+                        isBase64 = true;
+                    }
+                } catch (e) {
+                    // 解码失败，使用原始内容
+                }
+
+                const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+                const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//g;
+                const validNodes = lines.filter(line => nodeRegex.test(line));
+                const hy2Nodes = lines.filter(line => /^(hysteria2|hy2):\/\//.test(line));
+
+                return new Response(JSON.stringify({
+                    success: true,
+                    userAgent: testUserAgent,
+                    isBase64: isBase64,
+                    totalLines: lines.length,
+                    validNodes: validNodes.length,
+                    hy2Nodes: hy2Nodes.length,
+                    hy2Examples: hy2Nodes.slice(0, 3),
+                    firstFewLines: lines.slice(0, 5),
+                    firstFewValidNodes: validNodes.slice(0, 5)
+                }), { headers: { 'Content-Type': 'application/json' } });
+
+            } catch (error) {
+                console.error('[Debug Subscription Error]', error);
+                return new Response(JSON.stringify({
+                    error: error.message,
+                    userAgent: testUserAgent || 'clash-verge/v2.3.1'
+                }), { status: 500 });
+            }
+        }
+
         case '/settings': {
             if (request.method === 'GET') {
                 try {
@@ -992,10 +1061,8 @@ function getProcessedUserAgent(originalUserAgent) {
     if (userAgent.includes('clash-verge') || 
         userAgent.includes('mihomo') || 
         userAgent.includes('shellcrash')) {
-        // 模拟CF-Workers-SUB的处理方式，使用v2rayN前缀
-        const processedUA = `v2rayN/6.45 MiSub/1.0 clash(${originalUserAgent})`;
-        console.log(`[UA处理] 原始: ${originalUserAgent} -> 处理: ${processedUA}`);
-        return processedUA;
+        console.log(`[UA处理] 原始: ${originalUserAgent} -> 统一: clash-verge/v2.3.1`);
+        return 'clash-verge/v2.3.1';
     }
     
     console.log(`[UA处理] 保持原始: ${originalUserAgent}`);
@@ -1038,6 +1105,9 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             }
             let text = await response.text();
             
+            // 调试日志：记录原始内容的前500个字符
+            console.log(`[${sub.url}] 原始内容前500字符:`, text.substring(0, 500));
+            
             // 智能内容类型检测
             if (text.includes('proxies:')) {
                 console.log(`检测到Clash配置: ${sub.url}`);
@@ -1056,6 +1126,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
                     for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
                     text = new TextDecoder('utf-8').decode(bytes);
                     console.log(`成功解码Base64订阅: ${sub.url}`);
+                    console.log(`[${sub.url}] 解码后内容前500字符:`, text.substring(0, 500));
                 }
             } catch (e) {
                 console.warn(`Base64解码失败: ${sub.url}`, e);
@@ -1064,17 +1135,27 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
 
             // 调试日志：记录节点过滤前后的数量
-            const totalLines = text.split('\n').length;
+            const allLines = text.split('\n').map(line => line.trim()).filter(line => line);
+            const totalLines = allLines.length;
             const hy2NodesCount = validNodes.filter(line => /^(hysteria2|hy2):\/\//.test(line)).length;
+            
+            // 调试日志：查找原始内容中的hy2节点
+            const originalHy2Lines = allLines.filter(line => line.includes('hysteria2://') || line.includes('hy2://'));
+            
             console.log(`[${sub.url}] 总行数: ${totalLines}, 有效节点: ${validNodes.length}, hy2节点: ${hy2NodesCount}`);
+            console.log(`[${sub.url}] 原始内容中的hy2节点数量: ${originalHy2Lines.length}`);
             
             // 调试日志：输出用户代理
             console.log(`[${sub.url}] 使用的User-Agent: ${processedUserAgent}`);
             
             // 调试日志：输出hy2节点示例（前3个）
+            if (originalHy2Lines.length > 0) {
+                console.log(`[${sub.url}] 原始内容中的hy2节点示例:`, originalHy2Lines.slice(0, 3));
+            }
+            
             const hy2Examples = validNodes.filter(line => /^(hysteria2|hy2):\/\//.test(line)).slice(0, 3);
             if (hy2Examples.length > 0) {
-                console.log(`[${sub.url}] hy2节点示例:`, hy2Examples);
+                console.log(`[${sub.url}] 过滤后的hy2节点示例:`, hy2Examples);
             }
 
             // [核心重構] 引入白名單 (keep:) 和黑名單 (exclude) 模式
