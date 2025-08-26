@@ -18,11 +18,6 @@ const isSaving = ref(false);
 const isMigrating = ref(false);
 const settings = ref({});
 
-// 调试相关状态
-const debugUrl = ref('');
-const debugLoading = ref(false);
-const debugResult = ref('');
-
 const hasWhitespace = computed(() => {
   const fieldsToCkeck = [
     'FileName',
@@ -119,51 +114,6 @@ const handleMigrateToD1 = async () => {
   }
 };
 
-// 测试订阅函数
-const testSubscription = async (userAgent) => {
-  if (!debugUrl.value) {
-    showToast('请输入要测试的订阅URL', 'error');
-    return;
-  }
-
-  debugLoading.value = true;
-  debugResult.value = '正在测试...';
-
-  try {
-    const response = await fetch('/api/debug_subscription', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url: debugUrl.value,
-        userAgent: userAgent
-      })
-    });
-
-    const result = await response.json();
-    
-    if (result.success) {
-      debugResult.value = `测试结果 (${userAgent}):
-` +
-        `- 总行数: ${result.totalLines}
-` +
-        `- 有效节点: ${result.validNodes}
-` +
-        `- hy2节点: ${result.hy2Nodes}
-` +
-        `- 是否Base64: ${result.isBase64}
-` +
-        `- hy2节点示例: ${JSON.stringify(result.hy2Examples, null, 2)}
-` +
-        `- 前几行内容: ${JSON.stringify(result.firstFewLines, null, 2)}`;
-    } else {
-      debugResult.value = `测试失败: ${result.error}`;
-    }
-  } catch (error) {
-    debugResult.value = `请求错误: ${error.message}`;
-  } finally {
-    debugLoading.value = false;
-  }
-};
 
 // 监听 show 属性，当模态框从隐藏变为显示时，加载设置
 watch(() => props.show, (newValue) => {
@@ -317,56 +267,6 @@ watch(() => props.show, (newValue) => {
               >
                 导入备份
               </button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 调试工具区域 -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">🔧 调试工具</label>
-          <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-3">
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              测试不同User-Agent对订阅获取的影响，帮助诊断节点过滤问题。
-            </p>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                测试订阅URL
-              </label>
-              <input
-                v-model="debugUrl"
-                type="url"
-                placeholder="输入要测试的订阅链接"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/90 dark:bg-gray-700/90 text-gray-900 dark:text-white"
-              />
-            </div>
-            
-            <div class="flex flex-wrap gap-2">
-              <button
-                @click="testSubscription('clash-verge/v2.3.1')"
-                :disabled="debugLoading"
-                class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm"
-              >
-                测试 Clash-Verge UA
-              </button>
-              <button
-                @click="testSubscription('mihomo/1.8.0')"
-                :disabled="debugLoading"
-                class="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 text-sm"
-              >
-                测试 Mihomo UA
-              </button>
-              <button
-                @click="testSubscription('v2rayN/6.45')"
-                :disabled="debugLoading"
-                class="px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 text-sm"
-              >
-                测试 v2rayN UA
-              </button>
-            </div>
-            
-            <div v-if="debugResult" class="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm max-h-64 overflow-y-auto">
-              <pre class="whitespace-pre-wrap text-gray-800 dark:text-gray-200">{{ debugResult }}</pre>
             </div>
           </div>
         </div>

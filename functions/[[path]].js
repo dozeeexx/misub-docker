@@ -79,9 +79,7 @@ async function conditionalKVPut(env, key, newData, oldData = null) {
         try {
             oldData = await env.MISUB_KV.get(key, 'json');
         } catch (error) {
-            console.warn(`Failed to read old data for key ${key}:`, error);
-            // 读取失败时，为安全起见执行写入，但记录警告
-            console.warn(`[KV Optimized] Performing write without comparison due to read failure for key ${key}`);
+            // 读取失败时，为安全起见执行写入
             await env.MISUB_KV.put(key, JSON.stringify(newData));
             return true;
         }
@@ -90,10 +88,8 @@ async function conditionalKVPut(env, key, newData, oldData = null) {
     // 检测数据是否变更
     if (hasDataChanged(oldData, newData)) {
         await env.MISUB_KV.put(key, JSON.stringify(newData));
-        console.log(`[KV Optimized] Data changed for key ${key}, write executed.`);
         return true;
     } else {
-        console.log(`[KV Optimized] No changes detected for key ${key}, write skipped.`);
         return false;
     }
 }
@@ -160,9 +156,7 @@ class BatchWriteManager {
         try {
             const wasWritten = await conditionalKVPut(env, key, writeTask.data, writeTask.oldData);
             writeTask.resolve(wasWritten);
-            console.log(`[Batch Write] Executed write for key ${key}, written: ${wasWritten}`);
         } catch (error) {
-            console.error(`[Batch Write] Failed to write key ${key}:`, error);
             writeTask.reject(error);
         } finally {
             // 清理队列
@@ -178,7 +172,6 @@ class BatchWriteManager {
         const keys = Array.from(this.writeQueue.keys());
         const promises = keys.map(key => this.executeWrite(env, key));
         await Promise.allSettled(promises);
-        console.log(`[Batch Write] Flushed ${keys.length} pending writes`);
     }
 }
 
@@ -222,7 +215,6 @@ const formatBytes = (bytes, decimals = 2) => {
 // --- TG 通知函式 (无修改) ---
 async function sendTgNotification(settings, message) {
   if (!settings.BotToken || !settings.ChatID) {
-    console.log("TG BotToken or ChatID not set, skipping notification.");
     return false;
   }
   
@@ -245,15 +237,11 @@ async function sendTgNotification(settings, message) {
       body: JSON.stringify(payload)
     });
     if (response.ok) {
-      console.log("TG 通知已成功发送。");
       return true;
     } else {
-      const errorData = await response.json();
-      console.error("发送 TG 通知失败：", response.status, errorData);
       return false;
     }
   } catch (error) {
-    console.error("发送 TG 通知时出错：", error);
     return false;
   }
 }
@@ -268,7 +256,6 @@ async function sendTgNotification(settings, message) {
  */
 async function sendEnhancedTgNotification(settings, type, clientIp, additionalData = '') {
   if (!settings.BotToken || !settings.ChatID) {
-    console.log("TG BotToken or ChatID not set, skipping notification.");
     return false;
   }
   
@@ -290,7 +277,7 @@ async function sendEnhancedTgNotification(settings, type, clientIp, additionalDa
       }
     }
   } catch (error) {
-    console.warn('获取IP位置信息失败:', error.message);
+    // 获取IP位置信息失败，忽略错误
   }
   
   // 构建完整消息
@@ -312,21 +299,16 @@ async function sendEnhancedTgNotification(settings, type, clientIp, additionalDa
       body: JSON.stringify(payload)
     });
     if (response.ok) {
-      console.log("TG 增强通知已成功发送。");
       return true;
     } else {
-      const errorData = await response.json();
-      console.error("发送 TG 增强通知失败：", response.status, errorData);
       return false;
     }
   } catch (error) {
-    console.error("发送 TG 增强通知时出错：", error);
     return false;
   }
 }
 
 async function handleCronTrigger(env) {
-    console.log("Cron trigger fired. Checking all subscriptions for traffic and node count...");
     const storageAdapter = await getStorageAdapter(env);
     const originalSubs = await storageAdapter.get(KV_KEY_SUBS) || [];
     const allSubs = JSON.parse(JSON.stringify(originalSubs)); // 深拷贝以便比较
@@ -367,7 +349,7 @@ async function handleCronTrigger(env) {
                         changesMade = true;
                     }
                 } else if (trafficResult.status === 'rejected') {
-                     console.error(`Cron: Failed to fetch traffic for ${sub.name}:`, trafficResult.reason.message);
+                     // 流量请求失败
                 }
 
                 if (nodeCountResult.status === 'fulfilled' && nodeCountResult.value.ok) {
@@ -385,20 +367,17 @@ async function handleCronTrigger(env) {
                         changesMade = true;
                     }
                 } else if (nodeCountResult.status === 'rejected') {
-                    console.error(`Cron: Failed to fetch node list for ${sub.name}:`, nodeCountResult.reason.message);
+                    // 节点数量请求失败
                 }
 
             } catch(e) {
-                console.error(`Cron: Unhandled error while updating ${sub.name}`, e.message);
+                // 请求处理出错
             }
         }
     }
 
     if (changesMade) {
         await storageAdapter.put(KV_KEY_SUBS, allSubs);
-        console.log("Subscriptions updated with new traffic info and node counts.");
-    } else {
-        console.log("Cron job finished. No changes detected.");
     }
     return new Response("Cron job completed successfully.", { status: 200 });
 }
@@ -641,7 +620,6 @@ async function handleApiRequest(request, env) {
                     const storageAdapter = await getStorageAdapter(env);
                     settings = await storageAdapter.get(KV_KEY_SETTINGS) || defaultSettings;
                 } catch (settingsError) {
-                    console.error('[API Error /misubs] 获取设置失败:', settingsError);
                     settings = defaultSettings; // 使用默认设置继续
                 }
 
@@ -650,17 +628,15 @@ async function handleApiRequest(request, env) {
                     const notificationPromises = misubs
                         .filter(sub => sub && sub.url && sub.url.startsWith('http'))
                         .map(sub => checkAndNotify(sub, settings, env).catch(notifyError => {
-                            console.error(`[API Warning /misubs] 通知处理失败 for ${sub.url}:`, notifyError);
                             // 通知失败不影响保存流程
                         }));
 
                     // 并行处理通知，但不等待完成
                     Promise.all(notificationPromises).catch(e => {
-                        console.error('[API Warning /misubs] 部分通知处理失败:', e);
+                        // 部分通知处理失败
                     });
                 } catch (notificationError) {
-                    console.error('[API Warning /misubs] 通知系统错误:', notificationError);
-                    // 继续保存流程
+                    // 通知系统错误，继续保存流程
                 }
 
                 // {{ AURA-X: Modify - 使用存储适配器保存数据. Approval: 寸止(ID:1735459200). }}
@@ -672,7 +648,6 @@ async function handleApiRequest(request, env) {
                         storageAdapter.put(KV_KEY_PROFILES, profiles)
                     ]);
                 } catch (storageError) {
-                    console.error('[API Error /misubs] 存储写入失败:', storageError);
                     return new Response(JSON.stringify({
                         success: false,
                         message: `数据保存失败: ${storageError.message || '存储服务暂时不可用，请稍后重试'}`
@@ -685,7 +660,6 @@ async function handleApiRequest(request, env) {
                 }));
 
             } catch (e) {
-                console.error('[API Error /misubs] 未预期的错误:', e);
                 return new Response(JSON.stringify({
                     success: false,
                     message: `保存失败: ${e.message || '服务器内部错误，请稍后重试'}`
@@ -733,7 +707,7 @@ async function handleApiRequest(request, env) {
                             result.userInfo = info;
                         }
                     } else if (responses[0].status === 'rejected') {
-                        console.error(`Traffic request for ${subUrl} rejected:`, responses[0].reason);
+                        // 流量请求失败
                     }
 
                     // 2. 处理节点数请求的结果
@@ -747,7 +721,7 @@ async function handleApiRequest(request, env) {
                             result.count = lineMatches.length;
                         }
                     } else if (responses[1].status === 'rejected') {
-                        console.error(`Node count request for ${subUrl} rejected:`, responses[1].reason);
+                        // 节点数请求失败
                     }
                     
                     // {{ AURA-X: Modify - 使用存储适配器优化节点计数更新. Approval: 寸止(ID:1735459200). }}
@@ -767,7 +741,7 @@ async function handleApiRequest(request, env) {
                     }
                     
                 } catch (e) {
-                    console.error(`[API Error /node_count] Unhandled exception for URL: ${subUrl}`, e);
+                    // 节点计数处理错误
                 }
                 
                 return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
@@ -795,7 +769,6 @@ async function handleApiRequest(request, env) {
                 return new Response(content, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 
             } catch (e) {
-                console.error(`[API Error /fetch_external_url] Failed to fetch ${externalUrl}:`, e);
                 return new Response(JSON.stringify({ error: `Failed to fetch external URL: ${e.message}` }), { status: 500 });
             }
         }
@@ -816,8 +789,6 @@ async function handleApiRequest(request, env) {
                 const storageAdapter = await getStorageAdapter(env);
                 const allSubs = await storageAdapter.get(KV_KEY_SUBS) || [];
                 const subsToUpdate = allSubs.filter(sub => subscriptionIds.includes(sub.id) && sub.url.startsWith('http'));
-
-                console.log(`[Batch Update] Starting batch update for ${subsToUpdate.length} subscriptions`);
 
                 // 并行更新所有订阅的节点信息
                 const updatePromises = subsToUpdate.map(async (sub) => {
@@ -874,8 +845,6 @@ async function handleApiRequest(request, env) {
                 // 使用存储适配器保存更新后的数据
                 await storageAdapter.put(KV_KEY_SUBS, allSubs);
 
-                console.log(`[Batch Update] Completed batch update, ${updateResults.filter(r => r.success).length} successful`);
-
                 return new Response(JSON.stringify({
                     success: true,
                     message: '批量更新完成',
@@ -883,7 +852,6 @@ async function handleApiRequest(request, env) {
                 }), { headers: { 'Content-Type': 'application/json' } });
 
             } catch (error) {
-                console.error('[API Error /batch_update_nodes]', error);
                 return new Response(JSON.stringify({
                     success: false,
                     message: `批量更新失败: ${error.message}`
@@ -952,7 +920,6 @@ async function handleApiRequest(request, env) {
                 }), { headers: { 'Content-Type': 'application/json' } });
 
             } catch (error) {
-                console.error('[Debug Subscription Error]', error);
                 return new Response(JSON.stringify({
                     error: error.message,
                     userAgent: testUserAgent || 'clash-verge/v2.3.1'
@@ -967,7 +934,6 @@ async function handleApiRequest(request, env) {
                     const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
                     return new Response(JSON.stringify({ ...defaultSettings, ...settings }), { headers: { 'Content-Type': 'application/json' } });
                 } catch (e) {
-                    console.error('[API Error /settings GET]', 'Failed to read settings:', e);
                     return new Response(JSON.stringify({ error: '读取设置失败' }), { status: 500 });
                 }
             }
@@ -986,7 +952,6 @@ async function handleApiRequest(request, env) {
 
                     return new Response(JSON.stringify({ success: true, message: '设置已保存' }));
                 } catch (e) {
-                    console.error('[API Error /settings POST]', 'Failed to parse request or write settings:', e);
                     return new Response(JSON.stringify({ error: '保存设置失败' }), { status: 500 });
                 }
             }
@@ -1057,15 +1022,13 @@ function getProcessedUserAgent(originalUserAgent) {
     const userAgent = originalUserAgent.toLowerCase();
     
     // 检测是否为clash-verge、mihomo part或shellcrash客户端
-    // 根据项目规范，将这些客户端的UA统一设置为clash-verge/v2.3.1
+    // 根据测试结果，只有v2rayN UA能获取完整节点，因此使用v2rayN来绕过机场过滤
     if (userAgent.includes('clash-verge') || 
         userAgent.includes('mihomo') || 
         userAgent.includes('shellcrash')) {
-        console.log(`[UA处理] 原始: ${originalUserAgent} -> 统一: clash-verge/v2.3.1`);
-        return 'clash-verge/v2.3.1';
+        return 'v2rayN/6.45';
     }
     
-    console.log(`[UA处理] 保持原始: ${originalUserAgent}`);
     // 其他客户端保持原始 User-Agent
     return originalUserAgent;
 }
@@ -1105,16 +1068,11 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
             }
             let text = await response.text();
             
-            // 调试日志：记录原始内容的前500个字符
-            console.log(`[${sub.url}] 原始内容前500字符:`, text.substring(0, 500));
-            
             // 智能内容类型检测
             if (text.includes('proxies:')) {
-                console.log(`检测到Clash配置: ${sub.url}`);
                 // 对于Clash配置，可能需要特殊处理
                 return '';
             } else if (text.includes('outbounds"') && text.includes('inbounds"')) {
-                console.log(`检测到Singbox配置: ${sub.url}`);
                 // 对于Singbox配置，可能需要特殊处理  
                 return '';
             }
@@ -1125,38 +1083,12 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
                     const bytes = new Uint8Array(binaryString.length);
                     for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
                     text = new TextDecoder('utf-8').decode(bytes);
-                    console.log(`成功解码Base64订阅: ${sub.url}`);
-                    console.log(`[${sub.url}] 解码后内容前500字符:`, text.substring(0, 500));
                 }
             } catch (e) {
-                console.warn(`Base64解码失败: ${sub.url}`, e);
+                // Base64解码失败，使用原始内容
             }
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim()).filter(line => nodeRegex.test(line));
-
-            // 调试日志：记录节点过滤前后的数量
-            const allLines = text.split('\n').map(line => line.trim()).filter(line => line);
-            const totalLines = allLines.length;
-            const hy2NodesCount = validNodes.filter(line => /^(hysteria2|hy2):\/\//.test(line)).length;
-            
-            // 调试日志：查找原始内容中的hy2节点
-            const originalHy2Lines = allLines.filter(line => line.includes('hysteria2://') || line.includes('hy2://'));
-            
-            console.log(`[${sub.url}] 总行数: ${totalLines}, 有效节点: ${validNodes.length}, hy2节点: ${hy2NodesCount}`);
-            console.log(`[${sub.url}] 原始内容中的hy2节点数量: ${originalHy2Lines.length}`);
-            
-            // 调试日志：输出用户代理
-            console.log(`[${sub.url}] 使用的User-Agent: ${processedUserAgent}`);
-            
-            // 调试日志：输出hy2节点示例（前3个）
-            if (originalHy2Lines.length > 0) {
-                console.log(`[${sub.url}] 原始内容中的hy2节点示例:`, originalHy2Lines.slice(0, 3));
-            }
-            
-            const hy2Examples = validNodes.filter(line => /^(hysteria2|hy2):\/\//.test(line)).slice(0, 3);
-            if (hy2Examples.length > 0) {
-                console.log(`[${sub.url}] 过滤后的hy2节点示例:`, hy2Examples);
-            }
 
             // [核心重構] 引入白名單 (keep:) 和黑名單 (exclude) 模式
             if (sub.exclude && sub.exclude.trim() !== '') {
@@ -1246,8 +1178,7 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
         } catch (e) { 
-            console.error(`订阅处理错误: ${sub.url}`, e.message);
-            // 生成错误节点而不是返回空字符串
+            // 订阅处理错误，生成错误节点
             const errorNodeName = `连接错误-${sub.name || '未知'}`;
             return `trojan://error@127.0.0.1:8888?security=tls&allowInsecure=1&type=tcp#${encodeURIComponent(errorNodeName)}`;
         }
@@ -1322,7 +1253,6 @@ async function handleMisubRequest(context) {
                 const expiryDate = new Date(profile.expiresAt);
                 const now = new Date();
                 if (now > expiryDate) {
-                    console.log(`Profile ${profile.name} (ID: ${profile.id}) has expired.`);
                     isProfileExpired = true;
                 }
             }
