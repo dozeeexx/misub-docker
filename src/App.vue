@@ -68,8 +68,25 @@ onMounted(() => {
 /* iOS内容偏移适配 */
 @supports (-webkit-touch-callout: none) {
   .ios-content-offset {
-    /* 为状态栏高度预留空间，防止内容穿透 */
+    /* 为状态栏和Header高度预留空间，防止内容穿透 */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 80px);
+    margin-top: 0;
+  }
+  
+  /* 确保整个应用区域正确适配 */
+  body {
     padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  /* 全局iOS适配 */
+  html, body {
+    overflow-x: hidden;
+    position: relative;
+  }
+  
+  /* 确保内容区域不会穿透 */
+  * {
+    -webkit-overflow-scrolling: touch;
   }
 }
 </style>

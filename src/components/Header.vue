@@ -16,7 +16,7 @@ const emit = defineEmits(['logout']);
 </script>
 
 <template>
-  <header class="bg-gradient-to-b from-white/95 via-white/90 to-white/95 dark:from-gray-950/95 dark:via-gray-950/90 dark:to-gray-950/95 backdrop-blur-xl sticky top-0 z-50 border-b border-gray-200/30 dark:border-white/5 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-950/80 transition-all duration-300">
+  <header class="bg-gradient-to-b from-white/95 via-white/90 to-white/95 dark:from-gray-950/95 dark:via-gray-950/90 dark:to-gray-950/95 backdrop-blur-xl fixed top-0 left-0 right-0 z-[9999] border-b border-gray-200/30 dark:border-white/5 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-950/80 transition-all duration-300">
     <!-- iOS状态栏背景遮罩层 -->
     <div class="ios-status-bar-overlay"></div>
     
@@ -66,43 +66,45 @@ const emit = defineEmits(['logout']);
   top: 0;
   left: 0;
   right: 0;
-  height: calc(env(safe-area-inset-top, 0px) + 1px); /* 加一像素确保完全遮盖 */
+  height: calc(env(safe-area-inset-top, 0px) + 2px); /* 增加到2像素确保完全遮盖 */
   background: inherit;
-  z-index: 1;
+  z-index: 10;
   pointer-events: none; /* 不阻断点击事件 */
 }
 
 /* iOS Safari专用优化 */
 @supports (-webkit-touch-callout: none) {
   header {
-    /* iOS上渐变背景，更好地融合状态栏 */
+    /* iOS上加强背景，确保完全遮盖状态栏 */
     background: linear-gradient(
       to bottom,
-      rgba(255, 255, 255, 0.98) 0%,
-      rgba(255, 255, 255, 0.95) 60%,
-      rgba(255, 255, 255, 0.90) 100%
-    );
+      rgba(255, 255, 255, 1) 0%,
+      rgba(255, 255, 255, 0.98) 70%,
+      rgba(255, 255, 255, 0.95) 100%
+    ) !important;
     backdrop-filter: blur(20px) saturate(1.8);
     -webkit-backdrop-filter: blur(20px) saturate(1.8);
     /* 平滑过渡 */
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* 确保完全不透明 */
+    min-height: calc(env(safe-area-inset-top, 0px) + 80px);
   }
   
   .dark header {
     background: linear-gradient(
       to bottom,
-      rgba(15, 23, 42, 0.98) 0%,
-      rgba(15, 23, 42, 0.95) 60%,
-      rgba(15, 23, 42, 0.90) 100%
-    );
+      rgba(15, 23, 42, 1) 0%,
+      rgba(15, 23, 42, 0.98) 70%,
+      rgba(15, 23, 42, 0.95) 100%
+    ) !important;
   }
   
   /* iOS状态栏遮罩层与header同步 */
   .ios-status-bar-overlay {
     background: linear-gradient(
       to bottom,
-      rgba(255, 255, 255, 0.98) 0%,
-      rgba(255, 255, 255, 0.95) 100%
+      rgba(255, 255, 255, 1) 0%,
+      rgba(255, 255, 255, 0.98) 100%
     );
     backdrop-filter: blur(20px) saturate(1.8);
     -webkit-backdrop-filter: blur(20px) saturate(1.8);
@@ -111,8 +113,8 @@ const emit = defineEmits(['logout']);
   .dark .ios-status-bar-overlay {
     background: linear-gradient(
       to bottom,
-      rgba(15, 23, 42, 0.98) 0%,
-      rgba(15, 23, 42, 0.95) 100%
+      rgba(15, 23, 42, 1) 0%,
+      rgba(15, 23, 42, 0.98) 100%
     );
   }
 }
