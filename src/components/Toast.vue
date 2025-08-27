@@ -46,8 +46,10 @@ watch(() => toast.id, () => {
   <Transition name="toast">
     <div
       v-if="isVisible"
+      class="toast-container"
       :class="[
         'fixed top-4 right-4 z-50 min-w-80 max-w-md',
+        'sm:min-w-80 min-w-[calc(100vw-2rem)] sm:max-w-md max-w-[calc(100vw-2rem)]',
         'backdrop-blur-lg border border-white/20',
         'rounded-xl shadow-2xl overflow-hidden',
         'ring-1 transition-all duration-300',
@@ -60,9 +62,9 @@ watch(() => toast.id, () => {
         <!-- 关闭按钮 -->
         <button
           @click="isVisible = false"
-          class="absolute top-2 right-2 p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+          class="toast-close-btn absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
         >
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-white flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -153,6 +155,25 @@ watch(() => toast.id, () => {
   }
   100% {
     left: 100%;
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 640px) {
+  .toast-container {
+    /* 确保在移动端Toast不会太宽 */
+    left: 1rem;
+    right: 1rem;
+    top: 1rem;
+  }
+  
+  /* 移动端关闭按钮优化 */
+  .toast-close-btn {
+    width: 36px;
+    height: 36px;
+    /* 确保足够的触击区域 */
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 </style>
