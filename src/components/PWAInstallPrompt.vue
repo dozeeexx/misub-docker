@@ -9,8 +9,11 @@ const isInstalled = ref(false);
 
 // 检查是否已安装
 const checkIfInstalled = () => {
+  console.log('检查PWA安装状态...');
+  
   // 检查是否在独立模式下运行（已安装）
   if (window.matchMedia('(display-mode: standalone)').matches) {
+    console.log('检测到standalone模式，应用已安装');
     isInstalled.value = true;
     canInstall.value = false; // 已安装时不显示安装按钮
     return true;
@@ -18,6 +21,7 @@ const checkIfInstalled = () => {
   
   // 检查是否在PWA环境中（iOS Safari）
   if (window.navigator.standalone === true) {
+    console.log('检测到iOS Safari standalone模式，应用已安装');
     isInstalled.value = true;
     canInstall.value = false; // 已安装时不显示安装按钮
     return true;
@@ -25,6 +29,7 @@ const checkIfInstalled = () => {
   
   // 检查localStorage中是否有安装标记
   if (localStorage.getItem('pwa-installed') === 'true') {
+    console.log('localStorage中发现安装标记，应用已安装');
     isInstalled.value = true;
     canInstall.value = false; // 已安装时不显示安装按钮
     return true;
@@ -32,12 +37,14 @@ const checkIfInstalled = () => {
   
   // 检查URL是否包含PWA启动参数
   if (window.location.search.includes('source=pwa') || window.location.search.includes('mode=standalone')) {
+    console.log('URL包含PWA启动参数，应用已安装');
     isInstalled.value = true;
     canInstall.value = false; // 已安装时不显示安装按钮
     localStorage.setItem('pwa-installed', 'true');
     return true;
   }
   
+  console.log('未检测到已安装PWA，初始化安装功能');
   return false;
 };
 
@@ -107,17 +114,18 @@ if (import.meta.env.DEV) {
 }
 
 onMounted(() => {
+  console.log('PWAInstallPrompt 组件已挂载，开始初始化...');
+  console.log('初始状态 - isInstalled:', isInstalled.value, ', canInstall:', canInstall.value);
+  
   // 检查是否已安装
   if (checkIfInstalled()) {
-    return;
+    console.log('检测到已安装，退出初始化');
+    return; // 已安装则退出，不显示任何安装内容
   }
   
-  // 如果未安装，初始化时就显示安装说明按钮
-  // 等待beforeinstallprompt事件来升级为直接安装按钮
-  if (!isInstalled.value) {
-    // 初始状态：显示安装说明按钮
-    canInstall.value = false; // 这会显示"安装说明"按钮
-  }
+  // 未安装时，显示安装说明按钮，等待beforeinstallprompt事件升级为直接安装按钮
+  console.log('未检测到已安装，初始化安装相关功能');
+  console.log('初始化后状态 - isInstalled:', isInstalled.value, ', canInstall:', canInstall.value);
   
   // 监听beforeinstallprompt事件
   window.addEventListener('beforeinstallprompt', (e) => {
