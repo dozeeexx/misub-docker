@@ -70,9 +70,9 @@ watch(() => toast.id, () => {
         </button>
 
         <!-- 图标和消息 -->
-        <div class="flex items-start gap-3 pr-6">
+        <div class="flex items-center gap-3 pr-6">
           <!-- 动态图标 -->
-          <div class="flex-shrink-0 w-6 h-6 mt-0.5">
+          <div class="flex-shrink-0 w-6 h-6 flex items-center justify-center">
             <svg class="w-full h-full text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="toastConfig.icon" />
             </svg>
