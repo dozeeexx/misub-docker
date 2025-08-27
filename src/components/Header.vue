@@ -16,9 +16,9 @@ const emit = defineEmits(['logout']);
 </script>
 
 <template>
-  <header class="bg-gradient-to-b from-white/95 via-white/90 to-white/95 dark:from-gray-950/95 dark:via-gray-950/90 dark:to-gray-950/95 backdrop-blur-xl sticky top-0 z-40 border-b border-gray-200/30 dark:border-white/5 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-950/80 transition-all duration-300">
-    <!-- iOS状态栏适配层 -->
-    <div class="ios-status-bar-bg"></div>
+  <header class="bg-gradient-to-b from-white/95 via-white/90 to-white/95 dark:from-gray-950/95 dark:via-gray-950/90 dark:to-gray-950/95 backdrop-blur-xl sticky top-0 z-50 border-b border-gray-200/30 dark:border-white/5 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-950/80 transition-all duration-300">
+    <!-- iOS状态栏背景遮罩层 -->
+    <div class="ios-status-bar-overlay"></div>
     
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- 添加iOS适配层 -->
@@ -60,15 +60,16 @@ const emit = defineEmits(['logout']);
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* iOS状态栏背景层 */
-.ios-status-bar-bg {
+/* iOS状态栏背景遮罩层 */
+.ios-status-bar-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: env(safe-area-inset-top, 0px);
+  height: calc(env(safe-area-inset-top, 0px) + 1px); /* 加一像素确保完全遮盖 */
   background: inherit;
-  z-index: -1;
+  z-index: 1;
+  pointer-events: none; /* 不阻断点击事件 */
 }
 
 /* iOS Safari专用优化 */
@@ -96,8 +97,8 @@ const emit = defineEmits(['logout']);
     );
   }
   
-  /* iOS状态栏背景层与header同步 */
-  .ios-status-bar-bg {
+  /* iOS状态栏遮罩层与header同步 */
+  .ios-status-bar-overlay {
     background: linear-gradient(
       to bottom,
       rgba(255, 255, 255, 0.98) 0%,
@@ -107,7 +108,7 @@ const emit = defineEmits(['logout']);
     -webkit-backdrop-filter: blur(20px) saturate(1.8);
   }
   
-  .dark .ios-status-bar-bg {
+  .dark .ios-status-bar-overlay {
     background: linear-gradient(
       to bottom,
       rgba(15, 23, 42, 0.98) 0%,

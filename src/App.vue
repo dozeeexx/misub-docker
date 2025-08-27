@@ -39,7 +39,7 @@ onMounted(() => {
     <Header :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
 
     <main 
-      class="grow"
+      class="grow ios-content-offset"
       :class="{
         'flex items-center justify-center': sessionState !== 'loggedIn' && sessionState !== 'loading',
         'overflow-y-auto': sessionState === 'loggedIn' || sessionState === 'loading'
@@ -63,5 +63,13 @@ onMounted(() => {
 }
 :root.light {
   color-scheme: light;
+}
+
+/* iOS内容偏移适配 */
+@supports (-webkit-touch-callout: none) {
+  .ios-content-offset {
+    /* 为状态栏高度预留空间，防止内容穿透 */
+    padding-top: env(safe-area-inset-top, 0px);
+  }
 }
 </style>
