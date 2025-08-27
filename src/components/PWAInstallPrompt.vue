@@ -10,6 +10,12 @@ const isInstalled = ref(false);
 // 检查是否已安装
 const checkIfInstalled = () => {
   console.log('检查PWA安装状态...');
+  console.log('设备信息:', {
+    userAgent: navigator.userAgent,
+    isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+    standalone: window.matchMedia('(display-mode: standalone)').matches,
+    navigatorStandalone: window.navigator.standalone
+  });
   
   // 检查是否在独立模式下运行（已安装）
   if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -105,7 +111,14 @@ const resetInstallState = () => {
   localStorage.removeItem('pwa-installed');
   isInstalled.value = false;
   canInstall.value = false;
-  console.log('PWA安装状态已重置');
+  console.log('🔄 PWA安装状态已重置');
+  console.log('重置后状态:', {
+    isInstalled: isInstalled.value,
+    canInstall: canInstall.value,
+    localStorage: localStorage.getItem('pwa-installed')
+  });
+  // 显示提示
+  showToast('🔄 PWA状态已重置，刷新页面测试安装功能', 'info', 5000);
 };
 
 // 在开发环境中暴露重置函数
@@ -294,5 +307,26 @@ onMounted(() => {
 
 .install-button-container {
   display: inline-block;
+}
+
+/* 移动端响应式优化 */
+@media (max-width: 640px) {
+  .install-button-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .install-button-container button {
+    min-width: unset;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  
+  .install-button-container svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
 }
 </style>
