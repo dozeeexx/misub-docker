@@ -7,11 +7,22 @@
     
     <!-- PWA Meta Tags -->
     <meta name="description" content="基于 Cloudflare 的订阅转换和管理工具" />
-    <meta name="theme-color" content="#4f46e5" />
+    
+    <!-- 沉浸式状态栏配置 - 兼容浅色和深色模式 -->
+    <meta name="theme-color" content="#f8fafc" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a" />
+    
+    <!-- iOS PWA 配置 -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="MiSub" />
+    
+    <!-- Android PWA 配置 -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Windows PWA 配置 -->
     <meta name="msapplication-TileColor" content="#4f46e5" />
+    <meta name="msapplication-navbutton-color" content="#4f46e5" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
     
     <!-- Apple Touch Icons -->

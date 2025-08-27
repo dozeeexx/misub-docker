@@ -12,24 +12,28 @@ const checkIfInstalled = () => {
   // 检查是否在独立模式下运行（已安装）
   if (window.matchMedia('(display-mode: standalone)').matches) {
     isInstalled.value = true;
+    canInstall.value = false; // 已安装时不显示安装按钮
     return true;
   }
   
   // 检查是否在PWA环境中（iOS Safari）
   if (window.navigator.standalone === true) {
     isInstalled.value = true;
+    canInstall.value = false; // 已安装时不显示安装按钮
     return true;
   }
   
   // 检查localStorage中是否有安装标记
   if (localStorage.getItem('pwa-installed') === 'true') {
     isInstalled.value = true;
+    canInstall.value = false; // 已安装时不显示安装按钮
     return true;
   }
   
   // 检查URL是否包含PWA启动参数
   if (window.location.search.includes('source=pwa') || window.location.search.includes('mode=standalone')) {
     isInstalled.value = true;
+    canInstall.value = false; // 已安装时不显示安装按钮
     localStorage.setItem('pwa-installed', 'true');
     return true;
   }
@@ -245,13 +249,13 @@ onMounted(() => {
     </button>
   </div>
   
-  <!-- 已安装状态提示 -->
-  <div v-if="isInstalled" class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-sm font-medium rounded-lg">
+  <!-- 已安装状态提示 - 隐藏，因为用户已经在使用应用 -->
+  <!-- <div v-if="isInstalled" class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-sm font-medium rounded-lg">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
     </svg>
     应用已安装
-  </div>
+  </div> -->
 </template>
 
 <style scoped>
