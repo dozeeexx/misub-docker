@@ -15,9 +15,22 @@ const checkIfInstalled = () => {
     return true;
   }
   
-  // 检查是否在PWA环境中
+  // 检查是否在PWA环境中（iOS Safari）
   if (window.navigator.standalone === true) {
     isInstalled.value = true;
+    return true;
+  }
+  
+  // 检查localStorage中是否有安装标记
+  if (localStorage.getItem('pwa-installed') === 'true') {
+    isInstalled.value = true;
+    return true;
+  }
+  
+  // 检查URL是否包含PWA启动参数
+  if (window.location.search.includes('source=pwa') || window.location.search.includes('mode=standalone')) {
+    isInstalled.value = true;
+    localStorage.setItem('pwa-installed', 'true');
     return true;
   }
   
@@ -42,6 +55,8 @@ const installPWA = async () => {
       showToast('应用安装成功！您可以在桌面或主屏幕找到MiSub', 'success');
       canInstall.value = false;
       isInstalled.value = true;
+      // 标记已安装到localStorage
+      localStorage.setItem('pwa-installed', 'true');
     } else {
       showToast('安装已取消', 'info');
     }
@@ -74,6 +89,19 @@ const showInstallGuide = () => {
   showToast(guide, 'info', 8000);
 };
 
+// 重置安装状态（开发用）
+const resetInstallState = () => {
+  localStorage.removeItem('pwa-installed');
+  isInstalled.value = false;
+  canInstall.value = false;
+  console.log('PWA安装状态已重置');
+};
+
+// 在开发环境中暴露重置函数
+if (import.meta.env.DEV) {
+  window.resetPWAInstallState = resetInstallState;
+}
+
 onMounted(() => {
   // 检查是否已安装
   if (checkIfInstalled()) {
@@ -102,8 +130,38 @@ onMounted(() => {
     console.log('PWA已成功安装');
     canInstall.value = false;
     isInstalled.value = true;
+    localStorage.setItem('pwa-installed', 'true');
     showToast('MiSub已成功安装！', 'success');
   });
+  
+  // 监听显示模式变化（安装后会触发）
+  const mediaQuery = window.matchMedia('(display-mode: standalone)');
+  const handleDisplayModeChange = (e) => {
+    if (e.matches) {
+      console.log('检测到应用已安装（standalone模式）');
+      canInstall.value = false;
+      isInstalled.value = true;
+      localStorage.setItem('pwa-installed', 'true');
+    }
+  };
+  
+  mediaQuery.addListener(handleDisplayModeChange);
+  
+  // 定期检查安装状态（用于处理某些浏览器延迟检测）
+  const checkInterval = setInterval(() => {
+    if (checkIfInstalled()) {
+      clearInterval(checkInterval);
+    }
+  }, 2000);
+  
+  // 清理定时器（组件卸载时）
+  const cleanup = () => {
+    clearInterval(checkInterval);
+    mediaQuery.removeListener(handleDisplayModeChange);
+  };
+  
+  // 在组件卸载时清理
+  window.addEventListener('beforeunload', cleanup);
   
   // 检查Service Worker支持
   if (!('serviceWorker' in navigator)) {

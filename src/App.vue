@@ -12,7 +12,6 @@ import Header from './components/Header.vue';
 import Toast from './components/Toast.vue';
 import Footer from './components/Footer.vue';
 import PWAUpdatePrompt from './components/PWAUpdatePrompt.vue';
-import PWAInstallPrompt from './components/PWAInstallPrompt.vue';
 import PWADevTools from './components/PWADevTools.vue';
 
 const themeStore = useThemeStore();
@@ -52,7 +51,6 @@ onMounted(() => {
     </main>
     
     <Toast :show="toastState.id" :message="toastState.message" :type="toastState.type" />
-    <PWAInstallPrompt />
     <PWAUpdatePrompt />
     <PWADevTools />
     <Footer />
