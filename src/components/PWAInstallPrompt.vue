@@ -112,6 +112,13 @@ onMounted(() => {
     return;
   }
   
+  // 如果未安装，初始化时就显示安装说明按钮
+  // 等待beforeinstallprompt事件来升级为直接安装按钮
+  if (!isInstalled.value) {
+    // 初始状态：显示安装说明按钮
+    canInstall.value = false; // 这会显示"安装说明"按钮
+  }
+  
   // 监听beforeinstallprompt事件
   window.addEventListener('beforeinstallprompt', (e) => {
     console.log('PWA安装提示事件触发');
@@ -121,7 +128,7 @@ onMounted(() => {
     
     // 保存事件，稍后手动触发
     deferredPrompt.value = e;
-    canInstall.value = true;
+    canInstall.value = true; // 升级为直接安装按钮
     
     // 显示友好提示
     setTimeout(() => {
@@ -229,7 +236,7 @@ onMounted(() => {
     <button
       v-if="canInstall"
       @click="installPWA"
-      class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500/50"
+      class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors focus:outline-none"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -240,7 +247,7 @@ onMounted(() => {
     <button
       v-else
       @click="showInstallGuide"
-      class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+      class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors focus:outline-none"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
