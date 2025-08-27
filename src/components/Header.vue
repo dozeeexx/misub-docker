@@ -16,9 +16,14 @@ const emit = defineEmits(['logout']);
 </script>
 
 <template>
-  <header class="bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl sticky top-0 z-40 border-b border-gray-200/50 dark:border-white/10 card-shadow">
+  <header class="bg-gradient-to-b from-white/95 via-white/90 to-white/95 dark:from-gray-950/95 dark:via-gray-950/90 dark:to-gray-950/95 backdrop-blur-xl sticky top-0 z-40 border-b border-gray-200/30 dark:border-white/5 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-950/80 transition-all duration-300">
+    <!-- iOS状态栏适配层 -->
+    <div class="ios-status-bar-bg"></div>
+    
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center h-20">
+      <!-- 添加iOS适配层 -->
+      <div class="pt-safe-top">
+        <div class="flex justify-between items-center h-16 md:h-20">
         <div class="flex items-center">
           <svg width="32" height="32" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" class="text-indigo-600 dark:text-indigo-400">
             <path fill="currentColor" d="M64 128a64 64 0 1 1 64-64a64.07 64.07 0 0 1-64 64Zm0-122a58 58 0 1 0 58 58A58.07 58.07 0 0 0 64 6Z"/>
@@ -43,7 +48,79 @@ const emit = defineEmits(['logout']);
           </button>
         </div>
 
+        </div>
       </div>
     </div>
   </header>
 </template>
+
+<style scoped>
+/* iOS状态栏适配 */
+.pt-safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* iOS状态栏背景层 */
+.ios-status-bar-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: inherit;
+  z-index: -1;
+}
+
+/* iOS Safari专用优化 */
+@supports (-webkit-touch-callout: none) {
+  header {
+    /* iOS上渐变背景，更好地融合状态栏 */
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.98) 0%,
+      rgba(255, 255, 255, 0.95) 60%,
+      rgba(255, 255, 255, 0.90) 100%
+    );
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    /* 平滑过渡 */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .dark header {
+    background: linear-gradient(
+      to bottom,
+      rgba(15, 23, 42, 0.98) 0%,
+      rgba(15, 23, 42, 0.95) 60%,
+      rgba(15, 23, 42, 0.90) 100%
+    );
+  }
+  
+  /* iOS状态栏背景层与header同步 */
+  .ios-status-bar-bg {
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.98) 0%,
+      rgba(255, 255, 255, 0.95) 100%
+    );
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  }
+  
+  .dark .ios-status-bar-bg {
+    background: linear-gradient(
+      to bottom,
+      rgba(15, 23, 42, 0.98) 0%,
+      rgba(15, 23, 42, 0.95) 100%
+    );
+  }
+}
+
+/* 滚动时的动态效果 */
+@media (max-width: 768px) {
+  header {
+    transform: translateZ(0); /* 启用硬件加速 */
+    will-change: transform;
+  }
+}
+</style>

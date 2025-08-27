@@ -45,14 +45,11 @@ export const useThemeStore = defineStore('theme', () => {
       }
     }
     
-    // 更新 iOS 状态栏样式
+    // 更新 iOS 状态栏样式 - 统一使用黑色半透明配合Header渐变背景
     const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
     if (statusBarMeta) {
-      if (theme.value === 'dark') {
-        statusBarMeta.setAttribute('content', 'black-translucent'); // 深色模式：黑色半透明
-      } else {
-        statusBarMeta.setAttribute('content', 'default'); // 浅色模式：黑色文字
-      }
+      // 使用black-translucent让状态栏完全透明，由Header的渐变背景提供视觉效果
+      statusBarMeta.setAttribute('content', 'black-translucent');
     }
   }
 
