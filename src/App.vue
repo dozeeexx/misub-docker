@@ -11,6 +11,7 @@ import Login from './components/Login.vue';
 import Header from './components/Header.vue';
 import Toast from './components/Toast.vue';
 import Footer from './components/Footer.vue';
+import PWAUpdatePrompt from './components/PWAUpdatePrompt.vue';
 
 const themeStore = useThemeStore();
 const { theme } = storeToRefs(themeStore);
@@ -49,6 +50,7 @@ onMounted(() => {
     </main>
     
     <Toast :show="toastState.id" :message="toastState.message" :type="toastState.type" />
+    <PWAUpdatePrompt />
     <Footer />
   </div>
 </template>
