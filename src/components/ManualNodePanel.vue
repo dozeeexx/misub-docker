@@ -290,6 +290,29 @@ onUnmounted(() => {
       </div>
 
       <div v-if="viewMode === 'list'" class="space-y-2">
+        <draggable 
+          v-if="isSorting && !localSearchTerm"
+          tag="div" 
+          class="space-y-2" 
+          :list="manualNodes" 
+          item-key="id" 
+          animation="300" 
+          @end="handleSortEnd"
+        >
+          <template #item="{ element: node, index }">
+            <div class="cursor-move">
+              <ManualNodeList
+                  :node="node"
+                  :index="index + 1"
+                  class="list-item-animation"
+                  :style="{ '--delay-index': index }"
+                  @edit="handleEdit(node.id)"
+                  @delete="handleDelete(node.id)"
+              />
+            </div>
+          </template>
+        </draggable>
+        <div v-else>
           <ManualNodeList
               v-for="(node, index) in paginatedNodes"
               :key="node.id"
@@ -300,6 +323,7 @@ onUnmounted(() => {
               @edit="handleEdit(node.id)"
               @delete="handleDelete(node.id)"
           />
+        </div>
       </div>
       
       <!-- 分页 - 搜索时使用本地分页，否则使用props -->
