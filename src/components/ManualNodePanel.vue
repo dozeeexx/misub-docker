@@ -16,7 +16,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'add', 'delete', 'edit', 'changePage', 'update:searchTerm', 'update:viewMode',
-  'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import'
+  'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import', 'deleteAll'
 ]);
 
 const nodesMoreMenuRef = ref(null);
@@ -121,10 +121,17 @@ const currentPage = ref(1);
 const nodesPerPage = 24;
 const totalPages = computed(() => Math.ceil(filteredNodes.value.length / nodesPerPage));
 
+// 计算当前显示的节点数据
 const paginatedNodes = computed(() => {
-  const start = (currentPage.value - 1) * nodesPerPage;
-  const end = start + nodesPerPage;
-  return filteredNodes.value.slice(start, end);
+  if (localSearchTerm.value) {
+    // 搜索时使用本地过滤和分页
+    const start = (currentPage.value - 1) * nodesPerPage;
+    const end = start + nodesPerPage;
+    return filteredNodes.value.slice(start, end);
+  } else {
+    // 非搜索时使用props传入的分页数据
+    return props.paginatedManualNodes;
+  }
 });
 
 // 监听搜索词变化重置分页
@@ -311,7 +318,7 @@ onUnmounted(() => {
       </div>
       
       <!-- 非搜索时的原有分页 -->
-      <div v-else-if="!localSearchTerm && props.totalPages > 1 && !isSorting" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
+      <div v-else-if="!localSearchTerm && props.totalPages > 1" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
         <button 
           @click="handleChangePage(props.currentPage - 1)" 
           :disabled="props.currentPage === 1" 
