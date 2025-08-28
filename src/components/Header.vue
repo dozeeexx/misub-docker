@@ -16,7 +16,7 @@ const emit = defineEmits(['logout']);
 </script>
 
 <template>
-  <header class="bg-gradient-to-b from-white/95 via-white/90 to-white/95 dark:from-gray-950/95 dark:via-gray-950/90 dark:to-gray-950/95 backdrop-blur-xl fixed top-0 left-0 right-0 z-[9999] border-b border-gray-200/30 dark:border-white/5 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-950/80 transition-all duration-300">
+  <header class="bg-gradient-to-b from-white/95 via-white/90 to-white/95 dark:from-gray-950/95 dark:via-gray-950/90 dark:to-gray-950/95 backdrop-blur-xl sticky top-0 z-50 border-b border-gray-200/30 dark:border-white/5 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-950/80 transition-all duration-300">
     <!-- iOS状态栏背景遮罩层 -->
     <div class="ios-status-bar-overlay"></div>
     
@@ -75,7 +75,12 @@ const emit = defineEmits(['logout']);
 /* iOS Safari专用优化 */
 @supports (-webkit-touch-callout: none) {
   header {
-    /* iOS上加强背景，确保完全遮盖状态栏 */
+    /* iOS上使用fixed定位和加强背景，确保完全遮盖状态栏 */
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
     background: linear-gradient(
       to bottom,
       rgba(255, 255, 255, 1) 0%,

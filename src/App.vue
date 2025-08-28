@@ -39,10 +39,11 @@ onMounted(() => {
     <Header :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
 
     <main 
-      class="grow ios-content-offset"
+      class="grow"
       :class="{
         'flex items-center justify-center': sessionState !== 'loggedIn' && sessionState !== 'loading',
-        'overflow-y-auto': sessionState === 'loggedIn' || sessionState === 'loading'
+        'overflow-y-auto': sessionState === 'loggedIn' || sessionState === 'loading',
+        'ios-content-offset': sessionState === 'loggedIn' || sessionState === 'loading'
       }"
     >
       <DashboardSkeleton v-if="sessionState === 'loading'" />
@@ -65,10 +66,10 @@ onMounted(() => {
   color-scheme: light;
 }
 
-/* iOS内容偏移适配 */
+/* iOS内容偏移适配 - 只在iOS设备上生效 */
 @supports (-webkit-touch-callout: none) {
   .ios-content-offset {
-    /* 为状态栏和Header高度预留空间，防止内容穿透 */
+    /* 为iOS状态栏和Header高度预留空间，防止内容穿透 */
     padding-top: calc(env(safe-area-inset-top, 0px) + 80px);
     margin-top: 0;
   }
@@ -87,6 +88,14 @@ onMounted(() => {
   /* 确保内容区域不会穿透 */
   * {
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* 非iOS设备的正常样式 */
+@supports not (-webkit-touch-callout: none) {
+  .ios-content-offset {
+    /* 非iOS设备不需要额外的顶部间距 */
+    padding-top: 0;
   }
 }
 </style>
