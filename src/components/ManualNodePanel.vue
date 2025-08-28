@@ -249,7 +249,7 @@ onUnmounted(() => {
       </div>
       
       <div v-if="viewMode === 'card'">
-         <draggable 
+        <draggable 
           v-if="isSorting && !localSearchTerm"
           tag="div" 
           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
@@ -287,7 +287,7 @@ onUnmounted(() => {
               v-for="(node, index) in paginatedNodes"
               :key="node.id"
               :node="node"
-              :index="(currentPage - 1) * 24 + index + 1"
+              :index="localSearchTerm ? (currentPage - 1) * 24 + index + 1 : (props.currentPage - 1) * 24 + index + 1"
               :class="`list-item-animation`"
               :style="{ '--delay-index': index }"
               @edit="handleEdit(node.id)"

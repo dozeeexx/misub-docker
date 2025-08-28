@@ -177,8 +177,7 @@ const handleDeleteAllNodesWithCleanup = () => {
 };
 const handleAutoSortNodes = () => {
   autoSortNodes();
-  showToast('已按地区排序！正在为您自动保存...', 'success');
-  handleSave();
+  showToast('已按地区排序，请手动保存', 'success');
 };
 
 const handleDeduplicateNodes = () => {

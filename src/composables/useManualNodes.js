@@ -239,9 +239,12 @@ export function useManualNodes(initialNodesRef, markDirty) {
     markDirty();
   }
 
-    // [新增] 监听搜索词变化，重置分页
-  watch(searchTerm, () => {
-    manualNodesCurrentPage.value = 1;
+  // [新增] 监听搜索词变化，重置分页
+  watch(searchTerm, (newValue, oldValue) => {
+    // 只在搜索词实际改变时重置分页
+    if (newValue !== oldValue) {
+      manualNodesCurrentPage.value = 1;
+    }
   });
 
   watch(initialNodesRef, (newInitialNodes) => {
