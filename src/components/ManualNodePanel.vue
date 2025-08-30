@@ -235,12 +235,9 @@ onUnmounted(() => {
               <button @click="handleDeduplicate" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键去重</button>
               <button 
                 @click="handleToggleSort" 
-                :disabled="localSearchTerm"
-                class="w-full text-left px-4 py-2 text-sm transition-colors"
-                :class="localSearchTerm ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                class="w-full text-left px-4 py-2 text-sm transition-colors text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 {{ isSorting ? '完成排序' : '手动排序' }}
-                {{ localSearchTerm ? ' (搜索时不可用)' : '' }}
               </button>
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
               <button @click="handleDeleteAll" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10">清空所有</button>
@@ -257,7 +254,7 @@ onUnmounted(() => {
       
       <div v-if="viewMode === 'card'">
         <draggable 
-          v-if="isSorting && !localSearchTerm"
+          v-if="isSorting"
           tag="div" 
           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
           :list="manualNodes" 
@@ -291,7 +288,7 @@ onUnmounted(() => {
 
       <div v-if="viewMode === 'list'" class="space-y-2">
         <draggable 
-          v-if="isSorting && !localSearchTerm"
+          v-if="isSorting"
           tag="div" 
           class="space-y-2" 
           :list="manualNodes" 
@@ -312,7 +309,7 @@ onUnmounted(() => {
             </div>
           </template>
         </draggable>
-        <div v-else>
+        <div v-else class="space-y-2">
           <ManualNodeList
               v-for="(node, index) in paginatedNodes"
               :key="node.id"
