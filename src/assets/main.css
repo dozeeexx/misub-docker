@@ -185,6 +185,14 @@ button:active {
   }
 }
 
+/* 平板设备优化 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* 确保平板设备上的按钮始终可见 */
+  .shrink-0.flex.items-center.gap-1 {
+    opacity: 1 !important;
+  }
+}
+
 /* 🆕 增强的微交互效果 */
 
 /* 流体按钮微交互 */
@@ -270,4 +278,5 @@ html {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
 }
