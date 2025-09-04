@@ -174,7 +174,8 @@ class D1StorageAdapter {
         } else if (key === DATA_KEYS.SETTINGS) {
             return { table: 'settings', queryField: 'key', queryValue: 'main' };
         } else {
-            // 处理其他格式的 key，默认作为 settings 表的 key
+            // 处理其他格式的 key，默认作为 settings 表的 key，但记录警告
+            console.warn(`[D1 Storage] Unknown key format: ${key}, treating as settings key`);
             return { table: 'settings', queryField: 'key', queryValue: key };
         }
     }

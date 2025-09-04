@@ -67,12 +67,12 @@ onUnmounted(() => {
 
 <template>
   <div class="sticky top-24">
-    <div class="bg-white/50 dark:bg-gray-900/60 backdrop-blur-xs p-5 rounded-2xl shadow-lg dark:shadow-2xl ring-1 ring-black/5">
-      <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">生成订阅链接</h3>
+    <div class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md card-shadow hover:card-shadow-hover p-6 rounded-2xl transition-all duration-300">
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 list-item-animation" style="--delay-index: 0">生成订阅链接</h3>
 
-      <div class="mb-4">
+      <div class="mb-4 list-item-animation" style="--delay-index: 1">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">1. 选择订阅内容</label>
-        <select v-model="selectedId" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">
+        <select v-model="selectedId" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white input-enhanced">
             <option value="default">默认订阅 (全部启用节点)</option>
             <option v-for="profile in profiles" :key="profile.id" :value="profile.customId || profile.id">
                 {{ profile.name }}
@@ -80,14 +80,15 @@ onUnmounted(() => {
         </select>
       </div>
 
-      <div class="mb-5">
+      <div class="mb-5 list-item-animation" style="--delay-index: 2">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">2. 选择格式</label>
         <div class="grid grid-cols-3 gap-2">
             <button
-              v-for="format in formats"
+              v-for="(format, index) in formats"
               :key="format"
               @click="selectedFormat = format"
-              class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex justify-center items-center"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex justify-center items-center list-item-animation"
+              :style="{ '--delay-index': index }"
               :class="[
                 selectedFormat === format
                   ? 'bg-indigo-600 text-white shadow-md'
@@ -99,13 +100,13 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="relative">
+      <div class="relative list-item-animation" style="--delay-index: 3">
         <input
           type="text"
           :value="subLink"
           readonly
           :disabled="!isLinkValid"
-          class="w-full text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 rounded-lg pl-3 pr-10 py-2.5 focus:outline-hidden focus:ring-2 font-mono"
+          class="w-full text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 rounded-lg pl-3 pr-10 py-2.5 focus:outline-hidden focus:ring-2 font-mono input-enhanced"
           :class="{
             'focus:ring-indigo-500': isLinkValid,
             'focus:ring-red-500 cursor-not-allowed': !isLinkValid,
@@ -124,7 +125,7 @@ onUnmounted(() => {
         </button>
       </div>
 
-       <p v-if="!isLinkValid || requiredToken.value.value === 'auto'" class="text-xs text-yellow-600 dark:text-yellow-500 mt-2">
+       <p v-if="!isLinkValid || requiredToken.value.value === 'auto'" class="text-xs text-yellow-600 dark:text-yellow-500 mt-2 list-item-animation" style="--delay-index: 4">
            提示：
            <span v-if="!isLinkValid">请在 
              <button @click="uiStore.isSettingsModalVisible = true" class="font-bold underline hover:text-yellow-400">设置</button> 

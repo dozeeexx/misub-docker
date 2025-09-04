@@ -16,7 +16,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'add', 'delete', 'edit', 'changePage', 'update:searchTerm', 'update:viewMode',
-  'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import'
+  'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import', 'deleteAll'
 ]);
 
 const nodesMoreMenuRef = ref(null);
@@ -33,7 +33,6 @@ const filteredNodes = computed(() => {
   }
   
   const searchQuery = localSearchTerm.value.toLowerCase().trim();
-  console.log('🔍 组件内搜索:', { searchQuery, totalNodes: props.manualNodes.length });
   
   // 国家/地区代码到中文名称的映射
   const countryCodeMap = {
@@ -100,7 +99,6 @@ const filteredNodes = computed(() => {
     
     // 直接搜索匹配
     if (nodeName.includes(searchQuery)) {
-      console.log('✅ 直接匹配:', node.name);
       return true;
     }
     
@@ -108,7 +106,6 @@ const filteredNodes = computed(() => {
     const alternativeTerms = countryCodeMap[searchQuery] || [];
     for (const altTerm of alternativeTerms) {
       if (nodeName.includes(altTerm.toLowerCase())) {
-        console.log('✅ 地区匹配:', node.name, '匹配词:', altTerm);
         return true;
       }
     }
@@ -116,7 +113,6 @@ const filteredNodes = computed(() => {
     return false;
   });
   
-  console.log('🔍 过滤结果:', { filteredCount: filtered.length, names: filtered.map(n => n.name) });
   return filtered;
 });
 
@@ -125,10 +121,17 @@ const currentPage = ref(1);
 const nodesPerPage = 24;
 const totalPages = computed(() => Math.ceil(filteredNodes.value.length / nodesPerPage));
 
+// 计算当前显示的节点数据
 const paginatedNodes = computed(() => {
-  const start = (currentPage.value - 1) * nodesPerPage;
-  const end = start + nodesPerPage;
-  return filteredNodes.value.slice(start, end);
+  if (localSearchTerm.value) {
+    // 搜索时使用本地过滤和分页
+    const start = (currentPage.value - 1) * nodesPerPage;
+    const end = start + nodesPerPage;
+    return filteredNodes.value.slice(start, end);
+  } else {
+    // 非搜索时使用props传入的分页数据
+    return props.paginatedManualNodes;
+  }
 });
 
 // 监听搜索词变化重置分页
@@ -198,7 +201,6 @@ onUnmounted(() => {
       <div class="flex items-center gap-3">
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">手动节点</h2>
         <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ manualNodes.length }}</span>
-        <!-- 添加搜索调试信息 -->
         <span v-if="localSearchTerm" class="px-2.5 py-0.5 text-sm font-semibold text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-500/20 rounded-full">
           搜索: "{{ localSearchTerm }}" ({{ filteredNodes.length }}/{{ manualNodes.length }} 结果)
         </span>
@@ -214,10 +216,10 @@ onUnmounted(() => {
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
         <div class="p-0.5 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center shrink-0">
-            <button @click="handleSetViewMode('card')" class="p-1 rounded-md transition-colors" :class="viewMode === 'card' ? 'bg-white dark:bg-gray-900 text-indigo-600' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'">
+            <button @click="handleSetViewMode('card')" class="view-mode-toggle p-1.5 rounded-md transition-colors flex items-center justify-center" :class="viewMode === 'card' ? 'bg-white dark:bg-gray-900 text-indigo-600' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
             </button>
-            <button @click="handleSetViewMode('list')" class="p-1 rounded-md transition-colors" :class="viewMode === 'list' ? 'bg-white dark:bg-gray-900 text-indigo-600' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'">
+            <button @click="handleSetViewMode('list')" class="view-mode-toggle p-1.5 rounded-md transition-colors flex items-center justify-center" :class="viewMode === 'list' ? 'bg-white dark:bg-gray-900 text-indigo-600' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
             </button>
         </div>
@@ -233,12 +235,9 @@ onUnmounted(() => {
               <button @click="handleDeduplicate" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键去重</button>
               <button 
                 @click="handleToggleSort" 
-                :disabled="localSearchTerm"
-                class="w-full text-left px-4 py-2 text-sm transition-colors"
-                :class="localSearchTerm ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                class="w-full text-left px-4 py-2 text-sm transition-colors text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 {{ isSorting ? '完成排序' : '手动排序' }}
-                {{ localSearchTerm ? ' (搜索时不可用)' : '' }}
               </button>
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
               <button @click="handleDeleteAll" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10">清空所有</button>
@@ -254,8 +253,8 @@ onUnmounted(() => {
       </div>
       
       <div v-if="viewMode === 'card'">
-         <draggable 
-          v-if="isSorting && !localSearchTerm"
+        <draggable 
+          v-if="isSorting"
           tag="div" 
           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
           :list="manualNodes" 
@@ -273,7 +272,12 @@ onUnmounted(() => {
           </template>
         </draggable>
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-          <div v-for="node in paginatedNodes" :key="node.id">
+          <div 
+            v-for="(node, index) in paginatedNodes" 
+            :key="node.id"
+            class="list-item-animation"
+            :style="{ '--delay-index': index }"
+          >
             <ManualNodeCard 
               :node="node" 
               @edit="handleEdit(node.id)" 
@@ -283,14 +287,40 @@ onUnmounted(() => {
       </div>
 
       <div v-if="viewMode === 'list'" class="space-y-2">
+        <draggable 
+          v-if="isSorting"
+          tag="div" 
+          class="space-y-2" 
+          :list="manualNodes" 
+          item-key="id" 
+          animation="300" 
+          @end="handleSortEnd"
+        >
+          <template #item="{ element: node, index }">
+            <div class="cursor-move">
+              <ManualNodeList
+                  :node="node"
+                  :index="index + 1"
+                  class="list-item-animation"
+                  :style="{ '--delay-index': index }"
+                  @edit="handleEdit(node.id)"
+                  @delete="handleDelete(node.id)"
+              />
+            </div>
+          </template>
+        </draggable>
+        <div v-else class="space-y-2">
           <ManualNodeList
               v-for="(node, index) in paginatedNodes"
               :key="node.id"
               :node="node"
-              :index="(currentPage - 1) * 24 + index + 1"
+              :index="localSearchTerm ? (currentPage - 1) * 24 + index + 1 : (props.currentPage - 1) * 24 + index + 1"
+              :class="`list-item-animation`"
+              :style="{ '--delay-index': index }"
               @edit="handleEdit(node.id)"
               @delete="handleDelete(node.id)"
           />
+        </div>
       </div>
       
       <!-- 分页 - 搜索时使用本地分页，否则使用props -->
@@ -309,7 +339,7 @@ onUnmounted(() => {
       </div>
       
       <!-- 非搜索时的原有分页 -->
-      <div v-else-if="!localSearchTerm && props.totalPages > 1 && !isSorting" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
+      <div v-else-if="!localSearchTerm && props.totalPages > 1" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
         <button 
           @click="handleChangePage(props.currentPage - 1)" 
           :disabled="props.currentPage === 1" 

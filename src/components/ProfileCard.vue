@@ -14,7 +14,7 @@ const emit = defineEmits(['delete', 'change', 'edit', 'copy-link']);
 
 <template>
   <div
-    class="group bg-white dark:bg-gray-900/60 backdrop-blur-xs rounded-2xl shadow-lg dark:shadow-2xl ring-1 ring-black/5 p-4 transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-between"
+    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl card-shadow hover:card-shadow-hover p-4 smooth-all hover:-translate-y-1 flex flex-col justify-between"
     :class="{ 'opacity-50': !profile.enabled }"
   >
     <div class="flex items-start justify-between gap-3">

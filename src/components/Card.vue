@@ -91,8 +91,8 @@ const expiryInfo = computed(() => {
 
 <template>
   <div 
-    class="group bg-white dark:bg-gray-900/60 backdrop-blur-xs rounded-2xl shadow-lg dark:shadow-2xl ring-1 ring-black/5 p-4 transition-all duration-300 hover:-translate-y-0.5 flex flex-col h-full min-h-[175px]"
-    :class="{ 'opacity-50': !misub.enabled, 'ring-indigo-500/50': misub.isNew }"
+    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl card-shadow hover:card-shadow-hover p-4 smooth-all hover:-translate-y-1 flex flex-col h-full min-h-[175px]"
+    :class="{ 'opacity-50': !misub.enabled }"
   >
     <div class="flex items-start justify-between gap-3">
       <div class="w-full truncate">
@@ -113,7 +113,7 @@ const expiryInfo = computed(() => {
     </div>
     
     <div class="mt-2 grow flex flex-col justify-center space-y-2">
-      <input type="text" :value="misub.url" readonly class="w-full text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-2 focus:outline-hidden font-mono" />
+      <input type="text" :value="misub.url" readonly class="w-full text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 rounded-lg px-3 py-2 focus:outline-hidden font-mono border-0" />
       <div v-if="trafficInfo" class="space-y-1 pt-1">
         <div class="flex justify-between text-xs font-mono"><span class="text-gray-600 dark:text-gray-400">{{ trafficInfo.used }}</span><span class="text-gray-600 dark:text-gray-400">{{ trafficInfo.total }}</span></div>
         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5"><div class="bg-linear-to-r from-blue-500 to-indigo-600 h-1.5 rounded-full" :style="{ width: trafficInfo.percentage + '%' }"></div></div>
