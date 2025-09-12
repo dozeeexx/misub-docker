@@ -47,9 +47,18 @@ export function extractNodeName(url) {
             case 'ss':
                 const atIndexSS = mainPart.indexOf('@');
                 if (atIndexSS !== -1) return mainPart.substring(atIndexSS + 1).split(':')[0] || '';
-                const decodedSS = atob(mainPart);
-                const ssDecodedAtIndex = decodedSS.indexOf('@');
-                if (ssDecodedAtIndex !== -1) return decodedSS.substring(ssDecodedAtIndex + 1).split(':')[0] || '';
+                try {
+                    // 处理URL编码的base64部分
+                    let base64Part = mainPart;
+                    if (base64Part.includes('%')) {
+                        base64Part = decodeURIComponent(base64Part);
+                    }
+                    const decodedSS = atob(base64Part);
+                    const ssDecodedAtIndex = decodedSS.indexOf('@');
+                    if (ssDecodedAtIndex !== -1) return decodedSS.substring(ssDecodedAtIndex + 1).split(':')[0] || '';
+                } catch (e) {
+                    // Base64解码失败时的回退处理
+                }
                 return '';
             default:
                 if(url.startsWith('http')) return new URL(url).hostname;
@@ -116,7 +125,12 @@ export function extractHostAndPort(url) {
         // --- SS/SSR Base64 解码处理 ---
         if ((protocol === 'ss' || protocol === 'ssr') && mainPart.indexOf('@') === -1) {
             try {
-                mainPart = atob(mainPart);
+                // 处理URL编码的base64部分
+                let base64Part = mainPart;
+                if (base64Part.includes('%')) {
+                    base64Part = decodeURIComponent(base64Part);
+                }
+                mainPart = atob(base64Part);
                 decoded = true;
             } catch (e) { /* 解码失败则按原文处理 */ }
         }
