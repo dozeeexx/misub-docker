@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 import Modal from './Modal.vue';
-import { fetchSettings, saveSettings, migrateToD1 } from '../lib/api.js';
+import { fetchSettings, saveSettings, migrateToD1, testSubscription } from '../lib/api.js';
 import { useToastStore } from '../stores/toast.js';
 
 const props = defineProps({
@@ -76,6 +76,44 @@ const loadSettings = async () => {
     showToast('加载设置失败', 'error');
   } finally {
     isLoading.value = false;
+  }
+};
+
+// 新增：订阅调试相关状态
+const debugUrl = ref('');
+const debugUserAgent = ref('clash-meta/1.17.0');
+const isDebugging = ref(false);
+const debugResult = ref(null);
+
+// 新增：订阅调试函数
+const handleDebugSubscription = async () => {
+  if (!debugUrl.value) {
+    showToast('请输入订阅URL', 'error');
+    return;
+  }
+  
+  if (!/^https?:\/\//.test(debugUrl.value)) {
+    showToast('请输入有效的 http:// 或 https:// URL', 'error');
+    return;
+  }
+  
+  isDebugging.value = true;
+  debugResult.value = null;
+  
+  try {
+    const result = await testSubscription(debugUrl.value, debugUserAgent.value);
+    debugResult.value = result;
+    
+    if (result.success) {
+      showToast('调试完成，请查看结果', 'success');
+    } else {
+      showToast('调试失败: ' + (result.error || '未知错误'), 'error');
+    }
+  } catch (error) {
+    showToast('调试请求失败: ' + error.message, 'error');
+    debugResult.value = { error: error.message };
+  } finally {
+    isDebugging.value = false;
   }
 };
 
@@ -344,6 +382,102 @@ watch(() => props.show, (newValue) => {
               >
                 导入备份
               </button>
+            </div>
+          </div>
+        </div>
+        <!-- 订阅调试工具 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">🔍 订阅调试工具</label>
+          <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-3">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              用于调试订阅链接的内容，帮助诊断节点丢失等问题。
+            </p>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">订阅URL</label>
+                <input 
+                  v-model="debugUrl"
+                  placeholder="https://example.com/subscription"
+                  class="block w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                >
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">User-Agent</label>
+                <select 
+                  v-model="debugUserAgent"
+                  class="block w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                >
+                  <option value="clash-meta/1.17.0">Clash-Meta</option>
+                  <option value="v2rayN/6.45">v2rayN</option>
+                  <option value="NekoBox/1.6.1">NekoBox</option>
+                  <option value="Shadowrocket/1999">Shadowrocket</option>
+                  <option value="surge/4.0">Surge</option>
+                  <option value="QuantumultX/1.0">Quantumult X</option>
+                  <option value="Stash/1.0">Stash</option>
+                  <option value="Mihomo/0.1">Mihomo</option>
+                  <option value="clash-verge/1.0">Clash Verge</option>
+                </select>
+              </div>
+              <button
+                @click="handleDebugSubscription"
+                :disabled="isDebugging || !debugUrl"
+                class="w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-md transition-colors duration-200"
+              >
+                <span v-if="isDebugging">正在调试...</span>
+                <span v-else>开始调试</span>
+              </button>
+            </div>
+            
+            <!-- 调试结果显示 -->
+            <div v-if="debugResult" class="mt-4 p-3 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 max-h-96 overflow-y-auto">
+              <div v-if="debugResult.error" class="text-red-600 dark:text-red-400 text-sm">
+                <p class="font-medium">错误:</p>
+                <p>{{ debugResult.error }}</p>
+              </div>
+              <div v-else-if="debugResult.success" class="text-sm space-y-3">
+                <div>
+                  <p class="font-medium text-gray-700 dark:text-gray-300">基本信息:</p>
+                  <p class="text-gray-600 dark:text-gray-400">URL: {{ debugResult.url }}</p>
+                  <p class="text-gray-600 dark:text-gray-400">User-Agent: {{ debugResult.userAgent }}</p>
+                  <p class="text-gray-600 dark:text-gray-400">总节点数: {{ debugResult.totalNodes }}</p>
+                  <p class="text-gray-600 dark:text-gray-400">SS节点数: {{ debugResult.ssNodesCount }}</p>
+                </div>
+                
+                <div v-if="debugResult.ssNodes && debugResult.ssNodes.length > 0">
+                  <p class="font-medium text-gray-700 dark:text-gray-300">SS节点分析:</p>
+                  <div v-for="(node, index) in debugResult.ssNodes" :key="index" class="mt-2 p-2 bg-gray-100 dark:bg-gray-600 rounded">
+                    <div v-if="node.error" class="text-red-600 dark:text-red-400">
+                      <p class="font-medium">解析错误:</p>
+                      <p>{{ node.error }}</p>
+                    </div>
+                    <div v-else>
+                      <p class="font-medium text-gray-700 dark:text-gray-300">节点 {{ index + 1 }}:</p>
+                      <p class="text-gray-600 dark:text-gray-400 text-xs truncate">原始: {{ node.original }}</p>
+                      <p class="text-gray-600 dark:text-gray-400 text-xs" v-if="node.hasUrlEncoding">包含URL编码: 是</p>
+                      <p class="text-gray-600 dark:text-gray-400 text-xs truncate" v-if="node.base64Part">Base64部分: {{ node.base64Part }}</p>
+                      <p class="text-gray-600 dark:text-gray-400 text-xs truncate" v-if="node.credentials">凭证: {{ node.credentials }}</p>
+                      <p class="text-gray-600 dark:text-gray-400 text-xs truncate" v-if="node.fixed && node.fixed !== node.original">修复后: {{ node.fixed }}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-if="debugResult.validNodes && debugResult.validNodes.length > 0">
+                  <p class="font-medium text-gray-700 dark:text-gray-300">前20个有效节点:</p>
+                  <ul class="list-disc list-inside text-gray-600 dark:text-gray-400 text-xs space-y-1">
+                    <li v-for="(node, index) in debugResult.validNodes" :key="index" class="truncate">{{ node }}</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <p class="font-medium text-gray-700 dark:text-gray-300">原始内容预览 (前2000字符):</p>
+                  <pre class="text-gray-600 dark:text-gray-400 text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded mt-1 max-h-32 overflow-y-auto">{{ debugResult.rawContent }}</pre>
+                </div>
+                
+                <div>
+                  <p class="font-medium text-gray-700 dark:text-gray-300">处理后内容预览 (前2000字符):</p>
+                  <pre class="text-gray-600 dark:text-gray-400 text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded mt-1 max-h-32 overflow-y-auto">{{ debugResult.processedContent }}</pre>
+                </div>
+              </div>
             </div>
           </div>
         </div>

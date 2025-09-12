@@ -174,3 +174,31 @@ export async function migrateToD1() {
         return { success: false, message: '网络请求失败，请检查网络连接' };
     }
 }
+
+/**
+ * 测试订阅链接内容
+ * @param {string} url - 订阅URL
+ * @param {string} userAgent - User-Agent
+ * @returns {Promise<Object>} - 测试结果
+ */
+export async function testSubscription(url, userAgent) {
+    try {
+        const response = await fetch('/api/debug_subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, userAgent })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.message || errorData.error || `服务器错误 (${response.status})`;
+            return { success: false, message: errorMessage };
+        }
+
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error("Failed to test subscription:", error);
+        return { success: false, message: '网络请求失败，请检查网络连接' };
+    }
+}

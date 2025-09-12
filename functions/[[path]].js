@@ -914,6 +914,128 @@ async function handleApiRequest(request, env) {
             }
         }
 
+        case '/debug_subscription': {
+            if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+            
+            try {
+                const { url: debugUrl, userAgent } = await request.json();
+                if (!debugUrl || typeof debugUrl !== 'string' || !/^https?:\/\//.test(debugUrl)) {
+                    return new Response(JSON.stringify({ error: 'Invalid or missing url' }), { status: 400 });
+                }
+                
+                const result = {
+                    url: debugUrl,
+                    userAgent: userAgent || 'MiSub-Debug/1.0',
+                    success: false,
+                    rawContent: '',
+                    processedContent: '',
+                    validNodes: [],
+                    ssNodes: [],
+                    error: null
+                };
+                
+                try {
+                    const response = await fetch(new Request(debugUrl, {
+                        headers: { 'User-Agent': result.userAgent },
+                        redirect: "follow",
+                        cf: { insecureSkipVerify: true }
+                    }));
+                    
+                    if (!response.ok) {
+                        result.error = `HTTP ${response.status}: ${response.statusText}`;
+                        return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
+                    }
+                    
+                    const text = await response.text();
+                    result.rawContent = text.substring(0, 2000); // 限制原始内容长度
+                    
+                    // 处理Base64解码
+                    let processedText = text;
+                    try {
+                        const cleanedText = text.replace(/\s/g, '');
+                        if (isValidBase64(cleanedText)) {
+                            const binaryString = atob(cleanedText);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                            processedText = new TextDecoder('utf-8').decode(bytes);
+                        }
+                    } catch (e) {
+                        // Base64解码失败，使用原始内容
+                    }
+                    
+                    result.processedContent = processedText.substring(0, 2000); // 限制处理后内容长度
+                    
+                    // 提取所有有效节点
+                    const allNodes = processedText.replace(/\r\n/g, '\n').split('\n')
+                        .map(line => line.trim())
+                        .filter(line => /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line));
+                    
+                    result.validNodes = allNodes.slice(0, 20); // 限制显示节点数量
+                    
+                    // 特别提取SS节点进行分析
+                    result.ssNodes = allNodes.filter(line => line.startsWith('ss://')).map(line => {
+                        try {
+                            const hashIndex = line.indexOf('#');
+                            let baseLink = hashIndex !== -1 ? line.substring(0, hashIndex) : line;
+                            let fragment = hashIndex !== -1 ? line.substring(hashIndex) : '';
+                            
+                            const protocolEnd = baseLink.indexOf('://');
+                            const atIndex = baseLink.indexOf('@');
+                            let analysis = {
+                                original: line,
+                                hasUrlEncoding: false,
+                                fixed: line,
+                                base64Part: '',
+                                credentials: ''
+                            };
+                            
+                            if (protocolEnd !== -1 && atIndex !== -1) {
+                                const base64Part = baseLink.substring(protocolEnd + 3, atIndex);
+                                analysis.base64Part = base64Part;
+                                
+                                if (base64Part.includes('%')) {
+                                    analysis.hasUrlEncoding = true;
+                                    const decodedBase64 = decodeURIComponent(base64Part);
+                                    analysis.fixed = 'ss://' + decodedBase64 + baseLink.substring(atIndex) + fragment;
+                                    
+                                    try {
+                                        analysis.credentials = atob(decodedBase64);
+                                    } catch (e) {
+                                        analysis.credentials = 'Base64解码失败: ' + e.message;
+                                    }
+                                } else {
+                                    try {
+                                        analysis.credentials = atob(base64Part);
+                                    } catch (e) {
+                                        analysis.credentials = 'Base64解码失败: ' + e.message;
+                                    }
+                                }
+                            }
+                            
+                            return analysis;
+                        } catch (e) {
+                            return {
+                                original: line,
+                                error: e.message
+                            };
+                        }
+                    }).slice(0, 10); // 限制SS节点分析数量
+                    
+                    result.success = true;
+                    result.totalNodes = allNodes.length;
+                    result.ssNodesCount = allNodes.filter(line => line.startsWith('ss://')).length;
+                    
+                } catch (e) {
+                    result.error = e.message;
+                }
+                
+                return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
+                
+            } catch (e) {
+                return new Response(JSON.stringify({ error: `调试失败: ${e.message}` }), { status: 500 });
+            }
+        }
+
         case '/settings': {
             if (request.method === 'GET') {
                 try {
@@ -1031,7 +1153,32 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
         if (node.isExpiredNode) {
             return node.url; // Directly use the URL for expired node
         } else {
-            return shouldPrependManualNodes ? prependNodeName(node.url, manualNodePrefix) : node.url;
+            // 修复手动SS节点中的URL编码问题
+            let processedUrl = node.url;
+            if (processedUrl.startsWith('ss://')) {
+                try {
+                    const hashIndex = processedUrl.indexOf('#');
+                    let baseLink = hashIndex !== -1 ? processedUrl.substring(0, hashIndex) : processedUrl;
+                    let fragment = hashIndex !== -1 ? processedUrl.substring(hashIndex) : '';
+                    
+                    // 检查base64部分是否包含URL编码字符
+                    const protocolEnd = baseLink.indexOf('://');
+                    const atIndex = baseLink.indexOf('@');
+                    if (protocolEnd !== -1 && atIndex !== -1) {
+                        const base64Part = baseLink.substring(protocolEnd + 3, atIndex);
+                        if (base64Part.includes('%')) {
+                            // 解码URL编码的base64部分
+                            const decodedBase64 = decodeURIComponent(base64Part);
+                            baseLink = 'ss://' + decodedBase64 + baseLink.substring(atIndex);
+                        }
+                    }
+                    processedUrl = baseLink + fragment;
+                } catch (e) {
+                    // 如果处理失败，使用原始链接
+                }
+            }
+            
+            return shouldPrependManualNodes ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
         }
     }).join('\n');
 
