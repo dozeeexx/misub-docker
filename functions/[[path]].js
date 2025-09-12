@@ -188,6 +188,38 @@ async function getStorageAdapter(env) {
     return StorageFactory.createAdapter(env, storageType);
 }
 
+/**
+ * 处理配置的向后兼容性，确保新的前缀配置结构存在
+ * @param {Object} config - 原始配置对象
+ * @returns {Object} - 处理后的配置对象
+ */
+function migrateConfigSettings(config) {
+    const migratedConfig = { ...config };
+    
+    // 如果没有新的 prefixConfig，但有老的 prependSubName，则创建默认的 prefixConfig
+    if (!migratedConfig.prefixConfig) {
+        const fallbackEnabled = migratedConfig.prependSubName ?? true;
+        migratedConfig.prefixConfig = {
+            enableManualNodes: fallbackEnabled,
+            enableSubscriptions: fallbackEnabled,
+            manualNodePrefix: '手动节点'
+        };
+    }
+    
+    // 确保 prefixConfig 的所有字段都存在
+    if (!migratedConfig.prefixConfig.hasOwnProperty('enableManualNodes')) {
+        migratedConfig.prefixConfig.enableManualNodes = migratedConfig.prependSubName ?? true;
+    }
+    if (!migratedConfig.prefixConfig.hasOwnProperty('enableSubscriptions')) {
+        migratedConfig.prefixConfig.enableSubscriptions = migratedConfig.prependSubName ?? true;
+    }
+    if (!migratedConfig.prefixConfig.hasOwnProperty('manualNodePrefix')) {
+        migratedConfig.prefixConfig.manualNodePrefix = '手动节点';
+    }
+    
+    return migratedConfig;
+}
+
 // --- [新] 默认设置中增加通知阈值和存储类型 ---
 const defaultSettings = {
   FileName: 'MiSub',
@@ -195,7 +227,12 @@ const defaultSettings = {
   profileToken: 'profiles',
   subConverter: 'url.v1.mk',
   subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full.ini',
-  prependSubName: true,
+  prependSubName: true, // 保持向后兼容
+  prefixConfig: {
+    enableManualNodes: true,    // 手动节点前缀开关
+    enableSubscriptions: true,  // 机场订阅前缀开关
+    manualNodePrefix: '手动节点', // 手动节点前缀文本
+  },
   NotifyThresholdDays: 3,
   NotifyThresholdPercent: 90,
   storageType: 'kv' // 新增：数据存储类型，默认 KV，可选 'd1'
@@ -959,13 +996,24 @@ function getProcessedUserAgent(originalUserAgent, url = '') {
 }
 
 // --- 节点列表生成函数 ---
-async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '') {
+async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '', profilePrefixSettings = null) {
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//g;
+    
+    // 判断是否启用手动节点前缀
+    const shouldPrependManualNodes = profilePrefixSettings?.enableManualNodes ?? 
+        config.prefixConfig?.enableManualNodes ?? 
+        config.prependSubName ?? true;
+    
+    // 手动节点前缀文本
+    const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ?? 
+        config.prefixConfig?.manualNodePrefix ?? 
+        '手动节点';
+    
     const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
         if (node.isExpiredNode) {
             return node.url; // Directly use the URL for expired node
         } else {
-            return (config.prependSubName) ? prependNodeName(node.url, '手动节点') : node.url;
+            return shouldPrependManualNodes ? prependNodeName(node.url, manualNodePrefix) : node.url;
         }
     }).join('\n');
 
@@ -1100,7 +1148,12 @@ async function generateCombinedNodeList(context, config, userAgent, misubs, prep
                 }
             }
             
-            return (config.prependSubName && sub.name)
+            // 判断是否启用订阅前缀
+            const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? 
+                config.prefixConfig?.enableSubscriptions ?? 
+                config.prependSubName ?? true;
+            
+            return (shouldPrependSubscriptions && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
         } catch (e) { 
@@ -1141,8 +1194,8 @@ async function handleMisubRequest(context) {
     const settings = settingsData || {};
     const allMisubs = misubsData || [];
     const allProfiles = profilesData || [];
-    // 關鍵：我們在這裡定義了 `config`，後續都應該使用它
-    const config = { ...defaultSettings, ...settings }; 
+    // 关键：我们在这里定义了 `config`，后续都应该使用它
+    const config = migrateConfigSettings({ ...defaultSettings, ...settings }); 
 
     let token = '';
     let profileIdentifier = null;
@@ -1309,7 +1362,14 @@ async function handleMisubRequest(context) {
         }
     }
 
-    const combinedNodeList = await generateCombinedNodeList(context, config, userAgentHeader, targetMisubs, prependedContentForSubconverter);
+    const combinedNodeList = await generateCombinedNodeList(
+        context, 
+        config, 
+        userAgentHeader, 
+        targetMisubs, 
+        prependedContentForSubconverter,
+        profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier)?.prefixSettings : null
+    );
 
     if (targetFormat === 'base64') {
         let contentToEncode;

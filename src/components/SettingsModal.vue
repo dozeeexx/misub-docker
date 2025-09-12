@@ -18,6 +18,13 @@ const isSaving = ref(false);
 const isMigrating = ref(false);
 const settings = ref({});
 
+// 新增：前缀配置的响应式对象
+const prefixConfig = ref({
+  enableManualNodes: true,
+  enableSubscriptions: true,
+  manualNodePrefix: '手动节点'
+});
+
 const hasWhitespace = computed(() => {
   const fieldsToCkeck = [
     'FileName',
@@ -48,6 +55,23 @@ const loadSettings = async () => {
   isLoading.value = true;
   try {
     settings.value = await fetchSettings();
+    
+    // 加载前缀配置，支持向后兼容
+    if (settings.value.prefixConfig) {
+      prefixConfig.value = {
+        enableManualNodes: settings.value.prefixConfig.enableManualNodes ?? true,
+        enableSubscriptions: settings.value.prefixConfig.enableSubscriptions ?? true,
+        manualNodePrefix: settings.value.prefixConfig.manualNodePrefix ?? '手动节点'
+      };
+    } else {
+      // 如果没有新的配置，使用老的 prependSubName 作为默认值
+      const fallbackEnabled = settings.value.prependSubName ?? true;
+      prefixConfig.value = {
+        enableManualNodes: fallbackEnabled,
+        enableSubscriptions: fallbackEnabled,
+        manualNodePrefix: '手动节点'
+      };
+    }
   } catch (error) {
     showToast('加载设置失败', 'error');
   } finally {
@@ -73,7 +97,17 @@ const handleSave = async () => {
       settings.value.storageType = 'kv';
     }
 
-    const result = await saveSettings(settings.value);
+    // 合并前缀配置到设置中
+    const settingsToSave = {
+      ...settings.value,
+      prefixConfig: {
+        enableManualNodes: prefixConfig.value.enableManualNodes,
+        enableSubscriptions: prefixConfig.value.enableSubscriptions,
+        manualNodePrefix: prefixConfig.value.manualNodePrefix
+      }
+    };
+
+    const result = await saveSettings(settingsToSave);
     if (result.success) {
       // 弹出成功提示
       showToast('设置已保存，页面将自动刷新...', 'success');
@@ -189,13 +223,57 @@ watch(() => props.show, (newValue) => {
           >
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">节点名前缀</label>
-          <div class="mt-2 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-            <p class="text-sm text-gray-600 dark:text-gray-300">自动将订阅名添加为节点名的前缀</p>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" v-model="settings.prependSubName" class="sr-only peer">
-              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-            </label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">节点名前缀设置</label>
+          <div class="space-y-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+            <!-- 全局开关(保持向后兼容) -->
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">全局前缀开关</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">控制所有前缀功能的总开关</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" v-model="settings.prependSubName" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+            
+            <!-- 细粒度控制 -->
+            <div v-if="settings.prependSubName" class="mt-4 space-y-3 border-t border-gray-200 dark:border-gray-600 pt-3">
+              <!-- 手动节点前缀 -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300">手动节点前缀</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">为手动添加的节点添加前缀</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="prefixConfig.enableManualNodes" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+              
+              <!-- 手动节点前缀文本 -->
+              <div v-if="prefixConfig.enableManualNodes" class="ml-4">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">手动节点前缀文本</label>
+                <input 
+                  type="text" 
+                  v-model="prefixConfig.manualNodePrefix" 
+                  placeholder="手动节点"
+                  class="block w-full px-2 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                >
+              </div>
+              
+              <!-- 机场订阅前缀 -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300">机场订阅前缀</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">为机场订阅节点添加订阅名前缀</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="prefixConfig.enableSubscriptions" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
         <div>

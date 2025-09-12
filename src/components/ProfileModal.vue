@@ -132,9 +132,29 @@ watch(() => props.profile, (newProfile) => {
         profileCopy.expiresAt = '';
       }
     }
+    // 初始化前缀设置
+    if (!profileCopy.prefixSettings) {
+      profileCopy.prefixSettings = {
+        enableManualNodes: null,
+        enableSubscriptions: null,
+        manualNodePrefix: ''
+      };
+    }
     localProfile.value = profileCopy;
   } else {
-    localProfile.value = { name: '', enabled: true, subscriptions: [], manualNodes: [], customId: '', expiresAt: '' };
+    localProfile.value = { 
+      name: '', 
+      enabled: true, 
+      subscriptions: [], 
+      manualNodes: [], 
+      customId: '', 
+      expiresAt: '',
+      prefixSettings: {
+        enableManualNodes: null,
+        enableSubscriptions: null,
+        manualNodePrefix: ''
+      }
+    };
   }
 }, { deep: true, immediate: true });
 
@@ -250,6 +270,53 @@ const handleDeselectAll = (listName, sourceArray) => {
                 class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
               >
               <p class="text-xs text-gray-400 mt-1">设置此订阅组的到期时间，到期后将返回默认节点。</p>
+            </div>
+            
+            <!-- 前缀设置部分 -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">前缀设置 (可选)</label>
+              <div class="space-y-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">手动节点前缀</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">覆盖全局设置，控制是否为手动节点添加前缀</p>
+                  </div>
+                  <select 
+                    v-model="localProfile.prefixSettings.enableManualNodes" 
+                    class="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                  >
+                    <option :value="null">使用全局设置</option>
+                    <option :value="true">启用</option>
+                    <option :value="false">禁用</option>
+                  </select>
+                </div>
+                
+                <div v-if="localProfile.prefixSettings.enableManualNodes === true" class="ml-4">
+                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">自定义手动节点前缀</label>
+                  <input 
+                    type="text" 
+                    v-model="localProfile.prefixSettings.manualNodePrefix" 
+                    placeholder="留空使用全局设置"
+                    class="block w-full px-2 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                  >
+                </div>
+                
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">机场订阅前缀</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">覆盖全局设置，控制是否为订阅节点添加前缀</p>
+                  </div>
+                  <select 
+                    v-model="localProfile.prefixSettings.enableSubscriptions" 
+                    class="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                  >
+                    <option :value="null">使用全局设置</option>
+                    <option :value="true">启用</option>
+                    <option :value="false">禁用</option>
+                  </select>
+                </div>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">单独为此订阅组配置前缀设置，优先级高于全局设置。</p>
             </div>
         </div>
 
