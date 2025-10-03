@@ -181,7 +181,7 @@ button:active {
   
   /* 修复：提高下拉菜单的z-index以防止被覆盖 */
   .absolute.right-0.mt-2 {
-    z-index: 100;
+    z-index: 10000;
   }
   
   /* 移动端搜索框优化 */
