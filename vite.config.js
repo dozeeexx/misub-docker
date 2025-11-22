@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
+import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [
@@ -9,6 +10,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // 在开发环境中完全禁用workbox日志
+        debug: false,
+        // 只在生产环境中输出错误日志
+        logLevel: 'error',
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\..*/i,
@@ -85,12 +90,16 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true,
+        enabled: false, // 在开发环境中禁用PWA，避免workbox日志
         type: 'module'
       }
     })
   ],
-  // 我们移除了所有 alias 配置
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
+    }
+  },
   server: {
     proxy: {
       '/api': {
