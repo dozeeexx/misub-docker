@@ -10,10 +10,6 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // 在开发环境中完全禁用workbox日志
-        debug: false,
-        // 只在生产环境中输出错误日志
-        logLevel: 'error',
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\..*/i,
