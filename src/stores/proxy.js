@@ -8,7 +8,7 @@ const defaultProxyConfig = {
     enableTrojan: false,      // Trojan 默认关闭
     uuid: '',                 // UUID 初始为空
     proxyIP: '',              // 代理IP 初始为空
-    subPath: 'link',          // 订阅路径有默认值
+    subPath: '',              // 订阅路径初始为空，由用户自行设置
     cfipList: []              // 优选IP列表初始为空
 };
 

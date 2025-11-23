@@ -188,7 +188,7 @@
                 </label>
                 <input type="text"
                        v-model="proxyConfig.subPath"
-                       placeholder="link"
+                       placeholder="自定义订阅路径"
                        class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">代理订阅的访问路径</p>
               </div>
@@ -211,7 +211,8 @@
               <textarea v-model="cfipText"
                         rows="8"
                         placeholder="每行一个，格式：IP:端口#备注"
-                         class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm text-gray-900 dark:text-white"></textarea>
+                        wrap="soft"
+                        class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm text-gray-900 dark:text-white resize-y"></textarea>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 每行一个优选IP，格式：IP:端口 或 IP:端口#备注名称。支持IPv4、域名和IPv6格式。
               </p>
@@ -285,7 +286,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { useProxyStore } from '@/stores/proxy';
 import { useToastStore } from '@/stores/toast';
 
@@ -319,16 +320,13 @@ const canSave = computed(() => {
 });
 
 // Watchers
+// 只在组件初始化或配置加载时设置文本框内容
 watch(() => proxyConfig.value.cfipList, (newList) => {
-  cfipText.value = newList.join('\n');
+  // 只在文本框为空或首次加载时设置
+  if (cfipText.value === '' || cfipText.value === undefined) {
+    cfipText.value = newList.join('\n');
+  }
 }, { immediate: true });
-
-watch(cfipText, (newText) => {
-  const lines = newText.split('\n')
-    .map(line => line.trim())
-    .filter(line => line);
-  proxyConfig.value.cfipList = lines;
-});
 
 // Methods
 async function onServiceToggle() {
@@ -337,6 +335,14 @@ async function onServiceToggle() {
 }
 
 async function saveConfig() {
+  // 处理文本框内容，过滤空行
+  const lines = cfipText.value.split('\n');
+  const filteredLines = lines.filter(line => line.trim() !== '');
+  proxyConfig.value.cfipList = filteredLines;
+
+  // 同时更新文本框内容，去除空行
+  cfipText.value = filteredLines.join('\n');
+
   if (!canSave.value) {
     toastStore.showToast('配置验证失败，请检查必填项', 'error');
     return;
@@ -414,7 +420,7 @@ function handleKeydown(event) {
 watch(() => props.show, (newValue) => {
   if (newValue) {
     document.addEventListener('keydown', handleKeydown);
-    // 只有在模态窗口显示时才获取配置
+    // 打开模态窗口时获取配置
     proxyStore.fetchProxyConfig();
   } else {
     document.removeEventListener('keydown', handleKeydown);
