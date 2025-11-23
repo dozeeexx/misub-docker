@@ -933,9 +933,10 @@ async function handleApiRequest(request, env) {
                 const storageAdapter = await getStorageAdapter(env);
                 let targetUrls = [];
                 let subscriptionNames = [];
+                let manualNodeResults = []; // 声明手工节点结果数组
 
                 if (profileId) {
-                    // 订阅组模式：获取订阅组中的所有订阅
+                    // 订阅组模式：使用现有的组合订阅逻辑获取所有相关项目
                     const allProfiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
                     const allSubscriptions = await storageAdapter.get(KV_KEY_SUBS) || [];
                     const profile = allProfiles.find(p => (p.customId && p.customId === profileId) || p.id === profileId);
@@ -944,13 +945,95 @@ async function handleApiRequest(request, env) {
                         return new Response(JSON.stringify({ error: '订阅组不存在或已禁用' }), { status: 404 });
                     }
 
-                    const profileSubIds = new Set(profile.subscriptions);
-                    const targetSubscriptions = allSubscriptions.filter(sub =>
-                        profileSubIds.has(sub.id) && sub.enabled && sub.url.startsWith('http')
-                    );
+                    const profileSubIds = new Set(profile.subscriptions || []);
+                    const profileNodeIds = new Set(profile.manualNodes || []);
 
+                    // 复用现有的组合订阅过滤逻辑
+                    const targetMisubs = allSubscriptions.filter(item => {
+                        const isSubscription = item.url && item.url.startsWith('http');
+                        const isManualNode = !isSubscription;
+
+                        // 检查项目是否属于当前订阅组且已启用
+                        const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) || (isManualNode && profileNodeIds.has(item.id));
+                        if (!item.enabled || !belongsToProfile) {
+                            return false;
+                        }
+                        return true;
+                    });
+
+                    // 分离HTTP订阅和手工节点
+                    const targetSubscriptions = targetMisubs.filter(item => item.url.startsWith('http'));
+                    const targetManualNodes = targetMisubs.filter(item => !item.url.startsWith('http'));
+
+                    // 为HTTP订阅创建URL列表
                     targetUrls = targetSubscriptions.map(sub => sub.url);
                     subscriptionNames = targetSubscriptions.map(sub => sub.name);
+
+                    // 为手工节点创建模拟的结果（直接解析节点URL）
+                    manualNodeResults = targetManualNodes.map(node => {
+                        const nodeUrl = node.url;
+                        const protocolMatch = nodeUrl.match(/^(.*?):\/\//);
+                        const protocol = protocolMatch ? protocolMatch[1].toLowerCase() : 'unknown';
+
+                        let nodeName = '';
+                        let region = '';
+
+                        // 提取节点名称
+                        const hashIndex = nodeUrl.lastIndexOf('#');
+                        if (hashIndex !== -1) {
+                            try {
+                                nodeName = decodeURIComponent(nodeUrl.substring(hashIndex + 1));
+                            } catch (e) {
+                                nodeName = nodeUrl.substring(hashIndex + 1);
+                            }
+                        }
+
+                        // 提取地区信息
+                        const regionKeywords = {
+                            '香港': ['HK', '香港', 'Hong Kong', 'HongKong'],
+                            '台湾': ['TW', '台湾', 'Taiwan', 'Taipei'],
+                            '新加坡': ['SG', '新加坡', 'Singapore'],
+                            '日本': ['JP', '日本', 'Japan', 'Tokyo', 'Osaka'],
+                            '美国': ['US', '美国', 'USA', 'United States', 'America'],
+                            '韩国': ['KR', '韩国', 'Korea', 'Seoul'],
+                            '英国': ['UK', '英国', 'Britain', 'London'],
+                            '德国': ['DE', '德国', 'Germany', 'Frankfurt'],
+                            '法国': ['FR', '法国', 'France', 'Paris'],
+                            '加拿大': ['CA', '加拿大', 'Canada'],
+                            '澳大利亚': ['AU', '澳大利亚', 'Australia'],
+                            '荷兰': ['NL', '荷兰', 'Netherlands', 'Amsterdam'],
+                            '俄罗斯': ['RU', '俄罗斯', 'Russia', 'Moscow'],
+                            '印度': ['IN', '印度', 'India'],
+                            '土耳其': ['TR', '土耳其', 'Turkey', 'Istanbul'],
+                            '马来西亚': ['MY', '马来西亚', 'Malaysia'],
+                            '泰国': ['TH', '泰国', 'Thailand', 'Bangkok'],
+                            '越南': ['VN', '越南', 'Vietnam'],
+                            '菲律宾': ['PH', '菲律宾', 'Philippines'],
+                            '印尼': ['ID', '印尼', 'Indonesia']
+                        };
+
+                        for (const [regionName, keywords] of Object.entries(regionKeywords)) {
+                            if (keywords.some(keyword => nodeName.toLowerCase().includes(keyword.toLowerCase()))) {
+                                region = regionName;
+                                break;
+                            }
+                        }
+
+                        return {
+                            subscriptionName: node.name || '手工节点',
+                            url: nodeUrl,
+                            success: true,
+                            nodes: [{
+                                name: nodeName || '未命名节点',
+                                url: nodeUrl,
+                                protocol: protocol,
+                                region: region || '其他',
+                                subscriptionName: node.name || '手工节点'
+                            }],
+                            error: null,
+                            isManualNode: true
+                        };
+                    });
                 } else if (subscriptionId) {
                     // 单订阅模式：通过ID获取订阅
                     const allSubscriptions = await storageAdapter.get(KV_KEY_SUBS) || [];
@@ -960,8 +1043,87 @@ async function handleApiRequest(request, env) {
                         return new Response(JSON.stringify({ error: '订阅不存在或已禁用' }), { status: 404 });
                     }
 
-                    targetUrls = [subscription.url];
-                    subscriptionNames = [subscription.name];
+                    // 检查是否为手工节点
+                    if (subscription.url && !subscription.url.startsWith('http')) {
+                        // 手工节点：直接解析节点URL
+                        const nodeUrl = subscription.url;
+                        const protocolMatch = nodeUrl.match(/^(.*?):\/\//);
+                        const protocol = protocolMatch ? protocolMatch[1].toLowerCase() : 'unknown';
+
+                        let nodeName = '';
+                        let region = '';
+
+                        // 提取节点名称
+                        const hashIndex = nodeUrl.lastIndexOf('#');
+                        if (hashIndex !== -1) {
+                            try {
+                                nodeName = decodeURIComponent(nodeUrl.substring(hashIndex + 1));
+                            } catch (e) {
+                                nodeName = nodeUrl.substring(hashIndex + 1);
+                            }
+                        }
+
+                        // 提取地区信息
+                        const regionKeywords = {
+                            '香港': ['HK', '香港', 'Hong Kong', 'HongKong'],
+                            '台湾': ['TW', '台湾', 'Taiwan', 'Taipei'],
+                            '新加坡': ['SG', '新加坡', 'Singapore'],
+                            '日本': ['JP', '日本', 'Japan', 'Tokyo', 'Osaka'],
+                            '美国': ['US', '美国', 'USA', 'United States', 'America'],
+                            '韩国': ['KR', '韩国', 'Korea', 'Seoul'],
+                            '英国': ['UK', '英国', 'Britain', 'London'],
+                            '德国': ['DE', '德国', 'Germany', 'Frankfurt'],
+                            '法国': ['FR', '法国', 'France', 'Paris'],
+                            '加拿大': ['CA', '加拿大', 'Canada'],
+                            '澳大利亚': ['AU', '澳大利亚', 'Australia'],
+                            '荷兰': ['NL', '荷兰', 'Netherlands', 'Amsterdam'],
+                            '俄罗斯': ['RU', '俄罗斯', 'Russia', 'Moscow'],
+                            '印度': ['IN', '印度', 'India'],
+                            '土耳其': ['TR', '土耳其', 'Turkey', 'Istanbul'],
+                            '马来西亚': ['MY', '马来西亚', 'Malaysia'],
+                            '泰国': ['TH', '泰国', 'Thailand', 'Bangkok'],
+                            '越南': ['VN', '越南', 'Vietnam'],
+                            '菲律宾': ['PH', '菲律宾', 'Philippines'],
+                            '印尼': ['ID', '印尼', 'Indonesia']
+                        };
+
+                        for (const [regionName, keywords] of Object.entries(regionKeywords)) {
+                            if (keywords.some(keyword => nodeName.toLowerCase().includes(keyword.toLowerCase()))) {
+                                region = regionName;
+                                break;
+                            }
+                        }
+
+                        const manualNodeResult = {
+                            subscriptionName: subscription.name || '手工节点',
+                            url: nodeUrl,
+                            success: true,
+                            nodes: [{
+                                name: nodeName || '未命名节点',
+                                url: nodeUrl,
+                                protocol: protocol,
+                                region: region || '其他',
+                                subscriptionName: subscription.name || '手工节点'
+                            }],
+                            error: null,
+                            isManualNode: true
+                        };
+
+                        return new Response(JSON.stringify({
+                            success: true,
+                            subscriptions: [manualNodeResult],
+                            nodes: manualNodeResult.nodes,
+                            totalCount: manualNodeResult.nodes.length,
+                            stats: {
+                                protocols: { [protocol]: 1 },
+                                regions: { [region || '其他']: 1 }
+                            }
+                        }), { headers: { 'Content-Type': 'application/json' } });
+                    } else {
+                        // HTTP订阅：添加到处理列表
+                        targetUrls = [subscription.url];
+                        subscriptionNames = [subscription.name];
+                    }
                 } else {
                     // 直接URL模式
                     targetUrls = [subscriptionUrl];
@@ -1082,9 +1244,12 @@ async function handleApiRequest(request, env) {
 
                 const results = await Promise.all(nodePromises);
 
+                // 合并HTTP订阅结果和手工节点结果
+                const allResults = profileId ? [...results, ...manualNodeResults] : results;
+
                 // 合并所有节点
                 const allNodes = [];
-                results.forEach(result => {
+                allResults.forEach(result => {
                     if (result.success) {
                         allNodes.push(...result.nodes);
                     }
@@ -1100,7 +1265,7 @@ async function handleApiRequest(request, env) {
 
                 return new Response(JSON.stringify({
                     success: true,
-                    subscriptions: results,
+                    subscriptions: allResults,
                     nodes: allNodes,
                     totalCount: allNodes.length,
                     stats: {
