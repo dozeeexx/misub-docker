@@ -222,9 +222,11 @@ export class ProxyHandler {
         if (this.config.enableVLESS) {
             const vlessLinks = this.config.cfipList.map(cdnItem => {
                 const [address, remark] = this.parseCfipItem(cdnItem);
+                const { host, port } = this.parseAddressAndPort(address);
                 const nodeName = remark ? `${remark}-VLESS` : `Workers-VLESS`;
 
-                return `vless://${this.config.uuid}@${address}?encryption=none&security=tls&sni=${currentDomain}&fp=firefox&allowInsecure=1&type=ws&host=${currentDomain}&path=%2F%3Fed%3D2560#${nodeName}`;
+                // 根据_worker.js的实现：地址使用cfipList中的优选域名/IP，SNI和host使用当前域名
+                return `vless://${this.config.uuid}@${host}:${port}?encryption=none&security=tls&sni=${currentDomain}&fp=firefox&allowInsecure=1&type=ws&host=${currentDomain}&path=%2F%3Fed%3D2560#${nodeName}`;
             });
             links.push(...vlessLinks);
         }
@@ -233,9 +235,11 @@ export class ProxyHandler {
         if (this.config.enableTrojan) {
             const trojanLinks = this.config.cfipList.map(cdnItem => {
                 const [address, remark] = this.parseCfipItem(cdnItem);
+                const { host, port } = this.parseAddressAndPort(address);
                 const nodeName = remark ? `${remark}-Trojan` : `Workers-Trojan`;
 
-                return `trojan://${this.config.uuid}@${address}?security=tls&sni=${currentDomain}&fp=firefox&allowInsecure=1&type=ws&host=${currentDomain}&path=%2F%3Fed%3D2560#${nodeName}`;
+                // 根据_worker.js的实现：地址使用cfipList中的优选域名/IP，SNI和host使用当前域名
+                return `trojan://${this.config.uuid}@${host}:${port}?security=tls&sni=${currentDomain}&fp=firefox&allowInsecure=1&type=ws&host=${currentDomain}&path=%2F%3Fed%3D2560#${nodeName}`;
             });
             links.push(...trojanLinks);
         }
@@ -251,15 +255,40 @@ export class ProxyHandler {
         });
     }
 
-    /**
+      /**
      * 解析优选IP条目
+     * 支持: domain:port#remark, domain#remark, 或 domain:port 格式
+     * 如果没有指定端口，默认使用443
      */
     parseCfipItem(item) {
         const hashIndex = item.indexOf('#');
+        let address = item;
+        let remark = '';
+
         if (hashIndex > 0) {
-            return [item.substring(0, hashIndex), item.substring(hashIndex + 1)];
+            address = item.substring(0, hashIndex).trim();
+            remark = item.substring(hashIndex + 1).trim();
         }
-        return [item, ''];
+
+        return [address, remark];
+    }
+
+    /**
+     * 解析地址和端口
+     * 参考 _worker.js 的实现逻辑
+     */
+    parseAddressAndPort(address) {
+        const colonIndex = address.indexOf(':');
+        if (colonIndex > 0) {
+            // 有端口号的情况，如 "mfa.gov.ua:8080" 或 "mfa.gov.ua:443"
+            const host = address.substring(0, colonIndex);
+            const portStr = address.substring(colonIndex + 1);
+            const port = parseInt(portStr) || 443;
+            return { host, port };
+        } else {
+            // 没有端口号的情况，使用默认端口443
+            return { host: address, port: 443 };
+        }
     }
 
     /**
