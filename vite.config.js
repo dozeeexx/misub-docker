@@ -8,6 +8,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
+        // 禁用调试日志
+        debug: false,
+        // 禁用Workbox控制台输出
+        quiet: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
@@ -131,7 +135,9 @@ export default defineConfig({
       },
       devOptions: {
         enabled: true,
-        type: 'module'
+        type: 'module',
+        // 禁用开发环境的Workbox调试信息
+        navigateFallbackAllowlist: [/^\/$/],
       }
     })
   ],
