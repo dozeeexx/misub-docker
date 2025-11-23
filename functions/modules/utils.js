@@ -219,33 +219,6 @@ export function migrateConfigSettings(config) {
 }
 
 /**
- * 检测字符串是否为有效的Base64格式
- * @param {string} str - 要检测的字符串
- * @returns {boolean} - 是否为有效Base64
- */
-export function isValidBase64(str) {
-    // 先移除所有空白字符(空格、换行、回车等)
-    const cleanStr = str.replace(/\s/g, '');
-    const base64Regex = /^[A-Za-z0-9+\/=]+$/;
-    return base64Regex.test(cleanStr) && cleanStr.length > 20;
-}
-
-/**
- * 根据客户端类型确定合适的用户代理
- * 参考CF-Workers-SUB的优雅策略：统一使用v2rayN UA获取订阅，简单而有效
- * @param {string} originalUserAgent - 原始用户代理字符串
- * @returns {string} - 处理后的用户代理字符串
- */
-export function getProcessedUserAgent(originalUserAgent, url = '') {
-    if (!originalUserAgent) return originalUserAgent;
-
-    // CF-Workers-SUB的精华策略：
-    // 统一使用v2rayN UA获取订阅，绕过机场过滤同时保证获取完整节点
-    // 不需要复杂的客户端判断，简单而有效
-    return 'v2rayN/7.23';
-}
-
-/**
  * 创建JSON响应
  * @param {Object} data - 响应数据
  * @param {number} status - HTTP状态码

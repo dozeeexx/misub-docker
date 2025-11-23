@@ -2,7 +2,7 @@
  * MiSub Cloudflare Pages Functions - 主入口文件
  * 负责路由分发和请求协调
  *
- * 模块化架构:
+ * 模块化架构v2:
  * - utils.js: 工具函数
  * - auth-middleware.js: 认证中间件
  * - notifications.js: 通知功能
@@ -10,6 +10,13 @@
  * - subscription-handler.js: 订阅请求处理
  * - api-handler.js: API处理
  * - api-router.js: API路由
+ * - handlers/: 功能处理器模块
+ *   - subscription-handler.js: 订阅相关处理
+ *   - node-handler.js: 节点相关处理
+ *   - debug-handler.js: 调试相关处理
+ * - utils/: 工具模块
+ *   - geo-utils.js: 地理识别工具
+ *   - node-parser.js: 节点解析工具
  */
 
 import { handleMisubRequest } from './modules/subscription-handler.js';
@@ -65,7 +72,7 @@ export async function onRequest(context) {
  * 调试信息导出 (仅开发环境)
  */
 export const debugInfo = {
-    version: '2.0.0-modular',
+    version: '2.0.0-modular-v2',
     modules: [
         'utils',
         'auth-middleware',
@@ -73,7 +80,12 @@ export const debugInfo = {
         'subscription',
         'subscription-handler',
         'api-handler',
-        'api-router'
+        'api-router',
+        'handlers/subscription-handler',
+        'handlers/node-handler',
+        'handlers/debug-handler',
+        'utils/geo-utils',
+        'utils/node-parser'
     ],
-    architecture: 'modular-refactor-v2'
+    architecture: 'modular-refactor-v2-domain-split'
 };
