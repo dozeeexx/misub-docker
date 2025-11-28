@@ -2,10 +2,7 @@ version: '3.8'
 
 services:
   misub:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: misub
+    image: imzyb/misub:latest
     ports:
       - "8808:8787" # Host port 8808 -> Container port 8787 (miniflare)
     restart: always
