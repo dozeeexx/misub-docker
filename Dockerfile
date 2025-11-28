@@ -26,4 +26,4 @@ EXPOSE 8787
 
 # The command is specified in docker-compose.yml to include all arguments,
 # but we provide a default here for running the container directly.
-CMD ["npx", "miniflare", "functions/[[path]].js", "--host", "0.0.0.0", "--site", "./dist"]
+CMD ["sh", "-c", "npx miniflare functions/[[path]].js --host 0.0.0.0 --site ./dist --d1 MISUB_DB --d1-persist /var/lib/d1 --kv MISUB_KV --kv-persist /var/lib/kv"]
