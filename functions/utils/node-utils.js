@@ -4,7 +4,7 @@
  */
 
 // [引入] 从 geo-utils 引入必要的函数
-import { extractNodeRegion, getRegionEmoji } from './geo-utils.js';
+import { extractNodeRegion, getRegionEmoji } from '../modules/utils/geo-utils.js';
 
 /**
  * 节点协议正则表达式
