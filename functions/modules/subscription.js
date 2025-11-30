@@ -4,7 +4,7 @@
  */
 
 import { isValidBase64, formatBytes, prependNodeName, getProcessedUserAgent } from './utils.js';
-import { addFlagEmoji } from './utils/node-utils.js';
+import { addFlagEmoji } from '../utils/node-utils.js';
 import { sendEnhancedTgNotification } from './notifications.js';
 
 // --- [新] 默认设置中增加通知阈值和存储类型 ---
