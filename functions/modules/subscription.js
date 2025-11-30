@@ -156,7 +156,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                         }
                     }
                     return line;
-                });
+                })
 
                 .map(line => addFlagEmoji(line));
 
