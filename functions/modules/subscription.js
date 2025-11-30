@@ -4,6 +4,7 @@
  */
 
 import { isValidBase64, formatBytes, prependNodeName, getProcessedUserAgent } from './utils.js';
+import { addFlagEmoji } from './utils/node-utils.js';
 import { sendEnhancedTgNotification } from './notifications.js';
 
 // --- [新] 默认设置中增加通知阈值和存储类型 ---
@@ -75,6 +76,8 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                     // 如果处理失败，使用原始链接
                 }
             }
+
+            processedUrl = addFlagEmoji(processedUrl);
 
             return shouldPrependManualNodes ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
         }
@@ -154,6 +157,8 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                     }
                     return line;
                 });
+
+                .map(line => addFlagEmoji(line));
 
             // [核心重構] 引入白名單 (keep:) 和黑名單 (exclude) 模式
             if (sub.exclude && sub.exclude.trim() !== '') {

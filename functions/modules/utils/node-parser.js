@@ -52,6 +52,15 @@ export function fixNodeEncoding(nodeUrl) {
     if (!nodeUrl || typeof nodeUrl !== 'string') {
         return nodeUrl;
     }
+    if (nodeUrl.startsWith('hysteria2://')) {
+        return nodeUrl.replace(/([?&]obfs-password=)([^&]+)/g, (match, prefix, value) => {
+            try {
+                return prefix + decodeURIComponent(value);
+            } catch (e) {
+                return match;
+            }
+        });
+    }
 
     // 处理支持URL编码的协议
     const supportedProtocols = ['ss://', 'vless://', 'trojan://'];

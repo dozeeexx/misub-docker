@@ -1,3 +1,4 @@
+import { REGION_KEYWORDS, prependNodeName as prependNameRaw, extractNodeRegion, getRegionEmoji } from './geo-utils.js';
 /**
  * 节点处理工具函数
  * @author MiSub Team
@@ -159,6 +160,15 @@ export function fixSSEncoding(nodeUrl) {
  * @returns {string} - 修复后的URL
  */
 export function fixNodeUrlEncoding(nodeUrl) {
+    if (nodeUrl.startsWith('hysteria2://')) {
+        return nodeUrl.replace(/([?&]obfs-password=)([^&]+)/g, (match, prefix, value) => {
+            try {
+                return prefix + decodeURIComponent(value);
+            } catch (e) {
+                return match;
+            }
+        });
+    }
     if (!nodeUrl.startsWith('ss://') && !nodeUrl.startsWith('vless://') && !nodeUrl.startsWith('trojan://')) {
         return nodeUrl;
     }
@@ -184,5 +194,55 @@ export function fixNodeUrlEncoding(nodeUrl) {
     } catch (e) {
         // 如果处理失败，返回原始链接
         return nodeUrl;
+    }
+}
+
+export function addFlagEmoji(link) {
+    if (!link) return link;
+
+    const appendEmoji = (name) => {
+        const region = extractNodeRegion(name);
+        const emoji = getRegionEmoji(region);
+        if (!emoji) return name;
+        
+        // 简单检查是否已包含该 Emoji，避免重复添加
+        if (name.includes(emoji)) return name;
+        
+        return `${emoji} ${name}`;
+    };
+
+    if (link.startsWith('vmess://')) {
+        try {
+            const base64Part = link.substring('vmess://'.length);
+            const binaryString = atob(base64Part);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const jsonString = new TextDecoder('utf-8').decode(bytes);
+            const nodeConfig = JSON.parse(jsonString);
+            
+            if (nodeConfig.ps) {
+                nodeConfig.ps = appendEmoji(nodeConfig.ps);
+                const newJsonString = JSON.stringify(nodeConfig);
+                const newBase64Part = btoa(unescape(encodeURIComponent(newJsonString)));
+                return 'vmess://' + newBase64Part;
+            }
+            return link;
+        } catch (e) {
+            return link;
+        }
+    } else {
+        // 处理包含 hash (#) 的常规链接 (ss, vless, trojan 等)
+        const hashIndex = link.lastIndexOf('#');
+        if (hashIndex === -1) return link;
+        
+        try {
+            const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+            const newName = appendEmoji(originalName);
+            return link.substring(0, hashIndex + 1) + encodeURIComponent(newName);
+        } catch (e) {
+            return link;
+        }
     }
 }
