@@ -4,7 +4,8 @@
  */
 
 import { isValidBase64, formatBytes, prependNodeName, getProcessedUserAgent } from './utils.js';
-import { addFlagEmoji } from '../utils/node-utils.js';
+// [引入] 引入我们在 node-utils.js 中定义的工具函数
+import { addFlagEmoji, fixNodeUrlEncoding } from '../utils/node-utils.js';
 import { sendEnhancedTgNotification } from './notifications.js';
 
 // --- [新] 默认设置中增加通知阈值和存储类型 ---
@@ -48,41 +49,25 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         config.prefixConfig?.manualNodePrefix ??
         '手动节点';
 
+    // --- 处理手动节点 ---
     const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
         if (node.isExpiredNode) {
             return node.url; // Directly use the URL for expired node
         } else {
-            // 修复手动SS节点中的URL编码问题
             let processedUrl = node.url;
-            if (processedUrl.startsWith('ss://')) {
-                try {
-                    const hashIndex = processedUrl.indexOf('#');
-                    let baseLink = hashIndex !== -1 ? processedUrl.substring(0, hashIndex) : processedUrl;
-                    let fragment = hashIndex !== -1 ? processedUrl.substring(hashIndex) : '';
-
-                    // 检查base64部分是否包含URL编码字符
-                    const protocolEnd = baseLink.indexOf('://');
-                    const atIndex = baseLink.indexOf('@');
-                    if (protocolEnd !== -1 && atIndex !== -1) {
-                        const base64Part = baseLink.substring(protocolEnd + 3, atIndex);
-                        if (base64Part.includes('%')) {
-                            // 解码URL编码的base64部分
-                            const decodedBase64 = decodeURIComponent(base64Part);
-                            baseLink = 'ss://' + decodedBase64 + baseLink.substring(atIndex);
-                        }
-                    }
-                    processedUrl = baseLink + fragment;
-                } catch (e) {
-                    // 如果处理失败，使用原始链接
-                }
-            }
-
+            
+            // 1. [修复] 调用封装好的函数修复编码 (包含 Hysteria2 密码解码、SS/VLESS Base64修复)
+            // 这行代码替代了原来那一大段 if (processedUrl.startsWith('ss://')) { ... } 逻辑
+            processedUrl = fixNodeUrlEncoding(processedUrl);
+            
+            // 2. [新增] 自动添加国旗 Emoji
             processedUrl = addFlagEmoji(processedUrl);
 
             return shouldPrependManualNodes ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
         }
     }).join('\n');
 
+    // --- 处理订阅节点 ---
     const httpSubs = misubs.filter(sub => sub.url.toLowerCase().startsWith('http'));
     const subPromises = httpSubs.map(async (sub) => {
         try {
@@ -126,39 +111,19 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
             } catch (e) {
                 // Base64解码失败，使用原始内容
             }
+            
             let validNodes = text.replace(/\r\n/g, '\n').split('\n')
                 .map(line => line.trim())
                 .filter(line => /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line))
                 .map(line => {
-                    // 修复SS节点中的URL编码问题
-                    if (line.startsWith('ss://') || line.startsWith('vless://') || line.startsWith('trojan://')) {
-                        try {
-                            const hashIndex = line.indexOf('#');
-                            let baseLink = hashIndex !== -1 ? line.substring(0, hashIndex) : line;
-                            let fragment = hashIndex !== -1 ? line.substring(hashIndex) : '';
-
-                            // 检查base64部分是否包含URL编码字符
-                            const protocolEnd = baseLink.indexOf('://');
-                            const atIndex = baseLink.indexOf('@');
-                            if (protocolEnd !== -1 && atIndex !== -1) {
-                                const base64Part = baseLink.substring(protocolEnd + 3, atIndex);
-                                if (base64Part.includes('%')) {
-                                    // 解码URL编码的base64部分
-                                    const decodedBase64 = decodeURIComponent(base64Part);
-                                    const protocol = baseLink.substring(0, protocolEnd);
-                                    baseLink = protocol + '://' + decodedBase64 + baseLink.substring(atIndex);
-                                }
-                            }
-                            return baseLink + fragment;
-                        } catch (e) {
-                            // 如果处理失败，返回原始链接
-                            return line;
-                        }
-                    }
-                    return line;
+                    // 1. [修复] 调用封装好的函数修复编码
+                    // 这替代了原来那一大段对 ss/vless/trojan 的 try-catch 处理
+                    return fixNodeUrlEncoding(line);
                 })
-
-                .map(line => addFlagEmoji(line));
+                .map(line => {
+                    // 2. [新增] 自动添加国旗 Emoji
+                    return addFlagEmoji(line);
+                });
 
             // [核心重構] 引入白名單 (keep:) 和黑名單 (exclude) 模式
             if (sub.exclude && sub.exclude.trim() !== '') {
