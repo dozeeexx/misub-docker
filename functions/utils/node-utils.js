@@ -1,34 +1,10 @@
-import { REGION_KEYWORDS, prependNodeName as prependNameRaw, extractNodeRegion, getRegionEmoji } from './geo-utils.js';
 /**
  * 节点处理工具函数
  * @author MiSub Team
  */
 
-/**
- * 地区关键词映射
- */
-export const REGION_KEYWORDS = {
-    '香港': ['HK', '香港', 'Hong Kong', 'HongKong'],
-    '台湾': ['TW', '台湾', 'Taiwan', 'Taipei'],
-    '新加坡': ['SG', '新加坡', 'Singapore'],
-    '日本': ['JP', '日本', 'Japan', 'Tokyo', 'Osaka'],
-    '美国': ['US', '美国', 'USA', 'United States', 'America'],
-    '韩国': ['KR', '韩国', 'Korea', 'Seoul'],
-    '英国': ['UK', '英国', 'Britain', 'London'],
-    '德国': ['DE', '德国', 'Germany', 'Frankfurt'],
-    '法国': ['FR', '法国', 'France', 'Paris'],
-    '加拿大': ['CA', '加拿大', 'Canada'],
-    '澳大利亚': ['AU', '澳大利亚', 'Australia'],
-    '荷兰': ['NL', '荷兰', 'Netherlands', 'Amsterdam'],
-    '俄罗斯': ['RU', '俄罗斯', 'Russia', 'Moscow'],
-    '印度': ['IN', '印度', 'India'],
-    '土耳其': ['TR', '土耳其', 'Turkey', 'Istanbul'],
-    '马来西亚': ['MY', '马来西亚', 'Malaysia'],
-    '泰国': ['TH', '泰国', 'Thailand', 'Bangkok'],
-    '越南': ['VN', '越南', 'Vietnam'],
-    '菲律宾': ['PH', '菲律宾', 'Philippines'],
-    '印尼': ['ID', '印尼', 'Indonesia']
-};
+// [引入] 从 geo-utils 引入必要的函数
+import { extractNodeRegion, getRegionEmoji } from './geo-utils.js';
 
 /**
  * 节点协议正则表达式
@@ -81,17 +57,68 @@ export function prependNodeName(link, prefix) {
 }
 
 /**
- * 从节点URL提取地区信息
+ * [兼容导出] 从节点URL提取地区信息
+ * 直接调用 geo-utils 中的 extractNodeRegion
  * @param {string} nodeName - 节点名称
  * @returns {string} - 地区名称
  */
 export function extractRegionFromNodeName(nodeName) {
-    for (const [regionName, keywords] of Object.entries(REGION_KEYWORDS)) {
-        if (keywords.some(keyword => nodeName.toLowerCase().includes(keyword.toLowerCase()))) {
-            return regionName;
+    return extractNodeRegion(nodeName);
+}
+
+/**
+ * [新增] 为节点链接添加国旗 Emoji
+ * @param {string} link - 节点链接
+ * @returns {string} - 添加 Emoji 后的链接
+ */
+export function addFlagEmoji(link) {
+    if (!link) return link;
+
+    const appendEmoji = (name) => {
+        const region = extractNodeRegion(name);
+        const emoji = getRegionEmoji(region);
+        if (!emoji) return name;
+        
+        // 简单检查是否已包含该 Emoji，避免重复添加
+        if (name.includes(emoji)) return name;
+        
+        return `${emoji} ${name}`;
+    };
+
+    if (link.startsWith('vmess://')) {
+        try {
+            const base64Part = link.substring('vmess://'.length);
+            const binaryString = atob(base64Part);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const jsonString = new TextDecoder('utf-8').decode(bytes);
+            const nodeConfig = JSON.parse(jsonString);
+            
+            if (nodeConfig.ps) {
+                nodeConfig.ps = appendEmoji(nodeConfig.ps);
+                const newJsonString = JSON.stringify(nodeConfig);
+                const newBase64Part = btoa(unescape(encodeURIComponent(newJsonString)));
+                return 'vmess://' + newBase64Part;
+            }
+            return link;
+        } catch (e) {
+            return link;
+        }
+    } else {
+        // 处理包含 hash (#) 的常规链接 (ss, vless, trojan 等)
+        const hashIndex = link.lastIndexOf('#');
+        if (hashIndex === -1) return link;
+        
+        try {
+            const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+            const newName = appendEmoji(originalName);
+            return link.substring(0, hashIndex + 1) + encodeURIComponent(newName);
+        } catch (e) {
+            return link;
         }
     }
-    return '其他';
 }
 
 /**
@@ -160,6 +187,7 @@ export function fixSSEncoding(nodeUrl) {
  * @returns {string} - 修复后的URL
  */
 export function fixNodeUrlEncoding(nodeUrl) {
+    // [新增] Hysteria2 修复逻辑
     if (nodeUrl.startsWith('hysteria2://')) {
         return nodeUrl.replace(/([?&]obfs-password=)([^&]+)/g, (match, prefix, value) => {
             try {
@@ -169,6 +197,7 @@ export function fixNodeUrlEncoding(nodeUrl) {
             }
         });
     }
+
     if (!nodeUrl.startsWith('ss://') && !nodeUrl.startsWith('vless://') && !nodeUrl.startsWith('trojan://')) {
         return nodeUrl;
     }
@@ -194,55 +223,5 @@ export function fixNodeUrlEncoding(nodeUrl) {
     } catch (e) {
         // 如果处理失败，返回原始链接
         return nodeUrl;
-    }
-}
-
-export function addFlagEmoji(link) {
-    if (!link) return link;
-
-    const appendEmoji = (name) => {
-        const region = extractNodeRegion(name);
-        const emoji = getRegionEmoji(region);
-        if (!emoji) return name;
-        
-        // 简单检查是否已包含该 Emoji，避免重复添加
-        if (name.includes(emoji)) return name;
-        
-        return `${emoji} ${name}`;
-    };
-
-    if (link.startsWith('vmess://')) {
-        try {
-            const base64Part = link.substring('vmess://'.length);
-            const binaryString = atob(base64Part);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            const jsonString = new TextDecoder('utf-8').decode(bytes);
-            const nodeConfig = JSON.parse(jsonString);
-            
-            if (nodeConfig.ps) {
-                nodeConfig.ps = appendEmoji(nodeConfig.ps);
-                const newJsonString = JSON.stringify(nodeConfig);
-                const newBase64Part = btoa(unescape(encodeURIComponent(newJsonString)));
-                return 'vmess://' + newBase64Part;
-            }
-            return link;
-        } catch (e) {
-            return link;
-        }
-    } else {
-        // 处理包含 hash (#) 的常规链接 (ss, vless, trojan 等)
-        const hashIndex = link.lastIndexOf('#');
-        if (hashIndex === -1) return link;
-        
-        try {
-            const originalName = decodeURIComponent(link.substring(hashIndex + 1));
-            const newName = appendEmoji(originalName);
-            return link.substring(0, hashIndex + 1) + encodeURIComponent(newName);
-        } catch (e) {
-            return link;
-        }
     }
 }
