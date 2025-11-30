@@ -5,7 +5,8 @@
 
 import { formatBytes, prependNodeName, getProcessedUserAgent } from './utils.js';
 import { addFlagEmoji, fixNodeUrlEncoding } from '../utils/node-utils.js';
-import { extractValidNodes } from './utils/node-parser.js'; // [新增] 引入新的解析函数
+// [新增] 引入 node-parser 中的解析函数
+import { extractValidNodes } from './utils/node-parser.js'; 
 import { sendEnhancedTgNotification } from './notifications.js';
 
 export const defaultSettings = {
@@ -62,7 +63,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                         validateCertificate: false
                     }
                 })),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 15000)) // 增加超时时间到15秒
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 15000))
             ]);
             
             if (!response.ok) {
@@ -72,8 +73,8 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
             
             const text = await response.text();
 
-            // [核心修改] 使用 extractValidNodes 统一提取节点
-            // 这会自动处理 Base64、Clash YAML、纯文本列表
+            // [核心修复] 移除了之前会拦截 proxies: 和 outbounds 的 if 判断
+            // 直接使用 extractValidNodes，它会自动识别 Clash YAML、Base64 或纯文本
             const rawNodes = extractValidNodes(text);
             
             let validNodes = rawNodes
