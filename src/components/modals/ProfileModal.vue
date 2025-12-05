@@ -152,7 +152,7 @@ watch(() => props.profile, (newProfile) => {
       prefixSettings: {
         enableManualNodes: null,
         enableSubscriptions: null,
-        manualNodePrefix: ''
+        manualNodePrefix: '',
         enableNodeEmoji: null // [新增] 初始化为 null (使用全局设置)
       }
     };
