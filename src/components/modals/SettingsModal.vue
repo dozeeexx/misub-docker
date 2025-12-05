@@ -61,7 +61,9 @@ const loadSettings = async () => {
       prefixConfig.value = {
         enableManualNodes: settings.value.prefixConfig.enableManualNodes ?? true,
         enableSubscriptions: settings.value.prefixConfig.enableSubscriptions ?? true,
-        manualNodePrefix: settings.value.prefixConfig.manualNodePrefix ?? '手动节点'
+        manualNodePrefix: settings.value.prefixConfig.manualNodePrefix ?? '手动节点',
+        // [新增] 加载 emoji 配置
+        enableNodeEmoji: settings.value.prefixConfig.enableNodeEmoji ?? true
       };
     } else {
       // 如果没有新的配置，使用老的 prependSubName 作为默认值
@@ -69,7 +71,8 @@ const loadSettings = async () => {
       prefixConfig.value = {
         enableManualNodes: fallbackEnabled,
         enableSubscriptions: fallbackEnabled,
-        manualNodePrefix: '手动节点'
+        manualNodePrefix: '手动节点',
+        enableNodeEmoji: true // [新增]
       };
     }
   } catch (error) {
@@ -141,7 +144,8 @@ const handleSave = async () => {
       prefixConfig: {
         enableManualNodes: prefixConfig.value.enableManualNodes,
         enableSubscriptions: prefixConfig.value.enableSubscriptions,
-        manualNodePrefix: prefixConfig.value.manualNodePrefix
+        manualNodePrefix: prefixConfig.value.manualNodePrefix,
+        enableNodeEmoji: prefixConfig.value.enableNodeEmoji // [新增]
       }
     };
 
