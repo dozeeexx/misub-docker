@@ -315,6 +315,16 @@ watch(() => props.show, (newValue) => {
                   <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-indigo-600 dark:peer-checked:bg-green-600"></div>
                 </label>
               </div>
+              <div class="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-600">
+                <div>
+                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300">节点国旗 Emoji</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">自动识别节点地区并添加对应国旗图标</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="prefixConfig.enableNodeEmoji" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-indigo-600 dark:peer-checked:bg-green-600"></div>  
+                </label>  
+              </div>
             </div>
           </div>
         </div>
