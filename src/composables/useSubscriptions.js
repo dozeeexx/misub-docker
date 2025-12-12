@@ -214,6 +214,111 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     initializeSubscriptions(newInitialSubs);
   }, { immediate: true, deep: true });
 
+  // ========== 全部刷新功能 ==========
+  async function batchUpdateAllSubscriptions() {
+    const subsToUpdate = subscriptions.value.filter(sub =>
+      sub.enabled && sub.url && sub.url.startsWith('http') && !sub.isUpdating
+    );
+
+    if (subsToUpdate.length === 0) {
+      showToast('没有可刷新的订阅', 'info');
+      return;
+    }
+
+    subsToUpdate.forEach(sub => { sub.isUpdating = true; });
+    showToast(`正在刷新 ${subsToUpdate.length} 个订阅...`, 'info');
+
+    try {
+      const result = await batchUpdateNodes(subsToUpdate.map(sub => sub.id));
+
+      if (result && result.success) {
+        let successCount = 0;
+        const resultList = Array.isArray(result.results) ? result.results : [];
+
+        // 第一步：更新节点数
+        resultList.forEach(updateResult => {
+          const id = updateResult.subscriptionId || updateResult.id;
+          const sub = subscriptions.value.find(s => s.id === id);
+          if (!sub) return;
+
+          if (updateResult.success) {
+            sub.nodeCount = updateResult.nodeCount || 0;
+            successCount++;
+          }
+        });
+
+        // 第二步：静默获取流量信息（批量API不返回userInfo）
+        for (const sub of subsToUpdate) {
+          try {
+            const data = await fetchNodeCount(sub.url);
+            if (!data?.error && data.userInfo) {
+              sub.userInfo = data.userInfo;
+            }
+          } catch {
+            // 静默更新：忽略单个订阅的流量获取失败
+          }
+        }
+
+        const failedCount = subsToUpdate.length - successCount;
+        showToast(`全部刷新完成：成功 ${successCount}/${subsToUpdate.length}，失败 ${failedCount}`, 'success');
+        markDirty();
+      } else {
+        showToast(`全部刷新失败: ${result?.message || '未知错误'}`, 'error');
+        // 降级：逐个更新
+        for (const sub of subsToUpdate) {
+          await handleUpdateNodeCount(sub.id);
+        }
+      }
+    } catch (error) {
+      handleError(error, 'Batch Subscription Update Error', {
+        subscriptionCount: subsToUpdate.length
+      });
+      showToast('全部刷新失败，正在降级逐个更新...', 'error');
+      for (const sub of subsToUpdate) {
+        await handleUpdateNodeCount(sub.id);
+      }
+    } finally {
+      subsToUpdate.forEach(sub => { sub.isUpdating = false; });
+    }
+  }
+
+  // ========== 定时自动更新功能 ==========
+  const AUTO_UPDATE_INTERVAL_MS = 30 * 60 * 1000; // 30分钟
+  let autoUpdateTimerId = null;
+  let autoUpdateRunning = false;
+
+  async function autoUpdateAllSubscriptions() {
+    if (autoUpdateRunning) return;
+    autoUpdateRunning = true;
+    try {
+      // 过滤掉正在更新的订阅，避免并发冲突
+      const subsToUpdate = subscriptions.value.filter(sub =>
+        sub.enabled && sub.url && sub.url.startsWith('http') && !sub.isUpdating
+      );
+      for (const sub of subsToUpdate) {
+        await handleUpdateNodeCount(sub.id, true); // 静默更新，不显示toast
+      }
+      // 静默更新不触发 markDirty，避免每30分钟弹出"未保存"提示
+      // 用户手动刷新时会触发 markDirty
+    } finally {
+      autoUpdateRunning = false;
+    }
+  }
+
+  function startAutoUpdate() {
+    if (autoUpdateTimerId) return;
+    autoUpdateTimerId = setInterval(() => {
+      void autoUpdateAllSubscriptions();
+    }, AUTO_UPDATE_INTERVAL_MS);
+  }
+
+  function stopAutoUpdate() {
+    if (autoUpdateTimerId) {
+      clearInterval(autoUpdateTimerId);
+      autoUpdateTimerId = null;
+    }
+  }
+
   return {
     subscriptions,
     subsCurrentPage,
@@ -228,5 +333,8 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     deleteAllSubscriptions,
     addSubscriptionsFromBulk,
     handleUpdateNodeCount,
+    batchUpdateAllSubscriptions,
+    startAutoUpdate,
+    stopAutoUpdate,
   };
 }

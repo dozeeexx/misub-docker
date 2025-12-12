@@ -39,7 +39,7 @@ const initialNodes = ref([]);
 const {
   subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions, totalRemainingTraffic,
   changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
-  addSubscriptionsFromBulk, handleUpdateNodeCount,
+  addSubscriptionsFromBulk, handleUpdateNodeCount, batchUpdateAllSubscriptions, startAutoUpdate, stopAutoUpdate,
 } = useSubscriptions(initialSubs, markDirty);
 
 const {
@@ -109,10 +109,14 @@ onMounted(() => {
   if (savedViewMode) {
     manualNodeViewMode.value = savedViewMode;
   }
+  // 启动订阅自动更新定时器（每30分钟）
+  startAutoUpdate();
 });
 
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
+  // 停止订阅自动更新定时器
+  stopAutoUpdate();
 });
 
 const setViewMode = (mode) => {
@@ -438,6 +442,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           @delete="handleDeleteSubscriptionWithCleanup"
           @change-page="changeSubsPage"
           @update-node-count="handleUpdateNodeCount"
+          @refresh-all="batchUpdateAllSubscriptions"
           @edit="handleEditSubscription"
           @toggle-sort="isSortingSubs = !isSortingSubs"
           @mark-dirty="markDirty"

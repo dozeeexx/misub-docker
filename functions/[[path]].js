@@ -42,8 +42,14 @@ export async function onRequest(context) {
             return await handleMisubRequest(context);
         } else if (url.pathname === '/cron') {
             // 定时任务路由 (需要认证)
+            // 支持两种认证方式：Header 或 URL 参数
             const cronAuthHeader = request.headers.get('Authorization');
-            if (cronAuthHeader !== `Bearer ${env.CRON_SECRET}`) {
+            const cronSecretParam = url.searchParams.get('secret');
+            const isAuthorized =
+                cronAuthHeader === `Bearer ${env.CRON_SECRET}` ||
+                cronSecretParam === env.CRON_SECRET;
+
+            if (!isAuthorized) {
                 return createJsonResponse({ error: 'Unauthorized' }, 401);
             }
 
