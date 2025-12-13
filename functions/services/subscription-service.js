@@ -35,6 +35,12 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
             // 修复手动SS节点中的URL编码问题
             let processedUrl = fixSSEncoding(node.url);
 
+            // 如果用户设置了手动节点名称，则替换链接中的原始名称
+            const customNodeName = typeof node.name === 'string' ? node.name.trim() : '';
+            if (customNodeName) {
+                processedUrl = applyManualNodeName(processedUrl, customNodeName);
+            }
+
             return shouldPrependManualNodes ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
         }
     }).join('\n');
@@ -133,6 +139,64 @@ async function decodeBase64Content(text) {
         // Base64解码失败，使用原始内容
     }
     return text;
+}
+
+/**
+ * 将手动节点的自定义名称应用到节点链接中
+ * @param {string} nodeUrl - 节点URL
+ * @param {string} customName - 用户自定义名称
+ * @returns {string} - 应用名称后的URL
+ */
+function applyManualNodeName(nodeUrl, customName) {
+    if (!customName) return nodeUrl;
+
+    // vmess 协议：修改 base64 解码后 JSON 中的 ps 字段
+    if (nodeUrl.startsWith('vmess://')) {
+        try {
+            const hashIndex = nodeUrl.indexOf('#');
+            let base64Part = hashIndex !== -1
+                ? nodeUrl.substring('vmess://'.length, hashIndex)
+                : nodeUrl.substring('vmess://'.length);
+
+            // 处理 URL 编码和 URL-safe base64
+            if (base64Part.includes('%')) {
+                base64Part = decodeURIComponent(base64Part);
+            }
+            base64Part = base64Part.replace(/-/g, '+').replace(/_/g, '/');
+            // 补齐 padding
+            while (base64Part.length % 4 !== 0) {
+                base64Part += '=';
+            }
+
+            const binaryString = atob(base64Part);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const jsonString = new TextDecoder('utf-8').decode(bytes);
+            const nodeConfig = JSON.parse(jsonString);
+
+            // 类型校验：确保是对象
+            if (nodeConfig && typeof nodeConfig === 'object') {
+                nodeConfig.ps = customName;
+
+                const newJsonString = JSON.stringify(nodeConfig);
+                const newBase64Part = btoa(unescape(encodeURIComponent(newJsonString)));
+                return 'vmess://' + newBase64Part;
+            }
+        } catch (e) {
+            // vmess 解析失败则降级为 fragment 替换
+        }
+    }
+
+    // 其他协议：修改 URL 的 #fragment 部分
+    try {
+        const hashIndex = nodeUrl.lastIndexOf('#');
+        const baseLink = hashIndex !== -1 ? nodeUrl.substring(0, hashIndex) : nodeUrl;
+        return `${baseLink}#${encodeURIComponent(customName)}`;
+    } catch (e) {
+        return nodeUrl;
+    }
 }
 
 /**

@@ -11,7 +11,7 @@ const props = defineProps({
   isSorting: Boolean,
 });
 
-const emit = defineEmits(['add', 'delete', 'changePage', 'updateNodeCount', 'edit', 'toggleSort', 'markDirty', 'preview']);
+const emit = defineEmits(['add', 'delete', 'changePage', 'updateNodeCount', 'edit', 'toggleSort', 'markDirty', 'preview', 'deleteAll', 'refreshAll']);
 
 const subsMoreMenuRef = ref(null);
 const showSubsMoreMenu = ref(false);
@@ -29,6 +29,10 @@ const handleToggleSort = () => {
 const handleSortEnd = () => emit('markDirty');
 const handleDeleteAll = () => {
   emit('deleteAll');
+  showSubsMoreMenu.value = false;
+}
+const handleRefreshAll = () => {
+  emit('refreshAll');
   showSubsMoreMenu.value = false;
 }
 
@@ -63,6 +67,9 @@ onUnmounted(() => {
           </button>
           <Transition name="slide-fade-sm">
             <div v-if="showSubsMoreMenu" class="absolute right-0 mt-2 w-36 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg dark:shadow-2xl z-50 ring-1 ring-black/5">
+              <button @click="handleRefreshAll" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+                全部刷新
+              </button>
               <button @click="handleToggleSort" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                 {{ isSorting ? '完成排序' : '手动排序' }}
               </button>
