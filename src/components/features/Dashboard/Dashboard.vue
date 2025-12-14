@@ -129,13 +129,10 @@ const handleDiscard = () => {
 };
 
 const handleSave = async () => {
-  console.log('[Dashboard] handleSave clicked');
   saveState.value = 'saving';
   
   try {
-     console.log('[Dashboard] calling dataStore.saveData()...');
      await dataStore.saveData();
-     console.log('[Dashboard] dataStore.saveData() returned.');
      
      saveState.value = 'success';
      
@@ -144,8 +141,6 @@ const handleSave = async () => {
      setTimeout(() => { saveState.value = 'idle'; }, 1500);
 
   } catch (error) {
-     console.error('[Dashboard] handleSave error:', error);
-     showToast('Dashboard保存错误: ' + error.message, 'error');
      saveState.value = 'idle';
   }
 };

@@ -4,7 +4,7 @@ import { useToastStore } from './toast';
 import { DEFAULT_SETTINGS } from '@/constants/default-settings';
 
 export const useDataStore = defineStore('data', () => {
-    const toast = useToastStore();
+    const { showToast } = useToastStore();
 
     // 状态
     const subscriptions = ref([]);
@@ -43,7 +43,7 @@ export const useDataStore = defineStore('data', () => {
 
         } catch (error) {
             console.error('Failed to fetch data:', error);
-            toast.error('获取由于网络问题数据失败: ' + error.message);
+            showToast('获取由于网络问题数据失败: ' + error.message, 'error');
             throw error;
         } finally {
             isLoading.value = false;
@@ -119,11 +119,11 @@ export const useDataStore = defineStore('data', () => {
             }
 
             settings.value = { ...settings.value, ...newSettings };
-            toast.success('设置已更新');
+            showToast('设置已更新', 'success');
 
         } catch (error) {
             console.error('Failed to save settings:', error);
-            toast.error('保存设置失败: ' + error.message);
+            showToast('保存设置失败: ' + error.message, 'error');
             throw error;
         } finally {
             isLoading.value = false;
