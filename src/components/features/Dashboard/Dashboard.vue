@@ -1,3 +1,4 @@
+<script setup>
 import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
 import { extractNodeName } from '../../../lib/utils.js';
 import { useToastStore } from '../../../stores/toast.js';
