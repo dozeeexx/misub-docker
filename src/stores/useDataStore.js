@@ -54,7 +54,7 @@ export const useDataStore = defineStore('data', () => {
         console.log('[Store] saveData called. isLoading:', isLoading.value);
         if (isLoading.value) {
             console.warn('[Store] saveData aborted: isLoading is true');
-            toast.warning('操作过于频繁，请稍候...');
+            showToast('操作过于频繁，请稍候...', 'warning');
             return;
         }
 
@@ -85,14 +85,14 @@ export const useDataStore = defineStore('data', () => {
                 throw new Error(result.message || '保存失败');
             }
 
-            toast.success('数据已保存');
+            showToast('数据已保存', 'success');
             lastUpdated.value = new Date();
             clearDirty();
             console.log('[Store] saveData: success, dirty cleared.');
 
         } catch (error) {
             console.error('[Store] Failed to save data:', error);
-            toast.error('保存数据失败: ' + error.message);
+            showToast('保存数据失败: ' + error.message, 'error');
             throw error;
         } finally {
             isLoading.value = false;
