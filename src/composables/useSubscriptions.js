@@ -1,31 +1,21 @@
 // FILE: src/composables/useSubscriptions.js
-import { ref, computed, watch } from 'vue';
-import { fetchNodeCount, batchUpdateNodes } from '../lib/api.js';
+import { ref, computed } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useDataStore } from '../stores/useDataStore';
 import { useToastStore } from '../stores/toast.js';
+import { fetchNodeCount, batchUpdateNodes } from '../lib/api.js';
 import { handleError } from '../utils/errorHandler.js';
 
-export function useSubscriptions(initialSubsRef, markDirty) {
+export function useSubscriptions(markDirty) {
   const { showToast } = useToastStore();
-  const subscriptions = ref([]);
+  const dataStore = useDataStore();
+  const { subscriptions } = storeToRefs(dataStore);
+
   const subsCurrentPage = ref(1);
   const subsItemsPerPage = 6;
 
-  function initializeSubscriptions(subsData) {
-    subscriptions.value = (subsData || []).map(sub => ({
-      ...sub,
-      id: sub.id || crypto.randomUUID(),
-      enabled: sub.enabled ?? true,
-      nodeCount: sub.nodeCount || 0,
-      isUpdating: false,
-      userInfo: sub.userInfo || null,
-      exclude: sub.exclude || '', // 新增 exclude 属性
-    }));
-    // [最終修正] 移除此處的自動更新迴圈，以防止本地開發伺服器因併發請求過多而崩潰。
-    // subscriptions.value.forEach(sub => handleUpdateNodeCount(sub.id, true)); 
-  }
-
   const enabledSubscriptions = computed(() => subscriptions.value.filter(s => s.enabled));
-  
+
   const totalRemainingTraffic = computed(() => {
     const REASONABLE_TRAFFIC_LIMIT_BYTES = 10 * 1024 * 1024 * 1024 * 1024 * 1024; // 10 PB in bytes
     return subscriptions.value.reduce((acc, sub) => {
@@ -34,7 +24,7 @@ export function useSubscriptions(initialSubsRef, markDirty) {
         sub.userInfo &&
         sub.userInfo.total > 0 &&
         sub.userInfo.total < REASONABLE_TRAFFIC_LIMIT_BYTES
-      ) {  
+      ) {
         const used = (sub.userInfo.upload || 0) + (sub.userInfo.download || 0);
         const remaining = sub.userInfo.total - used;
         return acc + Math.max(0, remaining);
@@ -60,7 +50,7 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     if (!subToUpdate || !subToUpdate.url.startsWith('http')) return;
 
     if (!isInitialLoad) {
-        subToUpdate.isUpdating = true;
+      subToUpdate.isUpdating = true;
     }
 
     try {
@@ -87,6 +77,7 @@ export function useSubscriptions(initialSubsRef, markDirty) {
         if (!isInitialLoad) showToast(userMessage, 'error');
         console.error(`[handleUpdateNodeCount] Failed for ${subToUpdate.name}:`, data.error);
       } else {
+        // 直接更新 Store 中的对象
         subToUpdate.nodeCount = data.count || 0;
         subToUpdate.userInfo = data.userInfo || null;
 
@@ -107,31 +98,37 @@ export function useSubscriptions(initialSubsRef, markDirty) {
         showToast(errorMessage, 'error');
       }
     } finally {
-      subToUpdate.isUpdating = false;
+      if (subToUpdate) subToUpdate.isUpdating = false;
     }
   }
 
   function addSubscription(sub) {
-    subscriptions.value.unshift(sub);
+    dataStore.addSubscription(sub);
     subsCurrentPage.value = 1;
-    handleUpdateNodeCount(sub.id); // 新增時自動更新單個
+    handleUpdateNodeCount(sub.id);
     markDirty();
   }
 
   function updateSubscription(updatedSub) {
-    const index = subscriptions.value.findIndex(s => s.id === updatedSub.id);
-    if (index !== -1) {
-      if (subscriptions.value[index].url !== updatedSub.url) {
-        updatedSub.nodeCount = 0;
-        handleUpdateNodeCount(updatedSub.id); // URL 變更時自動更新單個
+    const originalSub = subscriptions.value.find(s => s.id === updatedSub.id);
+    if (originalSub) {
+      const urlChanged = originalSub.url !== updatedSub.url;
+      dataStore.updateSubscription(updatedSub.id, updatedSub);
+
+      if (urlChanged) {
+        // URL 变更，重置计数并更新
+        const sub = subscriptions.value.find(s => s.id === updatedSub.id);
+        if (sub) {
+          sub.nodeCount = 0;
+          handleUpdateNodeCount(sub.id);
+        }
       }
-      subscriptions.value[index] = updatedSub;
       markDirty();
     }
   }
 
   function deleteSubscription(subId) {
-    subscriptions.value = subscriptions.value.filter((s) => s.id !== subId);
+    dataStore.removeSubscription(subId);
     if (paginatedSubscriptions.value.length === 0 && subsCurrentPage.value > 1) {
       subsCurrentPage.value--;
     }
@@ -139,17 +136,19 @@ export function useSubscriptions(initialSubsRef, markDirty) {
   }
 
   function deleteAllSubscriptions() {
-    subscriptions.value = [];
+    subscriptions.value = []; // 直接修改 store ref
     subsCurrentPage.value = 1;
     markDirty();
   }
-  
-  // [优化] 批量導入使用批量更新API，减少KV写入次数
+
   async function addSubscriptionsFromBulk(subs) {
-    subscriptions.value.unshift(...subs);
+    // 逆序插入以保持顺序
+    for (let i = subs.length - 1; i >= 0; i--) {
+      dataStore.addSubscription(subs[i]);
+    }
+    // 或者: subscriptions.value.unshift(...subs);
     markDirty();
 
-    // 过滤出需要更新的订阅（只有http/https链接）
     const subsToUpdate = subs.filter(sub => sub.url && sub.url.startsWith('http'));
 
     if (subsToUpdate.length > 0) {
@@ -159,26 +158,23 @@ export function useSubscriptions(initialSubsRef, markDirty) {
         const result = await batchUpdateNodes(subsToUpdate.map(sub => sub.id));
 
         if (result.success) {
-          // 更新本地数据
           let successCount = 0;
           result.results.forEach(updateResult => {
             if (updateResult.success) {
               const sub = subscriptions.value.find(s => s.id === updateResult.id);
               if (sub) {
                 sub.nodeCount = updateResult.nodeCount;
-                // userInfo会在下次数据同步时更新
                 successCount++;
               }
             }
           });
 
           showToast(`批量更新完成！成功更新 ${successCount}/${subsToUpdate.length} 个订阅`, 'success');
-          markDirty(); // 标记需要保存
+          markDirty();
         } else {
           showToast(`批量更新失败: ${result.message}`, 'error');
-          // 降级到逐个更新
           showToast('正在降级到逐个更新模式...', 'info');
-          for(const sub of subsToUpdate) {
+          for (const sub of subsToUpdate) {
             await handleUpdateNodeCount(sub.id);
           }
         }
@@ -188,7 +184,6 @@ export function useSubscriptions(initialSubsRef, markDirty) {
           hasInitialData: !!subs
         });
 
-        // 分析错误类型并显示相应消息
         let userMessage = '批量更新失败';
         if (error.message.includes('timeout') || error.name === 'AbortError') {
           userMessage = '批量更新超时，正在降级到逐个更新...';
@@ -197,11 +192,9 @@ export function useSubscriptions(initialSubsRef, markDirty) {
         } else {
           userMessage = '批量更新发生错误，正在降级到逐个更新...';
         }
-
         showToast(userMessage, 'error');
 
-        // 降级到逐个更新
-        for(const sub of subsToUpdate) {
+        for (const sub of subsToUpdate) {
           await handleUpdateNodeCount(sub.id);
         }
       }
@@ -210,11 +203,6 @@ export function useSubscriptions(initialSubsRef, markDirty) {
     }
   }
 
-  watch(initialSubsRef, (newInitialSubs) => {
-    initializeSubscriptions(newInitialSubs);
-  }, { immediate: true, deep: true });
-
-  // ========== 全部刷新功能 ==========
   async function batchUpdateAllSubscriptions() {
     const subsToUpdate = subscriptions.value.filter(sub =>
       sub.enabled && sub.url && sub.url.startsWith('http') && !sub.isUpdating
@@ -235,7 +223,6 @@ export function useSubscriptions(initialSubsRef, markDirty) {
         let successCount = 0;
         const resultList = Array.isArray(result.results) ? result.results : [];
 
-        // 第一步：更新节点数
         resultList.forEach(updateResult => {
           const id = updateResult.subscriptionId || updateResult.id;
           const sub = subscriptions.value.find(s => s.id === id);
@@ -247,7 +234,6 @@ export function useSubscriptions(initialSubsRef, markDirty) {
           }
         });
 
-        // 第二步：静默获取流量信息（批量API不返回userInfo）
         for (const sub of subsToUpdate) {
           try {
             const data = await fetchNodeCount(sub.url);
@@ -255,7 +241,7 @@ export function useSubscriptions(initialSubsRef, markDirty) {
               sub.userInfo = data.userInfo;
             }
           } catch {
-            // 静默更新：忽略单个订阅的流量获取失败
+            // ignore
           }
         }
 
@@ -264,15 +250,12 @@ export function useSubscriptions(initialSubsRef, markDirty) {
         markDirty();
       } else {
         showToast(`全部刷新失败: ${result?.message || '未知错误'}`, 'error');
-        // 降级：逐个更新
         for (const sub of subsToUpdate) {
           await handleUpdateNodeCount(sub.id);
         }
       }
     } catch (error) {
-      handleError(error, 'Batch Subscription Update Error', {
-        subscriptionCount: subsToUpdate.length
-      });
+      handleError(error, 'Batch Subscription Update Error', { subscriptionCount: subsToUpdate.length });
       showToast('全部刷新失败，正在降级逐个更新...', 'error');
       for (const sub of subsToUpdate) {
         await handleUpdateNodeCount(sub.id);
@@ -285,23 +268,17 @@ export function useSubscriptions(initialSubsRef, markDirty) {
   // ========== 定时自动更新功能 ==========
   const AUTO_UPDATE_INTERVAL_MS = 30 * 60 * 1000; // 30分钟
   let autoUpdateTimerId = null;
-  let autoUpdateRunning = false;
 
   async function autoUpdateAllSubscriptions() {
-    if (autoUpdateRunning) return;
-    autoUpdateRunning = true;
     try {
-      // 过滤掉正在更新的订阅，避免并发冲突
       const subsToUpdate = subscriptions.value.filter(sub =>
         sub.enabled && sub.url && sub.url.startsWith('http') && !sub.isUpdating
       );
       for (const sub of subsToUpdate) {
-        await handleUpdateNodeCount(sub.id, true); // 静默更新，不显示toast
+        await handleUpdateNodeCount(sub.id, true);
       }
-      // 静默更新不触发 markDirty，避免每30分钟弹出"未保存"提示
-      // 用户手动刷新时会触发 markDirty
-    } finally {
-      autoUpdateRunning = false;
+    } catch (e) {
+      console.error('Auto update failed', e);
     }
   }
 

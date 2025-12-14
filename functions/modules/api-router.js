@@ -4,7 +4,7 @@
  */
 
 import { StorageFactory, DataMigrator } from '../storage-adapter.js';
-import { createJsonResponse } from './utils.js';
+import { createJsonResponse, createErrorResponse } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout } from './auth-middleware.js';
 import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave } from './api-handler.js';
 import { handleCronTrigger } from './notifications.js';
@@ -71,10 +71,7 @@ export async function handleApiRequest(request, env) {
 
         } catch (error) {
             console.error('[API Error /migrate_to_d1]', error);
-            return createJsonResponse({
-                success: false,
-                message: `迁移失败: ${error.message}`
-            }, 500);
+            return createErrorResponse(error, 500);
         }
     }
 
@@ -102,7 +99,7 @@ export async function handleApiRequest(request, env) {
             return createJsonResponse({ success: true, message: '数据迁移成功！' }, 200);
         } catch (e) {
             console.error('[API Error /migrate]', e);
-            return createJsonResponse({ success: false, message: `迁移失败: ${e.message}` }, 500);
+            return createErrorResponse(e, 500);
         }
     }
 
@@ -167,7 +164,7 @@ export async function handleApiRequest(request, env) {
             return createJsonResponse('Method Not Allowed', 405);
 
         default:
-            return createJsonResponse('API route not found', 404);
+            return createErrorResponse('API route not found', 404);
     }
 }
 
@@ -179,27 +176,25 @@ export async function handleApiRequest(request, env) {
  */
 async function handleExternalFetchRequest(request, env) {
     if (request.method !== 'POST') {
-        return createJsonResponse({ error: 'Method Not Allowed' }, 405);
+        return createErrorResponse('Method Not Allowed', 405);
     }
 
     let requestData;
     try {
         requestData = await request.json();
     } catch (e) {
-        return createJsonResponse({ error: 'Invalid JSON format' }, 400);
+        return createErrorResponse('Invalid JSON format', 400);
     }
 
     const { url: externalUrl, timeout = 15000 } = requestData;
 
     if (!externalUrl || typeof externalUrl !== 'string' || !/^https?:\/\/.+/.test(externalUrl)) {
-        return createJsonResponse({
-            error: 'Invalid or missing URL parameter. Must be a valid HTTP/HTTPS URL.'
-        }, 400);
+        return createErrorResponse('Invalid or missing URL parameter. Must be a valid HTTP/HTTPS URL.', 400);
     }
 
     // 检查URL长度限制
     if (externalUrl.length > 2048) {
-        return createJsonResponse({ error: 'URL too long (max 2048 characters)' }, 400);
+        return createErrorResponse('URL too long (max 2048 characters)', 400);
     }
 
     console.log(`[External Fetch] Processing URL: ${externalUrl}`);
@@ -240,9 +235,7 @@ async function handleExternalFetchRequest(request, env) {
         // 检查内容类型和大小
         const contentLength = response.headers.get('content-length');
         if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) { // 10MB limit
-            return createJsonResponse({
-                error: 'Content too large (max 10MB limit)'
-            }, 413);
+            return createErrorResponse('Content too large (max 10MB limit)', 413);
         }
 
         const contentType = response.headers.get('content-type') || '';
@@ -252,9 +245,7 @@ async function handleExternalFetchRequest(request, env) {
 
         // 检查内容大小限制
         if (content.length > 10 * 1024 * 1024) { // 10MB limit
-            return createJsonResponse({
-                error: 'Response content too large (max 10MB limit)'
-            }, 413);
+            return createErrorResponse('Response content too large (max 10MB limit)', 413);
         }
 
         console.log(`[External Fetch] Success: ${content.length} bytes, type: ${contentType}`);
@@ -297,10 +288,6 @@ async function handleExternalFetchRequest(request, env) {
             errorType: errorDetails.type
         });
 
-        return createJsonResponse({
-            error: errorMessage,
-            details: errorDetails,
-            url: externalUrl
-        }, 500);
+        return createErrorResponse(errorMessage, 500);
     }
 }

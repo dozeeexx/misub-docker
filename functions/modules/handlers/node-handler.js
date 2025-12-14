@@ -4,7 +4,7 @@
  */
 
 import { StorageFactory } from '../../storage-adapter.js';
-import { createJsonResponse } from '../utils.js';
+import { createJsonResponse, createErrorResponse } from '../utils.js';
 import { parseNodeList } from '../utils/node-parser.js';
 
 // 创建用于全局匹配的协议正则表达式
@@ -18,13 +18,13 @@ const NODE_PROTOCOL_GLOBAL_REGEX = new RegExp('^(ss|ssr|vmess|vless|trojan|hyste
  */
 export async function handleNodeCountRequest(request, env) {
     if (request.method !== 'POST') {
-        return createJsonResponse('Method Not Allowed', 405);
+        return createErrorResponse('Method Not Allowed', 'NodeHandler', 405);
     }
 
     try {
         const { url: subUrl } = await request.json();
         if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
-            return createJsonResponse({ error: 'Invalid or missing url' }, 400);
+            return createErrorResponse('Invalid or missing url', 'NodeHandler', 400);
         }
 
         const result = { count: 0, userInfo: null };
@@ -139,9 +139,7 @@ export async function handleNodeCountRequest(request, env) {
 
         return createJsonResponse(result);
     } catch (e) {
-        return createJsonResponse({
-            error: `获取节点数量失败: ${e.message}`
-        }, 500);
+        return createErrorResponse(`获取节点数量失败: ${e.message}`, 'NodeHandler', 500);
     }
 }
 
@@ -263,9 +261,7 @@ export async function handleBatchUpdateNodesRequest(request, env) {
             }
         });
     } catch (e) {
-        return createJsonResponse({
-            error: `批量更新失败: ${e.message}`
-        }, 500);
+        return createErrorResponse(`批量更新失败: ${e.message}`, 'NodeHandler', 500);
     }
 }
 
@@ -292,10 +288,7 @@ export async function handleCleanNodesRequest(request, env) {
             const previewResult = await handleSubscriptionNodesRequest(request, env);
 
             if (!previewResult.success) {
-                return createJsonResponse({
-                    error: '获取订阅组节点失败',
-                    details: previewResult.error
-                }, 400);
+                return createErrorResponse(`获取订阅组节点失败: ${previewResult.error}`, 'NodeHandler', 400);
             }
 
             // 去重处理
@@ -319,14 +312,10 @@ export async function handleCleanNodesRequest(request, env) {
             });
         } else {
             // 清理所有订阅的节点（全局清理）
-            return createJsonResponse({
-                error: '全局节点清理功能暂未实现，请指定profileId'
-            }, 501);
+            return createErrorResponse('全局节点清理功能暂未实现，请指定profileId', 'NodeHandler', 501);
         }
     } catch (e) {
-        return createJsonResponse({
-            error: `节点清理失败: ${e.message}`
-        }, 500);
+        return createErrorResponse(`节点清理失败: ${e.message}`, 'NodeHandler', 500);
     }
 }
 

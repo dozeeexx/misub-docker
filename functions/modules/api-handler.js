@@ -4,7 +4,7 @@
  */
 
 import { StorageFactory } from '../storage-adapter.js';
-import { createJsonResponse } from './utils.js';
+import { createJsonResponse, createErrorResponse } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout, createUnauthorizedResponse } from './auth-middleware.js';
 import { sendTgNotification, checkAndNotify } from './notifications.js';
 
@@ -41,7 +41,7 @@ export async function handleDataRequest(env) {
         return createJsonResponse({ misubs, profiles, config });
     } catch (e) {
         console.error('[API Error /data]', 'Failed to read from storage:', e);
-        return createJsonResponse({ error: '读取初始数据失败' }, 500);
+        return createErrorResponse('读取初始数据失败', 'APIHandler', 500);
     }
 }
 
@@ -151,7 +151,7 @@ export async function handleSettingsGet(env) {
         const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
         return createJsonResponse({ ...defaultSettings, ...settings });
     } catch (e) {
-        return createJsonResponse({ error: '读取设置失败' }, 500);
+        return createErrorResponse('读取设置失败', 'APIHandler', 500);
     }
 }
 
@@ -176,6 +176,6 @@ export async function handleSettingsSave(request, env) {
 
         return createJsonResponse({ success: true, message: '设置已保存' });
     } catch (e) {
-        return createJsonResponse({ error: '保存设置失败' }, 500);
+        return createErrorResponse('保存设置失败', 'APIHandler', 500);
     }
 }

@@ -1,12 +1,12 @@
-<script setup>
 import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
-import { saveMisubs } from '../../../lib/api.js';
 import { extractNodeName } from '../../../lib/utils.js';
 import { useToastStore } from '../../../stores/toast.js';
 import { useUIStore } from '../../../stores/ui.js';
+import { useDataStore } from '../../../stores/useDataStore.js'; // Added
 import { useSubscriptions } from '../../../composables/useSubscriptions.js';
 import { useManualNodes } from '../../../composables/useManualNodes.js';
 import { useProfiles } from '../../../composables/useProfiles.js';
+import { storeToRefs } from 'pinia'; // Added
 
 // --- Component Imports ---
 import RightPanel from '../../profiles/RightPanel.vue';
@@ -27,36 +27,40 @@ const NodePreviewModal = defineAsyncComponent(() => import('../../modals/NodePre
 const props = defineProps({ data: Object });
 const { showToast } = useToastStore();
 const uiStore = useUIStore();
-const isLoading = ref(true);
-const dirty = ref(false);
+const dataStore = useDataStore();
+const { settings, isDirty, isLoading } = storeToRefs(dataStore); // Use store refs
+const config = settings; // Compatibility alias for template
+const { clearDirty } = dataStore; // Don't destructure markDirty directly
+
 const saveState = ref('idle');
 
-// --- 將狀態和邏輯委託給 Composables ---
-const markDirty = () => { dirty.value = true; saveState.value = 'idle'; };
-const initialSubs = ref([]);
-const initialNodes = ref([]);
+// Wrapper for markDirty to also reset saveState
+const markDirty = () => {
+    dataStore.markDirty();
+    saveState.value = 'idle';
+};
 
+// --- 將狀態和邏輯委託給 Composables ---
+// Composables now use global store, so we don't pass refs
 const {
   subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions, totalRemainingTraffic,
   changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
   addSubscriptionsFromBulk, handleUpdateNodeCount, batchUpdateAllSubscriptions, startAutoUpdate, stopAutoUpdate,
-} = useSubscriptions(initialSubs, markDirty);
+} = useSubscriptions(markDirty);
 
 const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes, deduplicateNodes,
-} = useManualNodes(initialNodes, markDirty);
+} = useManualNodes(markDirty);
 
 // --- 訂閱組 (Profile) 相關狀態 ---
-const config = ref({});
-const initialProfiles = ref([]);
 const {
   profiles, editingProfile, isNewProfile, showProfileModal, showDeleteProfilesModal,
   initializeProfiles, handleProfileToggle, handleAddProfile, handleEditProfile,
   handleSaveProfile, handleDeleteProfile, handleDeleteAllProfiles, copyProfileLink,
   cleanupSubscriptions, cleanupNodes, cleanupAllSubscriptions, cleanupAllNodes,
-} = useProfiles(initialProfiles, markDirty, config);
+} = useProfiles(markDirty); // config is now in store
 
 // --- UI State ---
 const isSortingSubs = ref(false);
@@ -80,23 +84,16 @@ const previewProfileId = ref(null);
 const previewSubscriptionName = ref('');
 const previewSubscriptionUrl = ref('');
 const previewProfileName = ref('');
+const previewProfileName_ = ref(''); // fix potential unused var or re-usage
+
 // --- 初始化與生命週期 ---
-const initializeState = () => {
-  isLoading.value = true;
-  if (props.data) {
-    const subsData = props.data.misubs || [];
-    initialSubs.value = subsData.filter(item => item.url && /^https?:\/\//.test(item.url));
-    initialNodes.value = subsData.filter(item => !item.url || !/^https?:\/\//.test(item.url));
-    initialProfiles.value = props.data.profiles || [];
-    config.value = props.data.config || {};
-    initializeProfiles();
-  }
-  isLoading.value = false;
-  dirty.value = false;
+const initializeState = async () => {
+    await dataStore.fetchData();
+    clearDirty();
 };
 
 const handleBeforeUnload = (event) => {
-  if (dirty.value) {
+  if (isDirty.value) {
     event.preventDefault();
     event.returnValue = '您有未保存的更改，確定要离开嗎？';
   }
@@ -129,62 +126,23 @@ const handleDiscard = () => {
   initializeState();
   showToast('已放弃所有未保存的更改');
 };
+
 const handleSave = async () => {
   saveState.value = 'saving';
-  const combinedMisubs = [
-      ...subscriptions.value.map(sub => ({ ...sub, isUpdating: undefined })),
-      ...manualNodes.value.map(node => ({ ...node, isUpdating: undefined }))
-  ];
-
+  
   try {
-    // 数据验证
-    if (!Array.isArray(combinedMisubs) || !Array.isArray(profiles.value)) {
-      throw new Error('数据格式错误，请刷新页面后重试');
-    }
+     await dataStore.saveData();
+     
+     saveState.value = 'success';
+     
+     // 如果当前处于排序模式，自动退出排序模式
+     if (isSortingNodes.value) isSortingNodes.value = false;
+     
+     setTimeout(() => { clearDirty(); saveState.value = 'idle'; }, 1500);
 
-    const result = await saveMisubs(combinedMisubs, profiles.value);
-
-    if (result.success) {
-        saveState.value = 'success';
-        showToast('保存成功！', 'success');
-
-        // 如果服务器返回了更新后的数据，使用这些数据更新本地状态
-        if (result.data) {
-          const subsData = result.data.misubs || [];
-          initialSubs.value = subsData.filter(item => item.url && /^https?:\/\//.test(item.url));
-          initialNodes.value = subsData.filter(item => !item.url || !/^https?:\/\//.test(item.url));
-          initialProfiles.value = result.data.profiles || [];
-
-          // 重置分页到第一页
-          manualNodesCurrentPage.value = 1;
-        }
-
-        // 如果当前处于排序模式，自动退出排序模式
-        if (isSortingNodes.value) {
-          isSortingNodes.value = false;
-        }
-
-        setTimeout(() => { dirty.value = false; saveState.value = 'idle'; }, 1500);
-    } else {
-        // 显示服务器返回的具体错误信息
-        const errorMessage = result.message || result.error || '保存失败，请稍后重试';
-        throw new Error(errorMessage);
-    }
   } catch (error) {
-    console.error('保存数据时发生错误:', error);
-
-    // 根据错误类型提供不同的用户提示
-    let userMessage = error.message;
-    if (error.message.includes('网络')) {
-      userMessage = '网络连接异常，请检查网络后重试';
-    } else if (error.message.includes('格式')) {
-      userMessage = '数据格式异常，请刷新页面后重试';
-    } else if (error.message.includes('存储')) {
-      userMessage = '存储服务暂时不可用，请稍后重试';
-    }
-
-    showToast(userMessage, 'error');
-    saveState.value = 'idle';
+     saveState.value = 'idle';
+     // Error handling is done in store, or we can add extra handling here if needed
   }
 };
 const handleDeleteSubscriptionWithCleanup = (subId) => {
@@ -417,7 +375,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
 
     <!-- Dirty State Banner -->
     <Transition name="slide-fade">
-      <div v-if="dirty" class="p-3 mb-6 rounded-lg bg-indigo-600/10 dark:bg-indigo-500/20 ring-1 ring-inset ring-indigo-600/20 flex items-center justify-between">
+      <div v-if="isDirty" class="p-3 mb-6 rounded-lg bg-indigo-600/10 dark:bg-indigo-500/20 ring-1 ring-inset ring-indigo-600/20 flex items-center justify-between">
         <p class="text-sm font-medium text-indigo-800 dark:text-indigo-200">您有未保存的更改</p>
         <div class="flex items-center gap-3">
           <button @click="handleDiscard" class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">放弃更改</button>

@@ -237,25 +237,7 @@ export async function retryFetch(input, init = {}, options = {}) {
     throw lastError;
 }
 
-/**
- * 创建统一错误响应
- * @param {string} error - 错误信息
- * @param {string} context - 错误上下文
- * @param {number} status - HTTP状态码
- * @returns {Response} HTTP响应
- */
-export function createErrorResponse(error, context = '', status = 500) {
-    const errorInfo = {
-        success: false,
-        error: error.message || error,
-        context,
-        timestamp: new Date().toISOString()
-    };
 
-    console.error(`[${context || 'Error'}] ${errorInfo.error}`, error);
-
-    return createJsonResponse(errorInfo, status);
-}
 
 /**
  * 安全的存储操作包装器
@@ -355,14 +337,64 @@ export function migrateConfigSettings(config) {
 }
 
 /**
- * 创建JSON响应
+ * 创建标准JSON响应
  * @param {Object} data - 响应数据
  * @param {number} status - HTTP状态码
- * @returns {Response} Response对象
+ * @param {Object} headers - 额外的HTTP头
+ * @returns {Response}
  */
-export function createJsonResponse(data, status = 200) {
+export function createJsonResponse(data, status = 200, headers = {}) {
     return new Response(JSON.stringify(data), {
         status,
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            ...headers
+        }
     });
+}
+
+/**
+ * 自定义 API 错误类
+ */
+export class APIError extends Error {
+    constructor(message, status = 500, code = 'INTERNAL_ERROR', details = null) {
+        super(message);
+        this.name = 'APIError';
+        this.status = status;
+        this.code = code;
+        this.details = details;
+    }
+}
+
+/**
+ * 创建标准错误响应
+ * @param {Error|string} error - 错误对象或错误消息
+ * @param {number} status - HTTP状态码 (默认500)
+ * @returns {Response}
+ */
+export function createErrorResponse(error, status = 500) {
+    let message = 'Internal Server Error';
+    let code = 'INTERNAL_ERROR';
+    let details = null;
+
+    if (error instanceof APIError) {
+        status = error.status;
+        message = error.message;
+        code = error.code;
+        details = error.details;
+    } else if (error instanceof Error) {
+        message = error.message;
+    } else if (typeof error === 'string') {
+        message = error;
+    }
+
+    return createJsonResponse({
+        success: false,
+        error: message,
+        code,
+        details
+    }, status);
 }

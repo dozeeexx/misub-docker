@@ -4,7 +4,7 @@
  */
 
 import { StorageFactory } from '../../storage-adapter.js';
-import { createJsonResponse } from '../utils.js';
+import { createJsonResponse, createErrorResponse } from '../utils.js';
 import { extractNodeRegion, parseNodeInfo } from '../utils/geo-utils.js';
 import { parseNodeList, calculateProtocolStats, calculateRegionStats } from '../utils/node-parser.js';
 
@@ -45,7 +45,7 @@ async function handleProfileMode(request, env, profileId, userAgent) {
         const isManualNode = !isSubscription;
 
         const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) ||
-                                 (isManualNode && profileNodeIds.has(item.id));
+            (isManualNode && profileNodeIds.has(item.id));
 
         return item.enabled && belongsToProfile;
     });
