@@ -5,13 +5,9 @@
 
 import { StorageFactory } from '../storage-adapter.js';
 import { migrateConfigSettings, formatBytes, getCallbackToken } from './utils.js';
-import { generateCombinedNodeList, defaultSettings } from './subscription.js';
+import { generateCombinedNodeList } from './subscription.js';
 import { sendEnhancedTgNotification } from './notifications.js';
-
-// 常量定义
-const KV_KEY_SUBS = 'misub_subscriptions_v1';
-const KV_KEY_PROFILES = 'misub_profiles_v1';
-const KV_KEY_SETTINGS = 'worker_settings_v1';
+import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from './config.js';
 
 /**
  * 处理MiSub订阅请求
@@ -191,7 +187,7 @@ export async function handleMisubRequest(context) {
             }
             return acc;
         }, 0);
-        if (totalRemainingBytes > 0) {
+        if (config.enableTrafficNode !== false && totalRemainingBytes > 0) {
             const formattedTraffic = formatBytes(totalRemainingBytes);
             const fakeNodeName = `流量剩余 ≫ ${formattedTraffic}`;
             prependedContentForSubconverter = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`;

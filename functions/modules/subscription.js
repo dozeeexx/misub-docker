@@ -6,26 +6,10 @@
 import { formatBytes, prependNodeName, getProcessedUserAgent } from './utils.js';
 import { addFlagEmoji, fixNodeUrlEncoding } from '../utils/node-utils.js';
 // [新增] 引入 node-parser 中的解析函数
-import { extractValidNodes } from './utils/node-parser.js'; 
+import { extractValidNodes } from './utils/node-parser.js';
 import { sendEnhancedTgNotification } from './notifications.js';
 
-export const defaultSettings = {
-    FileName: 'MiSub',
-    mytoken: 'auto',
-    profileToken: 'profiles',
-    subConverter: 'url.v1.mk',
-    subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full.ini',
-    prependSubName: true,
-    prefixConfig: {
-        enableManualNodes: true,
-        enableSubscriptions: true,
-        manualNodePrefix: '手动节点',
-        enableNodeEmoji: true
-    },
-    NotifyThresholdDays: 3,
-    NotifyThresholdPercent: 90,
-    storageType: 'kv'
-};
+
 
 export async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '', profilePrefixSettings = null) {
     const shouldPrependManualNodes = profilePrefixSettings?.enableManualNodes ??
@@ -36,8 +20,8 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         config.prefixConfig?.manualNodePrefix ??
         '手动节点';
 
-    const shouldAddEmoji = profilePrefixSettings?.enableNodeEmoji ?? 
-        config.prefixConfig?.enableNodeEmoji ?? 
+    const shouldAddEmoji = profilePrefixSettings?.enableNodeEmoji ??
+        config.prefixConfig?.enableNodeEmoji ??
         true;
 
     // --- 处理手动节点 ---
@@ -50,7 +34,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
             if (shouldAddEmoji) {
                 processedUrl = addFlagEmoji(processedUrl);
             }
-            
+
             return shouldPrependManualNodes ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
         }
     }).join('\n');
@@ -73,18 +57,18 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                 })),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 15000))
             ]);
-            
+
             if (!response.ok) {
                 console.warn(`订阅请求失败: ${sub.url}, 状态: ${response.status}`);
                 return '';
             }
-            
+
             const text = await response.text();
 
             // [核心修复] 移除了之前会拦截 proxies: 和 outbounds 的 if 判断
             // 直接使用 extractValidNodes，它会自动识别 Clash YAML、Base64 或纯文本
             const rawNodes = extractValidNodes(text);
-            
+
             let validNodes = rawNodes
                 .map(line => line.trim())
                 .map(line => {
@@ -126,7 +110,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                                 try {
                                     const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
                                     if (nameRegex.test(nodeName)) return true;
-                                } catch (e) {}
+                                } catch (e) { }
                             }
                         }
                         return false;
@@ -155,7 +139,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                                 try {
                                     const nodeName = decodeURIComponent(nodeLink.substring(hashIndex + 1));
                                     if (nameRegex.test(nodeName)) return false;
-                                } catch (e) {}
+                                } catch (e) { }
                             }
                             else if (protocol === 'vmess') {
                                 try {
@@ -165,7 +149,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                                     for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
                                     const nodeConfig = JSON.parse(new TextDecoder('utf-8').decode(bytes));
                                     if (nameRegex.test(nodeConfig.ps || '')) return false;
-                                } catch (e) {}
+                                } catch (e) { }
                             }
                         }
                         return true;

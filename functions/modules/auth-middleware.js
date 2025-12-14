@@ -3,8 +3,7 @@
  * 处理用户认证和会话管理
  */
 
-const COOKIE_NAME = 'auth_session';
-const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8小时
+import { COOKIE_NAME, SESSION_DURATION } from './config.js';
 
 /**
  * 创建HMAC签名的令牌

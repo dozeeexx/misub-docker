@@ -240,6 +240,14 @@ const handlePreviewProfile = (profileId) => {
   }
 };
 
+const handleProfileReorder = (fromIndex, toIndex) => {
+  const list = [...profiles.value];
+  const item = list.splice(fromIndex, 1)[0];
+  list.splice(toIndex, 0, item);
+  profiles.value = list;
+  markDirty();
+};
+
 // --- Backup & Restore ---
 const exportBackup = () => {
   try {
@@ -486,6 +494,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           @toggle="handleProfileToggle"
           @copyLink="copyProfileLink"
           @preview="handlePreviewProfile"
+          @reorder="handleProfileReorder"
         />
       </div>
     </div>

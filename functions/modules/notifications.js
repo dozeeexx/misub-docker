@@ -4,6 +4,7 @@
  */
 
 import { formatBytes } from './utils.js';
+import { KV_KEY_SUBS, KV_KEY_SETTINGS, DEFAULT_SETTINGS, SYSTEM_CONSTANTS } from './config.js';
 
 /**
  * 发送Telegram基础通知
@@ -177,15 +178,9 @@ export async function handleCronTrigger(env) {
     const { checkAndNotify } = await import('./notifications.js');
 
     const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
-    const originalSubs = await storageAdapter.get('misub_subscriptions_v1') || [];
+    const originalSubs = await storageAdapter.get(KV_KEY_SUBS) || [];
     const allSubs = JSON.parse(JSON.stringify(originalSubs)); // 深拷贝以便比较
-    const defaultSettings = {
-        NotifyThresholdDays: 3,
-        NotifyThresholdPercent: 90,
-        BotToken: '',
-        ChatID: ''
-    };
-    const settings = await storageAdapter.get('worker_settings_v1') || defaultSettings;
+    const settings = await storageAdapter.get(KV_KEY_SETTINGS) || DEFAULT_SETTINGS;
 
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//gm;
     let changesMade = false;
@@ -205,7 +200,7 @@ export async function handleCronTrigger(env) {
                     cf: { insecureSkipVerify: true }
                 }));
                 const nodeCountRequest = fetch(new Request(sub.url, {
-                    headers: { 'User-Agent': 'v2rayN/7.23' },
+                    headers: { 'User-Agent': SYSTEM_CONSTANTS.FETCHER_USER_AGENT },
                     redirect: "follow",
                     cf: { insecureSkipVerify: true }
                 }));
@@ -273,7 +268,7 @@ export async function handleCronTrigger(env) {
 
     if (changesMade) {
         try {
-            await storageAdapter.put('misub_subscriptions_v1', allSubs);
+            await storageAdapter.put(KV_KEY_SUBS, allSubs);
             console.log(`[Cron] Successfully saved updated subscriptions`);
         } catch (saveError) {
             console.error(`[Cron] Failed to save subscriptions:`, saveError);

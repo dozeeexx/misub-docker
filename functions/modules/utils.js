@@ -116,6 +116,8 @@ export function clashFix(content) {
     return content;
 }
 
+import { SYSTEM_CONSTANTS } from './config.js';
+
 /**
  * 根据客户端类型确定合适的用户代理
  * @param {string} originalUserAgent - 原始用户代理字符串
@@ -126,7 +128,7 @@ export function getProcessedUserAgent(originalUserAgent, url = '') {
 
     // CF-Workers-SUB的精华策略：
     // 统一使用v2rayN UA获取订阅，绕过机场过滤同时保证获取完整节点
-    return 'v2rayN/7.23';
+    return SYSTEM_CONSTANTS.FETCHER_USER_AGENT;
 }
 
 /**
