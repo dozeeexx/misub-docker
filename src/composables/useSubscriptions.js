@@ -9,7 +9,13 @@ import { handleError } from '../utils/errorHandler.js';
 export function useSubscriptions(markDirty) {
   const { showToast } = useToastStore();
   const dataStore = useDataStore();
-  const { subscriptions } = storeToRefs(dataStore);
+  // Rename the store ref to avoid confusion, as it contains ALL items
+  const { subscriptions: allSubscriptions } = storeToRefs(dataStore);
+
+  // Filtered computed property: Only http/https links are "Subscriptions"
+  const subscriptions = computed(() => {
+    return (allSubscriptions.value || []).filter(sub => sub.url && /^https?:\/\//.test(sub.url));
+  });
 
   const subsCurrentPage = ref(1);
   const subsItemsPerPage = 6;
@@ -37,6 +43,7 @@ export function useSubscriptions(markDirty) {
   const paginatedSubscriptions = computed(() => {
     const start = (subsCurrentPage.value - 1) * subsItemsPerPage;
     const end = start + subsItemsPerPage;
+    // Use the filtered list for pagination
     return subscriptions.value.slice(start, end);
   });
 
@@ -46,8 +53,11 @@ export function useSubscriptions(markDirty) {
   }
 
   async function handleUpdateNodeCount(subId, isInitialLoad = false) {
+    // Find in the filtered list
     const subToUpdate = subscriptions.value.find(s => s.id === subId);
-    if (!subToUpdate || !subToUpdate.url.startsWith('http')) return;
+    if (!subToUpdate) return;
+    // Double check URL just in case
+    if (!subToUpdate.url.startsWith('http')) return;
 
     if (!isInitialLoad) {
       subToUpdate.isUpdating = true;
@@ -57,7 +67,6 @@ export function useSubscriptions(markDirty) {
       const data = await fetchNodeCount(subToUpdate.url);
 
       if (data.error) {
-        // 根据错误类型提供不同的用户提示
         let userMessage = `${subToUpdate.name || '订阅'} 更新失败`;
 
         switch (data.errorType) {
@@ -77,7 +86,7 @@ export function useSubscriptions(markDirty) {
         if (!isInitialLoad) showToast(userMessage, 'error');
         console.error(`[handleUpdateNodeCount] Failed for ${subToUpdate.name}:`, data.error);
       } else {
-        // 直接更新 Store 中的对象
+        // Direct mutation works because subToUpdate is a reactive object from the store
         subToUpdate.nodeCount = data.count || 0;
         subToUpdate.userInfo = data.userInfo || null;
 
@@ -110,13 +119,14 @@ export function useSubscriptions(markDirty) {
   }
 
   function updateSubscription(updatedSub) {
+    // Verify it exists in our filtered list
     const originalSub = subscriptions.value.find(s => s.id === updatedSub.id);
     if (originalSub) {
       const urlChanged = originalSub.url !== updatedSub.url;
       dataStore.updateSubscription(updatedSub.id, updatedSub);
 
       if (urlChanged) {
-        // URL 变更，重置计数并更新
+        // Re-fetch from filtered list to get the reactive object
         const sub = subscriptions.value.find(s => s.id === updatedSub.id);
         if (sub) {
           sub.nodeCount = 0;
@@ -136,17 +146,20 @@ export function useSubscriptions(markDirty) {
   }
 
   function deleteAllSubscriptions() {
-    subscriptions.value = []; // 直接修改 store ref
+    // Only remove the subscriptions visible in this composable (i.e. HTTP subs)
+    // Avoid removing manual nodes which are also in dataStore but filtered out here
+    const idsToRemove = subscriptions.value.map(s => s.id);
+    idsToRemove.forEach(id => dataStore.removeSubscription(id));
+
     subsCurrentPage.value = 1;
     markDirty();
   }
 
   async function addSubscriptionsFromBulk(subs) {
-    // 逆序插入以保持顺序
+    // Reverse insert to maintain order
     for (let i = subs.length - 1; i >= 0; i--) {
       dataStore.addSubscription(subs[i]);
     }
-    // 或者: subscriptions.value.unshift(...subs);
     markDirty();
 
     const subsToUpdate = subs.filter(sub => sub.url && sub.url.startsWith('http'));
@@ -161,6 +174,7 @@ export function useSubscriptions(markDirty) {
           let successCount = 0;
           result.results.forEach(updateResult => {
             if (updateResult.success) {
+              // Find in filtered list
               const sub = subscriptions.value.find(s => s.id === updateResult.id);
               if (sub) {
                 sub.nodeCount = updateResult.nodeCount;
