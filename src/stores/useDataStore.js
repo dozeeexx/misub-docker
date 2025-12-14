@@ -78,6 +78,7 @@ export const useDataStore = defineStore('data', () => {
 
             toast.success('数据已保存');
             lastUpdated.value = new Date();
+            clearDirty(); // Reset dirty state on successful save
 
         } catch (error) {
             console.error('Failed to save data:', error);
