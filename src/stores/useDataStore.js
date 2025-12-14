@@ -51,15 +51,22 @@ export const useDataStore = defineStore('data', () => {
     }
 
     async function saveData() {
-        if (isLoading.value) return;
+        console.log('[Store] saveData called. isLoading:', isLoading.value);
+        if (isLoading.value) {
+            console.warn('[Store] saveData aborted: isLoading is true');
+            toast.warning('操作过于频繁，请稍候...');
+            return;
+        }
 
         isLoading.value = true;
         try {
+            console.log('[Store] saveData: preparing payload...');
             const payload = {
                 misubs: subscriptions.value,
                 profiles: profiles.value
             };
 
+            console.log('[Store] saveData: sending fetch request...');
             const response = await fetch('/api/misubs', {
                 method: 'POST',
                 headers: {
@@ -68,9 +75,11 @@ export const useDataStore = defineStore('data', () => {
                 body: JSON.stringify(payload)
             });
 
+            console.log('[Store] saveData: response status:', response.status);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const result = await response.json();
+            console.log('[Store] saveData: result:', result);
 
             if (!result.success) {
                 throw new Error(result.message || '保存失败');
@@ -78,10 +87,11 @@ export const useDataStore = defineStore('data', () => {
 
             toast.success('数据已保存');
             lastUpdated.value = new Date();
-            clearDirty(); // Reset dirty state on successful save
+            clearDirty();
+            console.log('[Store] saveData: success, dirty cleared.');
 
         } catch (error) {
-            console.error('Failed to save data:', error);
+            console.error('[Store] Failed to save data:', error);
             toast.error('保存数据失败: ' + error.message);
             throw error;
         } finally {

@@ -129,19 +129,23 @@ const handleDiscard = () => {
 };
 
 const handleSave = async () => {
+  console.log('[Dashboard] handleSave clicked');
   saveState.value = 'saving';
   
   try {
+     console.log('[Dashboard] calling dataStore.saveData()...');
      await dataStore.saveData();
+     console.log('[Dashboard] dataStore.saveData() returned.');
      
      saveState.value = 'success';
      
-     // 如果当前处于排序模式，自动退出排序模式
      if (isSortingNodes.value) isSortingNodes.value = false;
      
      setTimeout(() => { saveState.value = 'idle'; }, 1500);
 
   } catch (error) {
+     console.error('[Dashboard] handleSave error:', error);
+     showToast('Dashboard保存错误: ' + error.message, 'error');
      saveState.value = 'idle';
   }
 };
