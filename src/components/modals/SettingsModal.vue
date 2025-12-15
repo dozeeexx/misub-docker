@@ -3,6 +3,7 @@ import { ref, watch, computed } from 'vue';
 import Modal from '../forms/Modal.vue';
 
 import { useToastStore } from '../../stores/toast.js';
+import { fetchSettings, saveSettings, migrateToD1 } from '../../lib/api.js';
 
 const props = defineProps({
   show: Boolean,
