@@ -1,5 +1,5 @@
 <script setup>
-import { defineAsyncComponent, onMounted } from 'vue';
+import { defineAsyncComponent, onMounted, ref, onErrorCaptured } from 'vue';
 import { useThemeStore } from './stores/theme';
 import { useSessionStore } from './stores/session';
 import { useToastStore } from './stores/toast';
@@ -37,6 +37,14 @@ onMounted(() => {
   initTheme();
   checkSession();
 });
+
+const error = ref(null);
+onErrorCaptured((err) => {
+  console.error('Captured Error:', err);
+  error.value = err.toString();
+  return false; // Stop propagation
+});
+const reload = () => window.location.reload();
 </script>
 
 <template>
@@ -54,7 +62,14 @@ onMounted(() => {
         'ios-content-offset': sessionState === 'loggedIn' || sessionState === 'loading'
       }"
     >
-      <DashboardSkeleton v-if="sessionState === 'loading'" />
+      <div v-if="error" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl max-w-lg w-full shadow-2xl border border-red-500">
+          <h2 class="text-xl font-bold text-red-600 mb-4">应用发生错误</h2>
+          <pre class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-auto text-xs font-mono text-red-500 max-h-64">{{ error }}</pre>
+          <button @click="reload" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg w-full hover:bg-indigo-700">刷新页面</button>
+        </div>
+      </div>
+      <DashboardSkeleton v-else-if="sessionState === 'loading'" />
       <Dashboard v-else-if="sessionState === 'loggedIn' && initialData" :data="initialData" />
       <Login v-else :login="login" />
     </main>
