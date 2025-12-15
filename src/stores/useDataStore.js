@@ -6,6 +6,7 @@ import { useProfileStore } from './profiles';
 import { useSettingsStore } from './settings';
 import { useEditorStore } from './editor';
 import { calculateDiff } from '../lib/diff.js';
+import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
 
 export const useDataStore = defineStore('data', () => {
     const { showToast } = useToastStore();
