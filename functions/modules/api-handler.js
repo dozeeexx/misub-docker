@@ -51,6 +51,16 @@ export async function handleDataRequest(env) {
  * @param {Object} env - Cloudflare环境对象
  * @returns {Promise<Response>} HTTP响应
  */
+import { applyPatch } from './patch-utils.js';
+
+// ... (existing imports)
+
+/**
+ * 处理订阅和配置保存API
+ * @param {Object} request - HTTP请求对象
+ * @param {Object} env - Cloudflare环境对象
+ * @returns {Promise<Response>} HTTP响应
+ */
 export async function handleMisubsSave(request, env) {
     try {
         // 步骤1: 解析请求体
@@ -65,55 +75,83 @@ export async function handleMisubsSave(request, env) {
             }, 400);
         }
 
-        const { misubs, profiles } = requestData;
+        const { misubs, profiles, diff } = requestData;
+        const storageAdapter = await getStorageAdapter(env);
 
-        // 步骤2: 验证必需字段
-        if (typeof misubs === 'undefined' || typeof profiles === 'undefined') {
-            return createJsonResponse({
-                success: false,
-                message: '请求体中缺少 misubs 或 profiles 字段'
-            }, 400);
-        }
+        let finalMisubs = misubs;
+        let finalProfiles = profiles;
 
-        // 步骤3: 验证数据类型
-        if (!Array.isArray(misubs) || !Array.isArray(profiles)) {
-            return createJsonResponse({
-                success: false,
-                message: 'misubs 和 profiles 必须是数组格式'
-            }, 400);
+        // 步骤1.5: 检查是否为 Diff 模式
+        if (diff) {
+            console.log('[API] Processing Diff Patch...');
+            // 获取当前数据
+            const [currentMisubs, currentProfiles] = await Promise.all([
+                storageAdapter.get(KV_KEY_SUBS).then(res => res || []),
+                storageAdapter.get(KV_KEY_PROFILES).then(res => res || [])
+            ]);
+
+            // 应用补丁
+            if (diff.subscriptions) {
+                finalMisubs = applyPatch(currentMisubs, diff.subscriptions);
+            } else {
+                finalMisubs = currentMisubs; // 无变动
+            }
+
+            if (diff.profiles) {
+                finalProfiles = applyPatch(currentProfiles, diff.profiles);
+            } else {
+                finalProfiles = currentProfiles; // 无变动
+            }
+        } else {
+            // 步骤2: 验证必需字段 (仅在非Diff模式下)
+            if (typeof misubs === 'undefined' || typeof profiles === 'undefined') {
+                return createJsonResponse({
+                    success: false,
+                    message: '请求体中缺少 misubs 或 profiles 字段'
+                }, 400);
+            }
+
+            // 步骤3: 验证数据类型
+            if (!Array.isArray(misubs) || !Array.isArray(profiles)) {
+                return createJsonResponse({
+                    success: false,
+                    message: 'misubs 和 profiles 必须是数组格式'
+                }, 400);
+            }
         }
 
         // 步骤4: 获取设置（带错误处理）
         let settings;
         try {
-            const storageAdapter = await getStorageAdapter(env);
             settings = await storageAdapter.get(KV_KEY_SETTINGS) || defaultSettings;
         } catch (settingsError) {
             settings = defaultSettings; // 使用默认设置继续
         }
 
         // 步骤5: 处理通知（非阻塞，错误不影响保存）
-        try {
-            const notificationPromises = misubs
-                .filter(sub => sub && sub.url && sub.url.startsWith('http'))
-                .map(sub => checkAndNotify(sub, settings, env).catch(notifyError => {
-                    // 通知失败不影响保存流程
-                }));
+        // 仅在有订阅数据时处理
+        if (finalMisubs && finalMisubs.length > 0) {
+            try {
+                const notificationPromises = finalMisubs
+                    .filter(sub => sub && sub.url && sub.url.startsWith('http'))
+                    .map(sub => checkAndNotify(sub, settings, env).catch(notifyError => {
+                        // 通知失败不影响保存流程
+                    }));
 
-            // 并行处理通知，但不等待完成
-            Promise.all(notificationPromises).catch(e => {
-                // 部分通知处理失败
-            });
-        } catch (notificationError) {
-            // 通知系统错误，继续保存流程
+                // 并行处理通知，但不等待完成
+                Promise.all(notificationPromises).catch(e => {
+                    // 部分通知处理失败
+                });
+            } catch (notificationError) {
+                // 通知系统错误，继续保存流程
+            }
         }
 
         // 步骤6: 保存数据到存储（使用存储适配器）
         try {
-            const storageAdapter = await getStorageAdapter(env);
             await Promise.all([
-                storageAdapter.put(KV_KEY_SUBS, misubs),
-                storageAdapter.put(KV_KEY_PROFILES, profiles)
+                storageAdapter.put(KV_KEY_SUBS, finalMisubs),
+                storageAdapter.put(KV_KEY_PROFILES, finalProfiles)
             ]);
         } catch (storageError) {
             return createJsonResponse({
@@ -125,10 +163,10 @@ export async function handleMisubsSave(request, env) {
         // 步骤7: 返回保存后的数据，确保前端能更新状态
         return createJsonResponse({
             success: true,
-            message: '订阅源及订阅组已保存',
+            message: diff ? '增量更新已保存' : '订阅源及订阅组已保存',
             data: {
-                misubs,
-                profiles
+                misubs: finalMisubs,
+                profiles: finalProfiles
             }
         });
 

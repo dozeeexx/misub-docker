@@ -67,6 +67,11 @@ onMounted(() => {
 </template>
 
 <style>
+:root {
+  --header-height: 80px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
 :root.dark {
   color-scheme: dark;
 }
@@ -78,19 +83,21 @@ onMounted(() => {
 @supports (-webkit-touch-callout: none) {
   .ios-content-offset {
     /* 为iOS状态栏和Header高度预留空间，防止内容穿透 */
-    padding-top: calc(env(safe-area-inset-top, 0px) + 80px);
+    padding-top: calc(var(--safe-top) + var(--header-height));
     margin-top: 0;
   }
   
   /* 确保整个应用区域正确适配 */
   body {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
   }
   
   /* 全局iOS适配 */
   html, body {
     overflow-x: hidden;
     position: relative;
+    height: 100%;
   }
   
   /* 确保内容区域不会穿透 */

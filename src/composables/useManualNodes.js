@@ -239,7 +239,7 @@ export function useManualNodes(markDirty) {
     });
 
     // Update store with new order: Subscriptions first, then Manual Nodes
-    dataStore.subscriptions = [...subs, ...nodes];
+    dataStore.overwriteSubscriptions([...subs, ...nodes]);
 
     manualNodesCurrentPage.value = 1;
     markDirty();

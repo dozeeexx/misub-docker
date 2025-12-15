@@ -254,9 +254,10 @@ const importBackup = () => {
         }
 
         if (confirm('这将覆盖您当前的所有数据（需要手动保存后生效），确定要从备份中恢复吗？')) {
-          subscriptions.value = data.subscriptions;
-          manualNodes.value = data.manualNodes;
-          profiles.value = data.profiles;
+          // Merge subscriptions and manual nodes as they are stored together in the backend/store
+          const mergedSubscriptions = [...data.subscriptions, ...data.manualNodes];
+          dataStore.overwriteSubscriptions(mergedSubscriptions);
+          dataStore.overwriteProfiles(data.profiles);
           markDirty();
           showToast('数据已从备份恢复，请点击“保存更改”以持久化', 'success');
           uiStore.hide(); // Close settings modal after import

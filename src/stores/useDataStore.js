@@ -1,24 +1,61 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useToastStore } from './toast';
-import { DEFAULT_SETTINGS } from '@/constants/default-settings';
+import { useSubscriptionStore } from './subscriptions';
+import { useProfileStore } from './profiles';
+import { useSettingsStore } from './settings';
+import { useEditorStore } from './editor';
 
 export const useDataStore = defineStore('data', () => {
     const { showToast } = useToastStore();
 
-    // 状态
-    const subscriptions = ref([]);
-    const profiles = ref([]);
-    const settings = ref({ ...DEFAULT_SETTINGS });
-    const isLoading = ref(false);
-    const lastUpdated = ref(null);
-    const hasDataLoaded = ref(false);
+    // Sub-stores
+    const subscriptionStore = useSubscriptionStore();
+    const profileStore = useProfileStore();
+    const settingsStore = useSettingsStore();
+    const editorStore = useEditorStore();
 
-    // Getters
-    const activeSubscriptions = computed(() => subscriptions.value.filter(sub => sub.enabled));
-    const activeProfiles = computed(() => profiles.value.filter(profile => profile.enabled));
+    // --- State Proxies (maintain reactivity for storeToRefs) ---
+    const subscriptions = computed(() => subscriptionStore.items);
+    const profiles = computed(() => profileStore.items);
+    const settings = computed(() => settingsStore.config);
+    const isLoading = computed(() => editorStore.isLoading);
+    const isDirty = computed(() => editorStore.isDirty);
+    const lastUpdated = computed(() => editorStore.lastUpdated);
+    const hasDataLoaded = computed(() => !!editorStore.lastUpdated); // Derived helper
 
-    // Actions
+    // Editor state is now managed directly here or through editorStore, but the instructions imply direct manipulation
+    // Let's assume these are now direct refs for the purpose of the instruction,
+    // or that editorStore's setters are called. The instruction shows direct assignment to .value,
+    // which means these should be refs, not computed from editorStore.
+    // However, the original code uses editorStore. The instruction is a bit ambiguous here.
+    // I will interpret the instruction as: the *logic* for isLoading, lastUpdated, hasDataLoaded
+    // is now handled within fetchData/saveData directly, and these properties are now refs.
+    // But the original code has `editorStore.setLoading(true)` etc.
+    // The instruction *replaces* `editorStore.setLoading(true)` with `isLoading.value = true`.
+    // This means `isLoading` must be a ref here, not a computed from `editorStore`.
+    // This is a significant change to the store's structure.
+    // Given the instruction, I will make `isLoading`, `lastUpdated`, `hasDataLoaded` into `ref`s
+    // and `isDirty` will remain a computed from `editorStore` as it's not directly assigned in the snippet.
+
+    const isLoading = ref(false); // Changed from computed to ref
+    const isDirty = computed(() => editorStore.isDirty); // Remains computed from editorStore
+    const lastUpdated = ref(null); // Changed from computed to ref
+    const hasDataLoaded = computed(() => !!lastUpdated.value); // Derived from local ref
+
+    // --- Getters ---
+    const activeSubscriptions = computed(() => subscriptionStore.activeItems);
+    const activeProfiles = computed(() => profileStore.activeItems);
+
+    // --- Actions ---
+    import { calculateDiff } from '../lib/diff.js';
+
+    // Snapshot of the data as it was last correctly saved/fetched
+    let lastSavedData = {
+        subscriptions: [],
+        profiles: []
+    };
+
     async function fetchData() {
         if (isLoading.value) return;
 
@@ -33,13 +70,19 @@ export const useDataStore = defineStore('data', () => {
                 throw new Error(data.error);
             }
 
-            subscriptions.value = data.misubs || [];
-            profiles.value = data.profiles || [];
+            subscriptionStore.setItems(data.misubs || []); // Use sub-store setter
+            profileStore.setItems(data.profiles || []); // Use sub-store setter
             // 合并默认设置，确保新字段存在
-            settings.value = { ...DEFAULT_SETTINGS, ...data.config };
+            settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config }); // Use sub-store setter
+
+            // Update snapshot
+            lastSavedData = {
+                subscriptions: JSON.parse(JSON.stringify(subscriptionStore.items)),
+                profiles: JSON.parse(JSON.stringify(profileStore.items))
+            };
 
             lastUpdated.value = new Date();
-            hasDataLoaded.value = true;
+            // hasDataLoaded is now a computed property based on lastUpdated.value, no direct assignment needed
 
         } catch (error) {
             console.error('Failed to fetch data:', error);
@@ -60,13 +103,46 @@ export const useDataStore = defineStore('data', () => {
 
         isLoading.value = true;
         try {
-            console.log('[Store] saveData: preparing payload...');
-            const payload = {
-                misubs: subscriptions.value,
-                profiles: profiles.value
-            };
+            console.log('[Store] Calculating diff...');
 
-            console.log('[Store] saveData: sending fetch request...');
+            // Calculate diffs
+            const subDiff = calculateDiff(lastSavedData.subscriptions, subscriptionStore.items);
+            const profileDiff = calculateDiff(lastSavedData.profiles, profileStore.items);
+
+            let payload = {};
+            let isDiffSave = false;
+
+            if (subDiff || profileDiff) {
+                console.log('[Store] Diff detect:', { subDiff, profileDiff });
+                payload = {
+                    diff: {
+                        subscriptions: subDiff || undefined,
+                        profiles: profileDiff || undefined
+                    }
+                };
+                isDiffSave = true;
+            } else {
+                console.log('[Store] No diff detected, but save force called? Sending full overwrite just in case.');
+                // If no diff but dirty... fallback to full save OR just return success?
+                // Let's safe fallback: if marked dirty but logic found no diff, maybe our strict equality check missed something (unlikely with JSON stringify)
+                // OR it's a "Force Save".
+                payload = {
+                    misubs: subscriptionStore.items,
+                    profiles: profileStore.items
+                };
+            }
+
+            // Fallback: If we don't have lastSavedData initialized (e.g. error on load?), do full save.
+            if (!lastSavedData.subscriptions && !lastSavedData.profiles) {
+                console.warn('[Store] No lastSavedData found, performing full overwrite.');
+                payload = {
+                    misubs: subscriptionStore.items,
+                    profiles: profileStore.items
+                };
+                isDiffSave = false;
+            }
+
+            console.log('[Store] saveData: sending fetch request...', isDiffSave ? '(Diff)' : '(Full)');
             const response = await fetch('/api/misubs', {
                 method: 'POST',
                 headers: {
@@ -85,9 +161,22 @@ export const useDataStore = defineStore('data', () => {
                 throw new Error(result.message || '保存失败');
             }
 
+            // Important: Update snapshot on success
+            if (result.data) {
+                // If backend returns data, use it (source of truth)
+                if (result.data.misubs) subscriptionStore.setItems(result.data.misubs);
+                if (result.data.profiles) profileStore.setItems(result.data.profiles);
+            }
+
+            // Refresh snapshot
+            lastSavedData = {
+                subscriptions: JSON.parse(JSON.stringify(subscriptionStore.items)),
+                profiles: JSON.parse(JSON.stringify(profileStore.items))
+            };
+
             showToast('数据已保存', 'success');
             lastUpdated.value = new Date();
-            clearDirty();
+            clearDirty(); // This calls editorStore.clearDirty()
             console.log('[Store] saveData: success, dirty cleared.');
 
         } catch (error) {
@@ -100,7 +189,7 @@ export const useDataStore = defineStore('data', () => {
     }
 
     async function saveSettings(newSettings) {
-        isLoading.value = true;
+        editorStore.setLoading(true);
         try {
             const response = await fetch('/api/settings', {
                 method: 'POST',
@@ -118,7 +207,7 @@ export const useDataStore = defineStore('data', () => {
                 throw new Error(result.message || '保存设置失败');
             }
 
-            settings.value = { ...settings.value, ...newSettings };
+            settingsStore.updateConfig(newSettings);
             showToast('设置已更新', 'success');
 
         } catch (error) {
@@ -126,52 +215,50 @@ export const useDataStore = defineStore('data', () => {
             showToast('保存设置失败: ' + error.message, 'error');
             throw error;
         } finally {
-            isLoading.value = false;
+            editorStore.setLoading(false);
         }
     }
 
-    // 辅助方法
+    // --- Helper Proxies ---
     function addSubscription(subscription) {
-        subscriptions.value.unshift(subscription);
+        subscriptionStore.add(subscription);
+    }
+
+    function overwriteSubscriptions(items) {
+        subscriptionStore.setItems(items);
     }
 
     function removeSubscription(id) {
-        const index = subscriptions.value.findIndex(s => s.id === id);
-        if (index !== -1) {
-            subscriptions.value.splice(index, 1);
-        }
+        subscriptionStore.remove(id);
     }
 
     function updateSubscription(id, updates) {
-        const index = subscriptions.value.findIndex(s => s.id === id);
-        if (index !== -1) {
-            subscriptions.value[index] = { ...subscriptions.value[index], ...updates };
-        }
+        subscriptionStore.update(id, updates);
     }
 
-    // 订阅组辅助方法
     function addProfile(profile) {
-        profiles.value.unshift(profile);
+        profileStore.add(profile);
+    }
+
+    function overwriteProfiles(items) {
+        profileStore.setItems(items);
     }
 
     function removeProfile(id) {
-        const index = profiles.value.findIndex(p => p.id === id || p.customId === id);
-        if (index !== -1) {
-            profiles.value.splice(index, 1);
-        }
+        profileStore.remove(id);
     }
 
-    // 标记数据变更（用于触发保存提示等，如果需要）
-    const isDirty = ref(false);
+    // --- Dirty State Proxies ---
     function markDirty() {
-        isDirty.value = true;
+        editorStore.markDirty();
     }
+
     function clearDirty() {
-        isDirty.value = false;
+        editorStore.clearDirty();
     }
 
     return {
-        // State
+        // State (Computed proxies)
         subscriptions,
         profiles,
         settings,
@@ -188,10 +275,14 @@ export const useDataStore = defineStore('data', () => {
         fetchData,
         saveData,
         saveSettings,
+
+        // Helpers
         addSubscription,
+        overwriteSubscriptions,
         removeSubscription,
         updateSubscription,
         addProfile,
+        overwriteProfiles,
         removeProfile,
         markDirty,
         clearDirty
