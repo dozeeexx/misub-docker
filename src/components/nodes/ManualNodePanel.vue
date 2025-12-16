@@ -20,7 +20,7 @@ const emit = defineEmits([
 ]);
 
 const draggableManualNodes = computed({
-  get: () => props.manualNodes,
+  get: () => [...props.manualNodes],
   set: (val) => emit('reorder', val)
 });
 

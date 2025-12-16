@@ -14,7 +14,7 @@ const props = defineProps({
 const emit = defineEmits(['add', 'delete', 'changePage', 'updateNodeCount', 'edit', 'toggleSort', 'markDirty', 'preview', 'deleteAll', 'refreshAll', 'reorder']);
 
 const draggableSubscriptions = computed({
-    get: () => props.subscriptions,
+    get: () => [...props.subscriptions],
     set: (val) => emit('reorder', val)
 });
 
