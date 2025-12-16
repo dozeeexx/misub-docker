@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import draggable from 'vuedraggable';
 import ManualNodeCard from './ManualNodeCard.vue';
 import ManualNodeList from './ManualNodeList.vue';
@@ -29,7 +29,7 @@ const showNodesMoreMenu = ref(false);
 const localSearchTerm = ref(props.searchTerm || '');
 
 // 简化搜索逻辑 - 直接在组件内处理
-import { computed } from 'vue';
+
 
 // 在组件内部直接计算过滤结果
 const filteredNodes = computed(() => {
@@ -203,7 +203,7 @@ const handleClickOutside = (event) => {
 };
 
 // 在组件挂载和卸载时添加/移除事件监听器
-import { onMounted, onUnmounted } from 'vue';
+
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
