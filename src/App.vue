@@ -62,9 +62,7 @@ onMounted(() => {
         'ios-content-offset': sessionState === 'loggedIn' || sessionState === 'loading'
       }"
     >
-      <div class="fixed top-20 left-4 bg-black/80 text-white p-2 z-50 text-xs font-mono pointer-events-none">
-        Debug: {{ sessionState }} | Data: {{ !!initialData }}
-      </div>
+
       <DashboardSkeleton v-if="sessionState === 'loading'" />
       <Dashboard v-else-if="sessionState === 'loggedIn'" :data="initialData || {}" />
       <Login v-else :login="login" />

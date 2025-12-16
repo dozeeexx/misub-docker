@@ -303,6 +303,13 @@ export function useSubscriptions(markDirty) {
     }, AUTO_UPDATE_INTERVAL_MS);
   }
 
+  function stopAutoUpdate() {
+    if (autoUpdateTimerId) {
+      clearInterval(autoUpdateTimerId);
+      autoUpdateTimerId = null;
+    }
+  }
+
   function reorderSubscriptions(newOrder) {
     // 1. Get all Manual Nodes (to preserve them)
     // We can't rely just on manualNodes computed because it might be filtered or not imported here.

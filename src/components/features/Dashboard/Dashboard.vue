@@ -44,39 +44,31 @@ const markDirty = () => {
 
 // --- 將狀態和邏輯委託給 Composables ---
 // Composables now use global store, so we don't pass refs
-console.log('Dashboard: setup - invoking hooks');
 // --- UI State ---
 const isSortingSubs = ref(false);
 const isSortingNodes = ref(false);
 const manualNodeViewMode = ref('card');
 
-console.log('Dashboard: setup - calling useSubscriptions');
 const {
   subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions, totalRemainingTraffic,
   changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
   addSubscriptionsFromBulk, handleUpdateNodeCount, batchUpdateAllSubscriptions, startAutoUpdate, stopAutoUpdate,
   reorderSubscriptions, 
 } = useSubscriptions(markDirty);
-console.log('Dashboard: setup - useSubscriptions done', { subs: subscriptions.value?.length });
 
-console.log('Dashboard: setup - calling useManualNodes');
 const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes, deduplicateNodes,
   reorderManualNodes, 
 } = useManualNodes(markDirty);
-console.log('Dashboard: setup - useManualNodes done', { nodes: manualNodes.value?.length });
 
-console.log('Dashboard: setup - calling useProfiles');
 const {
   profiles, editingProfile, isNewProfile, showProfileModal, showDeleteProfilesModal,
   initializeProfiles, handleProfileToggle, handleAddProfile, handleEditProfile,
   handleSaveProfile, handleDeleteProfile, handleDeleteAllProfiles, copyProfileLink,
   cleanupSubscriptions, cleanupNodes, cleanupAllSubscriptions, cleanupAllNodes,
-} = useProfiles(markDirty); 
-console.log('Dashboard: setup - useProfiles done');
-
+} = useProfiles(markDirty);
 // --- UI State ---
 
 const editingSubscription = ref(null);
@@ -376,9 +368,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
 </script>
 
 <template>
-  <div style="background: red; color: white; padding: 10px; z-index: 9999; position: relative;" v-if="true">
-    DASHBOARD MOUNTED. isLoading: {{ isLoading }}
-  </div>
+
   <div v-if="isLoading" class="w-full max-w-(--breakpoint-xl) mx-auto p-4 sm:p-6 lg:p-8">
     <SkeletonLoader type="dashboard" />
   </div>
