@@ -32,6 +32,7 @@ const dataStore = useDataStore();
 const { settings, isDirty, isLoading } = storeToRefs(dataStore); // Use store refs
 const config = settings; // Compatibility alias for template
 const { clearDirty } = dataStore; // Don't destructure markDirty directly
+console.log('Dashboard: setup running');
 
 const saveState = ref('idle');
 
@@ -91,8 +92,17 @@ const previewProfileName_ = ref(''); // fix potential unused var or re-usage
 
 // --- 初始化與生命週期 ---
 const initializeState = async () => {
-    await dataStore.fetchData();
-    clearDirty();
+    console.log('Dashboard: initializeState started');
+    try {
+        await dataStore.fetchData();
+        console.log('Dashboard: fetchData completed', { 
+            subs: subscriptions.value?.length, 
+            nodes: manualNodes.value?.length 
+        });
+        clearDirty();
+    } catch (e) {
+        console.error('Dashboard: initializeState error', e);
+    }
 };
 
 const handleBeforeUnload = (event) => {
