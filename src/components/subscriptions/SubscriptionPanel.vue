@@ -4,7 +4,7 @@ import draggable from 'vuedraggable';
 import Card from '../ui/Card.vue';
 
 const props = defineProps({
-  subscriptions: Array,
+  subscriptions: { type: Array, default: () => [] },
   paginatedSubscriptions: Array,
   currentPage: Number,
   totalPages: Number,

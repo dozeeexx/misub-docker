@@ -5,7 +5,7 @@ import ManualNodeCard from './ManualNodeCard.vue';
 import ManualNodeList from './ManualNodeList.vue';
 
 const props = defineProps({
-  manualNodes: Array,
+  manualNodes: { type: Array, default: () => [] },
   paginatedManualNodes: Array,
   currentPage: Number,
   totalPages: Number,
