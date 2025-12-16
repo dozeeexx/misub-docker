@@ -78,9 +78,7 @@ const {
 console.log('Dashboard: setup - useProfiles done');
 
 // --- UI State ---
-const isSortingSubs = ref(false);
-const isSortingNodes = ref(false);
-const manualNodeViewMode = ref('card');
+
 const editingSubscription = ref(null);
 const isNewSubscription = ref(false);
 const showSubModal = ref(false);
