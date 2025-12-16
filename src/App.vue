@@ -6,6 +6,7 @@ import { useToastStore } from './stores/toast';
 import { storeToRefs } from 'pinia';
 
 // 懒加载大型组件以提升性能
+const DashboardSkeleton = defineAsyncComponent(() => import('./components/layout/DashboardSkeleton.vue'));
 const Dashboard = defineAsyncComponent({
   loader: () => import('./components/features/Dashboard/Dashboard.vue'),
   loadingComponent: DashboardSkeleton,
@@ -14,7 +15,6 @@ const Dashboard = defineAsyncComponent({
   },
   timeout: 3000
 });
-const DashboardSkeleton = defineAsyncComponent(() => import('./components/layout/DashboardSkeleton.vue'));
 const Login = defineAsyncComponent(() => import('./components/modals/Login.vue'));
 const Header = defineAsyncComponent(() => import('./components/layout/Header.vue'));
 const Toast = defineAsyncComponent(() => import('./components/ui/Toast.vue'));
