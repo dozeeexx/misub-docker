@@ -303,11 +303,21 @@ export function useSubscriptions(markDirty) {
     }, AUTO_UPDATE_INTERVAL_MS);
   }
 
-  function stopAutoUpdate() {
-    if (autoUpdateTimerId) {
-      clearInterval(autoUpdateTimerId);
-      autoUpdateTimerId = null;
-    }
+  function reorderSubscriptions(newOrder) {
+    // 1. Get all Manual Nodes (to preserve them)
+    // We can't rely just on manualNodes computed because it might be filtered or not imported here.
+    // Instead, filter from source of truth: allSubscriptions
+    const currentManualNodes = (allSubscriptions.value || []).filter(item => !item.url || !/^https?:\/\//.test(item.url));
+
+    // 2. Combine New Ordered Subscriptions + Existing Manual Nodes
+    // Logic: Keep Subscriptions at top, Manual Nodes at bottom
+    const mergedList = [...newOrder, ...currentManualNodes];
+
+    // 3. Update Store
+    dataStore.overwriteSubscriptions(mergedList);
+
+    // 4. Mark Dirty
+    markDirty();
   }
 
   return {
@@ -327,5 +337,6 @@ export function useSubscriptions(markDirty) {
     batchUpdateAllSubscriptions,
     startAutoUpdate,
     stopAutoUpdate,
+    reorderSubscriptions, // Added
   };
 }

@@ -47,12 +47,14 @@ const {
   subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions, totalRemainingTraffic,
   changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
   addSubscriptionsFromBulk, handleUpdateNodeCount, batchUpdateAllSubscriptions, startAutoUpdate, stopAutoUpdate,
+  reorderSubscriptions, // Added
 } = useSubscriptions(markDirty);
 
 const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes, deduplicateNodes,
+  reorderManualNodes, // Added
 } = useManualNodes(markDirty);
 
 // --- 訂閱組 (Profile) 相關狀態 ---
@@ -421,6 +423,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           @mark-dirty="markDirty"
           @delete-all="showDeleteSubsModal = true"
           @preview="handlePreviewSubscription"
+          @reorder="reorderSubscriptions"
         />
 
         <!-- Manual Node Panel -->
@@ -444,6 +447,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           @deduplicate="handleDeduplicateNodes"
           @import="showSubscriptionImportModal = true"
           @delete-all="showDeleteNodesModal = true"
+          @reorder="reorderManualNodes"
         />
       </div>
       

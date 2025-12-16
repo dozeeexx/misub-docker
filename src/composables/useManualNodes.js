@@ -251,6 +251,21 @@ export function useManualNodes(markDirty) {
     }
   });
 
+  function reorderManualNodes(newOrder) {
+    // 1. Get all Subscriptions (to preserve them)
+    const currentSubscriptions = (allSubscriptions.value || []).filter(item => item.url && /^https?:\/\//.test(item.url));
+
+    // 2. Combine Existing Subscriptions + New Ordered Manual Nodes
+    // Logic: Keep Subscriptions at top, Manual Nodes at bottom
+    const mergedList = [...currentSubscriptions, ...newOrder];
+
+    // 3. Update Store
+    dataStore.overwriteSubscriptions(mergedList);
+
+    // 4. Mark Dirty
+    markDirty();
+  }
+
   return {
     manualNodes, // Returns computed filtered list
     manualNodesCurrentPage,
@@ -266,5 +281,6 @@ export function useManualNodes(markDirty) {
     addNodesFromBulk,
     autoSortNodes,
     deduplicateNodes,
+    reorderManualNodes, // Added
   };
 }

@@ -16,8 +16,13 @@ const props = defineProps({
 
 const emit = defineEmits([
   'add', 'delete', 'edit', 'changePage', 'update:searchTerm', 'update:viewMode',
-  'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import', 'deleteAll'
+  'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import', 'deleteAll', 'reorder'
 ]);
+
+const draggableManualNodes = computed({
+  get: () => props.manualNodes,
+  set: (val) => emit('reorder', val)
+});
 
 const nodesMoreMenuRef = ref(null);
 const showNodesMoreMenu = ref(false);
@@ -271,7 +276,7 @@ onUnmounted(() => {
           v-if="isSorting"
           tag="div" 
           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
-          :list="manualNodes" 
+          v-model="draggableManualNodes" 
           item-key="id" 
           animation="300" 
           @end="handleSortEnd"
@@ -305,7 +310,7 @@ onUnmounted(() => {
           v-if="isSorting"
           tag="div" 
           class="space-y-2" 
-          :list="manualNodes" 
+          v-model="draggableManualNodes" 
           item-key="id" 
           animation="300" 
           @end="handleSortEnd"

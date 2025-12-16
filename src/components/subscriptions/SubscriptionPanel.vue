@@ -11,7 +11,12 @@ const props = defineProps({
   isSorting: Boolean,
 });
 
-const emit = defineEmits(['add', 'delete', 'changePage', 'updateNodeCount', 'edit', 'toggleSort', 'markDirty', 'preview', 'deleteAll', 'refreshAll']);
+const emit = defineEmits(['add', 'delete', 'changePage', 'updateNodeCount', 'edit', 'toggleSort', 'markDirty', 'preview', 'deleteAll', 'refreshAll', 'reorder']);
+
+const draggableSubscriptions = computed({
+    get: () => props.subscriptions,
+    set: (val) => emit('reorder', val)
+});
 
 const subsMoreMenuRef = ref(null);
 const showSubsMoreMenu = ref(false);
@@ -85,7 +90,7 @@ onUnmounted(() => {
         v-if="isSorting" 
         tag="div" 
         class="grid grid-cols-1 md:grid-cols-2 gap-5" 
-        :list="subscriptions" 
+        v-model="draggableSubscriptions" 
         item-key="id"
         animation="300" 
         @end="handleSortEnd">
