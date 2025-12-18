@@ -141,21 +141,31 @@ const protocolOrderText = computed({
             <div class="w-9 h-5 bg-gray-200 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 dark:peer-checked:bg-green-600"></div>
           </label>
         </div>
-        <div v-if="config.rename.regex.enabled" class="space-y-2 mt-3">
-          <div v-for="(rule, idx) in config.rename.regex.rules" :key="idx" class="flex items-center gap-2 text-xs">
+        <div v-if="config.rename.regex.enabled" class="space-y-3 mt-3">
+          <!-- 已添加的规则列表 -->
+          <div v-for="(rule, idx) in config.rename.regex.rules" :key="idx" class="flex items-center gap-2 text-xs bg-white dark:bg-gray-700/50 p-2 rounded border border-gray-200 dark:border-gray-600">
             <code class="flex-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded truncate">{{ rule.pattern }}</code>
             <span class="text-gray-400">→</span>
             <code class="flex-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded truncate">{{ rule.replacement || '(空)' }}</code>
-            <span class="text-gray-400 text-xs">/{{ rule.flags || 'g' }}/</span>
-            <button @click="removeRegexRule(idx)" class="px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">删除</button>
+            <span class="text-gray-400 text-xs shrink-0">/{{ rule.flags || 'g' }}/</span>
+            <button @click="removeRegexRule(idx)" class="shrink-0 px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">删除</button>
           </div>
-          <div class="flex items-center gap-2">
-            <input v-model="newRegexRule.pattern" placeholder="正则表达式" class="flex-1 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-            <input v-model="newRegexRule.replacement" placeholder="替换为" class="flex-1 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-            <input v-model="newRegexRule.flags" placeholder="gi" class="w-12 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" title="正则标志(如 g, i, gi)">
-            <button @click="addRegexRule" class="px-2 py-1 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600">添加</button>
+          <!-- 添加新规则 -->
+          <div class="space-y-2">
+            <div class="flex items-center gap-2">
+              <input v-model="newRegexRule.pattern" placeholder="正则表达式，如：\\[广告\\]" class="flex-1 min-w-0 px-2 py-1.5 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              <input v-model="newRegexRule.replacement" placeholder="替换为（留空则删除）" class="flex-1 min-w-0 px-2 py-1.5 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs text-gray-500 dark:text-gray-400">标志:</span>
+                <input v-model="newRegexRule.flags" placeholder="g" class="w-14 px-2 py-1.5 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white text-center">
+              </div>
+              <p class="flex-1 text-xs text-gray-400">g=全局替换 i=忽略大小写</p>
+              <button @click="addRegexRule" class="shrink-0 px-3 py-1.5 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600">添加规则</button>
+            </div>
           </div>
-          <p class="text-xs text-gray-400">示例：\\[广告\\] → (空) 可移除包含 [广告] 的文字</p>
+          <p class="text-xs text-gray-400 border-t border-gray-200 dark:border-gray-600 pt-2">示例：\\[广告\\] → (空) 可移除包含 [广告] 的文字</p>
         </div>
       </div>
 
