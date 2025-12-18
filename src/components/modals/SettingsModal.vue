@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 import Modal from '../forms/Modal.vue';
+import NodeTransformSettings from '../settings/NodeTransformSettings.vue';
 
 import { useToastStore } from '../../stores/toast.js';
 import { fetchSettings, saveSettings, migrateToD1 } from '../../lib/api.js';
@@ -24,6 +25,14 @@ const prefixConfig = ref({
   enableManualNodes: true,
   enableSubscriptions: true,
   manualNodePrefix: '手动节点'
+});
+
+// 新增：节点转换配置
+const nodeTransform = ref({
+  enabled: false,
+  rename: { regex: { enabled: false, rules: [] }, template: { enabled: false, template: '{emoji}{region}-{protocol}-{index}' } },
+  dedup: { enabled: false, mode: 'serverPort', includeProtocol: false },
+  sort: { enabled: false, nameIgnoreEmoji: true, keys: [] }
 });
 
 const hasWhitespace = computed(() => {
@@ -73,8 +82,13 @@ const loadSettings = async () => {
         enableManualNodes: fallbackEnabled,
         enableSubscriptions: fallbackEnabled,
         manualNodePrefix: '手动节点',
-        enableNodeEmoji: true // [新增]
+        enableNodeEmoji: true
       };
+    }
+
+    // 加载节点转换配置
+    if (settings.value.nodeTransform) {
+      nodeTransform.value = settings.value.nodeTransform;
     }
   } catch (error) {
     showToast('加载设置失败', 'error');
@@ -110,8 +124,9 @@ const handleSave = async () => {
         enableManualNodes: prefixConfig.value.enableManualNodes,
         enableSubscriptions: prefixConfig.value.enableSubscriptions,
         manualNodePrefix: prefixConfig.value.manualNodePrefix,
-        enableNodeEmoji: prefixConfig.value.enableNodeEmoji // [新增]
-      }
+        enableNodeEmoji: prefixConfig.value.enableNodeEmoji
+      },
+      nodeTransform: nodeTransform.value
     };
 
     const result = await saveSettings(settingsToSave);
@@ -291,6 +306,13 @@ watch(() => props.show, (newValue) => {
                 </label>  
               </div>
             </div>
+          </div>
+        </div>
+        <!-- 节点转换配置 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">节点转换管道</label>
+          <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+            <NodeTransformSettings v-model="nodeTransform" />
           </div>
         </div>
         <div>
