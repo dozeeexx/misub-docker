@@ -38,49 +38,56 @@ const config = ref({
 });
 
 const newRegexRule = ref({ pattern: '', replacement: '', flags: 'g' });
-let isInternalUpdate = false;
+let lastEmittedJson = '';
+
+const buildConfig = (val) => ({
+  enabled: val?.enabled ?? false,
+  rename: {
+    regex: {
+      enabled: val?.rename?.regex?.enabled ?? false,
+      rules: val?.rename?.regex?.rules ?? []
+    },
+    template: {
+      enabled: val?.rename?.template?.enabled ?? false,
+      template: val?.rename?.template?.template ?? '{emoji}{region}-{protocol}-{index}',
+      indexStart: val?.rename?.template?.indexStart ?? 1,
+      indexPad: val?.rename?.template?.indexPad ?? 2,
+      indexScope: val?.rename?.template?.indexScope ?? 'regionProtocol',
+      regionAlias: val?.rename?.template?.regionAlias ?? {},
+      protocolAlias: val?.rename?.template?.protocolAlias ?? { hysteria2: 'hy2' }
+    }
+  },
+  dedup: {
+    enabled: val?.dedup?.enabled ?? false,
+    mode: val?.dedup?.mode ?? 'serverPort',
+    includeProtocol: val?.dedup?.includeProtocol ?? false,
+    prefer: {
+      protocolOrder: val?.dedup?.prefer?.protocolOrder ?? ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr']
+    }
+  },
+  sort: {
+    enabled: val?.sort?.enabled ?? false,
+    nameIgnoreEmoji: val?.sort?.nameIgnoreEmoji ?? true,
+    keys: val?.sort?.keys ?? []
+  }
+});
 
 watch(() => props.modelValue, (val) => {
   if (val && typeof val === 'object') {
-    isInternalUpdate = true;
-    config.value = JSON.parse(JSON.stringify({
-      enabled: val.enabled ?? false,
-      rename: {
-        regex: {
-          enabled: val.rename?.regex?.enabled ?? false,
-          rules: val.rename?.regex?.rules ?? []
-        },
-        template: {
-          enabled: val.rename?.template?.enabled ?? false,
-          template: val.rename?.template?.template ?? '{emoji}{region}-{protocol}-{index}',
-          indexStart: val.rename?.template?.indexStart ?? 1,
-          indexPad: val.rename?.template?.indexPad ?? 2,
-          indexScope: val.rename?.template?.indexScope ?? 'regionProtocol',
-          regionAlias: val.rename?.template?.regionAlias ?? {},
-          protocolAlias: val.rename?.template?.protocolAlias ?? { hysteria2: 'hy2' }
-        }
-      },
-      dedup: {
-        enabled: val.dedup?.enabled ?? false,
-        mode: val.dedup?.mode ?? 'serverPort',
-        includeProtocol: val.dedup?.includeProtocol ?? false,
-        prefer: {
-          protocolOrder: val.dedup?.prefer?.protocolOrder ?? ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr']
-        }
-      },
-      sort: {
-        enabled: val.sort?.enabled ?? false,
-        nameIgnoreEmoji: val.sort?.nameIgnoreEmoji ?? true,
-        keys: val.sort?.keys ?? []
-      }
-    }));
-    isInternalUpdate = false;
+    const newJson = JSON.stringify(buildConfig(val));
+    if (newJson !== lastEmittedJson) {
+      config.value = JSON.parse(newJson);
+      lastEmittedJson = newJson;
+    }
   }
 }, { immediate: true, deep: true });
 
 watch(config, (val) => {
-  if (isInternalUpdate) return;
-  emit('update:modelValue', JSON.parse(JSON.stringify(val)));
+  const newJson = JSON.stringify(val);
+  if (newJson !== lastEmittedJson) {
+    lastEmittedJson = newJson;
+    emit('update:modelValue', JSON.parse(newJson));
+  }
 }, { deep: true });
 
 const addRegexRule = () => {
