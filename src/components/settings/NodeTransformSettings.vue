@@ -38,9 +38,11 @@ const config = ref({
 });
 
 const newRegexRule = ref({ pattern: '', replacement: '', flags: 'g' });
+let isInternalUpdate = false;
 
 watch(() => props.modelValue, (val) => {
   if (val && typeof val === 'object') {
+    isInternalUpdate = true;
     config.value = JSON.parse(JSON.stringify({
       enabled: val.enabled ?? false,
       rename: {
@@ -72,10 +74,12 @@ watch(() => props.modelValue, (val) => {
         keys: val.sort?.keys ?? []
       }
     }));
+    isInternalUpdate = false;
   }
 }, { immediate: true, deep: true });
 
 watch(config, (val) => {
+  if (isInternalUpdate) return;
   emit('update:modelValue', JSON.parse(JSON.stringify(val)));
 }, { deep: true });
 
