@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 const props = defineProps({
   modelValue: {
@@ -100,6 +100,18 @@ const addRegexRule = () => {
 const removeRegexRule = (index) => {
   config.value.rename.regex.rules.splice(index, 1);
 };
+
+// 协议优先级顺序的双向绑定
+const protocolOrderText = computed({
+  get: () => (config.value.dedup.prefer?.protocolOrder ?? []).join(', '),
+  set: (val) => {
+    const order = String(val ?? '')
+      .split(/[,\n]/)
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean);
+    config.value.dedup.prefer.protocolOrder = order;
+  }
+});
 </script>
 
 <template>
@@ -134,11 +146,13 @@ const removeRegexRule = (index) => {
             <code class="flex-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded truncate">{{ rule.pattern }}</code>
             <span class="text-gray-400">→</span>
             <code class="flex-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded truncate">{{ rule.replacement || '(空)' }}</code>
-            <button @click="removeRegexRule(idx)" class="text-red-500 hover:text-red-700">✕</button>
+            <span class="text-gray-400 text-xs">/{{ rule.flags || 'g' }}/</span>
+            <button @click="removeRegexRule(idx)" class="px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">删除</button>
           </div>
           <div class="flex items-center gap-2">
             <input v-model="newRegexRule.pattern" placeholder="正则表达式" class="flex-1 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
             <input v-model="newRegexRule.replacement" placeholder="替换为" class="flex-1 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            <input v-model="newRegexRule.flags" placeholder="gi" class="w-12 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" title="正则标志(如 g, i, gi)">
             <button @click="addRegexRule" class="px-2 py-1 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600">添加</button>
           </div>
           <p class="text-xs text-gray-400">示例：\\[广告\\] → (空) 可移除包含 [广告] 的文字</p>
@@ -167,7 +181,8 @@ const removeRegexRule = (index) => {
               <option value="protocol">按协议编号</option>
               <option value="regionProtocol">按地区+协议编号</option>
             </select>
-            <input type="number" v-model.number="config.rename.template.indexPad" min="0" max="4" class="w-16 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="补0">
+            <input type="number" v-model.number="config.rename.template.indexStart" min="0" class="w-16 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="起始" title="编号起始值">
+            <input type="number" v-model.number="config.rename.template.indexPad" min="0" max="4" class="w-16 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="补0" title="编号补零位数">
           </div>
         </div>
       </div>
@@ -184,14 +199,29 @@ const removeRegexRule = (index) => {
             <div class="w-9 h-5 bg-gray-200 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 dark:peer-checked:bg-green-600"></div>
           </label>
         </div>
-        <div v-if="config.dedup.enabled" class="space-y-2 mt-3">
-          <div class="flex items-center gap-4">
+        <div v-if="config.dedup.enabled" class="space-y-3 mt-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-600 dark:text-gray-400">去重模式:</span>
+            <select v-model="config.dedup.mode" class="flex-1 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              <option value="serverPort">服务器+端口 (推荐)</option>
+              <option value="url">完整 URL</option>
+            </select>
+          </div>
+          <div v-if="config.dedup.mode === 'serverPort'" class="space-y-2">
             <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
               <input type="checkbox" v-model="config.dedup.includeProtocol" class="rounded">
               去重时区分协议
             </label>
+            <div class="space-y-1">
+              <span class="text-xs text-gray-600 dark:text-gray-400">协议优先级（逗号分隔，越靠前越优先保留）:</span>
+              <input v-model="protocolOrderText" class="w-full px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="vless, trojan, vmess, hysteria2, ss, ssr">
+            </div>
           </div>
-          <p class="text-xs text-gray-400">启用后，相同服务器+端口但不同协议的节点会保留</p>
+          <p class="text-xs text-gray-400">
+            {{ config.dedup.mode === 'serverPort'
+              ? '基于服务器地址和端口去重，可识别不同协议的相同节点'
+              : '基于完整 URL 去重，仅移除完全相同的节点' }}
+          </p>
         </div>
       </div>
 

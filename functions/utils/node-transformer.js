@@ -5,6 +5,14 @@
 
 import { extractNodeRegion, getRegionEmoji } from '../modules/utils/geo-utils.js';
 
+// ============ 默认配置 ============
+
+const DEFAULT_SORT_KEYS = [
+    { key: 'region', order: 'asc', customOrder: ['香港', '台湾', '日本', '新加坡', '美国', '韩国', '英国', '德国', '法国', '加拿大'] },
+    { key: 'protocol', order: 'asc', customOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] },
+    { key: 'name', order: 'asc' }
+];
+
 // ============ 工具函数 ============
 
 function safeDecodeURI(value) {
@@ -13,10 +21,19 @@ function safeDecodeURI(value) {
 }
 
 function normalizeBase64(input) {
-    let s = String(input || '').trim().replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    let s = String(input || '').trim().replace(/\s+/g, '');
     if (!s) return '';
+    // 处理可能被 URL 编码的 Base64
+    if (s.includes('%')) {
+        try { s = decodeURIComponent(s); } catch { /* ignore */ }
+    }
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
     while (s.length % 4 !== 0) s += '=';
     return s;
+}
+
+function base64UrlEncode(text) {
+    return base64Encode(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 function getSchemePayload(url, prefixLen) {
@@ -55,6 +72,15 @@ function base64Encode(text) {
 function getProtocol(url) {
     const m = String(url || '').match(/^([a-zA-Z0-9+.-]+):\/\//);
     return m ? m[1].toLowerCase() : 'unknown';
+}
+
+/**
+ * 归一化协议名称，将别名统一为标准名
+ */
+function normalizeProtocol(proto) {
+    const p = String(proto || 'unknown').toLowerCase();
+    if (p === 'hy' || p === 'hy2' || p === 'hysteria') return 'hysteria2';
+    return p;
 }
 
 function getFragment(url) {
@@ -110,7 +136,7 @@ function extractSsrRemarks(decoded) {
 }
 
 function extractServerPort(url, protocol) {
-    const proto = protocol || getProtocol(url);
+    const proto = normalizeProtocol(protocol || getProtocol(url));
 
     if (proto === 'vmess') {
         try {
@@ -156,7 +182,7 @@ function extractServerPort(url, protocol) {
 }
 
 function getNodeName(url, protocol) {
-    const proto = protocol || getProtocol(url);
+    const proto = normalizeProtocol(protocol || getProtocol(url));
     const fragmentName = getFragment(url);
     if (fragmentName) return fragmentName;
 
@@ -178,7 +204,7 @@ function getNodeName(url, protocol) {
 }
 
 function setNodeName(url, protocol, name) {
-    const proto = protocol || getProtocol(url);
+    const proto = normalizeProtocol(protocol || getProtocol(url));
 
     if (proto === 'vmess') {
         try {
@@ -187,6 +213,36 @@ function setNodeName(url, protocol, name) {
             obj.ps = String(name || '');
             const rebuilt = `vmess://${base64Encode(JSON.stringify(obj))}${query}`;
             return hasFragment ? setFragment(rebuilt, name) : rebuilt;
+        } catch { return setFragment(url, name); }
+    }
+    if (proto === 'ssr') {
+        // SSR 需要同时更新 remarks 参数和 fragment
+        try {
+            const { payload, query } = splitSchemeQueryAndFragment(url, 6);
+            const decoded = base64Decode(payload);
+            const slashQ = decoded.indexOf('/?');
+            const qIdx = slashQ !== -1 ? slashQ + 2 : (decoded.indexOf('?') !== -1 ? decoded.indexOf('?') + 1 : -1);
+            if (qIdx === -1) return setFragment(url, name);
+
+            const prefix = decoded.slice(0, qIdx);
+            const paramStr = decoded.slice(qIdx);
+            // 手动解析和重建参数，过滤空段避免非法拼接
+            const rawParts = String(paramStr || '').split('&').filter(p => p && p.trim() !== '');
+            let replaced = false;
+            const parts = rawParts.map(p => {
+                const eq = p.indexOf('=');
+                const k = eq === -1 ? p : p.slice(0, eq);
+                const v = eq === -1 ? '' : p.slice(eq + 1);
+                if (k === 'remarks') {
+                    replaced = true;
+                    return `remarks=${base64UrlEncode(String(name || ''))}`;
+                }
+                return `${k}=${v}`;
+            });
+            if (!replaced) parts.push(`remarks=${base64UrlEncode(String(name || ''))}`);
+            const rebuiltDecoded = prefix + parts.join('&');
+            const rebuilt = `ssr://${base64UrlEncode(rebuiltDecoded)}${query}`;
+            return setFragment(rebuilt, name);
         } catch { return setFragment(url, name); }
     }
     return setFragment(url, name);
@@ -217,8 +273,8 @@ function normalizeConfig(cfg) {
                 enabled: Boolean(template.enabled),
                 template: template.template || '{emoji}{region}-{protocol}-{index}',
                 indexStart: Number.isFinite(template.indexStart) ? template.indexStart : 1,
-                indexPad: Number.isFinite(template.indexPad) ? template.indexPad : 0,
-                indexScope: template.indexScope || 'global',
+                indexPad: Number.isFinite(template.indexPad) ? template.indexPad : 2,
+                indexScope: template.indexScope || 'regionProtocol',
                 regionAlias: template.regionAlias || {},
                 protocolAlias: template.protocolAlias || {}
             }
@@ -236,7 +292,9 @@ function normalizeConfig(cfg) {
         sort: {
             enabled: Boolean(sort.enabled),
             nameIgnoreEmoji: sort.nameIgnoreEmoji !== false,
-            keys: Array.isArray(sort.keys) ? sort.keys : []
+            keys: Array.isArray(sort.keys) && sort.keys.length > 0
+                ? sort.keys
+                : DEFAULT_SORT_KEYS
         }
     };
 }
@@ -297,6 +355,14 @@ function makeComparator(sortCfg) {
     const keys = sortCfg.keys || [];
     const nameIgnoreEmoji = sortCfg.nameIgnoreEmoji !== false;
 
+    // 预先构建 customOrder 索引 Map，将 O(n) 查找优化为 O(1)
+    const customOrderMaps = keys.map(k => {
+        if (!Array.isArray(k?.customOrder)) return null;
+        const map = new Map();
+        k.customOrder.forEach((v, i) => map.set(String(v), i));
+        return map;
+    });
+
     const cmpStr = (a, b) => String(a || '').localeCompare(String(b || ''));
     const cmpNum = (a, b) => {
         const an = Number(a), bn = Number(b);
@@ -307,11 +373,12 @@ function makeComparator(sortCfg) {
     };
 
     return (ra, rb) => {
-        for (const k of keys) {
+        for (let i = 0; i < keys.length; i++) {
+            const k = keys[i];
             if (!k?.key) continue;
             const key = String(k.key);
             const order = String(k.order || 'asc').toLowerCase() === 'desc' ? -1 : 1;
-            const customOrder = k.customOrder;
+            const orderMap = customOrderMaps[i];
 
             let va, vb;
             if (key === 'name') {
@@ -330,11 +397,11 @@ function makeComparator(sortCfg) {
             va = ra[key];
             vb = rb[key];
 
-            if (Array.isArray(customOrder)) {
-                const ia = customOrder.indexOf(String(va || ''));
-                const ib = customOrder.indexOf(String(vb || ''));
-                const raIdx = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
-                const rbIdx = ib === -1 ? Number.MAX_SAFE_INTEGER : ib;
+            if (orderMap) {
+                const ia = orderMap.get(String(va || ''));
+                const ib = orderMap.get(String(vb || ''));
+                const raIdx = ia === undefined ? Number.MAX_SAFE_INTEGER : ia;
+                const rbIdx = ib === undefined ? Number.MAX_SAFE_INTEGER : ib;
                 if (raIdx !== rbIdx) return (raIdx - rbIdx) * order;
             }
 
@@ -361,14 +428,21 @@ export function applyNodeTransformPipeline(nodeUrls, transformConfig = {}) {
 
     if (!cfg.enabled) return input;
 
-    // 解析为结构化记录
+    // 预判哪些字段需要计算，避免不必要的开销
+    const sortKeys = cfg.sort.enabled ? (cfg.sort.keys || []) : [];
+    const sortKeySet = new Set(sortKeys.map(k => String(k?.key || '')));
+    const needServerPort = (cfg.dedup.enabled && cfg.dedup.mode !== 'url')
+        || cfg.rename.template.enabled
+        || (cfg.sort.enabled && (sortKeySet.has('server') || sortKeySet.has('port')));
+    const needRegionEmoji = cfg.rename.template.enabled
+        || (cfg.sort.enabled && sortKeySet.has('region'));
+
+    // 解析为结构化记录（延迟计算 region/emoji）
     let records = input.map(url => {
-        const protocol = getProtocol(url);
+        const protocol = normalizeProtocol(getProtocol(url));
         const name = getNodeName(url, protocol);
-        const region = extractNodeRegion(name);
-        const emoji = getRegionEmoji(region);
-        const { server, port } = extractServerPort(url, protocol);
-        return { url, protocol, name, originalName: name, region, emoji, server, port };
+        const { server, port } = needServerPort ? extractServerPort(url, protocol) : { server: '', port: '' };
+        return { url, protocol, name, originalName: name, region: '', emoji: '', server, port };
     });
 
     // Stage 1: 正则重命名
@@ -402,6 +476,15 @@ export function applyNodeTransformPipeline(nodeUrls, transformConfig = {}) {
         }
     }
 
+    // 去重后再计算 region/emoji：修复"正则改名后 region 未更新"问题，并减少大列表开销
+    if (needRegionEmoji) {
+        records = records.map(r => {
+            const region = extractNodeRegion(r.name);
+            const emoji = getRegionEmoji(region);
+            return { ...r, region, emoji };
+        });
+    }
+
     // Stage 3: 模板重命名
     if (cfg.rename.template.enabled) {
         const groupBuckets = new Map();
@@ -412,11 +495,24 @@ export function applyNodeTransformPipeline(nodeUrls, transformConfig = {}) {
             groupBuckets.set(gk, arr);
         }
 
+        // 稳定排序：server 字符串比较，port 数值比较
+        const cmpStr = (a, b) => String(a || '').localeCompare(String(b || ''));
+        const cmpPort = (a, b) => {
+            const an = Number(a), bn = Number(b);
+            if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
+            if (Number.isNaN(an)) return 1;
+            if (Number.isNaN(bn)) return -1;
+            return an - bn;
+        };
         for (const arr of groupBuckets.values()) {
             arr.sort((a, b) => {
-                const ak = `${a.server}:${a.port}|${a.protocol}|${a.name}`;
-                const bk = `${b.server}:${b.port}|${b.protocol}|${b.name}`;
-                return ak < bk ? -1 : ak > bk ? 1 : 0;
+                const r1 = cmpStr(String(a.server || '').toLowerCase(), String(b.server || '').toLowerCase());
+                if (r1 !== 0) return r1;
+                const r2 = cmpPort(a.port, b.port);
+                if (r2 !== 0) return r2;
+                const r3 = cmpStr(a.protocol, b.protocol);
+                if (r3 !== 0) return r3;
+                return cmpStr(a.name, b.name);
             });
         }
 
