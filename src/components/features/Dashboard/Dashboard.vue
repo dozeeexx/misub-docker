@@ -213,10 +213,9 @@ const handlePreviewProfile = (profileId) => {
 };
 
 const handleProfileReorder = (fromIndex, toIndex) => {
-  const list = [...profiles.value];
-  const item = list.splice(fromIndex, 1)[0];
-  list.splice(toIndex, 0, item);
-  profiles.value = list;
+  // 使用 splice 方法保持响应性,而不是直接赋值
+  const [item] = profiles.value.splice(fromIndex, 1);
+  profiles.value.splice(toIndex, 0, item);
   markDirty();
 };
 

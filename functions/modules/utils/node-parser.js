@@ -13,7 +13,7 @@ import { validateSS2022Node, fixSS2022Node } from './ss2022-validator.js';
 /**
  * 支持的节点协议正则表达式
  */
-export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|http):\/\//i;
+export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|snell|naive\+https?|naive\+quic|socks5|http):\/\//i;
 
 /**
  * Base64编码辅助函数
@@ -36,7 +36,28 @@ function convertClashProxyToUrl(proxy) {
 
         if (type === 'ss' || type === 'shadowsocks') {
             const userInfo = base64Encode(`${proxy.cipher}:${proxy.password}`);
-            return `ss://${userInfo}@${server}:${port}#${encodeURIComponent(name)}`;
+            let url = `ss://${userInfo}@${server}:${port}`;
+
+            // 支持 AnyTLS 插件
+            if (proxy.plugin === 'anytls' || proxy.plugin === 'obfs-local') {
+                const params = [];
+                if (proxy.plugin) params.push(`plugin=${proxy.plugin}`);
+
+                const pluginOpts = proxy['plugin-opts'];
+                if (pluginOpts) {
+                    if (pluginOpts.enabled !== undefined) params.push(`enabled=${pluginOpts.enabled}`);
+                    if (pluginOpts.padding !== undefined) params.push(`padding=${pluginOpts.padding}`);
+                    if (pluginOpts.mode) params.push(`obfs=${pluginOpts.mode}`);
+                    if (pluginOpts.host) params.push(`obfs-host=${encodeURIComponent(pluginOpts.host)}`);
+                }
+
+                if (params.length > 0) {
+                    url += `?${params.join('&')}`;
+                }
+            }
+
+            url += `#${encodeURIComponent(name)}`;
+            return url;
         }
 
         if (type === 'ssr' || type === 'shadowsocksr') {
@@ -121,6 +142,34 @@ function convertClashProxyToUrl(proxy) {
                 auth = `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password)}@`;
             }
             return `http://${auth}${server}:${port}#${encodeURIComponent(name)}`;
+        }
+
+        if (type === 'snell') {
+            const params = [];
+            if (proxy.version) params.push(`version=${proxy.version}`);
+
+            const obfsOpts = proxy['obfs-opts'];
+            if (obfsOpts) {
+                if (obfsOpts.mode) params.push(`obfs=${obfsOpts.mode}`);
+                if (obfsOpts.host) params.push(`obfs-host=${encodeURIComponent(obfsOpts.host)}`);
+            }
+
+            const query = params.length > 0 ? `?${params.join('&')}` : '';
+            return `snell://${encodeURIComponent(proxy.psk)}@${server}:${port}${query}#${encodeURIComponent(name)}`;
+        }
+
+        if (type === 'naive' || proxy.protocol === 'naive') {
+            const username = proxy.username || '';
+            const password = proxy.password || '';
+            const auth = username && password ? `${encodeURIComponent(username)}:${encodeURIComponent(password)}@` : '';
+
+            const params = [];
+            if (proxy.padding !== undefined) params.push(`padding=${proxy.padding}`);
+            if (proxy['extra-headers']) params.push(`extra-headers=${encodeURIComponent(proxy['extra-headers'])}`);
+
+            const query = params.length > 0 ? `?${params.join('&')}` : '';
+            const scheme = proxy.quic ? 'naive+quic' : 'naive+https';
+            return `${scheme}://${auth}${server}:${port}${query}#${encodeURIComponent(name)}`;
         }
 
         return null;
