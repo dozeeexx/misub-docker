@@ -21,6 +21,7 @@ const Toast = defineAsyncComponent(() => import('./components/ui/Toast.vue'));
 const Footer = defineAsyncComponent(() => import('./components/layout/Footer.vue'));
 const PWAUpdatePrompt = defineAsyncComponent(() => import('./components/features/PWAUpdatePrompt.vue'));
 const PWADevTools = defineAsyncComponent(() => import('./components/features/PWADevTools.vue'));
+const MobileBottomNav = defineAsyncComponent(() => import('./components/layout/MobileBottomNav.vue'));
 
 const themeStore = useThemeStore();
 const { theme } = storeToRefs(themeStore);
@@ -55,7 +56,7 @@ onMounted(() => {
     <Header :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
 
     <main 
-      class="grow"
+      class="grow main-content"
       :class="{
         'flex items-center justify-center': sessionState !== 'loggedIn' && sessionState !== 'loading',
         'overflow-y-auto': sessionState === 'loggedIn' || sessionState === 'loading',
@@ -71,6 +72,7 @@ onMounted(() => {
     <Toast :show="toastState.id" :message="toastState.message" :type="toastState.type" />
     <PWAUpdatePrompt />
     <PWADevTools />
+    <MobileBottomNav v-if="sessionState === 'loggedIn'" />
     <Footer />
   </div>
 </template>

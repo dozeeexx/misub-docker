@@ -91,8 +91,12 @@ const expiryInfo = computed(() => {
 
 <template>
   <div 
-    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl card-shadow hover:card-shadow-hover p-4 smooth-all hover:-translate-y-1 flex flex-col h-full min-h-[175px]"
-    :class="{ 'opacity-50': !misub.enabled }"
+    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl elevation-2 hover:elevation-4 p-4 spring-hover hover-glow flex flex-col h-full min-h-[175px] transition-all duration-300"
+    :class="{ 
+      'status-disabled': !misub.enabled,
+      'status-enabled': misub.enabled && !misub.isUpdating,
+      'status-updating': misub.isUpdating
+    }"
   >
     <div class="flex items-start justify-between gap-3">
       <div class="w-full truncate">
