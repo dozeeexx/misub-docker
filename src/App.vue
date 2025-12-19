@@ -56,7 +56,7 @@ onMounted(() => {
     <Header :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
 
     <main 
-      class="grow main-content"
+      class="grow"
       :class="{
         'flex items-center justify-center': sessionState !== 'loggedIn' && sessionState !== 'loading',
         'overflow-y-auto': sessionState === 'loggedIn' || sessionState === 'loading',
@@ -72,7 +72,6 @@ onMounted(() => {
     <Toast :show="toastState.id" :message="toastState.message" :type="toastState.type" />
     <PWAUpdatePrompt />
     <PWADevTools />
-    <MobileBottomNav v-if="sessionState === 'loggedIn'" />
     <Footer />
   </div>
 </template>
