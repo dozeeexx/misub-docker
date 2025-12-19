@@ -464,7 +464,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
       </div>
       
       <!-- Right Column -->
-      <div class="lg:col-span-1 space-y-8 desktop-fixed-sidebar">
+      <div class="lg:col-span-1 space-y-8">
         <RightPanel :config="config" :profiles="profiles" />
         <ProfilePanel 
           :profiles="profiles"
