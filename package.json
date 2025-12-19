@@ -5,13 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "node local-server.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
     "preview": "vite preview",
     "check-pwa": "node check-pwa.js",
     "build-pwa": "vite build && echo PWA build completed!",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:chrome": "node test-chrome-mcp.js"
   },
   "dependencies": {
     "clsx": "^2.1.1",
