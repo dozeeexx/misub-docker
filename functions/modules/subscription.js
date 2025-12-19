@@ -5,9 +5,9 @@
 
 import { formatBytes, prependNodeName, getProcessedUserAgent } from './utils.js';
 import { addFlagEmoji, fixNodeUrlEncoding } from '../utils/node-utils.js';
-// [新增] 引入 node-parser 中的解析函数
 import { extractValidNodes } from './utils/node-parser.js';
 import { sendEnhancedTgNotification } from './notifications.js';
+import { applyNodeTransformPipeline } from '../utils/node-transformer.js';
 
 
 
@@ -171,8 +171,16 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
     });
 
     const processedSubContents = await Promise.all(subPromises);
-    const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
-    const uniqueNodesString = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
+    const combinedLines = (processedManualNodes + '\n' + processedSubContents.join('\n'))
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    const nodeTransformConfig = profilePrefixSettings?.nodeTransform ?? config.nodeTransform;
+    const outputLines = nodeTransformConfig?.enabled
+        ? applyNodeTransformPipeline(combinedLines, nodeTransformConfig)
+        : [...new Set(combinedLines)];
+    const uniqueNodesString = outputLines.join('\n');
 
     let finalNodeList = uniqueNodesString;
     if (finalNodeList.length > 0 && !finalNodeList.endsWith('\n')) {

@@ -6,6 +6,7 @@
 import { NODE_PROTOCOL_REGEX } from '../utils/node-utils.js';
 import { getProcessedUserAgent } from '../utils/format-utils.js';
 import { prependNodeName } from '../utils/node-utils.js';
+import { applyNodeTransformPipeline } from '../utils/node-transformer.js';
 
 /**
  * 生成组合节点列表
@@ -104,8 +105,16 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
     });
 
     const processedSubContents = await Promise.all(subPromises);
-    const combinedContent = (processedManualNodes + '\n' + processedSubContents.join('\n'));
-    const uniqueNodesString = [...new Set(combinedContent.split('\n').map(line => line.trim()).filter(line => line))].join('\n');
+    const combinedLines = (processedManualNodes + '\n' + processedSubContents.join('\n'))
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    const nodeTransformConfig = profilePrefixSettings?.nodeTransform ?? config.nodeTransform;
+    const outputLines = nodeTransformConfig?.enabled
+        ? applyNodeTransformPipeline(combinedLines, nodeTransformConfig)
+        : [...new Set(combinedLines)];
+    const uniqueNodesString = outputLines.join('\n');
 
     // 确保最终的字符串在非空时以换行符结束，以兼容 subconverter
     let finalNodeList = uniqueNodesString;
