@@ -8,6 +8,13 @@ import { migrateConfigSettings, formatBytes, getCallbackToken } from './utils.js
 import { generateCombinedNodeList } from './subscription.js';
 import { sendEnhancedTgNotification } from './notifications.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from './config.js';
+import {
+    generateCacheKey,
+    getCache,
+    setCache,
+    triggerBackgroundRefresh,
+    createCacheHeaders
+} from '../services/node-cache-service.js';
 
 /**
  * 处理MiSub订阅请求
@@ -194,14 +201,58 @@ export async function handleMisubRequest(context) {
         }
     }
 
-    const combinedNodeList = await generateCombinedNodeList(
-        context,
-        config,
-        userAgentHeader,
-        targetMisubs,
-        prependedContentForSubconverter,
-        profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier)?.prefixSettings : null
+    // === 缓存机制：快速响应客户端请求 ===
+    const cacheKey = generateCacheKey(
+        profileIdentifier ? 'profile' : 'token',
+        profileIdentifier || token
     );
+
+    // 检查是否强制刷新（通过 URL 参数）
+    const forceRefresh = url.searchParams.has('refresh') || url.searchParams.has('nocache');
+
+    // 获取缓存状态
+    const { data: cachedData, status: cacheStatus } = forceRefresh
+        ? { data: null, status: 'miss' }
+        : await getCache(storageAdapter, cacheKey);
+
+    let combinedNodeList;
+    let cacheHeaders = {};
+
+    // 定义刷新函数（用于后台刷新）
+    const refreshNodes = async () => {
+        const freshNodes = await generateCombinedNodeList(
+            context,
+            config,
+            userAgentHeader,
+            targetMisubs,
+            prependedContentForSubconverter,
+            profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier)?.prefixSettings : null
+        );
+        const sourceNames = targetMisubs
+            .filter(s => s.url.startsWith('http'))
+            .map(s => s.name || s.url);
+        await setCache(storageAdapter, cacheKey, freshNodes, sourceNames);
+        return freshNodes;
+    };
+
+    if (cacheStatus === 'fresh' && cachedData) {
+        // 缓存新鲜：直接返回（当前策略下不会触发，因为 FRESH_TTL=0）
+        console.log(`[Cache] HIT (fresh) for ${cacheKey}`);
+        combinedNodeList = cachedData.nodes;
+        cacheHeaders = createCacheHeaders('HIT', cachedData.nodeCount);
+    } else if ((cacheStatus === 'stale' || cacheStatus === 'expired') && cachedData) {
+        // 有缓存：立即返回缓存数据，同时后台刷新确保下次获取最新
+        console.log(`[Cache] HIT (${cacheStatus}) for ${cacheKey}, returning cache + background refresh`);
+        combinedNodeList = cachedData.nodes;
+        cacheHeaders = createCacheHeaders(`REFRESHING`, cachedData.nodeCount);
+        // 触发后台刷新，确保缓存始终是最新的
+        triggerBackgroundRefresh(context, refreshNodes);
+    } else {
+        // 无缓存（首次访问或缓存已过期）：同步获取并缓存
+        console.log(`[Cache] MISS for ${cacheKey}, fetching synchronously`);
+        combinedNodeList = await refreshNodes();
+        cacheHeaders = createCacheHeaders('MISS', combinedNodeList.split('\n').filter(l => l.trim()).length);
+    }
 
     if (targetFormat === 'base64') {
         let contentToEncode;
@@ -210,7 +261,11 @@ export async function handleMisubRequest(context) {
         } else {
             contentToEncode = combinedNodeList;
         }
-        const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
+        const headers = {
+            "Content-Type": "text/plain; charset=utf-8",
+            'Cache-Control': 'no-store, no-cache',
+            ...cacheHeaders
+        };
         return new Response(btoa(unescape(encodeURIComponent(contentToEncode))), { headers });
     }
 
@@ -247,6 +302,10 @@ export async function handleMisubRequest(context) {
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
+        // 添加缓存状态头
+        Object.entries(cacheHeaders).forEach(([key, value]) => {
+            responseHeaders.set(key, value);
+        });
         return new Response(responseText, { status: subconverterResponse.status, statusText: subconverterResponse.statusText, headers: responseHeaders });
     } catch (error) {
         console.error(`[MiSub Final Error] ${error.message}`);
