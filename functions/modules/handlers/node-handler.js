@@ -28,6 +28,9 @@ export async function handleNodeCountRequest(request, env) {
         }
 
         const result = { count: 0, userInfo: null };
+        let trafficRequestSucceeded = false;
+        let nodeCountRequestSucceeded = false;
+        let fetchError = null;
 
         try {
             // 使用统一的User-Agent策略
@@ -59,7 +62,14 @@ export async function handleNodeCountRequest(request, env) {
                         if (key && value) info[key] = /^\d+$/.test(value) ? Number(value) : value;
                     });
                     result.userInfo = info;
+                    trafficRequestSucceeded = true;
                 }
+            } else if (responses[0].status === 'rejected') {
+                fetchError = responses[0].reason;
+                console.error('Traffic request failed:', responses[0].reason);
+            } else if (responses[0].status === 'fulfilled' && !responses[0].value.ok) {
+                fetchError = new Error(`HTTP ${responses[0].value.status}: ${responses[0].value.statusText}`);
+                console.error('Traffic request returned error:', responses[0].value.status);
             }
 
             // 2. 处理节点数请求的结果
@@ -76,6 +86,7 @@ export async function handleNodeCountRequest(request, env) {
                     const parsedNodes = parseNodeList(text);
                     console.log(`[DEBUG] Node count API: Parsed ${parsedNodes.length} nodes using parseNodeList`);
                     result.count = parsedNodes.length;
+                    nodeCountRequestSucceeded = true;
                 } catch (e) {
                     // 解析失败，尝试简单统计
                     console.error('Node count parse error:', e);
@@ -96,6 +107,7 @@ export async function handleNodeCountRequest(request, env) {
                             console.log(`[DEBUG] Node count API: Regex matches in decoded text: ${lineMatches ? lineMatches.length : 0}`);
                             if (lineMatches) {
                                 result.count = lineMatches.length;
+                                nodeCountRequestSucceeded = true;
                             }
                         } else {
                             console.log(`[DEBUG] Node count API: Using raw text regex match`);
@@ -103,6 +115,7 @@ export async function handleNodeCountRequest(request, env) {
                             console.log(`[DEBUG] Node count API: Regex matches in raw text: ${lineMatches ? lineMatches.length : 0}`);
                             if (lineMatches) {
                                 result.count = lineMatches.length;
+                                nodeCountRequestSucceeded = true;
                             }
                         }
                     } catch {
@@ -112,9 +125,41 @@ export async function handleNodeCountRequest(request, env) {
                         console.log(`[DEBUG] Node count API: Final regex matches: ${lineMatches ? lineMatches.length : 0}`);
                         if (lineMatches) {
                             result.count = lineMatches.length;
+                            nodeCountRequestSucceeded = true;
                         }
                     }
                 }
+            } else if (responses[1].status === 'rejected') {
+                if (!fetchError) fetchError = responses[1].reason;
+                console.error('Node count request failed:', responses[1].reason);
+            } else if (responses[1].status === 'fulfilled' && !responses[1].value.ok) {
+                if (!fetchError) fetchError = new Error(`HTTP ${responses[1].value.status}: ${responses[1].value.statusText}`);
+                console.error('Node count request returned error:', responses[1].value.status);
+            }
+
+            // 检查是否两个请求都失败了
+            if (!trafficRequestSucceeded && !nodeCountRequestSucceeded) {
+                // 两个请求都失败,返回错误信息
+                let errorType = 'fetch_failed';
+                let errorMessage = '订阅获取失败';
+
+                if (fetchError) {
+                    if (fetchError.name === 'AbortError' || fetchError.message?.includes('timeout')) {
+                        errorType = 'timeout';
+                        errorMessage = '订阅请求超时';
+                    } else if (fetchError.message?.includes('network') || fetchError.message?.includes('fetch')) {
+                        errorType = 'network';
+                        errorMessage = '网络连接失败';
+                    } else if (fetchError.message?.includes('HTTP')) {
+                        errorType = 'server';
+                        errorMessage = fetchError.message;
+                    }
+                }
+
+                console.error(`[Node Count] Both requests failed for ${subUrl}:`, errorMessage);
+                result.error = errorMessage;
+                result.errorType = errorType;
+                return createJsonResponse(result);
             }
 
             // 只有在至少获取到一个有效信息时，才更新数据库
@@ -135,6 +180,9 @@ export async function handleNodeCountRequest(request, env) {
         } catch (e) {
             // 节点计数处理错误
             console.error('Node count processing error:', e);
+            result.error = `处理失败: ${e.message}`;
+            result.errorType = 'processing_error';
+            return createJsonResponse(result);
         }
 
         return createJsonResponse(result);

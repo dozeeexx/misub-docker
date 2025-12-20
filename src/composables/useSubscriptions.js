@@ -63,15 +63,31 @@ export function useSubscriptions(markDirty) {
       subToUpdate.isUpdating = true;
     }
 
+    // 添加超时保护:如果30秒后仍在更新状态,强制重置
+    const timeoutId = setTimeout(() => {
+      if (subToUpdate.isUpdating) {
+        console.warn(`[handleUpdateNodeCount] Timeout protection triggered for ${subToUpdate.name}`);
+        subToUpdate.isUpdating = false;
+        if (!isInitialLoad) {
+          showToast(`${subToUpdate.name || '订阅'} 更新超时,已自动重置`, 'warning');
+        }
+      }
+    }, 30000); // 30秒超时保护
+
     try {
       const data = await fetchNodeCount(subToUpdate.url);
 
-      if (data.error) {
+      // 清除超时保护
+      clearTimeout(timeoutId);
+
+      // 更明确的错误检测:检查 error 字段
+      if (data.error || data.errorType) {
         let userMessage = `${subToUpdate.name || '订阅'} 更新失败`;
 
+        // 根据 errorType 提供更友好的错误提示
         switch (data.errorType) {
           case 'timeout':
-            userMessage = `${subToUpdate.name || '订阅'} 更新超时，请稍后重试`;
+            userMessage = `${subToUpdate.name || '订阅'} 更新超时,请稍后重试`;
             break;
           case 'network':
             userMessage = `${subToUpdate.name || '订阅'} 网络连接失败`;
@@ -79,13 +95,22 @@ export function useSubscriptions(markDirty) {
           case 'server':
             userMessage = `${subToUpdate.name || '订阅'} 服务器错误`;
             break;
+          case 'fetch_failed':
+            userMessage = `${subToUpdate.name || '订阅'} 订阅获取失败,请检查链接是否有效`;
+            break;
+          case 'processing_error':
+            userMessage = `${subToUpdate.name || '订阅'} 处理失败`;
+            break;
           default:
             userMessage = `${subToUpdate.name || '订阅'} 更新失败: ${data.error}`;
         }
 
         if (!isInitialLoad) showToast(userMessage, 'error');
         console.error(`[handleUpdateNodeCount] Failed for ${subToUpdate.name}:`, data.error);
+
+        // 失败时不调用 markDirty(),避免误导用户
       } else {
+        // 成功获取数据
         // Direct mutation works because subToUpdate is a reactive object from the store
         subToUpdate.nodeCount = data.count || 0;
         subToUpdate.userInfo = data.userInfo || null;
@@ -96,6 +121,9 @@ export function useSubscriptions(markDirty) {
         }
       }
     } catch (error) {
+      // 清除超时保护
+      clearTimeout(timeoutId);
+
       handleError(error, 'Subscription Update Error', {
         subscriptionName: subToUpdate.name,
         subscriptionId: subId,

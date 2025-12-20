@@ -5,10 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "node local-server.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
     "preview": "vite preview",
     "check-pwa": "node check-pwa.js",
-    "build-pwa": "vite build && echo PWA build completed!"
+    "build-pwa": "vite build && echo PWA build completed!",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:chrome": "node test-chrome-mcp.js"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -20,10 +26,13 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^20.0.11",
     "miniflare": "^4.20250803.0",
     "tailwindcss": "^4.1.12",
     "vite": "^7.1.2",
     "vite-plugin-pwa": "^1.0.3",
+    "vitest": "^4.0.16",
     "workbox-window": "^7.3.0"
   }
 }

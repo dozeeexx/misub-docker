@@ -25,6 +25,8 @@ const getProtocol = (url) => {
     if (lowerUrl.startsWith('vless://')) return 'vless';
     if (lowerUrl.startsWith('trojan://')) return 'trojan';
     if (lowerUrl.startsWith('socks5://')) return 'socks5';
+    if (lowerUrl.startsWith('snell://')) return 'snell';
+    if (lowerUrl.startsWith('naive+https://') || lowerUrl.startsWith('naive+http://') || lowerUrl.startsWith('naive+quic://')) return 'naive';
     if (lowerUrl.startsWith('http')) return 'http';
   } catch { 
     return 'unknown';
@@ -60,6 +62,10 @@ const protocolStyle = computed(() => {
       return { text: 'SOCKS5', style: 'bg-lime-500/20 text-lime-500 dark:text-lime-400' };
     case 'http':
       return { text: 'HTTP', style: 'bg-green-500/20 text-green-500 dark:text-green-400' };
+    case 'snell':
+      return { text: 'SNELL', style: 'bg-indigo-500/20 text-indigo-500 dark:text-indigo-400' };
+    case 'naive':
+      return { text: 'NAIVE', style: 'bg-pink-500/20 text-pink-500 dark:text-pink-400' };
     default:
       return { text: 'LINK', style: 'bg-gray-500/20 text-gray-500 dark:text-gray-400' };
   }

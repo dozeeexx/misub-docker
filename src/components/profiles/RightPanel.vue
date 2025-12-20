@@ -66,7 +66,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="sticky top-24">
+  <div>
     <div class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md card-shadow hover:card-shadow-hover p-6 rounded-2xl transition-all duration-300">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 list-item-animation" style="--delay-index: 0">生成订阅链接</h3>
 

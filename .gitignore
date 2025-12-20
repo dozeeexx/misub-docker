@@ -81,3 +81,11 @@ temp/
 .claude/
 
 DOCKER_GUIDE.md
+
+# Local development and testing
+local-server.js
+local-server-full.js
+test-chrome-mcp.js
+test-new-protocols.js
+test-screenshots/
+.wrangler/

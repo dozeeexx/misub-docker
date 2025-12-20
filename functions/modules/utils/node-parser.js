@@ -8,11 +8,12 @@ import { parseNodeInfo, extractNodeRegion } from './geo-utils.js';
 // [注意] node-parser.js 在 functions/modules/utils/，而 node-utils.js 在 functions/utils/
 // 所以需要向上两级找到 functions/utils/
 import { fixNodeUrlEncoding, addFlagEmoji } from '../../utils/node-utils.js';
+import { validateSS2022Node, fixSS2022Node } from './ss2022-validator.js';
 
 /**
  * 支持的节点协议正则表达式
  */
-export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|http):\/\//i;
+export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|snell|naive\+https?|naive\+quic|socks5|http):\/\//i;
 
 /**
  * Base64编码辅助函数
@@ -30,21 +31,42 @@ function convertClashProxyToUrl(proxy) {
         const name = proxy.name || 'Untitled';
         const server = proxy.server;
         const port = proxy.port;
-        
+
         if (!server || !port) return null;
 
         if (type === 'ss' || type === 'shadowsocks') {
             const userInfo = base64Encode(`${proxy.cipher}:${proxy.password}`);
-            return `ss://${userInfo}@${server}:${port}#${encodeURIComponent(name)}`;
+            let url = `ss://${userInfo}@${server}:${port}`;
+
+            // 支持 AnyTLS 插件
+            if (proxy.plugin === 'anytls' || proxy.plugin === 'obfs-local') {
+                const params = [];
+                if (proxy.plugin) params.push(`plugin=${proxy.plugin}`);
+
+                const pluginOpts = proxy['plugin-opts'];
+                if (pluginOpts) {
+                    if (pluginOpts.enabled !== undefined) params.push(`enabled=${pluginOpts.enabled}`);
+                    if (pluginOpts.padding !== undefined) params.push(`padding=${pluginOpts.padding}`);
+                    if (pluginOpts.mode) params.push(`obfs=${pluginOpts.mode}`);
+                    if (pluginOpts.host) params.push(`obfs-host=${encodeURIComponent(pluginOpts.host)}`);
+                }
+
+                if (params.length > 0) {
+                    url += `?${params.join('&')}`;
+                }
+            }
+
+            url += `#${encodeURIComponent(name)}`;
+            return url;
         }
-        
+
         if (type === 'ssr' || type === 'shadowsocksr') {
             const password = base64Encode(proxy.password);
             const params = `obfs=${proxy.obfs || 'plain'}&obfsparam=${base64Encode(proxy['obfs-param'] || '')}&protocol=${proxy.protocol || 'origin'}&protoparam=${base64Encode(proxy['protocol-param'] || '')}&remarks=${base64Encode(name)}`;
             const ssrBody = `${server}:${port}:${proxy.protocol || 'origin'}:${proxy.cipher || 'none'}:${proxy.obfs || 'plain'}:${password}/?${params}`;
             return `ssr://${base64Encode(ssrBody)}`;
         }
-        
+
         if (type === 'vmess') {
             const vmessConfig = {
                 v: "2",
@@ -61,65 +83,93 @@ function convertClashProxyToUrl(proxy) {
             };
             return `vmess://${base64Encode(JSON.stringify(vmessConfig))}`;
         }
-        
+
         if (type === 'trojan') {
             const params = [];
             const network = proxy.network || 'tcp';
             if (network === 'ws') params.push('type=ws');
-            
+
             const wsOpts = proxy.wsOpts || proxy['ws-opts'];
             if (wsOpts) {
                 if (wsOpts.path) params.push(`path=${encodeURIComponent(wsOpts.path)}`);
                 if (wsOpts.headers?.Host) params.push(`host=${encodeURIComponent(wsOpts.headers.Host)}`);
             }
-            
+
             if (proxy.sni) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
             if (proxy.skipCertVerify) params.push('allowInsecure=1');
-            
+
             const query = params.length > 0 ? `?${params.join('&')}` : '';
             return `trojan://${encodeURIComponent(proxy.password)}@${server}:${port}${query}#${encodeURIComponent(name)}`;
         }
-        
+
         if (type === 'vless') {
-             const params = ['encryption=none'];
-             if (proxy.network) params.push(`type=${proxy.network}`);
-             
-             const wsOpts = proxy.wsOpts || proxy['ws-opts'];
-             if (wsOpts) {
-                 if (wsOpts.path) params.push(`path=${encodeURIComponent(wsOpts.path)}`);
-                 if (wsOpts.headers?.Host) params.push(`host=${encodeURIComponent(wsOpts.headers.Host)}`);
-             }
-             
-             if (proxy.tls) params.push('security=tls');
-             if (proxy.flow) params.push(`flow=${proxy.flow}`);
-             
-             return `vless://${proxy.uuid}@${server}:${port}?${params.join('&')}#${encodeURIComponent(name)}`;
+            const params = ['encryption=none'];
+            if (proxy.network) params.push(`type=${proxy.network}`);
+
+            const wsOpts = proxy.wsOpts || proxy['ws-opts'];
+            if (wsOpts) {
+                if (wsOpts.path) params.push(`path=${encodeURIComponent(wsOpts.path)}`);
+                if (wsOpts.headers?.Host) params.push(`host=${encodeURIComponent(wsOpts.headers.Host)}`);
+            }
+
+            if (proxy.tls) params.push('security=tls');
+            if (proxy.flow) params.push(`flow=${proxy.flow}`);
+
+            return `vless://${proxy.uuid}@${server}:${port}?${params.join('&')}#${encodeURIComponent(name)}`;
         }
-        
+
         if (type === 'hysteria2') {
             const params = [];
             const password = proxy.password || proxy.auth || '';
             if (password) params.push(`obfs-password=${encodeURIComponent(password)}`);
             if (proxy.sni) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
             if (proxy.skipCertVerify) params.push('insecure=1');
-            
+
             return `hysteria2://${password}@${server}:${port}?${params.join('&')}#${encodeURIComponent(name)}`;
         }
-        
+
         if (type === 'socks5') {
-             let auth = '';
-             if (proxy.username && proxy.password) {
-                 auth = `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password)}@`;
-             }
-             return `socks5://${auth}${server}:${port}#${encodeURIComponent(name)}`;
+            let auth = '';
+            if (proxy.username && proxy.password) {
+                auth = `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password)}@`;
+            }
+            return `socks5://${auth}${server}:${port}#${encodeURIComponent(name)}`;
         }
-        
+
         if (type === 'http') {
-             let auth = '';
-             if (proxy.username && proxy.password) {
-                 auth = `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password)}@`;
-             }
-             return `http://${auth}${server}:${port}#${encodeURIComponent(name)}`;
+            let auth = '';
+            if (proxy.username && proxy.password) {
+                auth = `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password)}@`;
+            }
+            return `http://${auth}${server}:${port}#${encodeURIComponent(name)}`;
+        }
+
+        if (type === 'snell') {
+            const params = [];
+            if (proxy.version) params.push(`version=${proxy.version}`);
+
+            const obfsOpts = proxy['obfs-opts'];
+            if (obfsOpts) {
+                if (obfsOpts.mode) params.push(`obfs=${obfsOpts.mode}`);
+                if (obfsOpts.host) params.push(`obfs-host=${encodeURIComponent(obfsOpts.host)}`);
+            }
+
+            const query = params.length > 0 ? `?${params.join('&')}` : '';
+            return `snell://${encodeURIComponent(proxy.psk)}@${server}:${port}${query}#${encodeURIComponent(name)}`;
+        }
+
+        if (type === 'naive' || proxy.protocol === 'naive') {
+            const username = proxy.username || '';
+            const password = proxy.password || '';
+            const auth = username && password ? `${encodeURIComponent(username)}:${encodeURIComponent(password)}@` : '';
+
+            const params = [];
+            if (proxy.padding !== undefined) params.push(`padding=${proxy.padding}`);
+            if (proxy['extra-headers']) params.push(`extra-headers=${encodeURIComponent(proxy['extra-headers'])}`);
+
+            const query = params.length > 0 ? `?${params.join('&')}` : '';
+            const scheme = proxy.quic ? 'naive+quic' : 'naive+https';
+            return `${scheme}://${auth}${server}:${port}${query}#${encodeURIComponent(name)}`;
         }
 
         return null;
@@ -145,7 +195,7 @@ export function extractValidNodes(text) {
             const yamlObj = yaml.load(text);
             // 兼容 proxies 和 Proxy 字段
             const proxies = yamlObj.proxies || yamlObj.Proxy;
-            
+
             if (Array.isArray(proxies)) {
                 proxies.forEach(proxy => {
                     const url = convertClashProxyToUrl(proxy);
@@ -183,7 +233,7 @@ export function extractValidNodes(text) {
         .replace(/\r\n/g, '\n')
         .split('\n')
         .map(line => line.trim());
-        
+
     for (const line of lines) {
         if (NODE_PROTOCOL_REGEX.test(line)) {
             nodes.push(line);
@@ -198,21 +248,61 @@ export function extractValidNodes(text) {
  */
 export function parseNodeList(content) {
     const validNodes = extractValidNodes(content);
-    
+
     return validNodes.map(nodeUrl => {
         // 1. 修复编码 (如 Hysteria2 密码)
         let fixedUrl = fixNodeUrlEncoding(nodeUrl);
-        
-        // 2. 添加 Emoji (保持预览一致性)
+
+        // 2. [新增] 验证和修复 SS 2022 节点
+        let ss2022Warning = null;
+        if (fixedUrl.startsWith('ss://')) {
+            const validation = validateSS2022Node(fixedUrl);
+
+            if (!validation.valid && validation.details?.suggestedCipher) {
+                // 尝试自动修复
+                const fixResult = fixSS2022Node(fixedUrl);
+                if (fixResult.fixed) {
+                    fixedUrl = fixResult.fixedUrl;
+                    ss2022Warning = {
+                        type: 'ss2022_auto_fixed',
+                        message: `已自动修复: ${fixResult.changes.from} → ${fixResult.changes.to}`,
+                        originalCipher: fixResult.changes.from,
+                        fixedCipher: fixResult.changes.to
+                    };
+                    console.warn(`[SS 2022] 自动修复节点: ${fixResult.changes.reason}`);
+                } else {
+                    ss2022Warning = {
+                        type: 'ss2022_invalid',
+                        message: validation.error,
+                        details: validation.details
+                    };
+                    console.error(`[SS 2022] 节点验证失败:`, validation.details);
+                }
+            } else if (validation.warning) {
+                ss2022Warning = {
+                    type: 'ss2022_warning',
+                    message: validation.warning
+                };
+            }
+        }
+
+        // 3. 添加 Emoji (保持预览一致性)
         fixedUrl = addFlagEmoji(fixedUrl);
 
-        // 3. 解析信息
+        // 4. 解析信息
         const nodeInfo = parseNodeInfo(fixedUrl);
-        
-        return {
+
+        // 5. 添加 SS 2022 警告信息
+        const result = {
             url: fixedUrl,
             ...nodeInfo
         };
+
+        if (ss2022Warning) {
+            result.warning = ss2022Warning;
+        }
+
+        return result;
     });
 }
 

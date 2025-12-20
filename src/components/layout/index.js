@@ -8,13 +8,15 @@ export { default as Header } from './Header.vue';
 export { default as Footer } from './Footer.vue';
 export { default as AdaptiveGrid } from './AdaptiveGrid.vue';
 export { default as DashboardSkeleton } from './DashboardSkeleton.vue';
+export { default as MobileBottomNav } from './MobileBottomNav.vue';
 
 // 组件列表
 export const LayoutComponents = {
   Header,
   Footer,
   AdaptiveGrid,
-  DashboardSkeleton
+  DashboardSkeleton,
+  MobileBottomNav
 };
 
 // 默认导出

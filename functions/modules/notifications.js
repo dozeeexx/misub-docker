@@ -56,9 +56,9 @@ export async function sendEnhancedTgNotification(settings, type, clientIp, addit
 
     let locationInfo = '';
 
-    // 尝试获取IP地理位置信息
+    // 尝试获取IP地理位置信息（使用HTTPS安全接口）
     try {
-        const response = await fetch(`http://ip-api.com/json/${clientIp}?lang=zh-CN`, {
+        const response = await fetch(`https://ipwho.is/${clientIp}`, {
             cf: {
                 // 设置较短的超时时间，避免影响主请求
                 timeout: 3000
@@ -67,12 +67,12 @@ export async function sendEnhancedTgNotification(settings, type, clientIp, addit
 
         if (response.ok) {
             const ipInfo = await response.json();
-            if (ipInfo.status === 'success') {
+            if (ipInfo.success !== false) {
                 locationInfo = `
 *国家:* \`${ipInfo.country || 'N/A'}\`
 *城市:* \`${ipInfo.city || 'N/A'}\`
-*ISP:* \`${ipInfo.org || 'N/A'}\`
-*ASN:* \`${ipInfo.as || 'N/A'}\``;
+*ISP:* \`${ipInfo.connection?.org || ipInfo.connection?.isp || 'N/A'}\`
+*ASN:* \`${ipInfo.connection?.asn ? 'AS' + ipInfo.connection.asn : 'N/A'}\``;
             }
         }
     } catch (error) {

@@ -21,6 +21,7 @@ const Toast = defineAsyncComponent(() => import('./components/ui/Toast.vue'));
 const Footer = defineAsyncComponent(() => import('./components/layout/Footer.vue'));
 const PWAUpdatePrompt = defineAsyncComponent(() => import('./components/features/PWAUpdatePrompt.vue'));
 const PWADevTools = defineAsyncComponent(() => import('./components/features/PWADevTools.vue'));
+const MobileBottomNav = defineAsyncComponent(() => import('./components/layout/MobileBottomNav.vue'));
 
 const themeStore = useThemeStore();
 const { theme } = storeToRefs(themeStore);
