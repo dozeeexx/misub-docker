@@ -8,6 +8,11 @@ import { useEditorStore } from './editor';
 import { calculateDiff } from '../lib/diff.js';
 import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
 
+// SessionStorage 缓存键
+const CACHE_KEY = 'misub_data_cache';
+const CACHE_TIMESTAMP_KEY = 'misub_data_cache_ts';
+const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存有效期
+
 export const useDataStore = defineStore('data', () => {
     const { showToast } = useToastStore();
 
@@ -55,8 +60,79 @@ export const useDataStore = defineStore('data', () => {
         profiles: []
     };
 
-    async function fetchData() {
+    // --- 缓存辅助函数 ---
+    function getCachedData() {
+        try {
+            const timestamp = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
+            if (!timestamp || Date.now() - parseInt(timestamp, 10) > CACHE_TTL) {
+                return null;
+            }
+            const cached = sessionStorage.getItem(CACHE_KEY);
+            return cached ? JSON.parse(cached) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    function setCachedData(data) {
+        try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            sessionStorage.setItem(CACHE_TIMESTAMP_KEY, String(Date.now()));
+        } catch {
+            // 忽略存储错误
+        }
+    }
+
+    function clearCachedData() {
+        try {
+            sessionStorage.removeItem(CACHE_KEY);
+            sessionStorage.removeItem(CACHE_TIMESTAMP_KEY);
+        } catch {
+            // 忽略错误
+        }
+    }
+
+    // --- 数据注入方法（供 session store 调用，避免重复请求）---
+    function hydrateFromData(data) {
+        if (!data) return false;
+
+        try {
+            subscriptionStore.setItems(data.misubs || []);
+            profileStore.setItems(data.profiles || []);
+            settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config });
+
+            lastSavedData = {
+                subscriptions: JSON.parse(JSON.stringify(subscriptionStore.items)),
+                profiles: JSON.parse(JSON.stringify(profileStore.items))
+            };
+
+            lastUpdated.value = new Date();
+            setCachedData(data);
+            return true;
+        } catch (error) {
+            console.error('hydrateFromData failed:', error);
+            return false;
+        }
+    }
+
+    async function fetchData(forceRefresh = false) {
+        // 如果数据已加载且不强制刷新，跳过请求
+        if (hasDataLoaded.value && !forceRefresh) {
+            console.log('[Store] fetchData skipped: data already loaded');
+            return;
+        }
+
         if (isLoading.value) return;
+
+        // 尝试使用缓存数据（仅在非强制刷新时）
+        if (!forceRefresh) {
+            const cachedData = getCachedData();
+            if (cachedData) {
+                console.log('[Store] Using cached data');
+                hydrateFromData(cachedData);
+                return;
+            }
+        }
 
         isLoading.value = true;
         try {
@@ -69,19 +145,17 @@ export const useDataStore = defineStore('data', () => {
                 throw new Error(data.error);
             }
 
-            subscriptionStore.setItems(data.misubs || []); // Use sub-store setter
-            profileStore.setItems(data.profiles || []); // Use sub-store setter
-            // 合并默认设置，确保新字段存在
-            settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config }); // Use sub-store setter
+            subscriptionStore.setItems(data.misubs || []);
+            profileStore.setItems(data.profiles || []);
+            settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config });
 
-            // Update snapshot
             lastSavedData = {
                 subscriptions: JSON.parse(JSON.stringify(subscriptionStore.items)),
                 profiles: JSON.parse(JSON.stringify(profileStore.items))
             };
 
             lastUpdated.value = new Date();
-            // hasDataLoaded is now a computed property based on lastUpdated.value, no direct assignment needed
+            setCachedData(data);
 
         } catch (error) {
             console.error('Failed to fetch data:', error);
@@ -274,6 +348,8 @@ export const useDataStore = defineStore('data', () => {
         fetchData,
         saveData,
         saveSettings,
+        hydrateFromData,
+        clearCachedData,
 
         // Helpers
         addSubscription,

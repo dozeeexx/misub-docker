@@ -7,6 +7,7 @@ import { StorageFactory } from '../storage-adapter.js';
 import { createJsonResponse, createErrorResponse } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout, createUnauthorizedResponse } from './auth-middleware.js';
 import { sendTgNotification, checkAndNotify } from './notifications.js';
+import { clearAllNodeCaches } from '../services/node-cache-service.js';
 
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from './config.js';
 
@@ -160,6 +161,15 @@ export async function handleMisubsSave(request, env) {
             }, 500);
         }
 
+        // 步骤6.5: 清除节点缓存（订阅变动后确保拉取最新数据）
+        try {
+            const cacheResult = await clearAllNodeCaches(storageAdapter);
+            console.log(`[API] Cleared ${cacheResult.cleared} node caches after subscription update`);
+        } catch (cacheError) {
+            // 缓存清除失败不影响保存结果
+            console.warn('[API] Failed to clear node caches:', cacheError.message);
+        }
+
         // 步骤7: 返回保存后的数据，确保前端能更新状态
         return createJsonResponse({
             success: true,
@@ -208,6 +218,14 @@ export async function handleSettingsSave(request, env) {
 
         // 使用存储适配器保存设置
         await storageAdapter.put(KV_KEY_SETTINGS, finalSettings);
+
+        // 清除节点缓存（设置变更可能影响节点处理逻辑）
+        try {
+            await clearAllNodeCaches(storageAdapter);
+            console.log('[API] Cleared node caches after settings update');
+        } catch (cacheError) {
+            console.warn('[API] Failed to clear node caches:', cacheError.message);
+        }
 
         const message = `⚙️ *MiSub 设置更新* ⚙️\n\n您的 MiSub 应用设置已成功更新。`;
         await sendTgNotification(finalSettings, message);
