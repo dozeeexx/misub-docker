@@ -282,6 +282,8 @@ export async function handleMisubRequest(context) {
     const subconverterUrl = new URL(`https://${effectiveSubConverter}/sub`);
     subconverterUrl.searchParams.set('target', targetFormat);
     subconverterUrl.searchParams.set('url', callbackUrl);
+    subconverterUrl.searchParams.set('scv', 'true');
+    subconverterUrl.searchParams.set('udp', 'true');
     if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') && effectiveSubConfig && effectiveSubConfig.trim() !== '') {
         subconverterUrl.searchParams.set('config', effectiveSubConfig);
     }
