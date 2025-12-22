@@ -148,6 +148,10 @@ function convertClashProxyToUrl(proxy) {
             const params = [];
             if (proxy.version) params.push(`version=${proxy.version}`);
 
+            // [增强] 支持 reuse 和 tfo 参数
+            if (proxy.reuse !== undefined) params.push(`reuse=${proxy.reuse}`);
+            if (proxy.tfo !== undefined) params.push(`tfo=${proxy.tfo}`);
+
             const obfsOpts = proxy['obfs-opts'];
             if (obfsOpts) {
                 if (obfsOpts.mode) params.push(`obfs=${obfsOpts.mode}`);
@@ -358,4 +362,130 @@ export function removeDuplicateNodes(nodes) {
 export function formatNodeCount(count) {
     if (typeof count !== 'number' || count < 0) return '0 个节点';
     return `${count} 个节点`;
+}
+
+/**
+ * 解析 Snell URL 为 Clash 代理对象
+ * @param {string} url - Snell URL
+ * @returns {Object|null} Clash 代理对象或 null
+ */
+export function parseSnellUrl(url) {
+    try {
+        const urlObj = new URL(url);
+
+        // 提取 PSK (可能在 username 或 pathname 中)
+        let psk = '';
+        if (urlObj.username) {
+            psk = decodeURIComponent(urlObj.username);
+        } else {
+            const pathMatch = urlObj.pathname.match(/^\/\/([^@]+)@/);
+            if (pathMatch) {
+                psk = decodeURIComponent(pathMatch[1]);
+            }
+        }
+
+        const server = urlObj.hostname;
+        const port = parseInt(urlObj.port);
+        const name = urlObj.hash ? decodeURIComponent(urlObj.hash.substring(1)) : 'Snell';
+
+        if (!psk || !server || !port) {
+            return null;
+        }
+
+        const proxy = {
+            type: 'snell',
+            name: name,
+            server: server,
+            port: port,
+            psk: psk
+        };
+
+        // 解析查询参数
+        const version = urlObj.searchParams.get('version');
+        if (version) proxy.version = parseInt(version);
+
+        const reuse = urlObj.searchParams.get('reuse');
+        if (reuse !== null) proxy.reuse = reuse === 'true';
+
+        const tfo = urlObj.searchParams.get('tfo');
+        if (tfo !== null) proxy.tfo = tfo === 'true';
+
+        const obfs = urlObj.searchParams.get('obfs');
+        const obfsHost = urlObj.searchParams.get('obfs-host');
+        if (obfs || obfsHost) {
+            proxy['obfs-opts'] = {};
+            if (obfs) proxy['obfs-opts'].mode = obfs;
+            if (obfsHost) proxy['obfs-opts'].host = decodeURIComponent(obfsHost);
+        }
+
+        return proxy;
+    } catch (e) {
+        console.error('Snell URL 解析失败:', e);
+        return null;
+    }
+}
+
+/**
+ * 验证 Snell 节点配置
+ * @param {string} url - Snell URL
+ * @returns {Object} 验证结果 {valid, error?, details?, proxy?}
+ */
+export function validateSnellNode(url) {
+    try {
+        if (!url || typeof url !== 'string') {
+            return { valid: false, error: '无效的 URL 格式' };
+        }
+
+        if (!url.startsWith('snell://')) {
+            return { valid: false, error: '不是 Snell 协议 URL' };
+        }
+
+        const proxy = parseSnellUrl(url);
+        if (!proxy) {
+            return { valid: false, error: '无效的 Snell URL 格式' };
+        }
+
+        // 验证必需参数
+        if (!proxy.server || !proxy.port || !proxy.psk) {
+            return {
+                valid: false,
+                error: 'Snell 节点缺少必需参数 (server/port/psk)',
+                details: { server: proxy.server, port: proxy.port, psk: !!proxy.psk }
+            };
+        }
+
+        // 验证版本号 (Snell 支持 v1-v5)
+        if (proxy.version && (proxy.version < 1 || proxy.version > 5)) {
+            return {
+                valid: false,
+                error: `Snell 版本号无效: ${proxy.version} (支持 1-5)`,
+                details: { version: proxy.version }
+            };
+        }
+
+        // 验证混淆模式
+        if (proxy['obfs-opts']?.mode) {
+            const validObfsModes = ['http', 'tls'];
+            if (!validObfsModes.includes(proxy['obfs-opts'].mode)) {
+                return {
+                    valid: false,
+                    error: `不支持的混淆模式: ${proxy['obfs-opts'].mode} (支持: ${validObfsModes.join(', ')})`,
+                    details: { obfsMode: proxy['obfs-opts'].mode }
+                };
+            }
+        }
+
+        // 验证端口范围
+        if (proxy.port < 1 || proxy.port > 65535) {
+            return {
+                valid: false,
+                error: `端口号无效: ${proxy.port} (范围: 1-65535)`,
+                details: { port: proxy.port }
+            };
+        }
+
+        return { valid: true, proxy };
+    } catch (e) {
+        return { valid: false, error: e.message };
+    }
 }
