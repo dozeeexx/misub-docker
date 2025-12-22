@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { fetchInitialData, login as apiLogin } from '../lib/api';
+import { useDataStore } from './useDataStore';
 
 export const useSessionStore = defineStore('session', () => {
   const sessionState = ref('loading'); // loading, loggedIn, loggedOut
@@ -12,6 +13,11 @@ export const useSessionStore = defineStore('session', () => {
       const data = await fetchInitialData();
       if (data) {
         initialData.value = data;
+
+        // 直接注入数据到 dataStore，避免 Dashboard 重复请求
+        const dataStore = useDataStore();
+        dataStore.hydrateFromData(data);
+
         sessionState.value = 'loggedIn';
       } else {
         sessionState.value = 'loggedOut';
@@ -45,6 +51,10 @@ export const useSessionStore = defineStore('session', () => {
     await fetch('/api/logout');
     sessionState.value = 'loggedOut';
     initialData.value = null;
+
+    // 清除缓存数据
+    const dataStore = useDataStore();
+    dataStore.clearCachedData();
   }
 
   return { sessionState, initialData, checkSession, login, logout };

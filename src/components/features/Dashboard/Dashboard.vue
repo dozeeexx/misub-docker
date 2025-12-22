@@ -95,10 +95,11 @@ const previewProfileName_ = ref(''); // fix potential unused var or re-usage
 const initializeState = async () => {
     console.log('Dashboard: initializeState started');
     try {
+        // fetchData 内部会检查数据是否已加载，避免重复请求
         await dataStore.fetchData();
-        console.log('Dashboard: fetchData completed', { 
-            subs: subscriptions.value?.length, 
-            nodes: manualNodes.value?.length 
+        console.log('Dashboard: fetchData completed', {
+            subs: subscriptions.value?.length,
+            nodes: manualNodes.value?.length
         });
         clearDirty();
     } catch (e) {
@@ -136,8 +137,9 @@ const setViewMode = (mode) => {
 };
 
 // --- 其他 JS 逻辑 (省略) ---
-const handleDiscard = () => {
-  initializeState();
+const handleDiscard = async () => {
+  // 强制刷新数据，忽略缓存
+  await dataStore.fetchData(true);
   showToast('已放弃所有未保存的更改');
 };
 
