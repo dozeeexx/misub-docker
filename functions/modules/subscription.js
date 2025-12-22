@@ -164,8 +164,12 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
      */
     const fetchSingleSubscription = async (sub) => {
         try {
-            const processedUserAgent = getProcessedUserAgent(userAgent, sub.url);
-            const requestHeaders = { 'User-Agent': processedUserAgent };
+            // [增强] 支持订阅级别的自定义 UA
+            const effectiveUserAgent = sub.customUserAgent && sub.customUserAgent.trim() !== ''
+                ? sub.customUserAgent
+                : getProcessedUserAgent(userAgent, sub.url);
+
+            const requestHeaders = { 'User-Agent': effectiveUserAgent };
 
             const response = await fetchWithRetry(sub.url, {
                 headers: requestHeaders,

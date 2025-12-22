@@ -303,7 +303,7 @@ const handleBulkImport = (importText) => {
 };
 const handleAddSubscription = () => {
   isNewSubscription.value = true;
-  editingSubscription.value = { name: '', url: '', enabled: true, exclude: '' }; // 新增 exclude
+  editingSubscription.value = { name: '', url: '', enabled: true, exclude: '', customUserAgent: '' }; // 新增 customUserAgent
   showSubModal.value = true;
 };
 const handleEditSubscription = (subId) => {
@@ -515,6 +515,40 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
             class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono dark:text-white">
           </textarea>
           <p class="text-xs text-gray-400 mt-1">每行一条规则。使用 `keep:` 切换为白名单模式。</p>
+        </div>
+        <!-- [新增] User-Agent 设置 -->
+        <div>
+          <label for="sub-edit-ua" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            自定义 User-Agent
+            <span class="text-xs text-gray-500 ml-2">(可选,留空使用默认)</span>
+          </label>
+          <select 
+            id="sub-edit-ua"
+            v-model="editingSubscription.customUserAgent"
+            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+          >
+            <option value="">使用默认 UA</option>
+            <optgroup label="Clash 系列">
+              <option value="clash-verge/v2.4.3">Clash Verge (v2.4.3)</option>
+              <option value="clash.meta">Clash Meta</option>
+              <option value="ClashForAndroid/2.5.12">Clash for Android</option>
+            </optgroup>
+            <optgroup label="V2Ray 系列">
+              <option value="v2rayN/7.23">v2rayN (v7.23)</option>
+              <option value="v2rayNG/1.8.5">v2rayNG (v1.8.5)</option>
+            </optgroup>
+            <optgroup label="其他客户端">
+              <option value="Shadowrocket/1.9.0">Shadowrocket</option>
+              <option value="Surge/5.0.0">Surge</option>
+              <option value="Quantumult%20X/1.4.0">Quantumult X</option>
+            </optgroup>
+            <optgroup label="浏览器">
+              <option value="Mozilla/5.0">Mozilla (通用)</option>
+            </optgroup>
+          </select>
+          <p v-if="editingSubscription.customUserAgent" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            当前 UA: {{ editingSubscription.customUserAgent }}
+          </p>
         </div>
       </div>
     </template>
