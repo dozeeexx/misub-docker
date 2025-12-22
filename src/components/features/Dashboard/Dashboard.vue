@@ -303,7 +303,7 @@ const handleBulkImport = (importText) => {
 };
 const handleAddSubscription = () => {
   isNewSubscription.value = true;
-  editingSubscription.value = { name: '', url: '', enabled: true, exclude: '', customUserAgent: '' }; // 新增 customUserAgent
+  editingSubscription.value = { name: '', url: '', enabled: true, exclude: '', customUserAgent: '', notes: '' }; // 新增 notes
   showSubModal.value = true;
 };
 const handleEditSubscription = (subId) => {
@@ -549,6 +549,20 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           <p v-if="editingSubscription.customUserAgent" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             当前 UA: {{ editingSubscription.customUserAgent }}
           </p>
+        </div>
+        <!-- [新增] 备注 -->
+        <div>
+          <label for="sub-edit-notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            备注
+            <span class="text-xs text-gray-500 ml-2">(可选,如官网、价格等)</span>
+          </label>
+          <textarea 
+            id="sub-edit-notes" 
+            v-model="editingSubscription.notes"
+            placeholder="例如: 官网: example.com | 价格: ￥20/月 | 到期: 2024-12-31"
+            rows="2" 
+            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+          ></textarea>
         </div>
       </div>
     </template>
