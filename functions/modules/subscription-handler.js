@@ -96,6 +96,37 @@ export async function handleMisubRequest(context) {
             }
             effectiveSubConverter = profile.subConverter && profile.subConverter.trim() !== '' ? profile.subConverter : config.subConverter;
             effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;
+
+            // [新增] 增加订阅组下载计数
+            // 仅在非回调请求时增加计数(避免重复计数)
+            if (!url.searchParams.has('callback_token')) {
+                try {
+                    // 初始化下载计数(如果不存在)
+                    if (typeof profile.downloadCount !== 'number') {
+                        profile.downloadCount = 0;
+                    }
+                    // 增加计数
+                    profile.downloadCount += 1;
+
+                    // 更新存储中的订阅组数据
+                    const updatedProfiles = allProfiles.map(p =>
+                        ((p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier)
+                            ? profile
+                            : p
+                    );
+
+                    // 异步保存,不阻塞响应
+                    context.waitUntil(
+                        storageAdapter.put(KV_KEY_PROFILES, updatedProfiles)
+                            .catch(err => console.error('[Download Count] Failed to update:', err))
+                    );
+
+                    console.log(`[Download Count] Profile "${profile.name}" count: ${profile.downloadCount}`);
+                } catch (err) {
+                    // 计数失败不影响订阅服务
+                    console.error('[Download Count] Error:', err);
+                }
+            }
         } else {
             return new Response('Profile not found or disabled', { status: 404 });
         }
