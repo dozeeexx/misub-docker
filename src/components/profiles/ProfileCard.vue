@@ -71,8 +71,8 @@ const emit = defineEmits(['delete', 'change', 'edit', 'copy-link', 'preview', 'm
       </button>
     </div>
 
-    <!-- 下载统计 (样式与备注一致) -->
-    <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+    <!-- 下载统计 -->
+    <div class="mt-2">
       <div class="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-400">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
