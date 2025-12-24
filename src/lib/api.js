@@ -13,17 +13,33 @@ export async function fetchInitialData() {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
+            // 401 is expected when not logged in, don't log error
+            if (response.status === 401) {
+                throw new Error('UNAUTHORIZED');
+            }
             console.error("Session invalid or API error, status:", response.status);
             throw new Error(`认证失败或API错误 (${response.status})`);
         }
 
         // 后端已经更新，会返回 { misubs, profiles, config }
-        return await response.json();
+        const data = await response.json();
+
+        // 检查新的认证状态响应 (200 OK with authenticated: false)
+        if (data && data.authenticated === false) {
+            throw new Error('UNAUTHORIZED');
+        }
+
+        return data;
     } catch (error) {
-        console.error("Failed to fetch initial data:", error);
+        // Don't log expected auth errors
+        if (error.message !== 'UNAUTHORIZED') {
+            console.error("Failed to fetch initial data:", error);
+        }
 
         // 分析错误类型
-        if (error.name === 'AbortError') {
+        if (error.message === 'UNAUTHORIZED') {
+            throw error;
+        } else if (error.name === 'AbortError') {
             throw new Error('初始化数据加载超时，请刷新页面重试');
         } else if (error.message.includes('fetch')) {
             throw new Error('网络连接失败，请检查网络连接');

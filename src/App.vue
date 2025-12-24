@@ -35,10 +35,7 @@ const uiStore = useUIStore();
 const { layoutMode } = storeToRefs(uiStore);
 
 onMounted(async () => {
-  const loadTime = performance.now();
-  if (import.meta.env.DEV) {
-    console.log(`MiSub App loaded in ${loadTime.toFixed(2)}ms`);
-  }
+
 
   initTheme();
   await checkSession();

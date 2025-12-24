@@ -116,8 +116,8 @@ class ErrorHandler {
   shouldSendToMonitoring(errorInfo) {
     // 只发送关键错误或高频错误
     return errorInfo.count >= 3 ||
-           errorInfo.context?.includes('critical') ||
-           errorInfo.message?.includes('network');
+      errorInfo.context?.includes('critical') ||
+      errorInfo.message?.includes('network');
   }
 
   /**
@@ -172,7 +172,7 @@ class ErrorHandler {
     try {
       // TODO: 实现错误监控服务集成
       // 例如：Sentry, LogRocket, 或自建监控服务
-      console.log('[Error Monitoring]', errorInfo);
+
     } catch (e) {
       // 监控服务本身失败，避免无限递归
       console.warn('[Error Monitoring Failed]', e);

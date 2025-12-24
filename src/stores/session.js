@@ -23,7 +23,9 @@ export const useSessionStore = defineStore('session', () => {
         sessionState.value = 'loggedOut';
       }
     } catch (error) {
-      console.error("Session check failed:", error);
+      if (error.message !== 'UNAUTHORIZED') {
+        console.error("Session check failed:", error);
+      }
       sessionState.value = 'loggedOut';
     }
   }
@@ -37,7 +39,7 @@ export const useSessionStore = defineStore('session', () => {
         const errData = await response.json();
         throw new Error(errData.error || '登录失败');
       }
-    } catch(e) {
+    } catch (e) {
       throw e;
     }
   }

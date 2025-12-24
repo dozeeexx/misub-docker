@@ -118,7 +118,6 @@ export const useDataStore = defineStore('data', () => {
     async function fetchData(forceRefresh = false) {
         // 如果数据已加载且不强制刷新，跳过请求
         if (hasDataLoaded.value && !forceRefresh) {
-            console.log('[Store] fetchData skipped: data already loaded');
             return;
         }
 
