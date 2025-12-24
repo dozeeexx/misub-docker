@@ -1,17 +1,29 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, defineAsyncComponent } from 'vue';
 import { useDataStore } from '../stores/useDataStore.js';
 import { storeToRefs } from 'pinia';
 import SkeletonLoader from '../components/ui/SkeletonLoader.vue';
 import RightPanel from '../components/profiles/RightPanel.vue';
 import { useSubscriptions } from '../composables/useSubscriptions.js';
 import { useRouter } from 'vue-router';
+import { useProfiles } from '../composables/useProfiles.js';
+import { useManualNodes } from '../composables/useManualNodes.js';
+import { extractNodeName } from '../lib/utils.js';
+import { useToastStore } from '../stores/toast.js';
 
 const dataStore = useDataStore();
 const { settings, profiles, isLoading, lastUpdated } = storeToRefs(dataStore);
-const { activeSubscriptions, activeProfiles } = dataStore; 
+const { activeSubscriptions, activeProfiles, markDirty } = dataStore; 
 
-const { totalRemainingTraffic: trafficVal, enabledSubscriptionsCount, subscriptions } = useSubscriptions(() => {}); 
+const { showToast } = useToastStore();
+const { 
+  totalRemainingTraffic: trafficVal, 
+  enabledSubscriptionsCount, 
+  subscriptions,
+  addSubscriptionsFromBulk 
+} = useSubscriptions(markDirty);
+
+const { manualNodes, addNodesFromBulk } = useManualNodes(markDirty);
 
 const router = useRouter();
 
@@ -51,6 +63,69 @@ const trafficStats = computed(() => {
         percentage
     };
 });
+
+// --- Bulk Import Logic ---
+const showBulkImportModal = ref(false);
+const BulkImportModal = defineAsyncComponent(() => import('../components/modals/BulkImportModal.vue'));
+
+const handleBulkImport = (importText) => {
+    if (!importText) return;
+    
+    // Split by newlines and filter empty lines
+    const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
+    const validSubs = [];
+    const validNodes = [];
+
+    lines.forEach(line => {
+        const newItem = {
+            id: crypto.randomUUID(),
+            name: extractNodeName(line) || '未命名',
+            url: line,
+            enabled: true,
+            status: 'unchecked',
+            // Default fields for subscriptions
+            exclude: '', 
+            customUserAgent: '', 
+            notes: ''
+        };
+
+        if (/^https?:\/\//.test(line)) {
+             validSubs.push(newItem);
+        } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line)) {
+             validNodes.push(newItem);
+        }
+    });
+
+    let message = '';
+    
+    if (validSubs.length > 0) {
+        addSubscriptionsFromBulk(validSubs);
+        message += `成功导入 ${validSubs.length} 条订阅 `;
+    }
+    
+    if (validNodes.length > 0) {
+        addNodesFromBulk(validNodes);
+        message += `成功导入 ${validNodes.length} 个节点`;
+    }
+
+    if (message) {
+        showToast(message, 'success');
+    } else {
+        showToast('未检测到有效的链接', 'warning');
+    }
+    showBulkImportModal.value = false;
+};
+
+// --- Profile Modal Logic ---
+const {
+  handleAddProfile,
+  handleSaveProfile,
+  editingProfile,
+  isNewProfile,
+  showProfileModal
+} = useProfiles(markDirty);
+
+const ProfileModal = defineAsyncComponent(() => import('../components/modals/ProfileModal.vue'));
 </script>
 
 <template>
@@ -69,11 +144,11 @@ const trafficStats = computed(() => {
         </div>
         
         <div class="flex gap-2">
-            <button @click="router.push('/groups')" class="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 rounded-md transition-colors">
-                管理订阅
+            <button @click="showBulkImportModal = true" class="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 rounded-md transition-colors">
+                批量导入
             </button>
-            <button @click="router.push('/subscriptions')" class="px-3 py-1.5 text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 rounded-md transition-colors">
-                新建组合
+            <button @click="handleAddProfile" class="px-3 py-1.5 text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 rounded-md transition-colors">
+                新增我的订阅
             </button>
         </div>
       </div>
@@ -165,6 +240,24 @@ const trafficStats = computed(() => {
              <RightPanel :config="settings" :profiles="profiles" />
         </div>
       </div>
+
+      <BulkImportModal 
+          v-if="showBulkImportModal" 
+          :show="showBulkImportModal" 
+          @update:show="showBulkImportModal = $event"
+          @import="handleBulkImport"
+      />
+
+      <ProfileModal 
+        v-if="showProfileModal" 
+        v-model:show="showProfileModal" 
+        :profile="editingProfile" 
+        :is-new="isNewProfile" 
+        :all-subscriptions="subscriptions" 
+        :all-manual-nodes="manualNodes" 
+        @save="handleSaveProfile" 
+        size="2xl" 
+      />
     </template>
   </div>
 </template>

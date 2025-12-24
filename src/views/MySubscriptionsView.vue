@@ -13,7 +13,8 @@ const { markDirty } = dataStore;
 const {
   profiles, editingProfile, isNewProfile, showProfileModal, showDeleteProfilesModal,
   handleProfileToggle, handleAddProfile, handleEditProfile,
-  handleSaveProfile, handleDeleteProfile, handleDeleteAllProfiles, copyProfileLink
+  handleSaveProfile, handleDeleteProfile, handleDeleteAllProfiles, copyProfileLink,
+  profilesCurrentPage, profilesTotalPages, paginatedProfiles, changeProfilesPage
 } = useProfiles(markDirty);
 
 // For ProfileModal need access to all subscriptions and nodes
@@ -51,6 +52,9 @@ const ProfileModal = defineAsyncComponent(() => import('../components/modals/Pro
 
     <ProfilePanel 
       :profiles="profiles"
+      :paginated-profiles="paginatedProfiles"
+      :current-page="profilesCurrentPage"
+      :total-pages="profilesTotalPages"
       @add="handleAddProfile"
       @edit="handleEditProfile"
       @delete="handleDeleteProfile"
@@ -59,6 +63,7 @@ const ProfileModal = defineAsyncComponent(() => import('../components/modals/Pro
       @copyLink="copyProfileLink"
       @preview="handlePreviewProfile"
       @reorder="handleProfileReorder"
+      @change-page="changeProfilesPage"
     />
 
     <ProfileModal 
