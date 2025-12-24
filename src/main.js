@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import './assets/main.css'
 import App from './App.vue'
+import router from './router'
 import { handleError } from './utils/errorHandler.js'
 
 // 全局错误处理
@@ -92,7 +93,9 @@ app.config.errorHandler = (error, instance, info) => {
     component: instance?.$options?.name || 'Unknown',
     info
   });
+  console.log('Global Error Handler caught:', error);
 };
 
 app.use(pinia)
+app.use(router) // Use Router
 app.mount('#app')
