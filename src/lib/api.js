@@ -103,7 +103,7 @@ export async function saveMisubs(misubs, profiles) {
 export async function fetchNodeCount(subUrl) {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
 
         const res = await fetch('/api/node_count', {
             method: 'POST',

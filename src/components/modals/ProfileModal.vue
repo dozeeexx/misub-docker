@@ -137,7 +137,8 @@ watch(() => props.profile, (newProfile) => {
       profileCopy.prefixSettings = {
         enableManualNodes: null,
         enableSubscriptions: null,
-        manualNodePrefix: ''
+        manualNodePrefix: '',
+        enableNodeEmoji: null
       };
     }
     localProfile.value = profileCopy;

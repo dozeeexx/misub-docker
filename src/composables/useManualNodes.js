@@ -238,8 +238,8 @@ export function useManualNodes(markDirty) {
       return a.name.localeCompare(b.name, 'zh-CN');
     });
 
-    // Update store with new order: Subscriptions first, then Manual Nodes
-    dataStore.overwriteSubscriptions([...subs, ...nodes]);
+    // Update store with new order: Manual Nodes first, then Subscriptions
+    dataStore.overwriteSubscriptions([...nodes, ...subs]);
 
     manualNodesCurrentPage.value = 1;
     markDirty();
@@ -256,8 +256,8 @@ export function useManualNodes(markDirty) {
     const currentSubscriptions = (allSubscriptions.value || []).filter(item => item.url && /^https?:\/\//.test(item.url));
 
     // 2. Combine Existing Subscriptions + New Ordered Manual Nodes
-    // Logic: Keep Subscriptions at top, Manual Nodes at bottom
-    const mergedList = [...currentSubscriptions, ...newOrder];
+    // Logic: Manual Nodes at top, Subscriptions at bottom
+    const mergedList = [...newOrder, ...currentSubscriptions];
 
     // 3. Update Store
     dataStore.overwriteSubscriptions(mergedList);

@@ -1,7 +1,9 @@
 <script setup>
 import { ref, defineAsyncComponent, computed } from 'vue';
+import { extractNodeName } from '../lib/utils.js';
 import { useDataStore } from '../stores/useDataStore.js';
 import { useSubscriptions } from '../composables/useSubscriptions.js';
+import { useManualNodes } from '../composables/useManualNodes.js';
 import { useProfiles } from '../composables/useProfiles.js';
 import SubscriptionPanel from '../components/subscriptions/SubscriptionPanel.vue';
 import Modal from '../components/forms/Modal.vue';
@@ -25,6 +27,8 @@ const {
   addSubscriptionsFromBulk, handleUpdateNodeCount, batchUpdateAllSubscriptions,
   reorderSubscriptions
 } = useSubscriptions(markDirty);
+
+const { addNodesFromBulk } = useManualNodes(markDirty);
 
 const { cleanupSubscriptions, cleanupAllSubscriptions } = useProfiles(markDirty);
 
@@ -85,10 +89,52 @@ const handlePreviewSubscription = (subscriptionId) => {
 
 // Bulk Import Logic
 const BulkImportModal = defineAsyncComponent(() => import('../components/modals/BulkImportModal.vue'));
-const handleBulkImport = (importedSubs) => {
-    addSubscriptionsFromBulk(importedSubs);
+const handleBulkImport = (importText) => {
+    if (!importText) return;
+    
+    // Split by newlines and filter empty lines
+    const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
+    const validSubs = [];
+    const validNodes = [];
+
+    lines.forEach(line => {
+        const newItem = {
+            id: crypto.randomUUID(),
+            name: extractNodeName(line) || '未命名',
+            url: line,
+            enabled: true,
+            status: 'unchecked',
+            // Default fields for subscriptions
+            exclude: '', 
+            customUserAgent: '', 
+            notes: ''
+        };
+
+        if (/^https?:\/\//.test(line)) {
+             validSubs.push(newItem);
+        } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line)) {
+             validNodes.push(newItem);
+        }
+    });
+
+    let message = '';
+    
+    if (validSubs.length > 0) {
+        addSubscriptionsFromBulk(validSubs);
+        message += `成功导入 ${validSubs.length} 条订阅 `;
+    }
+    
+    if (validNodes.length > 0) {
+        addNodesFromBulk(validNodes);
+        message += `成功导入 ${validNodes.length} 个节点`;
+    }
+
+    if (message) {
+        showToast(message, 'success');
+    } else {
+        showToast('未检测到有效的链接', 'warning');
+    }
     showBulkImportModal.value = false;
-    showToast(`成功导入 ${importedSubs.length} 条订阅`, 'success');
 };
 </script>
 
