@@ -149,7 +149,7 @@ export async function fetchNodeCount(subUrl) {
 
 export async function fetchSettings() {
     try {
-        const response = await fetch('/api/settings');
+        const response = await fetch(`/api/settings?t=${Date.now()}`);
         if (!response.ok) return {};
         return await response.json();
     } catch (error) {

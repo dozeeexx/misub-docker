@@ -62,6 +62,10 @@ const loadSettings = async () => {
     if (settings.value.nodeTransform) {
       nodeTransform.value = settings.value.nodeTransform;
     }
+    // Ensure storageType has a default
+    if (!settings.value.storageType) {
+        settings.value.storageType = 'kv';
+    }
   } catch (error) {
     showToast('加载设置失败', 'error');
   } finally {
@@ -115,6 +119,8 @@ const handleMigrateToD1 = async () => {
 onMounted(() => {
   loadSettings();
 });
+
+defineExpose({ handleSave });
 </script>
 
 <template>
@@ -232,7 +238,7 @@ onMounted(() => {
         </div>
 
         <!-- Save Button (Fixed at bottom or inline?) -->
-        <div class="pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end sticky bottom-0 bg-white dark:bg-gray-800 pb-4">
+        <div class="pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end sticky bottom-0 bg-white dark:bg-gray-800 pb-4 z-30">
             <button 
                 @click="handleSave" 
                 :disabled="isSaving || hasWhitespace || !isStorageTypeValid"
