@@ -7,12 +7,12 @@ export const useEditorStore = defineStore('editor', () => {
     const lastUpdated = ref(null);
 
     function markDirty() {
-        console.log('[EditorStore] markDirty called');
+
         isDirty.value = true;
     }
 
     function clearDirty() {
-        console.log('[EditorStore] clearDirty called');
+
         isDirty.value = false;
     }
 

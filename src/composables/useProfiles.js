@@ -8,12 +8,26 @@ export function useProfiles(markDirty) {
   const dataStore = useDataStore();
   const { profiles, settings } = storeToRefs(dataStore);
 
+  /* Pagination setup */
   const isNewProfile = ref(false);
   const editingProfile = ref(null);
   const showProfileModal = ref(false);
   const showDeleteProfilesModal = ref(false);
 
-  // 初始化不再需要，数据由 Store 管理
+  const profilesCurrentPage = ref(1);
+  const profilesItemsPerPage = 6;
+
+  const profilesTotalPages = computed(() => Math.ceil(profiles.value.length / profilesItemsPerPage));
+  const paginatedProfiles = computed(() => {
+    const start = (profilesCurrentPage.value - 1) * profilesItemsPerPage;
+    const end = start + profilesItemsPerPage;
+    return profiles.value.slice(start, end);
+  });
+
+  function changeProfilesPage(page) {
+    if (page < 1 || page > profilesTotalPages.value) return;
+    profilesCurrentPage.value = page;
+  }
 
   const handleProfileToggle = (updatedProfile) => {
     const index = profiles.value.findIndex(p => p.id === updatedProfile.id);
@@ -130,5 +144,11 @@ export function useProfiles(markDirty) {
     cleanupNodes,
     cleanupAllSubscriptions,
     cleanupAllNodes,
+    cleanupAllNodes,
+    // Pagination exports
+    profilesCurrentPage,
+    profilesTotalPages,
+    paginatedProfiles,
+    changeProfilesPage
   };
 }

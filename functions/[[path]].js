@@ -58,10 +58,35 @@ export async function onRequest(context) {
         } else {
             // 静态文件处理
             const isStaticAsset = /^\/(assets|@vite|src)\/./.test(url.pathname) || /\.\w+$/.test(url.pathname);
-            if (!isStaticAsset && url.pathname !== '/') {
+
+            // SPA 路由白名单：这些请求应该交由前端路由处理，而不是作为订阅请求
+            const isSpaRoute = [
+                '/groups',
+                '/nodes',
+                '/subscriptions',
+                '/settings',
+                '/login'
+            ].includes(url.pathname);
+
+            if (!isStaticAsset && !isSpaRoute && url.pathname !== '/') {
                 return await handleMisubRequest(context);
             }
-            // 继续处理静态文件或根路径
+
+            // Route protection for SPA pages
+            // If accessing a protected route without auth, redirect to login
+            if (isSpaRoute && url.pathname !== '/login') {
+                const { authMiddleware } = await import('./modules/auth-middleware.js');
+                const isAuthenticated = await authMiddleware(request, env);
+                if (!isAuthenticated) {
+                    // Redirect to login page
+                    return new Response(null, {
+                        status: 302,
+                        headers: { Location: '/login' }
+                    });
+                }
+            }
+
+            // Continue to static assets or root
             return next();
         }
     } catch (error) {

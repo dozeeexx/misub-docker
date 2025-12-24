@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { fetchInitialData, login as apiLogin } from '../lib/api';
 import { useDataStore } from './useDataStore';
+import router from '../router';
 
 export const useSessionStore = defineStore('session', () => {
   const sessionState = ref('loading'); // loading, loggedIn, loggedOut
@@ -23,7 +24,9 @@ export const useSessionStore = defineStore('session', () => {
         sessionState.value = 'loggedOut';
       }
     } catch (error) {
-      console.error("Session check failed:", error);
+      if (error.message !== 'UNAUTHORIZED') {
+        console.error("Session check failed:", error);
+      }
       sessionState.value = 'loggedOut';
     }
   }
@@ -33,11 +36,13 @@ export const useSessionStore = defineStore('session', () => {
       const response = await apiLogin(password);
       if (response.ok) {
         handleLoginSuccess();
+        // 登录成功后跳转到仪表盘
+        router.push({ name: 'Dashboard' });
       } else {
         const errData = await response.json();
         throw new Error(errData.error || '登录失败');
       }
-    } catch(e) {
+    } catch (e) {
       throw e;
     }
   }

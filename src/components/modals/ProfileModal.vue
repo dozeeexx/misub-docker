@@ -75,13 +75,18 @@ const countryCodeMap = {
 };
 
 const filteredSubscriptions = computed(() => {
+  // Only consider items with valid http/https URLs as "Subscriptions"
+  const validSubs = props.allSubscriptions.filter(sub => 
+    sub.url && /^https?:\/\//.test(sub.url)
+  );
+
   if (!subscriptionSearchTerm.value) {
-    return props.allSubscriptions;
+    return validSubs;
   }
   const lowerCaseSearchTerm = subscriptionSearchTerm.value.toLowerCase();
   const alternativeTerms = countryCodeMap[lowerCaseSearchTerm] || [];
 
-  return props.allSubscriptions.filter(sub => {
+  return validSubs.filter(sub => {
     const subNameLower = sub.name ? sub.name.toLowerCase() : '';
 
     if (subNameLower.includes(lowerCaseSearchTerm)) {
@@ -137,7 +142,8 @@ watch(() => props.profile, (newProfile) => {
       profileCopy.prefixSettings = {
         enableManualNodes: null,
         enableSubscriptions: null,
-        manualNodePrefix: ''
+        manualNodePrefix: '',
+        enableNodeEmoji: null
       };
     }
     localProfile.value = profileCopy;

@@ -52,7 +52,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
           class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full text-left ring-1 ring-black/5 dark:ring-white/10 flex flex-col max-h-[85vh]"
           :class="{
             'max-w-sm': size === 'sm',
-            'max-w-2xl': size === '2xl'
+            'max-w-2xl': size === '2xl',
+            'max-w-4xl': size === '4xl',
+            'max-w-5xl': size === '5xl',
+            'max-w-6xl': size === '6xl'
           }"
           @click.stop
         >

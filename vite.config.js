@@ -11,6 +11,12 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['offline.html'],
+        // Explicitly deny Service Worker for subscription paths so they go to network
+        navigateFallbackDenylist: [
+          /^\/sub\/.*/,      // /sub/...
+          /^\/[^/]+\/[^/]+(\?.*)?$/ // Two-segment paths like /test1/work, optionally with query params
+        ],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\..*/i,
@@ -134,8 +140,12 @@ export default defineConfig({
       devOptions: {
         enabled: true,
         type: 'module',
-        // 禁用开发环境的Workbox调试信息
+
         navigateFallbackAllowlist: [/^\/$/],
+        navigateFallbackDenylist: [
+          /^\/sub\/.*/,
+          /^\/[^/]+\/[^/]+(\?.*)?$/
+        ],
       }
     })
   ],
@@ -196,6 +206,40 @@ export default defineConfig({
         target: 'http://127.0.0.1:8787',
         changeOrigin: true,
       },
+      // Catch-all proxy for custom subscription paths (e.g. /test1/work)
+      // Use bypass to exclude static assets, Vite internals, and SPA routes
+      '^/.*': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+        bypass: (req) => {
+          const url = req.url;
+          const pureUrl = url.split('?')[0];
+
+          // 1. Exclude Vite internals (@fs, @vite, etc.)
+          if (url.startsWith('/@') || url.includes('/node_modules/') || url.startsWith('/src/')) {
+            return url;
+          }
+
+          // 2. Exclude static assets by extension
+          if (/\.(js|css|html|json|png|jpg|jpeg|svg|ico|woff2|woff|ttf|map|webmanifest)$/.test(pureUrl)) {
+            return url;
+          }
+
+          // 3. Exclude known SPA routes
+          const spaRoutes = ['/', '/groups', '/nodes', '/subscriptions', '/settings', '/login'];
+          if (spaRoutes.some(route => pureUrl === route || pureUrl.startsWith(route + '/'))) {
+            return url;
+          }
+
+          // 4. Exclude specific PWA files if not caught by extension
+          if (pureUrl === '/dev-sw.js' || pureUrl === '/registerSW.js') {
+            return url;
+          }
+
+          // Otherwise, allow proxy (return undefined/false)
+          return undefined;
+        }
+      }
     }
   },
   // 依赖优化

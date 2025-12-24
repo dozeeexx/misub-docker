@@ -52,24 +52,33 @@ export async function handleNodeCountRequest(request, env) {
             const responses = await Promise.allSettled([trafficRequest, nodeCountRequest]);
 
             // 1. 处理流量请求的结果
-            if (responses[0].status === 'fulfilled' && responses[0].value.ok) {
-                const trafficResponse = responses[0].value;
-                const userInfoHeader = trafficResponse.headers.get('subscription-userinfo');
+            // 辅助函数：从响应头提取用户信息
+            const extractUserInfo = (response) => {
+                const userInfoHeader = response.headers.get('subscription-userinfo');
                 if (userInfoHeader) {
                     const info = {};
                     userInfoHeader.split(';').forEach(part => {
                         const [key, value] = part.trim().split('=');
                         if (key && value) info[key] = /^\d+$/.test(value) ? Number(value) : value;
                     });
+                    return info;
+                }
+                return null;
+            };
+
+            // 1. 处理流量请求的结果
+            if (responses[0].status === 'fulfilled' && responses[0].value.ok) {
+                const info = extractUserInfo(responses[0].value);
+                if (info) {
                     result.userInfo = info;
                     trafficRequestSucceeded = true;
                 }
-            } else if (responses[0].status === 'rejected') {
-                fetchError = responses[0].reason;
-                console.error('Traffic request failed:', responses[0].reason);
-            } else if (responses[0].status === 'fulfilled' && !responses[0].value.ok) {
-                fetchError = new Error(`HTTP ${responses[0].value.status}: ${responses[0].value.statusText}`);
-                console.error('Traffic request returned error:', responses[0].value.status);
+            } else {
+                // 仅记录警告，不视为严重错误，因为我们还有 fallback
+                const reason = responses[0].status === 'fulfilled'
+                    ? `HTTP ${responses[0].value.status}`
+                    : (responses[0].reason?.message || 'Unknown Error');
+                console.warn(`[NodeHandler] Traffic specific request failed (${reason}). Will attempt fallback extraction.`);
             }
 
             // 2. 处理节点数请求的结果
@@ -77,20 +86,30 @@ export async function handleNodeCountRequest(request, env) {
                 const nodeCountResponse = responses[1].value;
                 const text = await nodeCountResponse.text();
 
-                console.log(`[DEBUG] Node count API: Raw text length: ${text.length}`);
-                console.log(`[DEBUG] Node count API: Raw text preview:`, text.substring(0, 200) + '...');
+
 
                 // 使用与预览功能相同的节点解析逻辑
                 try {
+                    // [新增] 如果之前的流量请求失败或没拿到数据，尝试从节点请求的响应中提取
+                    if (!result.userInfo) {
+                        const info = extractUserInfo(responses[1].value);
+                        if (info) {
+                            console.log('[NodeHandler] Successfully extracted traffic info from node response (Fallback).');
+                            result.userInfo = info;
+                            // 标记为成功，避免因为 specialized request 失败而报错
+                            trafficRequestSucceeded = true;
+                        }
+                    }
+
                     // 使用 parseNodeList 函数，与预览功能完全一致
                     const parsedNodes = parseNodeList(text);
-                    console.log(`[DEBUG] Node count API: Parsed ${parsedNodes.length} nodes using parseNodeList`);
+
                     result.count = parsedNodes.length;
                     nodeCountRequestSucceeded = true;
                 } catch (e) {
                     // 解析失败，尝试简单统计
                     console.error('Node count parse error:', e);
-                    console.log(`[DEBUG] Node count API: Falling back to regex count`);
+
                     try {
                         const cleanedText = text.replace(/\s/g, '');
                         const base64Regex = /^[A-Za-z0-9+\/=]+$/;

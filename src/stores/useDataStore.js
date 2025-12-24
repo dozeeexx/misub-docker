@@ -44,6 +44,7 @@ export const useDataStore = defineStore('data', () => {
     // and `isDirty` will remain a computed from `editorStore` as it's not directly assigned in the snippet.
 
     const isLoading = ref(false); // Changed from computed to ref
+    const saveState = ref('idle');
     const isDirty = computed(() => editorStore.isDirty); // Remains computed from editorStore
     const lastUpdated = ref(null); // Changed from computed to ref
     const hasDataLoaded = computed(() => !!lastUpdated.value); // Derived from local ref
@@ -97,7 +98,8 @@ export const useDataStore = defineStore('data', () => {
         if (!data) return false;
 
         try {
-            subscriptionStore.setItems(data.misubs || []);
+            const cleanSubs = (data.misubs || []).map(sub => ({ ...sub, isUpdating: false }));
+            subscriptionStore.setItems(cleanSubs);
             profileStore.setItems(data.profiles || []);
             settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config });
 
@@ -118,7 +120,6 @@ export const useDataStore = defineStore('data', () => {
     async function fetchData(forceRefresh = false) {
         // 如果数据已加载且不强制刷新，跳过请求
         if (hasDataLoaded.value && !forceRefresh) {
-            console.log('[Store] fetchData skipped: data already loaded');
             return;
         }
 
@@ -128,7 +129,7 @@ export const useDataStore = defineStore('data', () => {
         if (!forceRefresh) {
             const cachedData = getCachedData();
             if (cachedData) {
-                console.log('[Store] Using cached data');
+
                 hydrateFromData(cachedData);
                 return;
             }
@@ -145,7 +146,8 @@ export const useDataStore = defineStore('data', () => {
                 throw new Error(data.error);
             }
 
-            subscriptionStore.setItems(data.misubs || []);
+            const cleanSubs = (data.misubs || []).map(sub => ({ ...sub, isUpdating: false }));
+            subscriptionStore.setItems(cleanSubs);
             profileStore.setItems(data.profiles || []);
             settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config });
 
@@ -167,7 +169,7 @@ export const useDataStore = defineStore('data', () => {
     }
 
     async function saveData() {
-        console.log('[Store] saveData called. isLoading:', isLoading.value);
+
         if (isLoading.value) {
             console.warn('[Store] saveData aborted: isLoading is true');
             showToast('操作过于频繁，请稍候...', 'warning');
@@ -175,9 +177,23 @@ export const useDataStore = defineStore('data', () => {
         }
 
         isLoading.value = true;
+        saveState.value = 'saving';
         try {
-            console.log('[Store] Calculating diff...');
 
+
+            const sanitizedSubs = subscriptionStore.items.map(sub => {
+                const { isUpdating, ...rest } = sub;
+                return rest;
+            });
+
+            // Always send full payload to ensure order is preserved exactly as seen in UI
+            const payload = {
+                misubs: sanitizedSubs,
+                profiles: profileStore.items
+            };
+            const isDiffSave = false;
+
+            /* Diff logic removed to fix ordering issue
             // Calculate diffs
             const subDiff = calculateDiff(lastSavedData.subscriptions, subscriptionStore.items);
             const profileDiff = calculateDiff(lastSavedData.profiles, profileStore.items);
@@ -196,26 +212,20 @@ export const useDataStore = defineStore('data', () => {
                 isDiffSave = true;
             } else {
                 console.log('[Store] No diff detected, but save force called? Sending full overwrite just in case.');
-                // If no diff but dirty... fallback to full save OR just return success?
-                // Let's safe fallback: if marked dirty but logic found no diff, maybe our strict equality check missed something (unlikely with JSON stringify)
-                // OR it's a "Force Save".
                 payload = {
                     misubs: subscriptionStore.items,
                     profiles: profileStore.items
                 };
             }
+            */
 
             // Fallback: If we don't have lastSavedData initialized (e.g. error on load?), do full save.
             if (!lastSavedData.subscriptions && !lastSavedData.profiles) {
                 console.warn('[Store] No lastSavedData found, performing full overwrite.');
-                payload = {
-                    misubs: subscriptionStore.items,
-                    profiles: profileStore.items
-                };
-                isDiffSave = false;
+                // Payload already set above
             }
 
-            console.log('[Store] saveData: sending fetch request...', isDiffSave ? '(Diff)' : '(Full)');
+
             const response = await fetch('/api/misubs', {
                 method: 'POST',
                 headers: {
@@ -224,11 +234,11 @@ export const useDataStore = defineStore('data', () => {
                 body: JSON.stringify(payload)
             });
 
-            console.log('[Store] saveData: response status:', response.status);
+
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const result = await response.json();
-            console.log('[Store] saveData: result:', result);
+
 
             if (!result.success) {
                 throw new Error(result.message || '保存失败');
@@ -250,11 +260,20 @@ export const useDataStore = defineStore('data', () => {
             showToast('数据已保存', 'success');
             lastUpdated.value = new Date();
             clearDirty(); // This calls editorStore.clearDirty()
-            console.log('[Store] saveData: success, dirty cleared.');
+            saveState.value = 'success';
+
+
+            // Auto hide success state
+            setTimeout(() => {
+                if (saveState.value === 'success') {
+                    saveState.value = 'idle';
+                }
+            }, 2000);
 
         } catch (error) {
             console.error('[Store] Failed to save data:', error);
             showToast('保存数据失败: ' + error.message, 'error');
+            saveState.value = 'idle';
             throw error;
         } finally {
             isLoading.value = false;
@@ -323,6 +342,9 @@ export const useDataStore = defineStore('data', () => {
 
     // --- Dirty State Proxies ---
     function markDirty() {
+        if (saveState.value === 'success') {
+            saveState.value = 'idle';
+        }
         editorStore.markDirty();
     }
 
@@ -336,6 +358,7 @@ export const useDataStore = defineStore('data', () => {
         profiles,
         settings,
         isLoading,
+        saveState,
         lastUpdated,
         hasDataLoaded,
         isDirty,

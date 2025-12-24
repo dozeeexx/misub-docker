@@ -193,52 +193,17 @@ export function useSubscriptions(markDirty) {
     const subsToUpdate = subs.filter(sub => sub.url && sub.url.startsWith('http'));
 
     if (subsToUpdate.length > 0) {
-      showToast(`正在批量更新 ${subsToUpdate.length} 个订阅...`, 'success');
+      showToast(`正在批量更新 ${subsToUpdate.length} 个订阅...`, 'info');
+
+      // Use individual updates instead of batch backend update
+      // This avoids 400 error because backend doesn't have these IDs yet.
+      const updatePromises = subsToUpdate.map(sub => handleUpdateNodeCount(sub.id));
 
       try {
-        const result = await batchUpdateNodes(subsToUpdate.map(sub => sub.id));
-
-        if (result.success) {
-          let successCount = 0;
-          result.results.forEach(updateResult => {
-            if (updateResult.success) {
-              // Find in filtered list
-              const sub = subscriptions.value.find(s => s.id === updateResult.id);
-              if (sub) {
-                sub.nodeCount = updateResult.nodeCount;
-                successCount++;
-              }
-            }
-          });
-
-          showToast(`批量更新完成！成功更新 ${successCount}/${subsToUpdate.length} 个订阅`, 'success');
-          markDirty();
-        } else {
-          showToast(`批量更新失败: ${result.message}`, 'error');
-          showToast('正在降级到逐个更新模式...', 'info');
-          for (const sub of subsToUpdate) {
-            await handleUpdateNodeCount(sub.id);
-          }
-        }
-      } catch (error) {
-        handleError(error, 'Batch Subscription Update Error', {
-          subscriptionCount: subsToUpdate.length,
-          hasInitialData: !!subs
-        });
-
-        let userMessage = '批量更新失败';
-        if (error.message.includes('timeout') || error.name === 'AbortError') {
-          userMessage = '批量更新超时，正在降级到逐个更新...';
-        } else if (error.message.includes('network') || error.message.includes('fetch')) {
-          userMessage = '网络连接失败，正在降级到逐个更新...';
-        } else {
-          userMessage = '批量更新发生错误，正在降级到逐个更新...';
-        }
-        showToast(userMessage, 'error');
-
-        for (const sub of subsToUpdate) {
-          await handleUpdateNodeCount(sub.id);
-        }
+        await Promise.allSettled(updatePromises);
+        showToast('批量导入并更新完成！', 'success');
+      } catch (e) {
+        console.error("Batch update finished with some errors");
       }
     } else {
       showToast('批量导入完成！', 'success');
@@ -345,8 +310,8 @@ export function useSubscriptions(markDirty) {
     const currentManualNodes = (allSubscriptions.value || []).filter(item => !item.url || !/^https?:\/\//.test(item.url));
 
     // 2. Combine New Ordered Subscriptions + Existing Manual Nodes
-    // Logic: Keep Subscriptions at top, Manual Nodes at bottom
-    const mergedList = [...newOrder, ...currentManualNodes];
+    // Logic: Manual Nodes at top, Subscriptions at bottom
+    const mergedList = [...currentManualNodes, ...newOrder];
 
     // 3. Update Store
     dataStore.overwriteSubscriptions(mergedList);

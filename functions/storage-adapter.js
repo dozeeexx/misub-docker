@@ -13,7 +13,7 @@ export const STORAGE_TYPES = {
 // 数据键映射
 const DATA_KEYS = {
     SUBSCRIPTIONS: 'misub_subscriptions_v1',
-    PROFILES: 'misub_profiles_v1', 
+    PROFILES: 'misub_profiles_v1',
     SETTINGS: 'worker_settings_v1'
 };
 
@@ -87,6 +87,10 @@ class D1StorageAdapter {
 
             return type === 'json' ? JSON.parse(result.data) : result.data;
         } catch (error) {
+            // 如果是表不存在的错误，说明 D1 还未初始化或未被使用，直接返回 null
+            if (error.message && error.message.includes('no such table')) {
+                return null;
+            }
             console.error(`[D1] Failed to get key ${key}:`, error);
             return null;
         }
@@ -215,7 +219,7 @@ export class StorageFactory {
                     return new KVStorageAdapter(env.MISUB_KV);
                 }
                 return new D1StorageAdapter(env.MISUB_DB);
-            
+
             case STORAGE_TYPES.KV:
             default:
                 return new KVStorageAdapter(env.MISUB_KV);

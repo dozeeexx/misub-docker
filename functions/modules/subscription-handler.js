@@ -43,9 +43,57 @@ export async function handleMisubRequest(context) {
     const pathSegments = url.pathname.replace(/^\/sub\//, '/').split('/').filter(Boolean);
 
     if (pathSegments.length > 0) {
-        token = pathSegments[0];
+        const firstSegment = pathSegments[0];
         if (pathSegments.length > 1) {
-            profileIdentifier = pathSegments[1];
+            const firstSeg = pathSegments[0];
+            const secondSeg = pathSegments[1];
+
+            if (firstSeg === config.profileToken) {
+                // Standard case: /sub/profiles/ID
+                token = firstSeg;
+                profileIdentifier = secondSeg;
+            } else if (firstSeg === config.mytoken) {
+                // Admin token case? Currently not supported for 2 segments but preserving existing var assignment
+                token = firstSeg;
+                profileIdentifier = secondSeg;
+            } else {
+                // Custom/Public case: /folder/profileID OR /profileID/filename
+
+                // 1. Check if the SECOND segment is a valid profile ID (e.g. /test1/work where work is ID)
+                const foundProfileSecond = allProfiles.find(p => (p.customId && p.customId === secondSeg) || p.id === secondSeg);
+
+                // 2. Check if the FIRST segment is a valid profile ID (e.g. /myprofile/clash where myprofile is ID)
+                const foundProfileFirst = allProfiles.find(p => (p.customId && p.customId === firstSeg) || p.id === firstSeg);
+
+                if (foundProfileSecond) {
+                    // /anything/ID pattern
+                    profileIdentifier = secondSeg;
+                    token = config.profileToken;
+                } else if (foundProfileFirst) {
+                    // /ID/anything pattern
+                    profileIdentifier = firstSeg;
+                    token = config.profileToken;
+                } else {
+                    // Fallback to original behavior (likely invalid)
+                    token = firstSeg;
+                    profileIdentifier = secondSeg;
+                }
+            }
+        } else {
+            // Check if it's the admin token
+            if (firstSegment === config.mytoken) {
+                token = firstSegment;
+            } else {
+                // Check if it matches a valid profile (Public Access)
+                const foundProfile = allProfiles.find(p => (p.customId && p.customId === firstSegment) || p.id === firstSegment);
+                if (foundProfile) {
+                    // It is a profile! Shim the values to satisfy downstream logic
+                    profileIdentifier = firstSegment;
+                    token = config.profileToken;
+                } else {
+                    token = firstSegment;
+                }
+            }
         }
     } else {
         token = url.searchParams.get('token');
@@ -121,7 +169,7 @@ export async function handleMisubRequest(context) {
                             .catch(err => console.error('[Download Count] Failed to update:', err))
                     );
 
-                    console.log(`[Download Count] Profile "${profile.name}" count: ${profile.downloadCount}`);
+
                 } catch (err) {
                     // 计数失败不影响订阅服务
                     console.error('[Download Count] Error:', err);
@@ -268,19 +316,19 @@ export async function handleMisubRequest(context) {
 
     if (cacheStatus === 'fresh' && cachedData) {
         // 缓存新鲜：直接返回（当前策略下不会触发，因为 FRESH_TTL=0）
-        console.log(`[Cache] HIT (fresh) for ${cacheKey}`);
+
         combinedNodeList = cachedData.nodes;
         cacheHeaders = createCacheHeaders('HIT', cachedData.nodeCount);
     } else if ((cacheStatus === 'stale' || cacheStatus === 'expired') && cachedData) {
         // 有缓存：立即返回缓存数据，同时后台刷新确保下次获取最新
-        console.log(`[Cache] HIT (${cacheStatus}) for ${cacheKey}, returning cache + background refresh`);
+
         combinedNodeList = cachedData.nodes;
         cacheHeaders = createCacheHeaders(`REFRESHING`, cachedData.nodeCount);
         // 触发后台刷新，确保缓存始终是最新的
         triggerBackgroundRefresh(context, refreshNodes);
     } else {
         // 无缓存（首次访问或缓存已过期）：同步获取并缓存
-        console.log(`[Cache] MISS for ${cacheKey}, fetching synchronously`);
+
         combinedNodeList = await refreshNodes();
         cacheHeaders = createCacheHeaders('MISS', combinedNodeList.split('\n').filter(l => l.trim()).length);
     }

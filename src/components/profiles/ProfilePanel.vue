@@ -1,12 +1,33 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import ProfileCard from './ProfileCard.vue';
 
 const props = defineProps({
   profiles: Array,
+  paginatedProfiles: {
+    type: Array,
+    default: () => []
+  },
+  currentPage: Number,
+  totalPages: Number,
 });
 
-const emit = defineEmits(['add', 'edit', 'delete', 'deleteAll', 'toggle', 'copyLink', 'preview', 'reorder']);
+const emit = defineEmits(['add', 'edit', 'delete', 'deleteAll', 'toggle', 'copyLink', 'preview', 'reorder', 'changePage']);
+
+// [FIX] Compute profiles to display: use paginated if available, else all profiles
+const displayProfiles = computed(() => {
+  if (props.paginatedProfiles && props.paginatedProfiles.length > 0) {
+    return props.paginatedProfiles;
+  }
+  // If explicitly paginated but empty, check if we have profiles at all.
+  // In Dashboard mode, paginatedProfiles is undefined/empty, so we show all profiles.
+  // In View mode with pagination, if page is empty it might be a bug or correct empty state.
+  // Heuristic: If totalPages is passed, we rely on pagination logic.
+  if (props.totalPages !== undefined) {
+      return props.paginatedProfiles || [];
+  }
+  return props.profiles || [];
+});
 
 const showProfilesMoreMenu = ref(false);
 const profilesMoreMenuRef = ref(null);
@@ -18,6 +39,7 @@ const handleToggle = (event) => emit('toggle', event);
 const handleCopyLink = (profileId) => emit('copyLink', profileId);
 const handlePreview = (profileId) => emit('preview', profileId);
 const handleAdd = () => emit('add');
+const handleChangePage = (page) => emit('changePage', page);
 const handleDeleteAll = () => {
   emit('deleteAll');
   showProfilesMoreMenu.value = false;
@@ -100,21 +122,32 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-    <div v-if="profiles.length > 0" class="space-y-4" style="z-index: 1; position: relative;">
-      <ProfileCard
-        v-for="(profile, index) in profiles"
-        :key="profile.id"
-        :profile="profile"
-        class="list-item-animation"
-        :style="{ '--delay-index': index + 1 }"
-        @edit="handleEdit(profile.id)"
-        @delete="handleDelete(profile.id)"
-        @change="handleToggle($event)"
-        @copy-link="handleCopyLink(profile.id)"
-        @preview="handlePreview(profile.id)"
-        @move-up="handleMoveUp(index)"
-        @move-down="handleMoveDown(index)"
-      />
+    <div v-if="profiles.length > 0">
+      <div 
+        class="grid gap-5" 
+        :class="[paginatedProfiles && paginatedProfiles.length > 0 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1']"
+        style="z-index: 1; position: relative;"
+      >
+        <ProfileCard
+          v-for="(profile, index) in displayProfiles"
+          :key="profile.id"
+          :profile="profile"
+          class="list-item-animation"
+          :style="{ '--delay-index': index + 1 }"
+          @edit="handleEdit(profile.id)"
+          @delete="handleDelete(profile.id)"
+          @change="handleToggle($event)"
+          @copy-link="handleCopyLink(profile.id)"
+          @preview="handlePreview(profile.id)"
+          @move-up="handleMoveUp(index)"
+          @move-down="handleMoveDown(index)"
+        />
+      </div>
+      <div v-if="totalPages > 1 && paginatedProfiles && paginatedProfiles.length > 0" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
+          <button @click="handleChangePage(currentPage - 1)" :disabled="currentPage === 1" class="px-3 py-1 rounded-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">&laquo; 上一页</button>
+          <span class="text-gray-500 dark:text-gray-400">第 {{ currentPage }} / {{ totalPages }} 页</span>
+          <button @click="handleChangePage(currentPage + 1)" :disabled="currentPage === totalPages" class="px-3 py-1 rounded-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">下一页 &raquo;</button>
+      </div>
     </div>
     <div v-else class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl">
       <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>

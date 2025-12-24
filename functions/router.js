@@ -89,6 +89,20 @@ export async function handleApiRequest(request, env) {
         return await handleLogin(request, env);
     }
 
+    // 数据接口 - 特殊处理认证，避免返回401导致控制台报错
+    if (path === '/data') {
+        const authResult = await requireAuth(request, env);
+        if (authResult) {
+            // 如果认证失败，返回200 OK但带有authenticated: false标记
+            // 这样前端就不会在控制台打印红色401错误
+            return createJsonResponse({
+                authenticated: false,
+                message: 'Not logged in'
+            });
+        }
+        return await handleDataRequest(env);
+    }
+
     // 其他接口都需要认证
     const authResult = await requireAuth(request, env);
     if (authResult) return authResult;
@@ -96,9 +110,6 @@ export async function handleApiRequest(request, env) {
     switch (path) {
         case '/logout':
             return await handleLogout(request);
-
-        case '/data':
-            return await handleDataRequest(env);
 
         case '/misubs':
             return await handleMisubsSave(request, env);

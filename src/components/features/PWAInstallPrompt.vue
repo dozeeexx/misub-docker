@@ -9,19 +9,11 @@ const isInstalled = ref(false);
 
 // 检查是否已安装
 const checkIfInstalled = () => {
-  if (import.meta.env.DEV) {
-    console.log('检查PWA安装状态...');
-    console.log('设备信息:', {
-      userAgent: navigator.userAgent,
-      isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-      standalone: window.matchMedia('(display-mode: standalone)').matches,
-      navigatorStandalone: window.navigator.standalone
-    });
-  }
+
 
   // 检查是否在独立模式下运行（已安装）
   if (window.matchMedia('(display-mode: standalone)').matches) {
-    if (import.meta.env.DEV) console.log('检测到standalone模式，应用已安装');
+
     isInstalled.value = true;
     canInstall.value = false; // 已安装时不显示安装按钮
     return true;
@@ -29,7 +21,7 @@ const checkIfInstalled = () => {
 
   // 检查是否在PWA环境中（iOS Safari）
   if (window.navigator.standalone === true) {
-    if (import.meta.env.DEV) console.log('检测到iOS Safari standalone模式，应用已安装');
+
     isInstalled.value = true;
     canInstall.value = false; // 已安装时不显示安装按钮
     return true;
@@ -37,7 +29,7 @@ const checkIfInstalled = () => {
 
   // 检查localStorage中是否有安装标记
   if (localStorage.getItem('pwa-installed') === 'true') {
-    if (import.meta.env.DEV) console.log('localStorage中发现安装标记，应用已安装');
+
     isInstalled.value = true;
     canInstall.value = false; // 已安装时不显示安装按钮
     return true;
@@ -45,14 +37,14 @@ const checkIfInstalled = () => {
 
   // 检查URL是否包含PWA启动参数
   if (window.location.search.includes('source=pwa') || window.location.search.includes('mode=standalone')) {
-    if (import.meta.env.DEV) console.log('URL包含PWA启动参数，应用已安装');
+
     isInstalled.value = true;
     canInstall.value = false; // 已安装时不显示安装按钮
     localStorage.setItem('pwa-installed', 'true');
     return true;
   }
 
-  if (import.meta.env.DEV) console.log('未检测到已安装PWA，初始化安装功能');
+
   return false;
 };
 
@@ -129,26 +121,20 @@ if (import.meta.env.DEV) {
 }
 
 onMounted(() => {
-  if (import.meta.env.DEV) {
-    console.log('PWAInstallPrompt 组件已挂载，开始初始化...');
-    console.log('初始状态 - isInstalled:', isInstalled.value, ', canInstall:', canInstall.value);
-  }
+
 
   // 检查是否已安装
   if (checkIfInstalled()) {
-    if (import.meta.env.DEV) console.log('检测到已安装，退出初始化');
+
     return; // 已安装则退出，不显示任何安装内容
   }
 
   // 未安装时，显示安装说明按钮，等待beforeinstallprompt事件升级为直接安装按钮
-  if (import.meta.env.DEV) {
-    console.log('未检测到已安装，初始化安装相关功能');
-    console.log('初始化后状态 - isInstalled:', isInstalled.value, ', canInstall:', canInstall.value);
-  }
+
 
   // 监听beforeinstallprompt事件
   window.addEventListener('beforeinstallprompt', (e) => {
-    if (import.meta.env.DEV) console.log('PWA安装提示事件触发');
+
 
     // 阻止浏览器自动显示安装提示
     e.preventDefault();
@@ -171,7 +157,7 @@ onMounted(() => {
   const mediaQuery = window.matchMedia('(display-mode: standalone)');
   const handleDisplayModeChange = (e) => {
     if (e.matches) {
-      console.log('检测到应用已安装（standalone模式）');
+
       canInstall.value = false;
       isInstalled.value = true;
       localStorage.setItem('pwa-installed', 'true');
@@ -205,27 +191,28 @@ onMounted(() => {
 
 <template>
   <!-- 安装按钮（在头部或菜单中使用） -->
+  <!-- PWA安装/说明按钮 (Icon Only) -->
   <div v-if="!isInstalled" class="install-button-container">
     <button
       v-if="canInstall"
       @click="installPWA"
-      class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors focus:outline-none"
+      class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white smooth-all hover:scale-110 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+      title="安装应用"
     >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
       </svg>
-      安装应用
     </button>
 
     <button
       v-else
       @click="showInstallGuide"
-      class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors focus:outline-none"
+      class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white smooth-all hover:scale-110 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+      title="安装说明"
     >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
       </svg>
-      安装说明
     </button>
   </div>
 
@@ -244,23 +231,5 @@ onMounted(() => {
 }
 
 /* 移动端响应式优化 */
-@media (max-width: 640px) {
-  .install-button-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .install-button-container button {
-    min-width: unset;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    white-space: nowrap;
-  }
-
-  .install-button-container svg {
-    width: 0.875rem;
-    height: 0.875rem;
-  }
-}
+/* 移动端响应式优化 - 已移除，保持与其他图标一致大小 */
 </style>

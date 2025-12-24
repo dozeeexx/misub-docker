@@ -1,50 +1,63 @@
 <script setup>
-import { defineAsyncComponent, onMounted } from 'vue';
+import { defineAsyncComponent, onMounted, watch } from 'vue';
 import { useThemeStore } from './stores/theme';
 import { useSessionStore } from './stores/session';
 import { useToastStore } from './stores/toast';
+import { useDataStore } from './stores/useDataStore';
+import { useUIStore } from './stores/ui';
 import { storeToRefs } from 'pinia';
+import NavBar from './components/layout/NavBar.vue';
 
-// 懒加载大型组件以提升性能
-const DashboardSkeleton = defineAsyncComponent(() => import('./components/layout/DashboardSkeleton.vue'));
-const Dashboard = defineAsyncComponent({
-  loader: () => import('./components/features/Dashboard/Dashboard.vue'),
-  loadingComponent: DashboardSkeleton,
-  errorComponent: {
-    template: '<div class="p-4 text-red-500 text-center">Failed to load Dashboard component. Check console for details.</div>'
-  },
-  timeout: 3000
-});
+// Lazy components
 const Login = defineAsyncComponent(() => import('./components/modals/Login.vue'));
-const Header = defineAsyncComponent(() => import('./components/layout/Header.vue'));
 const Toast = defineAsyncComponent(() => import('./components/ui/Toast.vue'));
 const Footer = defineAsyncComponent(() => import('./components/layout/Footer.vue'));
 const PWAUpdatePrompt = defineAsyncComponent(() => import('./components/features/PWAUpdatePrompt.vue'));
 const PWADevTools = defineAsyncComponent(() => import('./components/features/PWADevTools.vue'));
-const MobileBottomNav = defineAsyncComponent(() => import('./components/layout/MobileBottomNav.vue'));
+const Dashboard = defineAsyncComponent(() => import('./components/features/Dashboard/Dashboard.vue'));
+const Header = defineAsyncComponent(() => import('./components/layout/Header.vue'));
 
 const themeStore = useThemeStore();
 const { theme } = storeToRefs(themeStore);
 const { initTheme } = themeStore;
 
 const sessionStore = useSessionStore();
-const { sessionState, initialData } = storeToRefs(sessionStore);
+const { sessionState } = storeToRefs(sessionStore);
 const { checkSession, login, logout } = sessionStore;
 
 const toastStore = useToastStore();
 const { toast: toastState } = storeToRefs(toastStore);
 
-onMounted(() => {
-  // 简单的性能监控（仅在开发模式显示）
-  const loadTime = performance.now();
-  if (import.meta.env.DEV) {
-    console.log(`MiSub App loaded in ${loadTime.toFixed(2)}ms`);
-  }
+const dataStore = useDataStore();
+const { isDirty, saveState } = storeToRefs(dataStore);
 
-  // 初始化主题和会话
+const uiStore = useUIStore();
+const { layoutMode } = storeToRefs(uiStore);
+
+onMounted(async () => {
+
+
   initTheme();
-  checkSession();
+  await checkSession();
+  
+  if (sessionState.value === 'loggedIn') {
+      await dataStore.fetchData();
+  }
 });
+
+watch(sessionState, async (newVal) => {
+    if (newVal === 'loggedIn') {
+        await dataStore.fetchData();
+    }
+});
+
+const handleSave = async () => {
+   await dataStore.saveData();
+};
+const handleDiscard = async () => {
+   await dataStore.fetchData(true);
+   toastStore.showToast('已放弃所有未保存的更改');
+};
 
 </script>
 
@@ -53,20 +66,46 @@ onMounted(() => {
     :class="theme" 
     class="min-h-screen flex flex-col text-gray-800 dark:text-gray-200 transition-colors duration-300 bg-gray-100 dark:bg-gray-950"
   >
-    <Header :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
+    <NavBar v-if="layoutMode === 'modern'" :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
+    <Header v-else :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
 
     <main 
-      class="grow"
+      class="grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"
       :class="{
         'flex items-center justify-center': sessionState !== 'loggedIn' && sessionState !== 'loading',
-        'overflow-y-auto': sessionState === 'loggedIn' || sessionState === 'loading',
-        'ios-content-offset': sessionState === 'loggedIn' || sessionState === 'loading'
       }"
     >
+      <div v-if="sessionState === 'loading'" class="flex justify-center p-8">Loading...</div>
+      
+      <template v-else-if="sessionState === 'loggedIn'">
+          <Transition name="slide-fade">
+            <div v-if="layoutMode === 'modern' && (isDirty || saveState === 'success')" 
+                class="sticky top-20 z-40 mb-6 p-4 rounded-lg shadow-lg flex items-center justify-between transition-all duration-300 backdrop-blur-md"
+                :class="saveState === 'success' ? 'bg-teal-500/10 ring-1 ring-teal-500/20' : 'bg-white/80 dark:bg-gray-800/80 ring-1 ring-indigo-500/30'">
+                <p class="text-sm font-medium" 
+                :class="saveState === 'success' ? 'text-teal-700 dark:text-teal-300' : 'text-indigo-700 dark:text-indigo-300'">
+                {{ saveState === 'success' ? '保存成功' : '您有未保存的更改' }}
+                </p>
+                <div class="flex items-center gap-3">
+                    <button v-if="saveState !== 'success'" @click="handleDiscard" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">放弃</button>
+                    <button @click="handleSave" :disabled="saveState !== 'idle'" class="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md shadow-sm transition-colors disabled:opacity-50">
+                        {{ saveState === 'saving' ? '保存中...' : (saveState === 'success' ? '已保存' : '保存更改') }}
+                    </button>
+                </div>
+            </div>
+          </Transition>
 
-      <DashboardSkeleton v-if="sessionState === 'loading'" />
-      <Dashboard v-else-if="sessionState === 'loggedIn'" :data="initialData || {}" />
+          <router-view v-if="layoutMode === 'modern'" v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+
+          <Dashboard v-else />
+      </template>
+      
       <Login v-else :login="login" />
+
     </main>
     
     <Toast :show="toastState.id" :message="toastState.message" :type="toastState.type" />
@@ -78,49 +117,21 @@ onMounted(() => {
 
 <style>
 :root {
-  --header-height: 80px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
-:root.dark {
-  color-scheme: dark;
+.ios-content-offset {
+    padding-top: calc(var(--safe-top));
 }
-:root.light {
-  color-scheme: light;
-}
-
-/* iOS内容偏移适配 - 只在iOS设备上生效 */
-@supports (-webkit-touch-callout: none) {
-  .ios-content-offset {
-    /* 为iOS状态栏和Header高度预留空间，防止内容穿透 */
-    padding-top: calc(var(--safe-top) + var(--header-height));
-    margin-top: 0;
-  }
-  
-  /* 确保整个应用区域正确适配 */
-  body {
-    padding-top: var(--safe-top);
-    padding-bottom: var(--safe-bottom);
-  }
-  
-  /* 全局iOS适配 */
-  html, body {
-    overflow-x: hidden;
-    position: relative;
-    height: 100%;
-  }
-  
-  /* 确保内容区域不会穿透 */
-  * {
-    -webkit-overflow-scrolling: touch;
-  }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
 }
 
-/* 非iOS设备的正常样式 */
-@supports not (-webkit-touch-callout: none) {
-  .ios-content-offset {
-    /* 非iOS设备不需要额外的顶部间距 */
-    padding-top: 0;
-  }
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
+.slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.3s ease; }
+.slide-fade-enter-from, .slide-fade-leave-to { transform: translateY(-10px); opacity: 0; }
 </style>

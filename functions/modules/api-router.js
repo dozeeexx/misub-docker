@@ -107,6 +107,18 @@ export async function handleApiRequest(request, env) {
         return await handleLogin(request, env);
     }
 
+    // Special handling for /data to return 200 OK for unauthenticated requests
+    // This prevents the browser from logging a 401 error in the console
+    if (path === '/data') {
+        if (!await authMiddleware(request, env)) {
+            return createJsonResponse({
+                authenticated: false,
+                message: 'Not logged in'
+            });
+        }
+        return await handleDataRequest(env);
+    }
+
     if (!await authMiddleware(request, env)) {
         return createJsonResponse({ error: 'Unauthorized' }, 401);
     }
@@ -115,8 +127,7 @@ export async function handleApiRequest(request, env) {
         case '/logout':
             return await handleLogout();
 
-        case '/data':
-            return await handleDataRequest(env);
+        // case '/data': moved up due to special auth handling
 
         case '/misubs':
             return await handleMisubsSave(request, env);
