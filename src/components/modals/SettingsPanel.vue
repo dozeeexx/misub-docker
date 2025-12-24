@@ -118,13 +118,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6 sm:p-8">
+  <div class="p-4 sm:p-6 w-full max-w-full overflow-x-hidden">
       <div v-if="isLoading" class="text-center p-8">
         <p class="text-gray-500">正在加载设置...</p>
       </div>
       <div v-else class="space-y-6">
         <!-- Basic Settings -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
              <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">自定义订阅文件名</label>
                 <input type="text" v-model="settings.FileName" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">

@@ -17,6 +17,7 @@ const emit = defineEmits(['update:show']);
     :show="show" 
     @update:show="emit('update:show', $event)" 
     :show-footer="false"
+    size="4xl"
   >
     <template #title><h3 class="text-lg font-bold text-gray-800 dark:text-white">设置</h3></template>
     <template #body>

@@ -44,17 +44,23 @@ const navItems = [
           </div>
           
           <!-- Navigation - Center (Desktop) -->
-          <nav v-if="isLoggedIn" class="hidden md:flex items-center space-x-1 lg:space-x-2 overflow-x-auto no-scrollbar mx-4">
-            <router-link 
-              v-for="item in navItems" 
-              :key="item.path" 
-              :to="item.path"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center whitespace-nowrap"
-              :class="route.path === item.path ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-500/20' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'"
-            >
-              <span>{{ item.name }}</span>
-            </router-link>
-          </nav>
+          <div class="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <nav v-if="isLoggedIn" class="flex items-center p-1.5 bg-gray-100/80 dark:bg-gray-800/80 rounded-full border border-gray-200/50 dark:border-white/10 backdrop-blur-md shadow-sm">
+              <router-link 
+                v-for="item in navItems" 
+                :key="item.path" 
+                :to="item.path"
+                class="px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 relative whitespace-nowrap"
+                :class="[
+                  route.path === item.path 
+                    ? 'bg-gray-900 text-white shadow-md dark:bg-gray-100 dark:text-gray-900' 
+                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-white/60 dark:hover:bg-white/10'
+                ]"
+              >
+                <span>{{ item.name }}</span>
+              </router-link>
+            </nav>
+          </div>
 
           <!-- Right Actions -->
           <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
@@ -74,22 +80,32 @@ const navItems = [
         </div>
       </div>
       
-      <!-- Mobile Navigation (Horizontal Scroll) -->
-      <div v-if="isLoggedIn" class="md:hidden border-t border-gray-100 dark:border-gray-800 overflow-x-auto no-scrollbar pt-safe-top">
-         <div class="flex items-center p-2 space-x-2 min-w-max">
-            <router-link 
-              v-for="item in navItems" 
-              :key="item.path" 
-              :to="item.path"
-              class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex flex-col items-center justify-center min-w-[70px]"
-              :class="route.path === item.path ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10' : 'text-gray-500 dark:text-gray-400'"
-            >
-              <span class="text-xs mt-1">{{ item.name }}</span>
-            </router-link>
-         </div>
-      </div>
+      
     </div>
   </header>
+
+      <!-- Mobile Navigation (Bottom Fixed for Modern Feel) -->
+      <nav v-if="isLoggedIn" class="md:hidden fixed bottom-0 left-0 right-0 z-50">
+          <div class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200/50 dark:border-white/10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] pb-safe-bottom">
+              <div class="flex justify-around items-center h-16">
+                <router-link 
+                  v-for="item in navItems" 
+                  :key="item.path" 
+                  :to="item.path"
+                  class="flex flex-col items-center justify-center w-full h-full transition-all duration-200"
+                  :class="route.path === item.path ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'"
+                >
+                  <svg v-if="item.name === '仪表盘'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-200" :class="route.path === item.path ? 'scale-110' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                  <svg v-else-if="item.name === '机场订阅'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-200" :class="route.path === item.path ? 'scale-110' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                  <svg v-else-if="item.name === '手工节点'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-200" :class="route.path === item.path ? 'scale-110' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
+                  <svg v-else-if="item.name === '我的订阅'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-200" :class="route.path === item.path ? 'scale-110' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+                  <svg v-else-if="item.name === '设置'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-200" :class="route.path === item.path ? 'scale-110' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  
+                  <span class="text-[10px] mt-1 font-medium">{{ item.name }}</span>
+                </router-link>
+              </div>
+          </div>
+      </nav>
 </template>
 
 <style scoped>
@@ -105,6 +121,9 @@ const navItems = [
   background: inherit;
   z-index: 10;
   pointer-events: none;
+}
+.pb-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
