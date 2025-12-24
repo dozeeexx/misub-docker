@@ -40,7 +40,7 @@ const navItems = [
               <path fill="currentColor" d="M64 100a36 36 0 1 1 36-36a36 36 0 0 1-36 36Zm0-66a30 30 0 1 0 30 30a30 30 0 0 0-30-30Z"/>
               <path fill="currentColor" d="M64 78a14 14 0 1 1 14-14a14 14 0 0 1-14 14Zm0-22a8 8 0 1 0 8 8a8 8 0 0 0-8-8Z"/>
             </svg>
-            <span class="ml-3 text-xl font-bold text-gray-800 dark:text-white hidden md:block">MISUB</span>
+            <span class="ml-3 text-xl font-bold text-gray-800 dark:text-white">MISUB</span>
           </div>
           
           <!-- Navigation - Center (Desktop) -->

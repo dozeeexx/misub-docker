@@ -226,7 +226,7 @@ export default defineConfig({
           }
 
           // 3. Exclude known SPA routes
-          const spaRoutes = ['/', '/groups', '/nodes', '/subscriptions', '/settings', '/login'];
+          const spaRoutes = ['/', '/groups', '/nodes', '/subscriptions', '/settings', '/login', '/dashboard', '/profile'];
           if (spaRoutes.some(route => pureUrl === route || pureUrl.startsWith(route + '/'))) {
             return url;
           }
