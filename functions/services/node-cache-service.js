@@ -97,7 +97,7 @@ export async function setCache(storageAdapter, cacheKey, nodes, sources = []) {
             await storageAdapter.put(cacheKey, cacheEntry);
         }
 
-        console.log(`[Cache] Saved ${nodeCount} nodes to cache: ${cacheKey} (TTL: ${ttlSeconds}s)`);
+
         return true;
     } catch (error) {
         console.error('[Cache] Failed to set cache:', error);
@@ -123,7 +123,7 @@ export function triggerBackgroundRefresh(context, refreshFn) {
         });
 
         context.waitUntil(refreshPromise);
-        console.log('[Cache] Background refresh triggered');
+
     } else {
         // 降级：不等待刷新完成
         console.warn('[Cache] waitUntil not available, skipping background refresh');
@@ -160,7 +160,7 @@ export function getCacheConfig() {
 export async function clearCache(storageAdapter, cacheKey) {
     try {
         await storageAdapter.delete(cacheKey);
-        console.log(`[Cache] Cleared cache: ${cacheKey}`);
+
         return true;
     } catch (error) {
         console.error('[Cache] Failed to clear cache:', error);
@@ -228,7 +228,7 @@ export async function clearAllNodeCaches(storageAdapter) {
             }
         } while (cursor);
 
-        console.log(`[Cache] Cleared ${cleared} caches, ${failed} failed`);
+
         return { cleared, failed };
     } catch (error) {
         console.error('[Cache] Failed to clear all caches:', error);

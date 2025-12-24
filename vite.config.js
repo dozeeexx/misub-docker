@@ -12,6 +12,11 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         globIgnores: ['offline.html'],
+        // Explicitly deny Service Worker for subscription paths so they go to network
+        navigateFallbackDenylist: [
+          /^\/sub\/.*/,      // /sub/...
+          /^\/[^/]+\/[^/]+(\?.*)?$/ // Two-segment paths like /test1/work, optionally with query params
+        ],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\..*/i,
@@ -137,6 +142,10 @@ export default defineConfig({
         type: 'module',
 
         navigateFallbackAllowlist: [/^\/$/],
+        navigateFallbackDenylist: [
+          /^\/sub\/.*/,
+          /^\/[^/]+\/[^/]+(\?.*)?$/
+        ],
       }
     })
   ],
