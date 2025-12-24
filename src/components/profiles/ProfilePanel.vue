@@ -1,15 +1,33 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import ProfileCard from './ProfileCard.vue';
 
 const props = defineProps({
   profiles: Array,
-  paginatedProfiles: Array,
+  paginatedProfiles: {
+    type: Array,
+    default: () => []
+  },
   currentPage: Number,
   totalPages: Number,
 });
 
 const emit = defineEmits(['add', 'edit', 'delete', 'deleteAll', 'toggle', 'copyLink', 'preview', 'reorder', 'changePage']);
+
+// [FIX] Compute profiles to display: use paginated if available, else all profiles
+const displayProfiles = computed(() => {
+  if (props.paginatedProfiles && props.paginatedProfiles.length > 0) {
+    return props.paginatedProfiles;
+  }
+  // If explicitly paginated but empty, check if we have profiles at all.
+  // In Dashboard mode, paginatedProfiles is undefined/empty, so we show all profiles.
+  // In View mode with pagination, if page is empty it might be a bug or correct empty state.
+  // Heuristic: If totalPages is passed, we rely on pagination logic.
+  if (props.totalPages !== undefined) {
+      return props.paginatedProfiles || [];
+  }
+  return props.profiles || [];
+});
 
 const showProfilesMoreMenu = ref(false);
 const profilesMoreMenuRef = ref(null);
@@ -105,9 +123,13 @@ onUnmounted(() => {
       </div>
     </div>
     <div v-if="profiles.length > 0">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5" style="z-index: 1; position: relative;">
+      <div 
+        class="grid gap-5" 
+        :class="[paginatedProfiles && paginatedProfiles.length > 0 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1']"
+        style="z-index: 1; position: relative;"
+      >
         <ProfileCard
-          v-for="(profile, index) in paginatedProfiles"
+          v-for="(profile, index) in displayProfiles"
           :key="profile.id"
           :profile="profile"
           class="list-item-animation"
@@ -121,7 +143,7 @@ onUnmounted(() => {
           @move-down="handleMoveDown(index)"
         />
       </div>
-      <div v-if="totalPages > 1" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
+      <div v-if="totalPages > 1 && paginatedProfiles && paginatedProfiles.length > 0" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
           <button @click="handleChangePage(currentPage - 1)" :disabled="currentPage === 1" class="px-3 py-1 rounded-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">&laquo; 上一页</button>
           <span class="text-gray-500 dark:text-gray-400">第 {{ currentPage }} / {{ totalPages }} 页</span>
           <button @click="handleChangePage(currentPage + 1)" :disabled="currentPage === totalPages" class="px-3 py-1 rounded-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">下一页 &raquo;</button>
