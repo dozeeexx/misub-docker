@@ -1,0 +1,19 @@
+name = "misub"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-04-05"
+
+[vars]
+ADMIN_PASSWORD = "admin"
+COOKIE_SECRET = "dev_secret_key_replaced_for_local_development_purposes_only"
+
+# 本地调试时，这些 ID 可以是占位符，但在部署前请确保使用真实 ID
+# Local development placeholders. Replace with real IDs before deployment if using this config for production.
+
+[[d1_databases]]
+binding = "MISUB_DB"
+database_name = "misub"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+[[kv_namespaces]]
+binding = "MISUB_KV"
+id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
