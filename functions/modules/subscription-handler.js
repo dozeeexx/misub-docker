@@ -8,6 +8,7 @@ import { migrateConfigSettings, formatBytes, getCallbackToken } from './utils.js
 import { generateCombinedNodeList } from '../services/subscription-service.js';
 import { sendEnhancedTgNotification } from './notifications.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from './config.js';
+import { renderDisguisePage } from './disguise-page.js';
 import {
     generateCacheKey,
     getCache,
@@ -37,6 +38,18 @@ export async function handleMisubRequest(context) {
     const allProfiles = profilesData || [];
     // 关键：我们在这里定义了 `config`，后续都应该使用它
     const config = migrateConfigSettings({ ...defaultSettings, ...settings });
+
+    // 伪装功能:检测浏览器访问
+    const isBrowser = /Mozilla|Chrome|Safari|Edge|Opera/i.test(userAgentHeader) &&
+        !/clash|v2ray|surge|loon|shadowrocket|quantumult|stash|shadowsocks/i.test(userAgentHeader);
+
+    if (config.disguise?.enabled && isBrowser) {
+        if (config.disguise.pageType === 'redirect' && config.disguise.redirectUrl) {
+            return Response.redirect(config.disguise.redirectUrl, 302);
+        } else {
+            return renderDisguisePage();
+        }
+    }
 
     let token = '';
     let profileIdentifier = null;
