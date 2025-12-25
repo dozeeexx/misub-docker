@@ -15,6 +15,7 @@ const emit = defineEmits(['update:show', 'save']);
 const localProfile = ref({});
 const subscriptionSearchTerm = ref('');
 const nodeSearchTerm = ref('');
+const activeManualNodeColorFilter = ref(null);
 
 // 国家/地区代码到旗帜和中文名称的映射
 const countryCodeMap = {
@@ -103,13 +104,19 @@ const filteredSubscriptions = computed(() => {
 });
 
 const filteredManualNodes = computed(() => {
+  let nodes = props.allManualNodes;
+
+  if (activeManualNodeColorFilter.value) {
+    nodes = nodes.filter(n => n.colorTag === activeManualNodeColorFilter.value);
+  }
+
   if (!nodeSearchTerm.value) {
-    return props.allManualNodes;
+    return nodes;
   }
   const lowerCaseSearchTerm = nodeSearchTerm.value.toLowerCase();
   const alternativeTerms = countryCodeMap[lowerCaseSearchTerm] || [];
 
-  return props.allManualNodes.filter(node => {
+  return nodes.filter(node => {
     const nodeNameLower = node.name ? node.name.toLowerCase() : '';
 
     if (nodeNameLower.includes(lowerCaseSearchTerm)) {
@@ -389,6 +396,26 @@ const handleDeselectAll = (listName, sourceArray) => {
                     <button @click="handleDeselectAll('manualNodes', filteredManualNodes)" class="text-xs text-indigo-600 hover:underline">全不选</button>
                 </div>
               </div>
+              <!-- Color Filter -->
+              <div class="flex items-center gap-2 mb-2 bg-gray-50 dark:bg-gray-800/50 p-1.5 rounded-lg border border-gray-100 dark:border-gray-700/50">
+                <button 
+                  @click="activeManualNodeColorFilter = null"
+                  class="px-2 py-0.5 text-xs font-medium rounded-md transition-all border"
+                  :class="!activeManualNodeColorFilter ? 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 shadow-xs text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                >全部</button>
+                <div class="w-px h-3 bg-gray-200 dark:bg-gray-600 mx-1"></div>
+                <button 
+                  v-for="color in ['red', 'orange', 'green', 'blue']" 
+                  :key="color"
+                  @click="activeManualNodeColorFilter = activeManualNodeColorFilter === color ? null : color"
+                  class="w-4 h-4 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+                  :class="[
+                    `bg-${color}-500`,
+                    activeManualNodeColorFilter === color ? 'ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-gray-900 scale-110' : 'opacity-70 hover:opacity-100'
+                  ]"
+                ></button>
+              </div>
+
               <div class="relative mb-2">
                 <input
                   type="text"
