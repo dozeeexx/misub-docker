@@ -100,7 +100,7 @@ export const REGION_EMOJI = {
     '丹麦': '🇩🇰',
     '芬兰': '🇫🇮',
     '奥地利': '🇦🇹',
-    '其他': '🏁' 
+    '其他': '🏁'
 };
 
 /**
@@ -206,12 +206,135 @@ export function parseNodeInfo(nodeUrl) {
         }
     }
 
+    // [增强] 如果 Hash 中没有名称，尝试从 URL 参数中提取 (支持 remarks, des, remark)
+    if (!nodeName) {
+        const paramsMatch = nodeUrl.match(/[?&](remarks|des|remark)=([^&#]+)/);
+        if (paramsMatch && paramsMatch[2]) {
+            try {
+                nodeName = decodeURIComponent(paramsMatch[2]);
+            } catch (e) {
+                nodeName = paramsMatch[2];
+            }
+        }
+    }
+
     // 如果没有名称，从URL生成一个
     if (!nodeName) {
         // 从URL中提取一些信息作为名称
         const urlWithoutProtocol = nodeUrl.replace(/^[^:]*:\/\/\/\//, '');
         const urlParts = urlWithoutProtocol.split(/[:@?#]/);
         nodeName = urlParts[0] || '未命名节点';
+    }
+
+    // [新增] 提取服务器地址和端口
+    let server = '';
+    let port = '';
+
+    try {
+        if (protocol === 'vmess') {
+            const base64Part = nodeUrl.replace('vmess://', '');
+            if (base64Part && !base64Part.includes('@')) { // 排除可能是明文的情况(虽然vmess少见)
+                try {
+                    // 处理 URL-safe Base64 字符
+                    let safeBody = base64Part.replace(/-/g, '+').replace(/_/g, '/');
+                    // 补全 Padding
+                    while (safeBody.length % 4) {
+                        safeBody += '=';
+                    }
+                    const jsonStr = atob(safeBody); // 使用 decodeURIComponent(escape(atob(safeBody))) 处理中文? 
+                    // 不, atob 解码后通常是 UTF-8 字节流乱码 if directly used as string for Chinese
+                    // 需要用 TextDecoder
+                    const binaryString = atob(safeBody);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const decodedStr = new TextDecoder('utf-8').decode(bytes);
+
+                    const config = JSON.parse(decodedStr);
+                    server = config.add || config.host || '';
+                    port = config.port || '';
+                    // [Fix] 提取名称
+                    if (config.ps) {
+                        nodeName = config.ps;
+                    }
+                } catch (e) {
+                    // console.error('VMess Base64 Decode Error:', e);
+                }
+            }
+        } else if (protocol === 'ss') {
+            // ss://base64(user:pass@host:port)#name
+            // 或者 ss://base64(user:pass)@host:port#name
+            let body = nodeUrl.substring(5); // remove ss://
+            const hIndex = body.indexOf('#');
+            if (hIndex !== -1) body = body.substring(0, hIndex);
+
+            // 检查是否有 @ 在明文部分 (非SIP002整体编码)
+            const atLast = body.lastIndexOf('@');
+            if (atLast !== -1 && body.substring(0, atLast).includes(':') === false) {
+                // 可能是 ss://base64(method:pass)@host:port
+                // 但通常 base64 串也可能包含 / + =
+                const serverPart = body.substring(atLast + 1);
+                const hostPort = serverPart.split(':');
+                if (hostPort.length >= 2) {
+                    server = hostPort[0];
+                    port = hostPort[1].split('/')[0].split('?')[0];
+                }
+            } else {
+                // 尝试整体解码 (SIP002)
+                try {
+                    // 处理 URL-safe Base64 字符
+                    let safeBody = body.replace(/-/g, '+').replace(/_/g, '/');
+                    // 补全 Padding
+                    while (safeBody.length % 4) {
+                        safeBody += '=';
+                    }
+                    const decoded = atob(safeBody); // user:pass@host:port
+                    const atIx = decoded.lastIndexOf('@');
+                    if (atIx !== -1) {
+                        const serverPart = decoded.substring(atIx + 1);
+                        const hostPort = serverPart.split(':');
+                        server = hostPort[0];
+                        port = hostPort[1].split('/')[0].split('?')[0];
+                    }
+                } catch (e) {
+                    // console.error('SS Base64 Decode Error:', e);
+                }
+            }
+        } else {
+            // 通用格式: protocol://user@host:port... 或 protocol://host:port...
+            // vless, trojan, hysteria2, socks5, http 等
+            // 去掉 protocol://
+            let body = nodeUrl.substring(nodeUrl.indexOf('://') + 3);
+            const hIndex = body.indexOf('#');
+            if (hIndex !== -1) body = body.substring(0, hIndex);
+
+            const qIndex = body.indexOf('?');
+            if (qIndex !== -1) body = body.substring(0, qIndex);
+
+            const atIndex = body.lastIndexOf('@');
+            let serverPart = (atIndex !== -1) ? body.substring(atIndex + 1) : body;
+
+            // 处理 IPv6 [::1]:port
+            if (serverPart.startsWith('[')) {
+                const closeBracket = serverPart.indexOf(']');
+                if (closeBracket !== -1) {
+                    server = serverPart.substring(1, closeBracket);
+                    const afterBracket = serverPart.substring(closeBracket + 1);
+                    if (afterBracket.startsWith(':')) {
+                        port = afterBracket.substring(1).split('/')[0];
+                    }
+                }
+            } else {
+                const parts = serverPart.split(':');
+                if (parts.length >= 2) {
+                    server = parts[0];
+                    port = parts[1].split('/')[0];
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error extracting server/port:', e);
     }
 
     // 识别地区
@@ -221,6 +344,8 @@ export function parseNodeInfo(nodeUrl) {
         protocol,
         name: nodeName,
         region,
+        server,
+        port,
         url: nodeUrl
     };
 }

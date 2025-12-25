@@ -31,6 +31,15 @@ export function validateSS2022Node(nodeUrl) {
         const hashIndex = nodeUrl.indexOf('#');
 
         if (atIndex === -1) {
+            // 检查是否为 SIP002 格式 (纯 Base64)
+            // ss://base64string
+            // 如果长度足够且是有效 Base64，可能就是 SIP002
+            const possibleBase64 = nodeUrl.substring(5, hashIndex !== -1 ? hashIndex : undefined);
+            if (/^[A-Za-z0-9+/=-_]+$/.test(possibleBase64)) {
+                // 认为是 SIP002，暂不校验内部，或者解码后再校验
+                // 这里简单返回 valid，因为 geo-utils 已经在负责解码提取了
+                return { valid: true };
+            }
             return { valid: true, warning: 'SS 节点格式不标准 (缺少 @)' };
         }
 

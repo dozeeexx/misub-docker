@@ -114,24 +114,24 @@ export async function handleNodeCountRequest(request, env) {
                         const cleanedText = text.replace(/\s/g, '');
                         const base64Regex = /^[A-Za-z0-9+\/=]+$/;
                         if (base64Regex.test(cleanedText) && cleanedText.length >= 20) {
-                            console.log(`[DEBUG] Node count API: Base64 content detected, decoding...`);
+                            // console.log(`[DEBUG] Node count API: Base64 content detected, decoding...`);
                             const binaryString = atob(cleanedText);
                             const bytes = new Uint8Array(binaryString.length);
                             for (let i = 0; i < binaryString.length; i++) {
                                 bytes[i] = binaryString.charCodeAt(i);
                             }
                             const processedText = new TextDecoder('utf-8').decode(bytes);
-                            console.log(`[DEBUG] Node count API: Decoded text length: ${processedText.length}`);
+                            // console.log(`[DEBUG] Node count API: Decoded text length: ${processedText.length}`);
                             const lineMatches = processedText.match(NODE_PROTOCOL_GLOBAL_REGEX);
-                            console.log(`[DEBUG] Node count API: Regex matches in decoded text: ${lineMatches ? lineMatches.length : 0}`);
+                            // console.log(`[DEBUG] Node count API: Regex matches in decoded text: ${lineMatches ? lineMatches.length : 0}`);
                             if (lineMatches) {
                                 result.count = lineMatches.length;
                                 nodeCountRequestSucceeded = true;
                             }
                         } else {
-                            console.log(`[DEBUG] Node count API: Using raw text regex match`);
+                            // console.log(`[DEBUG] Node count API: Using raw text regex match`);
                             const lineMatches = text.match(NODE_PROTOCOL_GLOBAL_REGEX);
-                            console.log(`[DEBUG] Node count API: Regex matches in raw text: ${lineMatches ? lineMatches.length : 0}`);
+                            // console.log(`[DEBUG] Node count API: Regex matches in raw text: ${lineMatches ? lineMatches.length : 0}`);
                             if (lineMatches) {
                                 result.count = lineMatches.length;
                                 nodeCountRequestSucceeded = true;
@@ -139,9 +139,9 @@ export async function handleNodeCountRequest(request, env) {
                         }
                     } catch {
                         // 最后降级到原始文本统计
-                        console.log(`[DEBUG] Node count API: Final fallback to raw text regex`);
+                        // console.log(`[DEBUG] Node count API: Final fallback to raw text regex`);
                         const lineMatches = text.match(NODE_PROTOCOL_GLOBAL_REGEX);
-                        console.log(`[DEBUG] Node count API: Final regex matches: ${lineMatches ? lineMatches.length : 0}`);
+                        // console.log(`[DEBUG] Node count API: Final regex matches: ${lineMatches ? lineMatches.length : 0}`);
                         if (lineMatches) {
                             result.count = lineMatches.length;
                             nodeCountRequestSucceeded = true;

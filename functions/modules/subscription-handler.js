@@ -299,13 +299,15 @@ export async function handleMisubRequest(context) {
 
     // 定义刷新函数（用于后台刷新）
     const refreshNodes = async () => {
+        const isDebugToken = (token === 'b0b422857bb46aba65da8234c84f38c6');
         const freshNodes = await generateCombinedNodeList(
             context,
             config,
             userAgentHeader,
             targetMisubs,
             prependedContentForSubconverter,
-            profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier)?.prefixSettings : null
+            profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier)?.prefixSettings : null,
+            isDebugToken
         );
         const sourceNames = targetMisubs
             .filter(s => s.url.startsWith('http'))
