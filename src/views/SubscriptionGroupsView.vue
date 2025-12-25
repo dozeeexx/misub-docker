@@ -140,18 +140,7 @@ const handleBulkImport = (importText) => {
 
 <template>
   <div class="max-w-(--breakpoint-xl) mx-auto">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">订阅组</h1>
-        <button 
-           @click="showBulkImportModal = true"
-           class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm font-medium transition-colors shadow-sm"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-               <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
-            批量导入
-        </button>
-    </div>
+
 
     <SubscriptionPanel
       :subscriptions="subscriptions"
@@ -170,7 +159,19 @@ const handleBulkImport = (importText) => {
       @delete-all="showDeleteSubsModal = true"
       @preview="handlePreviewSubscription"
       @reorder="reorderSubscriptions"
-    />
+    >
+        <template #actions-prepend>
+            <button 
+                @click="showBulkImportModal = true"
+                class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm font-medium transition-colors shadow-sm"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                批量导入
+            </button>
+        </template>
+    </SubscriptionPanel>
 
     <!-- Dialogs -->
     <Modal v-if="editingSubscription" v-model:show="showSubModal" @confirm="handleSaveSubscription">

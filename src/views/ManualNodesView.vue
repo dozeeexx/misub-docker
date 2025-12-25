@@ -92,9 +92,7 @@ const handleSaveNode = () => {
 
 <template>
   <div class="max-w-(--breakpoint-xl) mx-auto">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">手工节点</h1>
-    </div>
+
 
     <ManualNodePanel
       :manual-nodes="manualNodes"

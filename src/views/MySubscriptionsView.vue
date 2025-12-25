@@ -58,9 +58,7 @@ const handleViewLogs = (profileId) => {
 
 <template>
   <div class="max-w-(--breakpoint-xl) mx-auto">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">我的订阅</h1>
-    </div>
+
 
     <ProfilePanel 
       :profiles="profiles"
