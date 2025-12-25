@@ -158,6 +158,7 @@ export const useDataStore = defineStore('data', () => {
 
             lastUpdated.value = new Date();
             setCachedData(data);
+            clearDirty();
 
         } catch (error) {
             console.error('Failed to fetch data:', error);
