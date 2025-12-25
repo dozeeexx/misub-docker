@@ -281,10 +281,59 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
     }
 
     // 将虚假节点（如果存在）插入到列表最前面
+    let result = finalNodeList;
     if (prependedContent) {
-        return `${prependedContent}\n${finalNodeList}`;
+        result = `${prependedContent}\n${finalNodeList}`;
     }
-    return finalNodeList;
+
+    // --- 日志记录 ---
+    try {
+        if (!debug) { // 避免递归调试日志
+            const { LogService } = await import('./log-service.js');
+            const endTime = Date.now();
+
+            // 提取客户信息
+            let clientIp = 'Unknown';
+            let geoInfo = {};
+            if (context && context.request) {
+                const cf = context.request.cf;
+                clientIp = context.request.headers.get('CF-Connecting-IP') || 'Unknown';
+                if (cf) {
+                    geoInfo = {
+                        country: cf.country,
+                        city: cf.city,
+                        isp: cf.asOrganization,
+                        asn: cf.asn
+                    };
+                }
+            }
+
+            // 统计信息
+            const totalNodes = outputLines.length;
+            const successCount = processedSubContents.filter(c => c.length > 0).length;
+            const failCount = httpSubs.length - successCount;
+
+            await LogService.addLog(context.env, {
+                profileName: profilePrefixSettings?.name || 'Unknown Profile',
+                clientIp,
+                geoInfo,
+                userAgent: userAgent || 'Unknown',
+                status: failCount === 0 ? 'success' : (successCount > 0 ? 'partial' : 'error'),
+                details: {
+                    totalNodes,
+                    sourceCount: httpSubs.length,
+                    successCount,
+                    failCount,
+                    duration: endTime - (context.startTime || Date.now()) // 需要在上层记录 startTime
+                },
+                summary: `生成 ${totalNodes} 个节点 (成功: ${successCount}, 失败: ${failCount})`
+            });
+        }
+    } catch (e) {
+        console.error('Failed to save access log:', e);
+    }
+
+    return result;
 }
 
 /**

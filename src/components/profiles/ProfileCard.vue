@@ -8,7 +8,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['delete', 'change', 'edit', 'copy-link', 'preview', 'move-up', 'move-down']);
+const emit = defineEmits(['delete', 'change', 'edit', 'copy-link', 'preview', 'move-up', 'move-down', 'view-logs']);
 
 </script>
 
@@ -72,6 +72,11 @@ const emit = defineEmits(['delete', 'change', 'edit', 'copy-link', 'preview', 'm
       </div>
       
       <div class="flex items-center gap-1 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <button @click.stop="emit('view-logs')" class="p-1 rounded-full hover:bg-gray-500/10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 mr-1" title="查看日志">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </button>
         <button @click="emit('move-up')" class="p-1 rounded-full hover:bg-gray-500/10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="上移">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
