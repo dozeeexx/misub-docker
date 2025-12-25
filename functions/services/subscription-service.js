@@ -4,6 +4,7 @@
  */
 
 import { NODE_PROTOCOL_REGEX } from '../utils/node-utils.js';
+import { parseNodeList } from '../modules/utils/node-parser.js';
 import { getProcessedUserAgent } from '../utils/format-utils.js';
 import { prependNodeName } from '../utils/node-utils.js';
 import { applyNodeTransformPipeline } from '../utils/node-transformer.js';
@@ -130,9 +131,10 @@ function createConcurrencyLimiter(limit) {
  * @param {Array} misubs - 订阅列表
  * @param {string} prependedContent - 预置内容
  * @param {Object} profilePrefixSettings - 配置文件前缀设置
+ * @param {boolean} debug - 是否启用调试日志
  * @returns {Promise<string>} - 组合后的节点列表
  */
-export async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '', profilePrefixSettings = null) {
+export async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '', profilePrefixSettings = null, debug = false) {
     // 判断是否启用手动节点前缀
     const shouldPrependManualNodes = profilePrefixSettings?.enableManualNodes ??
         config.prefixConfig?.enableManualNodes ??
@@ -170,6 +172,9 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
      */
     const fetchSingleSubscription = async (sub) => {
         try {
+            if (debug) {
+                console.log(`[DEBUG] Fetching subscription: ${sub.url}`);
+            }
             const processedUserAgent = getProcessedUserAgent(userAgent, sub.url);
             const requestHeaders = { 'User-Agent': processedUserAgent };
 
@@ -185,28 +190,59 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
 
             if (!response.ok) {
                 console.warn(`订阅请求失败: ${sub.url}, 状态: ${response.status}`);
+                // if (debug) {
+                //     console.log(`[DEBUG] Failed response for ${sub.url}: Status ${response.status}`);
+                // }
                 return '';
             }
             let text = await response.text();
 
+            // if (debug) {
+            //     console.log(`[DEBUG] Response for ${sub.url} length: ${text.length}`);
+            //     console.log(`[DEBUG] Response snippet (first 500 chars): ${text.substring(0, 500)}`);
+            // }
+
             // 智能内容类型检测 - 更精确的判断条件
             if (text.includes('proxies:') && text.includes('rules:')) {
                 // 这是完整的Clash配置文件，不是节点列表
+                // if (debug) console.log(`[DEBUG] Detected Clash config for ${sub.url}, ignoring.`);
                 return '';
             } else if (text.includes('outbounds') && text.includes('inbounds') && text.includes('route')) {
                 // 这是完整的Singbox配置文件，不是节点列表
+                // if (debug) console.log(`[DEBUG] Detected Singbox config for ${sub.url}, ignoring.`);
                 return '';
             }
 
             text = await decodeBase64Content(text);
 
-            let validNodes = text.replace(/\r\n/g, '\n').split('\n')
-                .map(line => line.trim())
-                .filter(line => NODE_PROTOCOL_REGEX.test(line))
-                .map(line => fixNodeUrlEncoding(line));
+            // if (debug) {
+            //     console.log(`[DEBUG] Decoded text content snippet (first 1000 chars):`);
+            //     console.log(text.substring(0, 1000));
+            // }
+
+            // 使用统一的 node-parser 解析，确保与预览一致的过滤规则 (UUID校验, Hysteria1过滤, SS加密校验等)
+            const parsedObjects = parseNodeList(text);
+
+            // if (debug) {
+            //     console.log(`[DEBUG] Parsed ${parsedObjects.length} valid nodes using node-parser`);
+            // }
+
+            let validNodes = parsedObjects.map(node => node.url);
+
+            // if (debug) {
+            //     console.log(`[DEBUG] Parsed ${validNodes.length} nodes for ${sub.url}`);
+            //     console.log(`[DEBUG] Nodes list (PRE-FILTER):`);
+            //     validNodes.forEach((node, index) => console.log(`[${index}] ${node}`));
+            // }
 
             // 应用过滤规则
             validNodes = applyFilterRules(validNodes, sub);
+
+            // if (debug) {
+            //     console.log(`[DEBUG] After filtering: ${validNodes.length} nodes for ${sub.url}`);
+            //     console.log(`[DEBUG] Nodes list (POST-FILTER):`);
+            //     validNodes.forEach((node, index) => console.log(`[${index}] ${node}`));
+            // }
 
             // 判断是否启用订阅前缀
             const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ??

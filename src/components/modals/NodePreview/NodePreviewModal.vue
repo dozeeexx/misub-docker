@@ -265,11 +265,16 @@ const getProtocolStyle = (protocol) => {
 const parseNodeInfo = (node) => {
   const result = {
     name: node.name,
-    server: '',
-    port: '',
+    server: node.server || '',
+    port: node.port || '',
     protocol: node.protocol,
     region: node.region
   };
+
+  // 如果后端已经返回了服务器和端口，直接使用，不再前端解析
+  if (result.server && result.port) {
+      return result;
+  }
 
   try {
     const url = new URL(node.url);

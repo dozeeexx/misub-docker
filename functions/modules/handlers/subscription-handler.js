@@ -172,7 +172,8 @@ async function handleSingleSubscriptionMode(request, env, subscriptionId, userAg
  * @returns {Promise<Object>} 处理结果
  */
 async function handleDirectUrlMode(subscriptionUrl, userAgent) {
-    const result = await fetchSubscriptionNodes(subscriptionUrl, '预览订阅', userAgent);
+    const debug = subscriptionUrl.includes('b0b422857bb46aba65da8234c84f38c6');
+    const result = await fetchSubscriptionNodes(subscriptionUrl, '预览订阅', userAgent, null, debug);
 
     return {
         success: true,
@@ -192,10 +193,18 @@ async function handleDirectUrlMode(subscriptionUrl, userAgent) {
  * @param {string} subscriptionName - 订阅名称
  * @param {string} userAgent - 用户代理
  * @param {string} customUserAgent - 自定义用户代理 (可选)
+ * @param {boolean} debug - 是否启用调试日志
  * @returns {Promise<Object>} 节点获取结果
  */
-async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUserAgent = null) {
+async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUserAgent = null, debug = false) {
+    // 自动检测调试 Token，无论哪种模式都能触发
+    const shouldDebug = debug || (url && url.includes('b0b422857bb46aba65da8234c84f38c6'));
+
     try {
+        // if (shouldDebug) {
+        //     console.log(`[DEBUG PREVIEW] Fetching URL: ${url}`);
+        // }
+
         // [增强] 支持自定义 UA
         const effectiveUserAgent = customUserAgent && customUserAgent.trim() !== ''
             ? customUserAgent
@@ -208,6 +217,9 @@ async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUs
         }));
 
         if (!response.ok) {
+            // if (shouldDebug) {
+            //     console.log(`[DEBUG PREVIEW] Fetch failed: ${response.status} ${response.statusText}`);
+            // }
             return {
                 subscriptionName,
                 url,
@@ -219,9 +231,29 @@ async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUs
 
         let text = await response.text();
 
+        // if (shouldDebug) {
+        //     console.log(`[DEBUG PREVIEW] Original response length: ${text.length}`);
+        //     console.log(`[DEBUG PREVIEW] Original snippet (first 500): ${text.substring(0, 500)}`);
+        // }
+
+        // 尝试 BASE64 解码以便调试观察
+        // if (shouldDebug) {
+        //     const decoded = decodeAndProcessContent(text);
+        //     console.log(`[DEBUG PREVIEW] Decoded content snippet (first 1000):`);
+        //     console.log(decoded.substring(0, 1000));
+        // }
+
+        // 传递 debug 标志给解析器前，我们先在这里打印一下
+        // 注意：parseNodeList 目前还不支持 debug 参数，我们只能在外部打印结果
         const parsedNodes = parseNodeList(text);
 
-        console.log(`[DEBUG] Preview API: Final node count: ${parsedNodes.length}`);
+        // if (shouldDebug) {
+        //     console.log(`[DEBUG PREVIEW] Parsed ${parsedNodes.length} nodes.`);
+        //     console.log(`[DEBUG PREVIEW] Nodes List:`);
+        //     parsedNodes.forEach((n, i) => console.log(`[${i}] ${JSON.stringify(n)}`));
+        // } else {
+        //     console.log(`[DEBUG] Preview API: Final node count: ${parsedNodes.length}`);
+        // }
 
         return {
             subscriptionName,
@@ -231,6 +263,9 @@ async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUs
             error: null
         };
     } catch (e) {
+        if (shouldDebug) {
+            console.log(`[DEBUG PREVIEW] Error: ${e.message}`);
+        }
         return {
             subscriptionName,
             url,

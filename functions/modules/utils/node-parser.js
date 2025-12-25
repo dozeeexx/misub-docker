@@ -13,7 +13,7 @@ import { validateSS2022Node, fixSS2022Node } from './ss2022-validator.js';
 /**
  * 支持的节点协议正则表达式
  */
-export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|snell|naive\+https?|naive\+quic|socks5|http):\/\//i;
+export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2|hy2|tuic|snell|naive\+https?|naive\+quic|socks5|http|anytls):\/\//i;
 
 /**
  * Base64编码辅助函数
@@ -248,6 +248,26 @@ export function extractValidNodes(text) {
 }
 
 /**
+ * 支持的 Shadowsocks 加密算法 (AEAD)
+ * 现代客户端 (如 Sing-box) 已弃用非 AEAD 算法 (如 aes-256-cfb, rc4-md5)
+ */
+const SUPPORTED_SS_CIPHERS = [
+    'aes-128-gcm', 'aes-256-gcm',
+    'chacha20-poly1305', 'chacha20-ietf-poly1305',
+    'xchacha20-ietf-poly1305',
+    '2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm', '2022-blake3-chacha20-poly1305'
+];
+
+/**
+ * 验证 UUID 格式
+ */
+function isValidUUID(uuid) {
+    if (!uuid || typeof uuid !== 'string') return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+}
+
+/**
  * 解析节点列表 (用于预览和计数)
  */
 export function parseNodeList(content) {
@@ -257,10 +277,71 @@ export function parseNodeList(content) {
         // 1. 修复编码 (如 Hysteria2 密码)
         let fixedUrl = fixNodeUrlEncoding(nodeUrl);
 
-        // 2. [新增] 验证和修复 SS 2022 节点
+        // 2. [新增] 验证和修复 SS 2022 节点 & 过滤传统 SS 算法
         let ss2022Warning = null;
         if (fixedUrl.startsWith('ss://')) {
+            // 2.1 提取加密算法
+            let method = '';
+            try {
+                let body = fixedUrl.substring(5); // remove ss://
+                const hashIndex = body.indexOf('#');
+                if (hashIndex !== -1) body = body.substring(0, hashIndex);
+
+                // 处理 user@server:port 格式 (明文)
+                const atIndex = body.lastIndexOf('@');
+                if (atIndex !== -1 && !body.includes('://')) { // 排除 SIP002 base64 整体编码可能包含 @
+                    // 明文格式通常不常见用于订阅，多见于手动配置
+                    // userInfo = method:password
+                    const userInfo = body.substring(0, atIndex);
+                    // 还要考虑是否是 Base64 编码的 userInfo
+                    // 尝试简单判断: 包含 : 可能是明文，否则可能是 Base64
+                    if (userInfo.includes(':')) {
+                        method = userInfo.split(':')[0];
+                    } else {
+                        // Base64 解码 userInfo
+                        try {
+                            const decodedUser = atob(userInfo);
+                            if (decodedUser.includes(':')) method = decodedUser.split(':')[0];
+                        } catch (e) { }
+                    }
+                } else {
+                    // 处理 Base64 格式 (SIP002) ss://base64(method:password@server:port)
+                    // 或者 ss://base64(method:password)@server:port (旧式)
+                    try {
+                        let decoded = atob(body);
+                        // 格式: method:password@server:port
+                        if (decoded.includes('@')) {
+                            const userInfo = decoded.split('@')[0];
+                            if (userInfo.includes(':')) method = userInfo.split(':')[0];
+                        }
+                    } catch (e) {
+                        // 如果整体解码失败，可能是旧式 ss://userInfoBase64@server:port
+                        const atIndex = body.lastIndexOf('@');
+                        if (atIndex !== -1) {
+                            const userInfoBase64 = body.substring(0, atIndex);
+                            try {
+                                const decodedUser = atob(userInfoBase64);
+                                if (decodedUser.includes(':')) method = decodedUser.split(':')[0];
+                            } catch (e2) { }
+                        }
+                    }
+                }
+            } catch (e) {
+                // 解析出错
+            }
+
+            // 2.2 验证加密算法
+            if (method) {
+                const normalizedMethod = method.toLowerCase();
+                if (!SUPPORTED_SS_CIPHERS.includes(normalizedMethod)) {
+                    // console.log(`[Node Filter] Dropping SS node with legacy cipher: ${normalizedMethod}`);
+                    return null;
+                }
+            }
+
             const validation = validateSS2022Node(fixedUrl);
+
+            // ... (rest of SS2022 validation)
 
             if (!validation.valid && validation.details?.suggestedCipher) {
                 // 尝试自动修复
@@ -296,7 +377,95 @@ export function parseNodeList(content) {
         // 4. 解析信息
         const nodeInfo = parseNodeInfo(fixedUrl);
 
-        // 5. 添加 SS 2022 警告信息
+        // 5. [新增] 严格 UUID 验证 (过滤 auto: 开头的垃圾节点)
+        // 仅针对 VLESS 和 VMess (VMess 通常在 parseNodeInfo 内部处理，这里主要处理 VLESS 链接中的 UUID)
+        let isValidNode = true;
+        if (nodeInfo.protocol === 'vless') {
+            // VLESS 链接格式: 
+            // 1. 标准: vless://uuid@host:port
+            // 2. Base64: vless://base64(uuid@host:port)
+            let id = null;
+
+            // 尝试 Base64 解码优先 (因为 auto:uuid 经常出现在这里)
+            const matchStandard = fixedUrl.match(/^vless:\/\/([0-9a-fA-F-]{36})@/);
+
+            if (matchStandard) {
+                id = matchStandard[1];
+            } else {
+                // 尝试 Base64 格式
+                try {
+                    // 去掉 vless://
+                    let body = fixedUrl.substring(8);
+
+                    // 去掉参数和 fragment
+                    const qMarkIndex = body.indexOf('?');
+                    if (qMarkIndex !== -1) body = body.substring(0, qMarkIndex);
+                    const hashIndex = body.indexOf('#');
+                    if (hashIndex !== -1) body = body.substring(0, hashIndex);
+
+                    // 简单的 Base64 长度检查 (避免无效解码)
+                    if (body.length > 20) {
+                        const decoded = atob(body); // uuid@host:port
+                        const atIndex = decoded.indexOf('@');
+                        // 必须包含 @ 且 @ 前面是 ID
+                        if (atIndex !== -1) {
+                            id = decoded.substring(0, atIndex);
+                        } else {
+                            // 如果没有 @，可能直接就是 uuid (少见，但防止 auto:uuid)
+                            // 检查是否包含 auto:
+                            if (decoded.startsWith('auto:')) {
+                                id = decoded; // 这样后面 validation 会失败
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // 解码失败，回退到尝试直接提取
+                }
+
+                // 如果 Base64 解析失败，尝试从 URL 直接提取 (针对非标准 uuid@)
+                if (!id) {
+                    const matchAnyUser = fixedUrl.match(/^vless:\/\/([^@]+)@/);
+                    if (matchAnyUser) id = matchAnyUser[1];
+                }
+            }
+
+            if (id) {
+                // 如果是 auto: 开头，去掉 auto: 再验证 UUID?
+                // 不，用户不想看这些节点，直接验证完整 ID 是否为 UUID
+                // 包含 auto: 的 ID 会导致 isValidUUID 返回 false
+                if (!isValidUUID(id)) {
+                    isValidNode = false;
+                    // console.log(`[Node Filter] Dropping invalid VLESS node (Invalid UUID): ${id}`);
+                }
+            }
+        } else if (nodeInfo.protocol === 'vmess') {
+            // 对于 vmess，parseNodeInfo 并不返回具体配置，我们需要简单检查一下
+            // 如果是 vmess://(base64)，解码后看 id
+            if (fixedUrl.startsWith('vmess://')) {
+                try {
+                    const base64Part = fixedUrl.substring(8);
+                    // Use robust Base64 decoding (URL safe + padding)
+                    let safeBody = base64Part.replace(/-/g, '+').replace(/_/g, '/');
+                    while (safeBody.length % 4) {
+                        safeBody += '=';
+                    }
+                    const jsonStr = atob(safeBody);
+                    const config = JSON.parse(jsonStr);
+                    if (config && config.id && !isValidUUID(config.id)) {
+                        isValidNode = false;
+                        // console.log(`[Node Filter] Dropping invalid VMess node (Invalid UUID): ${config.id}`);
+                    }
+                } catch (e) {
+                    // 解码失败忽略，交给后续处理或保留
+                }
+            }
+        }
+
+        if (!isValidNode) {
+            return null;
+        }
+
+        // 6. 添加 SS 2022 警告信息
         const result = {
             url: fixedUrl,
             ...nodeInfo
@@ -307,7 +476,7 @@ export function parseNodeList(content) {
         }
 
         return result;
-    });
+    }).filter(node => node !== null); // 过滤掉无效节点
 }
 
 /**
