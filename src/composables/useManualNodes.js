@@ -78,14 +78,23 @@ export function useManualNodes(markDirty) {
     'nz': ['🇳🇿', '新西兰', '紐西蘭'],
   };
 
+  const activeColorFilter = ref(null); // null = all, or color string
+
   const filteredManualNodes = computed(() => {
+    let nodes = manualNodes.value;
+
+    // Apply Color Filter
+    if (activeColorFilter.value) {
+      nodes = nodes.filter(n => n.colorTag === activeColorFilter.value);
+    }
+
     if (!searchTerm.value) {
-      return manualNodes.value;
+      return nodes;
     }
     const searchQuery = searchTerm.value.toLowerCase().trim();
     const alternativeTerms = countryCodeMap[searchQuery] || [];
 
-    return manualNodes.value.filter(node => {
+    return nodes.filter(node => {
       if (!node.name) return false;
       const nodeName = node.name.toLowerCase();
       if (nodeName.includes(searchQuery)) return true;
@@ -109,6 +118,49 @@ export function useManualNodes(markDirty) {
   function changeManualNodesPage(page) {
     if (page < 1 || page > manualNodesTotalPages.value) return;
     manualNodesCurrentPage.value = page;
+  }
+
+  function setColorFilter(color) {
+    activeColorFilter.value = color;
+    manualNodesCurrentPage.value = 1; // Reset to page 1
+  }
+
+  function batchUpdateColor(nodeIds, color) {
+    if (!nodeIds || nodeIds.length === 0) return;
+    const idsSet = new Set(nodeIds);
+    const updates = manualNodes.value
+      .filter(n => idsSet.has(n.id))
+      .map(n => {
+        // Only update if changed
+        if (n.colorTag === color) return null;
+        return { id: n.id, updates: { ...n, colorTag: color } };
+      })
+      .filter(u => u);
+
+    if (updates.length > 0) {
+      updates.forEach(({ id, updates }) => {
+        dataStore.updateSubscription(id, updates);
+      });
+      markDirty();
+      showToast(`已标记 ${updates.length} 个节点`, 'success');
+    }
+  }
+
+  function batchDeleteNodes(nodeIds) {
+    if (!nodeIds || nodeIds.length === 0) return;
+    // Confirmation moved to UI layer
+
+    nodeIds.forEach(id => {
+      dataStore.removeSubscription(id);
+    });
+
+    // Adjust pagination if needed
+    if (paginatedManualNodes.value.length === 0 && manualNodesCurrentPage.value > 1) {
+      manualNodesCurrentPage.value--;
+    }
+
+    markDirty();
+    showToast(`已删除 ${nodeIds.length} 个节点`, 'success');
   }
 
   function addNode(node) {
@@ -234,6 +286,16 @@ export function useManualNodes(markDirty) {
       const indexB = regionOrder.indexOf(regionB);
       const effectiveIndexA = indexA === -1 ? Infinity : indexA;
       const effectiveIndexB = indexB === -1 ? Infinity : indexB;
+
+      // Primary Sort: Group
+      const groupA = a.group || '';
+      const groupB = b.group || '';
+      if (groupA !== groupB) {
+        if (!groupA) return 1; // Empty group last
+        if (!groupB) return -1;
+        return groupA.localeCompare(groupB, 'zh-CN');
+      }
+
       if (effectiveIndexA !== effectiveIndexB) return effectiveIndexA - effectiveIndexB;
       return a.name.localeCompare(b.name, 'zh-CN');
     });
@@ -266,13 +328,86 @@ export function useManualNodes(markDirty) {
     markDirty();
   }
 
+  const manualNodeGroups = computed(() => {
+    const groups = new Set();
+    manualNodes.value.forEach(node => {
+      if (node.group) {
+        groups.add(node.group);
+      }
+    });
+    return Array.from(groups).sort();
+  });
+
+  const groupedManualNodes = computed(() => {
+    const groups = {};
+    // Initialize groups
+    manualNodeGroups.value.forEach(group => {
+      groups[group] = [];
+    });
+    groups['默认'] = []; // Default group for ungrouped nodes
+
+    // Distribute nodes matches the current filter/search
+    // Use filteredManualNodes if we want to search within groups?
+    // Yes, usually we want to see search results grouped.
+
+    const nodesToDisplay = filteredManualNodes.value;
+
+    nodesToDisplay.forEach(node => {
+      const groupName = node.group || '默认';
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(node);
+    });
+
+    // Remove empty groups if they are not the target of a move (UI logic usually)
+    // For display, we might want to hide empty groups if search is active?
+    // Let's keep it simple: return all groups that have nodes AFTER filtering, 
+    // PLUS all existing groups (so empty groups show up? No, usually not).
+
+    // Reformatted: Only return groups that have matching nodes
+    const result = {};
+    Object.keys(groups).forEach(key => {
+      if (groups[key].length > 0) {
+        result[key] = groups[key];
+      }
+    });
+
+    return result;
+  });
+
+  function renameGroup(oldName, newName) {
+    if (!oldName || !newName || oldName === newName) return;
+
+    const nodesInGroup = manualNodes.value.filter(n => n.group === oldName);
+    nodesInGroup.forEach(node => {
+      dataStore.updateSubscription(node.id, { ...node, group: newName });
+    });
+    markDirty();
+  }
+
+  function deleteGroup(groupName) {
+    if (!groupName) return;
+    // Ungroup nodes (move to default)
+    const nodesInGroup = manualNodes.value.filter(n => n.group === groupName);
+    nodesInGroup.forEach(node => {
+      // Creating a copy logic is safe here as updateSubscription handles it
+      const { group, ...rest } = node;
+      dataStore.updateSubscription(node.id, { ...rest, group: '' }); // Set to empty string or remove property
+    });
+    markDirty();
+  }
+
   return {
     manualNodes, // Returns computed filtered list
+    manualNodeGroups,
+    groupedManualNodes,
     manualNodesCurrentPage,
     manualNodesTotalPages,
     paginatedManualNodes,
     enabledManualNodesCount: computed(() => enabledManualNodes.value.length),
     searchTerm,
+    activeColorFilter, // New
     changeManualNodesPage,
     addNode,
     updateNode,
@@ -282,5 +417,10 @@ export function useManualNodes(markDirty) {
     autoSortNodes,
     deduplicateNodes,
     reorderManualNodes, // Added
+    renameGroup,
+    deleteGroup,
+    setColorFilter, // New
+    batchUpdateColor, // New
+    batchDeleteNodes // New
   };
 }

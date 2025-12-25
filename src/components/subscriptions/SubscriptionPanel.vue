@@ -59,12 +59,13 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-      <div class="flex items-center gap-3">
+    <div class="flex flex-row items-center justify-between mb-4 gap-4">
+      <div class="flex items-center gap-3 shrink-0">
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">机场订阅</h2>
         <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ subscriptions.length }}</span>
       </div>
-      <div class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
+      <div class="flex items-center gap-2">
+        <slot name="actions-prepend"></slot>
         <button @click="handleAdd" class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-xs shrink-0">新增</button>
         <div class="relative shrink-0" ref="subsMoreMenuRef">
           <button @click="showSubsMoreMenu = !showSubsMoreMenu" class="p-2.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">

@@ -10,10 +10,12 @@ const props = defineProps({
   index: {
     type: Number,
     required: true,
-  }
+  },
+  isSelectionMode: Boolean,
+  isSelected: Boolean
 });
 
-const emit = defineEmits(['delete', 'edit']);
+const emit = defineEmits(['delete', 'edit', 'toggle-select']);
 
 const getProtocol = (url) => {
   try {
@@ -61,18 +63,44 @@ const protocolStyle = computed(() => {
   };
   return styles[p] || styles['unknown'];
 });
+
+const colorTagClass = computed(() => {
+    switch (props.node.colorTag) {
+        case 'red': return 'bg-red-500';
+        case 'orange': return 'bg-orange-500';
+        case 'green': return 'bg-green-500';
+        case 'blue': return 'bg-blue-500';
+        default: return null;
+    }
+});
 </script>
 
 <template>
   <div
     class="group w-full bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-lg shadow-md p-3 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 flex items-center gap-4"
-    :class="{ 'opacity-50': !node.enabled }"
+    :class="{ 
+        'opacity-50': !node.enabled && !isSelectionMode,
+        'ring-2 ring-indigo-500': isSelectionMode && isSelected,
+        'cursor-pointer': isSelectionMode
+    }"
+    @click="isSelectionMode ? emit('toggle-select') : null"
   >
+    <!-- Selection Checkbox -->
+    <div v-if="isSelectionMode" class="shrink-0 mr-1">
+        <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+             :class="isSelected ? 'bg-indigo-50 border-indigo-500' : 'border-gray-300 dark:border-gray-600'">
+            <svg v-if="isSelected" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+        </div>
+    </div>
+
     <div class="shrink-0 w-6 h-6 flex items-center justify-center bg-gray-200 dark:bg-gray-700/50 rounded-full">
       <span class="text-xs font-semibold text-gray-500 dark:text-gray-300">
         {{ index }}
       </span>
     </div>
+    
+     <!-- Color Dot -->
+    <div v-if="colorTagClass" class="w-2.5 h-2.5 rounded-full shrink-0" :class="colorTagClass"></div>
 
     <div class="shrink-0 w-20 text-center">
       <div
@@ -100,7 +128,7 @@ const protocolStyle = computed(() => {
       </p>
     </div>
 
-    <div class="shrink-0 flex items-center gap-1 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+    <div v-if="!isSelectionMode" class="shrink-0 flex items-center gap-1 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
       <button @click.stop="emit('edit')" class="p-1.5 rounded-full hover:bg-gray-500/10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="编辑节点">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>
       </button>

@@ -5,12 +5,15 @@ const props = defineProps({
   node: {
     type: Object,
     required: true
-  }
+  },
+  isSelectionMode: Boolean,
+  isSelected: Boolean
 });
 
-const emit = defineEmits(['delete', 'edit']);
+const emit = defineEmits(['delete', 'edit', 'toggle-select']);
 
 const getProtocol = (url) => {
+  // ... (protocol logic unchanged)
   try {
     if (!url) return 'unknown';
     const lowerUrl = url.toLowerCase();
@@ -37,47 +40,59 @@ const getProtocol = (url) => {
 const protocol = computed(() => getProtocol(props.node.url));
 
 const protocolStyle = computed(() => {
+  // ... (protocol style map unchanged)
   const p = protocol.value;
   switch (p) {
-    // [更新] 新增 anytls 的樣式
-    case 'anytls':
-      return { text: 'AnyTLS', style: 'bg-slate-500/20 text-slate-500 dark:text-slate-400' };
-    case 'vless':
-      return { text: 'VLESS', style: 'bg-blue-500/20 text-blue-500 dark:text-blue-400' };
-    case 'hysteria2':
-      return { text: 'HY2', style: 'bg-purple-500/20 text-purple-500 dark:text-purple-400' };
-    case 'hysteria':
-       return { text: 'Hysteria', style: 'bg-fuchsia-500/20 text-fuchsia-500 dark:text-fuchsia-400' };
-    case 'tuic':
-        return { text: 'TUIC', style: 'bg-cyan-500/20 text-cyan-500 dark:text-cyan-400' };
-    case 'trojan':
-      return { text: 'TROJAN', style: 'bg-red-500/20 text-red-500 dark:text-red-400' };
-    case 'ssr':
-      return { text: 'SSR', style: 'bg-rose-500/20 text-rose-500 dark:text-rose-400' };
-    case 'ss':
-      return { text: 'SS', style: 'bg-orange-500/20 text-orange-500 dark:text-orange-400' };
-    case 'vmess':
-      return { text: 'VMESS', style: 'bg-teal-500/20 text-teal-500 dark:text-teal-400' };
-    case 'socks5':
-      return { text: 'SOCKS5', style: 'bg-lime-500/20 text-lime-500 dark:text-lime-400' };
-    case 'http':
-      return { text: 'HTTP', style: 'bg-green-500/20 text-green-500 dark:text-green-400' };
-    case 'snell':
-      return { text: 'SNELL', style: 'bg-indigo-500/20 text-indigo-500 dark:text-indigo-400' };
-    case 'naive':
-      return { text: 'NAIVE', style: 'bg-pink-500/20 text-pink-500 dark:text-pink-400' };
-    default:
-      return { text: 'LINK', style: 'bg-gray-500/20 text-gray-500 dark:text-gray-400' };
+    case 'anytls': return { text: 'AnyTLS', style: 'bg-slate-500/20 text-slate-500 dark:text-slate-400' };
+    case 'vless': return { text: 'VLESS', style: 'bg-blue-500/20 text-blue-500 dark:text-blue-400' };
+    case 'hysteria2': return { text: 'HY2', style: 'bg-purple-500/20 text-purple-500 dark:text-purple-400' };
+    case 'hysteria': return { text: 'Hysteria', style: 'bg-fuchsia-500/20 text-fuchsia-500 dark:text-fuchsia-400' };
+    case 'tuic': return { text: 'TUIC', style: 'bg-cyan-500/20 text-cyan-500 dark:text-cyan-400' };
+    case 'trojan': return { text: 'TROJAN', style: 'bg-red-500/20 text-red-500 dark:text-red-400' };
+    case 'ssr': return { text: 'SSR', style: 'bg-rose-500/20 text-rose-500 dark:text-rose-400' };
+    case 'ss': return { text: 'SS', style: 'bg-orange-500/20 text-orange-500 dark:text-orange-400' };
+    case 'vmess': return { text: 'VMESS', style: 'bg-teal-500/20 text-teal-500 dark:text-teal-400' };
+    case 'socks5': return { text: 'SOCKS5', style: 'bg-lime-500/20 text-lime-500 dark:text-lime-400' };
+    case 'http': return { text: 'HTTP', style: 'bg-green-500/20 text-green-500 dark:text-green-400' };
+    case 'snell': return { text: 'SNELL', style: 'bg-indigo-500/20 text-indigo-500 dark:text-indigo-400' };
+    case 'naive': return { text: 'NAIVE', style: 'bg-pink-500/20 text-pink-500 dark:text-pink-400' };
+    default: return { text: 'LINK', style: 'bg-gray-500/20 text-gray-500 dark:text-gray-400' };
   }
+});
+
+const colorTagClass = computed(() => {
+    switch (props.node.colorTag) {
+        case 'red': return 'bg-red-500';
+        case 'orange': return 'bg-orange-500';
+        case 'green': return 'bg-green-500';
+        case 'blue': return 'bg-blue-500';
+        default: return null;
+    }
 });
 </script>
 
 <template>
   <div 
     class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-xl card-shadow hover:card-shadow-hover p-3 smooth-all hover:-translate-y-0.5 relative flex items-center justify-between gap-3"
-    :class="{ 'opacity-50': !node.enabled }"
+    :class="{ 
+        'opacity-50': !node.enabled && !isSelectionMode,
+        'ring-2 ring-indigo-500': isSelectionMode && isSelected,
+        'cursor-pointer': isSelectionMode
+    }"
+    @click="isSelectionMode ? emit('toggle-select') : null"
   >
+    <!-- Selection Checkbox -->
+    <div v-if="isSelectionMode" class="shrink-0 mr-1">
+        <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+             :class="isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 dark:border-gray-600'">
+            <svg v-if="isSelected" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+        </div>
+    </div>
+
     <div class="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
+      <!-- Color Dot -->
+      <div v-if="colorTagClass" class="w-2.5 h-2.5 rounded-full mobile-color-dot" :class="colorTagClass"></div>
+      
       <div 
         class="text-xs font-bold px-2 py-0.5 rounded-full shrink-0"
         :class="protocolStyle.style"
@@ -89,7 +104,7 @@ const protocolStyle = computed(() => {
       </p>
     </div>
 
-    <div class="shrink-0 flex items-center gap-1 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+    <div v-if="!isSelectionMode" class="shrink-0 flex items-center gap-1 lg:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button @click.stop="emit('edit')" class="p-1.5 rounded-full hover:bg-gray-500/10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="编辑节点">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>
         </button>
