@@ -12,7 +12,7 @@ const props = defineProps({
   totalPages: Number,
 });
 
-const emit = defineEmits(['add', 'edit', 'delete', 'deleteAll', 'toggle', 'copyLink', 'preview', 'reorder', 'changePage']);
+const emit = defineEmits(['add', 'edit', 'delete', 'deleteAll', 'toggle', 'copyLink', 'preview', 'reorder', 'changePage', 'viewLogs']);
 
 // [FIX] Compute profiles to display: use paginated if available, else all profiles
 const displayProfiles = computed(() => {
@@ -141,6 +141,7 @@ onUnmounted(() => {
           @preview="handlePreview(profile.id)"
           @move-up="handleMoveUp(index)"
           @move-down="handleMoveDown(index)"
+          @view-logs="emit('viewLogs', profile.id)"
         />
       </div>
       <div v-if="totalPages > 1 && paginatedProfiles && paginatedProfiles.length > 0" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
