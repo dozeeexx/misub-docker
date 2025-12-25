@@ -12,12 +12,94 @@ const props = defineProps({
   isSorting: Boolean,
   searchTerm: String,
   viewMode: String,
+  groups: { type: Array, default: () => [] },
+  activeColorFilter: { type: String, default: null }, // New
 });
 
 const emit = defineEmits([
   'add', 'delete', 'edit', 'changePage', 'update:searchTerm', 'update:viewMode',
-  'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import', 'deleteAll', 'reorder'
+  'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import', 'deleteAll', 'reorder',
+  'rename-group', 'delete-group',
+  'set-color-filter', 'batch-update-color', 'batch-delete-nodes'
 ]);
+
+const isSelectionMode = ref(false);
+const selectedNodeIds = ref(new Set());
+
+const toggleSelectionMode = () => {
+    isSelectionMode.value = !isSelectionMode.value;
+    selectedNodeIds.value.clear();
+};
+
+const toggleNodeSelection = (nodeId) => {
+    if (selectedNodeIds.value.has(nodeId)) {
+        selectedNodeIds.value.delete(nodeId);
+    } else {
+        selectedNodeIds.value.add(nodeId);
+    }
+};
+
+const handleBatchColor = (color) => {
+    emit('batch-update-color', Array.from(selectedNodeIds.value), color);
+    // Maintain selection? Or clear? Usually clear after action.
+    selectedNodeIds.value.clear();
+    isSelectionMode.value = false;
+};
+
+const handleBatchDelete = () => {
+    emit('batch-delete-nodes', Array.from(selectedNodeIds.value));
+    selectedNodeIds.value.clear();
+    isSelectionMode.value = false;
+};
+
+
+// ... (props setup for computed etc.)
+// Re-declare computed in context? No, just use existing but injected
+// But need to update the Templates where ManualNodeCard is used
+
+const groupedNodes = computed(() => {
+    const nodes = paginatedNodes.value;
+// ... (keep this)
+    const groups = {};
+    if (!nodes || nodes.length === 0) return {};
+
+    // Sort nodes by group status first? No, preserve order (pagination) but bucket them
+    
+    nodes.forEach(node => {
+        const groupName = node.group || '默认';
+        if (!groups[groupName]) {
+            groups[groupName] = [];
+        }
+        groups[groupName].push(node);
+    });
+    
+    // Sort keys so '默认' is last, others alphabetical
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+        if (a === '默认') return 1;
+        if (b === '默认') return -1;
+        return a.localeCompare(b);
+    });
+    
+    const sortedResult = {};
+    sortedKeys.forEach(key => {
+        sortedResult[key] = groups[key];
+    });
+    
+    return sortedResult;
+});
+
+const handleRenameGroup = (oldName) => {
+    const newName = prompt('请输入新的分组名称:', oldName);
+    if (newName && newName !== oldName) {
+        emit('rename-group', oldName, newName);
+    }
+};
+
+const handleDeleteGroup = (groupName) => {
+    if (confirm(`确定要解散分组 "${groupName}" 吗？\n组内节点将被移动到"默认"分组。`)) {
+        emit('delete-group', groupName);
+    }
+};
 
 const draggableManualNodes = computed({
   get: () => [...props.manualNodes],
@@ -217,14 +299,56 @@ onUnmounted(() => {
 <template>
   <div>
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 flex-wrap">
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">手动节点</h2>
         <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ manualNodes.length }}</span>
-        <span v-if="localSearchTerm" class="px-2.5 py-0.5 text-sm font-semibold text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-500/20 rounded-full">
-          搜索: "{{ localSearchTerm }}" ({{ filteredNodes.length }}/{{ manualNodes.length }} 结果)
+        
+        <!-- Mobile Color Filter -->
+        <div class="flex md:hidden items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 ml-auto sm:ml-2">
+            <button 
+                @click="emit('set-color-filter', null)"
+                class="px-3 py-1 text-xs font-medium rounded-md transition-all"
+                :class="!activeColorFilter ? 'bg-white dark:bg-gray-700 shadow-xs text-gray-800 dark:text-white' : 'text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200'"
+            >全</button>
+            <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+            <button 
+                v-for="color in ['red', 'orange', 'green', 'blue']" 
+                :key="color"
+                @click="emit('set-color-filter', activeColorFilter === color ? null : color)"
+                class="w-6 h-6 mx-0.5 rounded-full flex items-center justify-center transition-transform"
+                :class="[
+                    `bg-${color}-500`,
+                    activeColorFilter === color ? 'ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-gray-900 scale-110' : 'opacity-60'
+                ]"
+            ></button>
+        </div>
+
+        <span v-if="localSearchTerm" class="px-2.5 py-0.5 text-sm font-semibold text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-500/20 rounded-full w-full sm:w-auto mt-2 sm:mt-0">
+          搜索: "{{ localSearchTerm }}" ({{ filteredNodes.length }}/{{ manualNodes.length }})
         </span>
       </div>
       <div class="flex items-center gap-2 w-full sm:w-auto">
+        <!-- Color Filter -->
+        <div class="hidden md:flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mr-2">
+            <button 
+                @click="emit('set-color-filter', null)"
+                class="px-3 py-1 text-xs font-medium rounded-md transition-all"
+                :class="!activeColorFilter ? 'bg-white dark:bg-gray-700 shadow-xs text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+            >全部</button>
+            <button 
+                v-for="color in ['red', 'orange', 'green', 'blue']" 
+                :key="color"
+                @click="emit('set-color-filter', color)"
+                class="w-6 h-6 mx-1 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+                :class="[
+                    `bg-${color}-500`,
+                    activeColorFilter === color ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-gray-900 scale-110' : 'opacity-70 hover:opacity-100'
+                ]"
+            ></button>
+        </div>
+
+
+
         <div class="relative grow">
           <input 
             type="text" 
@@ -249,6 +373,14 @@ onUnmounted(() => {
           </button>
            <Transition name="slide-fade-sm">
             <div v-if="showNodesMoreMenu" class="absolute right-0 mt-2 w-36 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg dark:shadow-2xl z-50 ring-1 ring-black/5">
+              <button 
+                @click="toggleSelectionMode(); showNodesMoreMenu = false"
+                class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium"
+                :class="isSelectionMode ? 'text-indigo-600 dark:text-indigo-400' : ''"
+              >
+                {{ isSelectionMode ? '退出批量' : '批量操作' }}
+              </button>
+              <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
               <button @click="handleImport" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">导入订阅</button>
               <button @click="handleAutoSort" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键排序</button>
               <button @click="handleDeduplicate" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">一键去重</button>
@@ -265,77 +397,128 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Selection Toolbar -->
+    <Transition name="slide-fade-sm">
+        <div v-if="isSelectionMode && selectedNodeIds.size > 0" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] sm:w-auto max-w-xl bg-white dark:bg-gray-800 shadow-xl rounded-2xl sm:rounded-full px-4 py-3 sm:px-6 sm:py-3 flex flex-col sm:flex-row items-center justify-between sm:justify-center gap-3 sm:gap-4 z-50 border border-gray-200 dark:border-gray-700">
+            
+            <div class="flex items-center justify-between w-full sm:w-auto gap-4">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-300 whitespace-nowrap">已选 {{ selectedNodeIds.size }}</span>
+                
+                <!-- Mobile Only Cancel Button (Top Right) -->
+                <button @click="selectedNodeIds.clear(); isSelectionMode = false" class="sm:hidden text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md">取消</button>
+            </div>
+
+            <div class="h-px w-full sm:w-px sm:h-4 bg-gray-200 dark:bg-gray-600 flex-shrink-0"></div>
+
+            <div class="flex items-center justify-center w-full sm:w-auto gap-2 sm:gap-3 overflow-x-auto">
+                <span class="text-xs text-gray-500 hidden sm:inline">标记:</span>
+                <div class="flex items-center gap-2">
+                    <button v-for="color in ['red', 'orange', 'green', 'blue']" :key="color" 
+                        @click="handleBatchColor(color)"
+                        class="w-6 h-6 sm:w-6 sm:h-6 rounded-full hover:scale-110 transition-transform ring-1 ring-black/5"
+                        :class="`bg-${color}-500 shadow-sm`"
+                    ></button>
+                </div>
+                <div class="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-1"></div>
+                <button @click="handleBatchColor(null)" class="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 whitespace-nowrap">清除颜色</button>
+                <div class="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-1"></div>
+                <button @click="handleBatchDelete" class="text-xs text-red-500 hover:text-red-700 font-medium whitespace-nowrap flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                    删除
+                </button>
+            </div>
+            
+             <div class="hidden sm:block h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
+             <!-- Desktop Cancel -->
+             <button @click="selectedNodeIds.clear(); isSelectionMode = false" class="hidden sm:block text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white whitespace-nowrap">取消</button>
+        </div>
+    </Transition>
     <div v-if="manualNodes.length > 0">
       <!-- 如果有搜索词，显示搜索提示 -->
       <div v-if="localSearchTerm && filteredNodes.length === 0" class="text-center py-8 text-gray-500">
         <p>没有找到包含 "{{ localSearchTerm }}" 的节点</p>
       </div>
       
-      <div v-if="viewMode === 'card'">
-        <draggable 
-          v-if="isSorting"
-          tag="div" 
-          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
-          v-model="draggableManualNodes" 
-          item-key="id" 
-          animation="300" 
-          @end="handleSortEnd"
-        >
-          <template #item="{ element: node }">
-             <div class="cursor-move">
-                <ManualNodeCard 
-                    :node="node" 
-                    @edit="handleEdit(node.id)" 
-                    @delete="handleDelete(node.id)" />
-            </div>
-          </template>
-        </draggable>
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-          <div 
-            v-for="(node, index) in paginatedNodes" 
-            :key="node.id"
-            class="list-item-animation"
-            :style="{ '--delay-index': index }"
-          >
-            <ManualNodeCard 
-              :node="node" 
-              @edit="handleEdit(node.id)" 
-              @delete="handleDelete(node.id)" />
-          </div>
+      <div v-if="isSorting">
+        <!-- 排序模式保持原有扁平列表，方便跨组排序 -->
+        <div v-if="viewMode === 'card'">
+           <draggable 
+             tag="div" 
+             class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3" 
+             v-model="draggableManualNodes" 
+             item-key="id" 
+             animation="300" 
+             @end="handleSortEnd"
+           >
+             <template #item="{ element: node }">
+                <div class="cursor-move">
+                   <ManualNodeCard 
+                       :node="node" 
+                       :is-selection-mode="isSelectionMode"
+                       :is-selected="selectedNodeIds.has(node.id)"
+                       @toggle-select="toggleNodeSelection(node.id)"
+                       @edit="handleEdit(node.id)" 
+                       @delete="handleDelete(node.id)" />
+               </div>
+             </template>
+           </draggable>
+        </div>
+        <div v-else class="space-y-2">
+            <draggable 
+              tag="div" 
+              class="space-y-2" 
+              v-model="draggableManualNodes" 
+              item-key="id" 
+              animation="300" 
+              @end="handleSortEnd"
+            >
+              <template #item="{ element: node, index }">
+                <div class="cursor-move">
+                  <ManualNodeList
+                      :node="node"
+                      :index="index + 1"
+                      class="list-item-animation"
+                      :style="{ '--delay-index': index }"
+                      @edit="handleEdit(node.id)"
+                      @delete="handleDelete(node.id)"
+                  />
+                </div>
+              </template>
+            </draggable>
         </div>
       </div>
 
-      <div v-if="viewMode === 'list'" class="space-y-2">
-        <draggable 
-          v-if="isSorting"
-          tag="div" 
-          class="space-y-2" 
-          v-model="draggableManualNodes" 
-          item-key="id" 
-          animation="300" 
-          @end="handleSortEnd"
-        >
-          <template #item="{ element: node, index }">
-            <div class="cursor-move">
-              <ManualNodeList
-                  :node="node"
-                  :index="index + 1"
-                  class="list-item-animation"
-                  :style="{ '--delay-index': index }"
-                  @edit="handleEdit(node.id)"
-                  @delete="handleDelete(node.id)"
-              />
+      <div v-else>
+        <!-- Flat List Display (No Groups) -->
+        <div v-if="viewMode === 'card'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div 
+                v-for="(node, index) in paginatedNodes" 
+                :key="node.id"
+                class="list-item-animation"
+                :style="{ '--delay-index': index }"
+            >
+                <ManualNodeCard 
+                    :node="node" 
+                    :is-selection-mode="isSelectionMode"
+                    :is-selected="selectedNodeIds.has(node.id)"
+                    @toggle-select="toggleNodeSelection(node.id)"
+                    @edit="handleEdit(node.id)" 
+                    @delete="handleDelete(node.id)" 
+                />
             </div>
-          </template>
-        </draggable>
+        </div>
         <div v-else class="space-y-2">
-          <ManualNodeList
+             <ManualNodeList
               v-for="(node, index) in paginatedNodes"
               :key="node.id"
               :node="node"
-              :index="localSearchTerm ? (currentPage - 1) * 24 + index + 1 : (props.currentPage - 1) * 24 + index + 1"
-              :class="`list-item-animation`"
+              :index="paginatedNodes.indexOf(node) + 1" 
+              class="list-item-animation"
               :style="{ '--delay-index': index }"
+              :is-selection-mode="isSelectionMode"
+              :is-selected="selectedNodeIds.has(node.id)"
+              @toggle-select="toggleNodeSelection(node.id)"
               @edit="handleEdit(node.id)"
               @delete="handleDelete(node.id)"
           />
