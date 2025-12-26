@@ -304,24 +304,24 @@ onUnmounted(() => {
         <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ manualNodes.length }}</span>
         
         <!-- Mobile Color Filter -->
-        <div class="flex md:hidden items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 ml-auto sm:ml-2">
-            <button 
-                @click="emit('set-color-filter', null)"
-                class="px-3 py-1 text-xs font-medium rounded-md transition-all"
-                :class="!activeColorFilter ? 'bg-white dark:bg-gray-700 shadow-xs text-gray-800 dark:text-white' : 'text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200'"
-            >全</button>
-            <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-            <button 
-                v-for="color in ['red', 'orange', 'green', 'blue']" 
-                :key="color"
-                @click="emit('set-color-filter', activeColorFilter === color ? null : color)"
-                class="w-6 h-6 mx-0.5 rounded-full flex items-center justify-center transition-transform"
-                :class="[
-                    `bg-${color}-500`,
-                    activeColorFilter === color ? 'ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-gray-900 scale-110' : 'opacity-60'
-                ]"
-            ></button>
-        </div>
+            <div class="flex md:hidden items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 ml-auto sm:ml-2">
+                <button 
+                    @click="emit('set-color-filter', null)"
+                    class="px-3 py-1 text-xs font-medium rounded-md transition-all !min-w-0 !min-h-0"
+                    :class="!activeColorFilter ? 'bg-white dark:bg-gray-700 shadow-xs text-gray-800 dark:text-white' : 'text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200'"
+                >全</button>
+                <div class="w-px h-3 bg-gray-300 dark:bg-gray-600 mx-0.5"></div>
+                <button 
+                    v-for="color in ['red', 'orange', 'green', 'blue']" 
+                    :key="color"
+                    @click="emit('set-color-filter', activeColorFilter === color ? null : color)"
+                    class="w-6 h-6 mx-0.5 rounded-full flex items-center justify-center transition-transform !min-w-0 !min-h-0"
+                    :class="[
+                        `bg-${color}-500`,
+                        activeColorFilter === color ? 'ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-gray-900 scale-110' : 'opacity-60'
+                    ]"
+                ></button>
+            </div>
 
         <span v-if="localSearchTerm" class="px-2.5 py-0.5 text-sm font-semibold text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-500/20 rounded-full w-full sm:w-auto mt-2 sm:mt-0">
           搜索: "{{ localSearchTerm }}" ({{ filteredNodes.length }}/{{ manualNodes.length }})
@@ -404,34 +404,34 @@ onUnmounted(() => {
             
             <div class="flex items-center justify-between w-full sm:w-auto gap-4">
                 <span class="text-sm font-medium text-gray-600 dark:text-gray-300 whitespace-nowrap">已选 {{ selectedNodeIds.size }}</span>
-                
-                <!-- Mobile Only Cancel Button (Top Right) -->
-                <button @click="selectedNodeIds.clear(); isSelectionMode = false" class="sm:hidden text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md">取消</button>
             </div>
 
-            <div class="h-px w-full sm:w-px sm:h-4 bg-gray-200 dark:bg-gray-600 flex-shrink-0"></div>
+            <div class="h-px w-full sm:w-px sm:h-4 bg-gray-200 dark:bg-gray-600 flex-shrink-0 hidden sm:block"></div>
 
-            <div class="flex items-center justify-center w-full sm:w-auto gap-2 sm:gap-3 overflow-x-auto">
-                <span class="text-xs text-gray-500 hidden sm:inline">标记:</span>
-                <div class="flex items-center gap-2">
-                    <button v-for="color in ['red', 'orange', 'green', 'blue']" :key="color" 
-                        @click="handleBatchColor(color)"
-                        class="w-6 h-6 sm:w-6 sm:h-6 rounded-full hover:scale-110 transition-transform ring-1 ring-black/5"
-                        :class="`bg-${color}-500 shadow-sm`"
-                    ></button>
+            <div class="flex flex-col sm:flex-row items-center justify-between w-full sm:w-auto gap-3 sm:gap-2">
+                <!-- Colors (Scrollable area if needed, but now has full width) -->
+                <div class="flex items-center justify-center w-full sm:w-auto gap-2 sm:gap-3 overflow-x-auto no-scrollbar mask-gradient">
+                    <span class="text-xs text-gray-500 hidden sm:inline">标记:</span>
+                    <div class="flex items-center gap-3 sm:gap-2">
+                        <button v-for="color in ['red', 'orange', 'green', 'blue']" :key="color" 
+                            @click="handleBatchColor(color)"
+                            class="w-6 h-6 sm:w-6 sm:h-6 rounded-full hover:scale-110 transition-transform ring-1 ring-black/5"
+                            :class="`bg-${color}-500 shadow-sm`"
+                        ></button>
+                    </div>
+                    <div class="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-1 hidden sm:block"></div>
+                    <button @click="handleBatchColor(null)" class="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 whitespace-nowrap px-1 py-1 sm:px-0">清除颜色</button>
                 </div>
-                <div class="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-1"></div>
-                <button @click="handleBatchColor(null)" class="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 whitespace-nowrap">清除颜色</button>
-                <div class="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-1"></div>
-                <button @click="handleBatchDelete" class="text-xs text-red-500 hover:text-red-700 font-medium whitespace-nowrap flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                    删除
-                </button>
+                
+                <!-- Fixed Actions (Bottom row on mobile, Right side on desktop) -->
+                 <div class="flex items-center justify-center w-full sm:w-auto gap-4 sm:gap-2 shrink-0 sm:ml-1 sm:pl-2 sm:border-l border-gray-200 dark:border-gray-600 pt-1 sm:pt-0 border-t sm:border-t-0 w-full sm:w-auto">
+                    <button @click="handleBatchDelete" class="text-xs text-red-500 hover:text-red-700 font-medium whitespace-nowrap flex items-center gap-1 px-2 py-1 bg-red-50 sm:bg-transparent rounded-md sm:rounded-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                        删除
+                    </button>
+                    <button @click="selectedNodeIds.clear(); isSelectionMode = false" class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white whitespace-nowrap px-2 py-1 bg-gray-100 sm:bg-transparent rounded-md sm:rounded-none">取消</button>
+                 </div>
             </div>
-            
-             <div class="hidden sm:block h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
-             <!-- Desktop Cancel -->
-             <button @click="selectedNodeIds.clear(); isSelectionMode = false" class="hidden sm:block text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white whitespace-nowrap">取消</button>
         </div>
     </Transition>
     <div v-if="manualNodes.length > 0">
