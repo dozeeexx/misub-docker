@@ -16,6 +16,7 @@ const localProfile = ref({});
 const subscriptionSearchTerm = ref('');
 const nodeSearchTerm = ref('');
 const activeManualNodeColorFilter = ref(null);
+const showAdvanced = ref(false);
 
 // 国家/地区代码到旗帜和中文名称的映射
 const countryCodeMap = {
@@ -247,104 +248,119 @@ const handleDeselectAll = (listName, sourceArray) => {
               >
                <p class="text-xs text-gray-400 mt-1">设置后，订阅链接会更短，如 /token/home</p>
             </div>
-            <div>
-              <label for="profile-subconverter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                自定义后端 (可选)
-              </label>
-              <input
-                type="text"
-                id="profile-subconverter"
-                v-model="localProfile.subConverter"
-                placeholder="留空则使用全局设置"
-                class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
-              >
-              <p class="text-xs text-gray-400 mt-1">为此订阅组指定一个独立的 SubConverter 后端地址。</p>
-            </div>
-            <div>
-              <label for="profile-subconfig" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                自定义远程配置 (可选)
-              </label>
-              <input
-                type="text"
-                id="profile-subconfig"
-                v-model="localProfile.subConfig"
-                placeholder="留空则使用全局设置"
-                class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
-              >
-              <p class="text-xs text-gray-400 mt-1">为此订阅组指定一个独立的 Subconverter 配置文件。</p>
-            </div>
-            <div>
-              <label for="profile-expires-at" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                到期时间 (可选)
-              </label>
-              <input
-                type="date"
-                id="profile-expires-at"
-                v-model="localProfile.expiresAt"
-                class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
-              >
-              <p class="text-xs text-gray-400 mt-1">设置此订阅组的到期时间，到期后将返回默认节点。</p>
-            </div>
+        </div>
+
+        <!-- Advanced Settings Toggle -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <button 
+                type="button" 
+                @click="showAdvanced = !showAdvanced"
+                class="flex items-center text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 focus:outline-hidden"
+            >
+                <span>高级设置</span>
+                <svg :class="{'rotate-180': showAdvanced}" class="w-4 h-4 ml-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
             
-            <!-- 前缀设置部分 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">前缀设置 (可选)</label>
-              <div class="space-y-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">手动节点前缀</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">覆盖全局设置，控制是否为手动节点添加前缀</p>
-                  </div>
-                  <select 
-                    v-model="localProfile.prefixSettings.enableManualNodes" 
-                    class="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-                  >
-                    <option :value="null">使用全局设置</option>
-                    <option :value="true">启用</option>
-                    <option :value="false">禁用</option>
-                  </select>
+            <div v-show="showAdvanced" class="mt-4 space-y-4 animate-fade-in-down">
+                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                    <label for="profile-subconverter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        自定义后端 (可选)
+                    </label>
+                    <input
+                        type="text"
+                        id="profile-subconverter"
+                        v-model="localProfile.subConverter"
+                        placeholder="留空则使用全局设置"
+                        class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+                    >
+                    <p class="text-xs text-gray-400 mt-1">为此订阅组指定一个独立的 SubConverter 后端地址。</p>
+                    </div>
+                    <div>
+                    <label for="profile-subconfig" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        自定义远程配置 (可选)
+                    </label>
+                    <input
+                        type="text"
+                        id="profile-subconfig"
+                        v-model="localProfile.subConfig"
+                        placeholder="留空则使用全局设置"
+                        class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+                    >
+                    <p class="text-xs text-gray-400 mt-1">为此订阅组指定一个独立的 Subconverter 配置文件。</p>
+                    </div>
+                    <div>
+                    <label for="profile-expires-at" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        到期时间 (可选)
+                    </label>
+                    <input
+                        type="date"
+                        id="profile-expires-at"
+                        v-model="localProfile.expiresAt"
+                        class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+                    >
+                    <p class="text-xs text-gray-400 mt-1">设置此订阅组的到期时间，到期后将返回默认节点。</p>
+                    </div>
+                 </div>
+
+                <!-- Prefix Settings -->
+                <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-100 dark:border-gray-700">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">前缀设置 (覆盖全局)</label>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">手动节点前缀</span>
+                                    <select 
+                                        v-model="localProfile.prefixSettings.enableManualNodes" 
+                                        class="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                                    >
+                                        <option :value="null">默认</option>
+                                        <option :value="true">启用</option>
+                                        <option :value="false">禁用</option>
+                                    </select>
+                                </div>
+                                <input 
+                                    v-if="localProfile.prefixSettings.enableManualNodes === true"
+                                    type="text" 
+                                    v-model="localProfile.prefixSettings.manualNodePrefix" 
+                                    placeholder="自定义前缀"
+                                    class="block w-full px-2 py-1 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                                >
+                            </div>
+                            
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">订阅节点前缀</span>
+                                    <select 
+                                        v-model="localProfile.prefixSettings.enableSubscriptions" 
+                                        class="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                                    >
+                                        <option :value="null">默认</option>
+                                        <option :value="true">启用</option>
+                                        <option :value="false">禁用</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">节点国旗 Emoji</span>
+                                    <select
+                                        v-model="localProfile.prefixSettings.enableNodeEmoji"
+                                        class="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                                    >
+                                        <option :value="null">默认</option>
+                                        <option :value="true">启用</option>
+                                        <option :value="false">禁用</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div v-if="localProfile.prefixSettings.enableManualNodes === true" class="ml-4">
-                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">自定义手动节点前缀</label>
-                  <input 
-                    type="text" 
-                    v-model="localProfile.prefixSettings.manualNodePrefix" 
-                    placeholder="留空使用全局设置"
-                    class="block w-full px-2 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-                  >
-                </div>
-                
-                <div class="flex items-center justify-between">
-                  <div>
-                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">机场订阅前缀</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">覆盖全局设置，控制是否为订阅节点添加前缀</p>
-                  </div>
-                  <select 
-                    v-model="localProfile.prefixSettings.enableSubscriptions" 
-                    class="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-                  >
-                    <option :value="null">使用全局设置</option>
-                    <option :value="true">启用</option>
-                    <option :value="false">禁用</option>
-                  </select>
-                </div>
-                <div class="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-600 mt-2">
-                  <div>
-                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">节点国旗 Emoji</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">是否为此订阅组添加国旗图标</p>
-                  </div>
-                  <select
-                    v-model="localProfile.prefixSettings.enableNodeEmoji"
-                    class="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-                  >
-                    <option :value="null">使用全局设置</option>
-                    <option :value="true">启用</option>
-                    <option :value="false">禁用</option>
-                  </select>
-                </div>
-              </div>
-              <p class="text-xs text-gray-400 mt-1">单独为此订阅组配置前缀设置，优先级高于全局设置。</p>
             </div>
         </div>
 
@@ -400,7 +416,7 @@ const handleDeselectAll = (listName, sourceArray) => {
               <div class="flex items-center gap-2 mb-2 bg-gray-50 dark:bg-gray-800/50 p-1.5 rounded-lg border border-gray-100 dark:border-gray-700/50">
                 <button 
                   @click="activeManualNodeColorFilter = null"
-                  class="px-2 py-0.5 text-xs font-medium rounded-md transition-all border"
+                  class="px-3 py-1 text-xs font-medium rounded-md transition-all border !min-w-0 !min-h-0"
                   :class="!activeManualNodeColorFilter ? 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 shadow-xs text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
                 >全部</button>
                 <div class="w-px h-3 bg-gray-200 dark:bg-gray-600 mx-1"></div>
@@ -408,7 +424,7 @@ const handleDeselectAll = (listName, sourceArray) => {
                   v-for="color in ['red', 'orange', 'green', 'blue']" 
                   :key="color"
                   @click="activeManualNodeColorFilter = activeManualNodeColorFilter === color ? null : color"
-                  class="w-4 h-4 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+                  class="w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 !min-w-0 !min-h-0"
                   :class="[
                     `bg-${color}-500`,
                     activeManualNodeColorFilter === color ? 'ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-gray-900 scale-110' : 'opacity-70 hover:opacity-100'
