@@ -266,7 +266,7 @@ export async function handleMisubRequest(context) {
     // [Log Deduplication] Skip logging for internal backend requests and Telegram bots
     const shouldSkipLogging = userAgentHeader.includes('MiSub-Backend') || userAgentHeader.includes('TelegramBot');
 
-    if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
+    if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
         const country = request.headers.get('CF-IPCountry') || 'N/A';
         const domain = url.hostname;
@@ -285,23 +285,21 @@ export async function handleMisubRequest(context) {
         // 使用增强版TG通知，包含IP地理位置信息
         context.waitUntil(sendEnhancedTgNotification(config, '🛰️ *订阅被访问*', clientIp, additionalData));
 
-        // 记录访问日志 (如果开启)
-        if (config.enableAccessLog) {
-            const logEntry = {
-                ip: clientIp,
-                country: country,
-                domain: domain,
-                userAgent: userAgentHeader,
-                format: targetFormat,
-                token: profileIdentifier ? (profileIdentifier) : token,
-                type: profileIdentifier ? 'profile' : 'token',
-                timestamp: Date.now()
-            };
-            if (profileIdentifier) {
-                logEntry.name = subName;
-            }
-            context.waitUntil(LogService.addLog(env, logEntry));
+        // 记录访问日志
+        const logEntry = {
+            ip: clientIp,
+            country: country,
+            domain: domain,
+            userAgent: userAgentHeader,
+            format: targetFormat,
+            token: profileIdentifier ? (profileIdentifier) : token,
+            type: profileIdentifier ? 'profile' : 'token',
+            timestamp: Date.now()
+        };
+        if (profileIdentifier) {
+            logEntry.name = subName;
         }
+        context.waitUntil(LogService.addLog(env, logEntry));
     }
 
     let prependedContentForSubconverter = '';
@@ -439,6 +437,7 @@ export async function handleMisubRequest(context) {
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
+
         // 添加缓存状态头
         Object.entries(cacheHeaders).forEach(([key, value]) => {
             responseHeaders.set(key, value);
