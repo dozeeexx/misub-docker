@@ -161,7 +161,7 @@ function extractServerPort(url, protocol) {
                 return { server: parsed.hostname, port: parsed.port || '' };
             }
         }
-    } catch {}
+    } catch { }
 
     try {
         const main = url.split('#')[0];
@@ -173,7 +173,7 @@ function extractServerPort(url, protocol) {
             try {
                 const decoded = base64Decode(rest);
                 if (decoded.includes('@')) rest = decoded;
-            } catch {}
+            } catch { }
         }
 
         const at = rest.lastIndexOf('@');
@@ -264,6 +264,7 @@ function normalizeConfig(cfg) {
 
     return {
         enabled: Boolean(config.enabled),
+        enableEmoji: config.enableEmoji !== false,
         rename: {
             regex: {
                 enabled: Boolean(regex.enabled),
@@ -308,7 +309,7 @@ function applyRegexRename(name, rules) {
         try {
             const re = new RegExp(rule.pattern, rule.flags || 'g');
             result = result.replace(re, rule.replacement || '');
-        } catch {}
+        } catch { }
     }
     return result.trim();
 }
@@ -480,7 +481,7 @@ export function applyNodeTransformPipeline(nodeUrls, transformConfig = {}) {
     if (needRegionEmoji) {
         records = records.map(r => {
             const region = extractNodeRegion(r.name);
-            const emoji = getRegionEmoji(region);
+            const emoji = cfg.enableEmoji ? getRegionEmoji(region) : '';
             return { ...r, region, emoji };
         });
     }

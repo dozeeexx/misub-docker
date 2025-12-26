@@ -140,6 +140,10 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         config.prefixConfig?.enableManualNodes ??
         config.prependSubName ?? true;
 
+    const shouldAddEmoji = profilePrefixSettings?.enableNodeEmoji ??
+        config.prefixConfig?.enableNodeEmoji ??
+        true;
+
     // 手动节点前缀文本
     const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ??
         config.prefixConfig?.manualNodePrefix ??
@@ -270,7 +274,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
 
     const nodeTransformConfig = profilePrefixSettings?.nodeTransform ?? config.nodeTransform;
     const outputLines = nodeTransformConfig?.enabled
-        ? applyNodeTransformPipeline(combinedLines, nodeTransformConfig)
+        ? applyNodeTransformPipeline(combinedLines, { ...nodeTransformConfig, enableEmoji: shouldAddEmoji })
         : [...new Set(combinedLines)];
     const uniqueNodesString = outputLines.join('\n');
 

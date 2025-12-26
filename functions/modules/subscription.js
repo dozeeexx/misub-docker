@@ -304,7 +304,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
 
     const nodeTransformConfig = profilePrefixSettings?.nodeTransform ?? config.nodeTransform;
     const outputLines = nodeTransformConfig?.enabled
-        ? applyNodeTransformPipeline(combinedLines, nodeTransformConfig)
+        ? applyNodeTransformPipeline(combinedLines, { ...nodeTransformConfig, enableEmoji: shouldAddEmoji })
         : [...new Set(combinedLines)];
     const uniqueNodesString = outputLines.join('\n');
 
