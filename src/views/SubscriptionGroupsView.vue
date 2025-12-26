@@ -203,7 +203,7 @@ const handleBulkImport = (importText, colorTag) => {
         v-if="showBulkImportModal" 
         :show="showBulkImportModal" 
         @update:show="showBulkImportModal = $event"
-        @import="handleBulkImport"
+        @import="(txt, tag) => handleBulkImport(txt, tag)"
     />
 
     <NodePreviewModal
