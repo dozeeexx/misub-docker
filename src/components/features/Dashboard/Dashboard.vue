@@ -61,7 +61,7 @@ const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes, deduplicateNodes,
-  reorderManualNodes, 
+  reorderManualNodes, activeColorFilter, setColorFilter, batchUpdateColor, batchDeleteNodes
 } = useManualNodes(markDirty);
 
 const {
@@ -83,6 +83,8 @@ const showDeleteSubsModal = ref(false);
 const showDeleteNodesModal = ref(false);
 const showSubscriptionImportModal = ref(false);
 const showLogModal = ref(false);
+const showBatchDeleteModal = ref(false);
+const batchDeleteIds = ref([]);
 
 // 节点预览相关状态
 const showNodePreviewModal = ref(false);
@@ -189,6 +191,19 @@ const handleAutoSortNodes = () => {
 const handleDeduplicateNodes = () => {
     deduplicateNodes();
     showToast('已完成去重，请手动保存', 'success');
+};
+
+const handleBatchDeleteRequest = (ids) => {
+    if (ids && ids.length > 0) {
+        batchDeleteIds.value = ids;
+        showBatchDeleteModal.value = true;
+    }
+};
+
+const confirmBatchDelete = () => {
+    batchDeleteNodes(batchDeleteIds.value);
+    batchDeleteIds.value = [];
+    showBatchDeleteModal.value = false;
 };
 
 // 节点预览处理函数
@@ -451,6 +466,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           :is-sorting="isSortingNodes"
           :search-term="searchTerm"
           :view-mode="manualNodeViewMode"
+          :active-color-filter="activeColorFilter"
           @add="handleAddNode"
           @delete="handleDeleteNodeWithCleanup"
           @edit="handleEditNode"
@@ -464,6 +480,9 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           @import="showSubscriptionImportModal = true"
           @delete-all="showDeleteNodesModal = true"
           @reorder="reorderManualNodes"
+          @set-color-filter="setColorFilter"
+          @batch-update-color="batchUpdateColor"
+          @batch-delete-nodes="handleBatchDeleteRequest"
         />
       </div>
       
@@ -489,6 +508,10 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
   <LogModal v-model:show="showLogModal" />
   <Modal v-model:show="showDeleteSubsModal" @confirm="handleDeleteAllSubscriptionsWithCleanup"><template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**订阅**吗？此操作将标记为待保存，不会影响手动节点。</p></template></Modal>
   <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodesWithCleanup"><template #title><h3 class="text-lg font-bold text-red-500">确认清空节点</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**手动节点**吗？此操作将标记为待保存，不会影响订阅。</p></template></Modal>
+  <Modal v-model:show="showBatchDeleteModal" @confirm="confirmBatchDelete">
+      <template #title><h3 class="text-lg font-bold text-red-500">确认批量删除</h3></template>
+      <template #body><p class="text-sm text-gray-600 dark:text-gray-300">您确定要删除选中的 <span class="font-bold border-b border-red-500">{{ batchDeleteIds.length }}</span> 个节点吗？此操作不可恢复。</p></template>
+  </Modal>
   <Modal v-model:show="showDeleteProfilesModal" @confirm="handleDeleteAllProfiles"><template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅组</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**订阅组**吗？此操作不可逆。</p></template></Modal>
   
   <ProfileModal v-if="showProfileModal" v-model:show="showProfileModal" :profile="editingProfile" :is-new="isNewProfile" :all-subscriptions="subscriptions" :all-manual-nodes="manualNodes" @save="handleSaveProfile" size="2xl" />
