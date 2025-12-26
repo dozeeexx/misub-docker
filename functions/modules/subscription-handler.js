@@ -437,6 +437,7 @@ export async function handleMisubRequest(context) {
         responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
         responseHeaders.set('Cache-Control', 'no-store, no-cache');
+
         // 添加缓存状态头
         Object.entries(cacheHeaders).forEach(([key, value]) => {
             responseHeaders.set(key, value);

@@ -292,7 +292,8 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
 
     // --- 日志记录 ---
     try {
-        if (!debug) { // 避免递归调试日志
+        const isInternalRequest = userAgent.includes('MiSub-Backend') || userAgent.includes('TelegramBot');
+        if (!debug && config.enableAccessLog && !isInternalRequest) { // 避免递归调试日志，并遵循全局日志设置
             const { LogService } = await import('./log-service.js');
             const endTime = Date.now();
 
