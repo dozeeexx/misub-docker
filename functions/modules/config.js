@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS = {
         manualNodePrefix: '手动节点',
         enableNodeEmoji: true
     },
+    enableAccessLog: false,
     nodeTransform: {
         enabled: false,
         rename: {
