@@ -292,10 +292,25 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
 
     // --- 日志记录 ---
     try {
+        const endTime = Date.now();
+        const totalNodes = outputLines.length;
+        const successCount = processedSubContents.filter(c => c.length > 0).length;
+        const failCount = httpSubs.length - successCount;
+
+        // [Stats Export] Populate generation stats to context for use by handler (deferred logging)
+        if (context) {
+            context.generationStats = {
+                totalNodes,
+                sourceCount: httpSubs.length,
+                successCount,
+                failCount,
+                duration: endTime - (context.startTime || Date.now())
+            };
+        }
+
         const isInternalRequest = userAgent.includes('MiSub-Backend') || userAgent.includes('TelegramBot');
         if (!debug && config.enableAccessLog && !isInternalRequest) { // 避免递归调试日志，并遵循全局日志设置
             const { LogService } = await import('./log-service.js');
-            const endTime = Date.now();
 
             // 提取客户信息
             let clientIp = 'Unknown';
@@ -315,22 +330,6 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                         asn: cf.asn
                     };
                 }
-            }
-
-            // 统计信息
-            const totalNodes = outputLines.length;
-            const successCount = processedSubContents.filter(c => c.length > 0).length;
-            const failCount = httpSubs.length - successCount;
-
-            // [Stats Export] Populate generation stats to context for use by handler (deferred logging)
-            if (context) {
-                context.generationStats = {
-                    totalNodes,
-                    sourceCount: httpSubs.length,
-                    successCount,
-                    failCount,
-                    duration: endTime - (context.startTime || Date.now())
-                };
             }
 
             await LogService.addLog(context.env, {
