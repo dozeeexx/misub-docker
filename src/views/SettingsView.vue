@@ -210,10 +210,10 @@ onMounted(() => {
     <div class="md:grid md:grid-cols-12 md:gap-6">
       
       <!-- Sidebar -->
-      <aside class="md:col-span-3 mb-6 md:mb-0">
-        <div class="sticky top-0">
-            <div class="bg-white dark:bg-gray-800 shadow-xs rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700">
-               <div class="p-2 space-y-1">
+      <aside class="md:col-span-3 mb-4 md:mb-0">
+        <div class="sticky top-0 z-20">
+            <div class="bg-transparent md:bg-white md:dark:bg-gray-800 md:shadow-xs md:rounded-lg md:overflow-hidden md:border md:border-gray-100 md:dark:border-gray-700">
+               <div class="md:p-2 md:space-y-1">
                  <SettingsSidebar v-model:activeTab="activeTab" />
                </div>
             </div>
@@ -231,10 +231,7 @@ onMounted(() => {
         </div>
         
         <div v-else class="bg-white dark:bg-gray-800 shadow-xs rounded-lg border border-gray-100 dark:border-gray-700 min-h-[500px] flex flex-col">
-            <!-- Header for Mobile -->
-            <div class="md:hidden px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-               <h2 class="text-lg font-medium text-gray-900 dark:text-white">{{ currentTabLabel }}</h2>
-            </div>
+            <!-- Header for Mobile (Removed as tabs are now visible) -->
 
             <!-- Scrollable Content -->
             <div class="flex-1 p-6">

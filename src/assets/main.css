@@ -792,3 +792,12 @@ html {
 .animate-fade-in-down {
   animation: fade-in-down 0.3s ease-out;
 }
+
+/* Utility to hide scrollbar but allow scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
