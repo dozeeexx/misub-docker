@@ -68,7 +68,7 @@ const trafficStats = computed(() => {
 const showBulkImportModal = ref(false);
 const BulkImportModal = defineAsyncComponent(() => import('../components/modals/BulkImportModal.vue'));
 
-const handleBulkImport = (importText) => {
+const handleBulkImport = (importText, colorTag) => {
     if (!importText) return;
     
     // Split by newlines and filter empty lines
@@ -83,6 +83,7 @@ const handleBulkImport = (importText) => {
             url: line,
             enabled: true,
             status: 'unchecked',
+            colorTag: colorTag || null,
             // Default fields for subscriptions
             exclude: '', 
             customUserAgent: '', 
@@ -253,7 +254,7 @@ const LogModal = defineAsyncComponent(() => import('../components/modals/LogModa
           v-if="showBulkImportModal" 
           :show="showBulkImportModal" 
           @update:show="showBulkImportModal = $event"
-          @import="handleBulkImport"
+          @import="(txt, tag) => handleBulkImport(txt, tag)"
       />
 
       <ProfileModal 
