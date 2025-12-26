@@ -89,7 +89,7 @@ const handlePreviewSubscription = (subscriptionId) => {
 
 // Bulk Import Logic
 const BulkImportModal = defineAsyncComponent(() => import('../components/modals/BulkImportModal.vue'));
-const handleBulkImport = (importText) => {
+const handleBulkImport = (importText, colorTag) => {
     if (!importText) return;
     
     // Split by newlines and filter empty lines
@@ -104,6 +104,7 @@ const handleBulkImport = (importText) => {
             url: line,
             enabled: true,
             status: 'unchecked',
+            colorTag: colorTag || null,
             // Default fields for subscriptions
             exclude: '', 
             customUserAgent: '', 

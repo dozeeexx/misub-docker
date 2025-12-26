@@ -287,12 +287,12 @@ const importBackup = () => {
   };
   input.click();
 };
-const handleBulkImport = (importText) => {
+const handleBulkImport = (importText, colorTag) => {
   if (!importText) return;
   const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
   const newSubs = [], newNodes = [];
   for (const line of lines) {
-      const newItem = { id: crypto.randomUUID(), name: extractNodeName(line) || '未命名', url: line, enabled: true, status: 'unchecked' };
+      const newItem = { id: crypto.randomUUID(), name: extractNodeName(line) || '未命名', url: line, enabled: true, status: 'unchecked', colorTag: colorTag || null };
       if (/^https?:\/\//.test(line)) {
           newSubs.push(newItem);
       } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line)) {
