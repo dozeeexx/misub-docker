@@ -91,7 +91,7 @@ const colorTagClass = computed(() => {
 
     <div class="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
       <!-- Color Dot -->
-      <div v-if="colorTagClass" class="w-2.5 h-2.5 rounded-full mobile-color-dot" :class="colorTagClass"></div>
+      <div class="w-2.5 h-2.5 rounded-full mobile-color-dot shrink-0" :class="colorTagClass || 'opacity-0'"></div>
       
       <div 
         class="text-xs font-bold px-2 py-0.5 rounded-full shrink-0"

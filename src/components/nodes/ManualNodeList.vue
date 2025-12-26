@@ -99,8 +99,8 @@ const colorTagClass = computed(() => {
       </span>
     </div>
     
-     <!-- Color Dot -->
-    <div v-if="colorTagClass" class="w-2.5 h-2.5 rounded-full shrink-0" :class="colorTagClass"></div>
+    <!-- Color Dot -->
+    <div class="w-2.5 h-2.5 rounded-full shrink-0" :class="colorTagClass || 'opacity-0'"></div>
 
     <div class="shrink-0 w-20 text-center">
       <div
