@@ -2,8 +2,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { useDataStore } from '../stores/useDataStore.js';
 import { useToastStore } from '../stores/toast.js';
-import { fetchSettings, saveSettings, migrateToD1 } from '../lib/api.js';
+import { fetchSettings, saveSettings } from '../lib/api.js';
 import { useManualNodes } from '../composables/useManualNodes.js';
+import MigrationModal from '../components/modals/MigrationModal.vue';
 
 import SettingsSidebar from '../components/settings/SettingsSidebar.vue';
 import BasicSettings from '../components/settings/sections/BasicSettings.vue';
@@ -20,10 +21,10 @@ const { manualNodes } = useManualNodes(() => {});
 const activeTab = ref('basic');
 const isLoading = ref(false);
 const isSaving = ref(false);
-const isMigrating = ref(false);
+const showMigrationModal = ref(false);
 const settings = ref({});
 
-// Nested configuration objects - managed here to pass down
+// Nested configuration objects
 const prefixConfig = ref({
   enableManualNodes: true,
   enableSubscriptions: true,
@@ -133,22 +134,13 @@ const handleSave = async () => {
   }
 };
 
-const handleMigrateToD1 = async () => {
-  if (!confirm('确定要将数据从 KV 迁移到 D1 数据库吗？此操作不可逆。')) return;
-  isMigrating.value = true;
-  try {
-    const result = await migrateToD1();
-    if (result.success) {
-      showToast('数据迁移成功！请切换存储类型为 D1', 'success');
-      settings.value.storageType = 'd1';
-    } else {
-      throw new Error(result.message || '迁移失败');
-    }
-  } catch (err) {
-    showToast(`迁移失败: ${err.message}`, 'error');
-  } finally {
-    isMigrating.value = false;
-  }
+const handleOpenMigrationModal = () => {
+    showMigrationModal.value = true;
+};
+
+const handleMigrationSuccess = () => {
+    settings.value.storageType = 'd1';
+    showToast('数据迁移成功！系统已切换为 D1 存储', 'success');
 };
 
 // Backup Logic
@@ -250,7 +242,7 @@ onMounted(() => {
                 <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
                 <ProcessingSettings v-show="activeTab === 'pipeline'" :settings="settings" :prefixConfig="prefixConfig" v-model:nodeTransform="nodeTransform" />
                 <WebSettings v-show="activeTab === 'web'" :disguiseConfig="disguiseConfig" />
-                <SystemSettings v-show="activeTab === 'system'" :settings="settings" :isMigrating="isMigrating" :exportBackup="exportBackup" :importBackup="importBackup" @migrate="handleMigrateToD1" />
+                <SystemSettings v-show="activeTab === 'system'" :settings="settings" :exportBackup="exportBackup" :importBackup="importBackup" @migrate="handleOpenMigrationModal" />
             </div>
 
             <!-- Footer Actions -->
@@ -271,5 +263,8 @@ onMounted(() => {
         </div>
       </main>
     </div>
+
+    <!-- Modals -->
+    <MigrationModal v-model:show="showMigrationModal" @success="handleMigrationSuccess" />
   </div>
 </template>

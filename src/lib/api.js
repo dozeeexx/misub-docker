@@ -229,7 +229,12 @@ export async function migrateToD1() {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             const errorMessage = errorData.message || errorData.error || `服务器错误 (${response.status})`;
-            return { success: false, message: errorMessage };
+            // Pass through details if available (e.g. for migration errors)
+            return {
+                success: false,
+                message: errorMessage,
+                details: errorData.details || errorData.errors
+            };
         }
 
         const result = await response.json();
