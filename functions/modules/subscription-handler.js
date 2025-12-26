@@ -168,9 +168,10 @@ export async function handleMisubRequest(context) {
             effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;
 
             // [新增] 增加订阅组下载计数
-            // 仅在非回调请求时增加计数(避免重复计数)
+            // 仅在非回调请求时及非内部请求时增加计数(避免重复计数)
             // 且仅当开启访问日志时才计数
-            if (!url.searchParams.has('callback_token') && config.enableAccessLog) {
+            const shouldSkipLogging = userAgentHeader.includes('MiSub-Backend') || userAgentHeader.includes('TelegramBot');
+            if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
                 try {
                     // 初始化下载计数(如果不存在)
                     if (typeof profile.downloadCount !== 'number') {
@@ -262,7 +263,10 @@ export async function handleMisubRequest(context) {
     }
     if (!targetFormat) { targetFormat = 'base64'; }
 
-    if (!url.searchParams.has('callback_token')) {
+    // [Log Deduplication] Skip logging for internal backend requests and Telegram bots
+    const shouldSkipLogging = userAgentHeader.includes('MiSub-Backend') || userAgentHeader.includes('TelegramBot');
+
+    if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
         const country = request.headers.get('CF-IPCountry') || 'N/A';
         const domain = url.hostname;
@@ -423,7 +427,7 @@ export async function handleMisubRequest(context) {
     try {
         const subconverterResponse = await fetch(subconverterUrl.toString(), {
             method: 'GET',
-            headers: { 'User-Agent': 'Mozilla/5.0' },
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MiSub-Backend)' },
         });
         if (!subconverterResponse.ok) {
             const errorBody = await subconverterResponse.text();

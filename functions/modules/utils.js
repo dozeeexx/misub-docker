@@ -309,6 +309,25 @@ export async function getCallbackToken(env) {
 export function migrateConfigSettings(config) {
     const migratedConfig = { ...config };
 
+    // [Fix] 强制转换为布尔值，防止 KV 中存储了字符串 "false" 导致判断错误
+    const toBoolean = (val) => {
+        if (typeof val === 'string') {
+            return val.toLowerCase() === 'true';
+        }
+        return !!val;
+    };
+
+    if (migratedConfig.hasOwnProperty('enableAccessLog')) {
+        migratedConfig.enableAccessLog = toBoolean(migratedConfig.enableAccessLog);
+    }
+    if (migratedConfig.hasOwnProperty('enableTrafficNode')) {
+        migratedConfig.enableTrafficNode = toBoolean(migratedConfig.enableTrafficNode);
+    }
+    if (migratedConfig.hasOwnProperty('prependSubName')) {
+        migratedConfig.prependSubName = toBoolean(migratedConfig.prependSubName);
+    }
+
+
     // 如果没有新的 prefixConfig，但有老的 prependSubName，则创建默认的 prefixConfig
     if (!migratedConfig.prefixConfig) {
         const fallbackEnabled = migratedConfig.prependSubName ?? true;
@@ -332,6 +351,11 @@ export function migrateConfigSettings(config) {
     if (!migratedConfig.prefixConfig.hasOwnProperty('enableNodeEmoji')) {
         migratedConfig.prefixConfig.enableNodeEmoji = true;
     }
+
+    // [Fix] Ensure prefixConfig booleans are also cleaning
+    migratedConfig.prefixConfig.enableManualNodes = toBoolean(migratedConfig.prefixConfig.enableManualNodes);
+    migratedConfig.prefixConfig.enableSubscriptions = toBoolean(migratedConfig.prefixConfig.enableSubscriptions);
+    migratedConfig.prefixConfig.enableNodeEmoji = toBoolean(migratedConfig.prefixConfig.enableNodeEmoji);
 
     return migratedConfig;
 }
