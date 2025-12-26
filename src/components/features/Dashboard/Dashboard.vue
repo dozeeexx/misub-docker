@@ -22,6 +22,7 @@ const SettingsModal = defineAsyncComponent(() => import('../../modals/SettingsMo
 const BulkImportModal = defineAsyncComponent(() => import('../../modals/BulkImportModal.vue'));
 const ProfileModal = defineAsyncComponent(() => import('../../modals/ProfileModal.vue'));
 const SubscriptionImportModal = defineAsyncComponent(() => import('../../modals/SubscriptionImportModal.vue'));
+const LogModal = defineAsyncComponent(() => import('../../modals/LogModal.vue'));
 const NodePreviewModal = defineAsyncComponent(() => import('../../modals/NodePreview/NodePreviewModal.vue'));
 
 // --- 基礎 Props 和狀態 ---
@@ -81,6 +82,7 @@ const showBulkImportModal = ref(false);
 const showDeleteSubsModal = ref(false);
 const showDeleteNodesModal = ref(false);
 const showSubscriptionImportModal = ref(false);
+const showLogModal = ref(false);
 
 // 节点预览相关状态
 const showNodePreviewModal = ref(false);
@@ -327,7 +329,7 @@ const handleSaveSubscription = () => {
 };
 const handleAddNode = () => {
   isNewNode.value = true;
-  editingNode.value = { id: crypto.randomUUID(), name: '', url: '', enabled: true };
+  editingNode.value = { id: crypto.randomUUID(), name: '', url: '', enabled: true, colorTag: null };
   showNodeModal.value = true;
 };
 const handleEditNode = (nodeId) => {
@@ -386,6 +388,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
         </span>
       </div>
       <div class="flex items-center gap-2">
+        <button @click="showLogModal = true" class="text-sm font-semibold px-4 py-2 rounded-lg text-gray-600 dark:text-gray-400 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">订阅日志</button>
         <button @click="showBulkImportModal = true" class="text-sm font-semibold px-4 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 border-2 border-indigo-500/50 hover:bg-indigo-500/10 transition-colors">批量导入</button>
       </div>
     </div>
@@ -483,6 +486,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
   </div>
 
   <BulkImportModal v-model:show="showBulkImportModal" @import="handleBulkImport" />
+  <LogModal v-model:show="showLogModal" />
   <Modal v-model:show="showDeleteSubsModal" @confirm="handleDeleteAllSubscriptionsWithCleanup"><template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**订阅**吗？此操作将标记为待保存，不会影响手动节点。</p></template></Modal>
   <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodesWithCleanup"><template #title><h3 class="text-lg font-bold text-red-500">确认清空节点</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**手动节点**吗？此操作将标记为待保存，不会影响订阅。</p></template></Modal>
   <Modal v-model:show="showDeleteProfilesModal" @confirm="handleDeleteAllProfiles"><template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅组</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**订阅组**吗？此操作不可逆。</p></template></Modal>
@@ -494,6 +498,31 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
     <template #body>
       <div class="space-y-4">
         <div><label for="node-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">节点名称</label><input type="text" id="node-name" v-model="editingNode.name" placeholder="（可选）不填将自动获取" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"></div>
+        
+        <!-- Color Tag Selection -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">颜色标签</label>
+            <div class="flex items-center gap-3">
+                <button 
+                    v-for="color in ['red', 'orange', 'green', 'blue']" 
+                    :key="color"
+                    @click="editingNode.colorTag = editingNode.colorTag === color ? null : color"
+                    class="w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center"
+                    :class="[
+                        editingNode.colorTag === color ? 'border-indigo-500 scale-110' : 'border-transparent hover:scale-105',
+                        `bg-${color}-500`
+                    ]"
+                >
+                     <svg v-if="editingNode.colorTag === color" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                </button>
+                <button 
+                    v-if="editingNode.colorTag"
+                    @click="editingNode.colorTag = null"
+                    class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 ml-2"
+                >清除</button>
+            </div>
+        </div>
+
         <div><label for="node-url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">节点链接</label><textarea id="node-url" v-model="editingNode.url" @input="handleNodeUrlInput" rows="4" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono dark:text-white"></textarea></div>
       </div>
     </template>
