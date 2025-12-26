@@ -378,31 +378,18 @@ export async function handleMisubRequest(context) {
         combinedNodeList = cachedData.nodes;
         cacheHeaders = createCacheHeaders('HIT', cachedData.nodeCount);
 
-        // Log Cache Hit (since generateCombinedNodeList is NOT called)
-        if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
-            const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
-            const country = request.headers.get('CF-IPCountry') || 'N/A';
-            const domain = url.hostname;
+        combinedNodeList = cachedData.nodes;
+        cacheHeaders = createCacheHeaders('HIT', cachedData.nodeCount);
 
-            context.waitUntil(LogService.addLog(env, {
-                profileName: subName || 'Unknown Profile',
-                clientIp,
-                geoInfo: { country, city: request.cf?.city, isp: request.cf?.asOrganization, asn: request.cf?.asn },
-                userAgent: userAgentHeader || 'Unknown',
-                status: 'success', // Cached is success
-                format: targetFormat,
-                token: profileIdentifier ? (profileIdentifier) : token,
-                type: profileIdentifier ? 'profile' : 'token',
-                domain,
-                details: {
-                    totalNodes: cachedData.nodeCount || 0,
-                    sourceCount: targetMisubs.length,
-                    successCount: cachedData.nodeCount || 0, // Assumption for cache
-                    failCount: 0,
-                    duration: 0 // Immediate return
-                },
-                summary: `缓存命中: 生成 ${cachedData.nodeCount || 0} 个节点`
-            }));
+        // [Stats Export] Populate generation stats from cache for deferred logging
+        if (context) {
+            context.generationStats = {
+                totalNodes: cachedData.nodeCount || 0,
+                sourceCount: targetMisubs.length,
+                successCount: cachedData.nodeCount || 0,
+                failCount: 0,
+                duration: 0
+            };
         }
     } else if ((cacheStatus === 'stale' || cacheStatus === 'expired') && cachedData) {
         // 有缓存：立即返回缓存数据，同时后台刷新确保下次获取最新
@@ -412,31 +399,18 @@ export async function handleMisubRequest(context) {
         // 触发后台刷新，确保缓存始终是最新的
         triggerBackgroundRefresh(context, () => refreshNodes(true));
 
-        // Log Cache Hit (Stale) - similar to Fresh
-        if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
-            const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
-            const country = request.headers.get('CF-IPCountry') || 'N/A';
-            const domain = url.hostname;
+        // 触发后台刷新，确保缓存始终是最新的
+        triggerBackgroundRefresh(context, () => refreshNodes(true));
 
-            context.waitUntil(LogService.addLog(env, {
-                profileName: subName || 'Unknown Profile',
-                clientIp,
-                geoInfo: { country, city: request.cf?.city, isp: request.cf?.asOrganization, asn: request.cf?.asn },
-                userAgent: userAgentHeader || 'Unknown',
-                status: 'success',
-                format: targetFormat,
-                token: profileIdentifier ? (profileIdentifier) : token,
-                type: profileIdentifier ? 'profile' : 'token',
-                domain,
-                details: {
-                    totalNodes: cachedData.nodeCount || 0,
-                    sourceCount: targetMisubs.length,
-                    successCount: cachedData.nodeCount || 0,
-                    failCount: 0,
-                    duration: 0
-                },
-                summary: `缓存命中(Stale): 生成 ${cachedData.nodeCount || 0} 个节点`
-            }));
+        // [Stats Export] Populate generation stats from cache for deferred logging
+        if (context) {
+            context.generationStats = {
+                totalNodes: cachedData.nodeCount || 0,
+                sourceCount: targetMisubs.length,
+                successCount: cachedData.nodeCount || 0,
+                failCount: 0,
+                duration: 0
+            };
         }
     } else {
         // 无缓存（首次访问或缓存已过期）：同步获取并缓存
