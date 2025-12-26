@@ -53,7 +53,7 @@ export const DEFAULT_SETTINGS = {
     },
     NotifyThresholdDays: 3,
     NotifyThresholdPercent: 90,
-    enableTrafficNode: true,
+    enableTrafficNode: false,
     storageType: 'kv'
 };
 
