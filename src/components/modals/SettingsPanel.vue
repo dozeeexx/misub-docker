@@ -4,6 +4,7 @@ import NodeTransformSettings from '../settings/NodeTransformSettings.vue';
 import MigrationModal from './MigrationModal.vue';
 import { useToastStore } from '../../stores/toast.js';
 import { fetchSettings, saveSettings } from '../../lib/api.js';
+import SubConverterSelector from '../forms/SubConverterSelector.vue';
 
 const props = defineProps({
   exportBackup: Function,
@@ -196,12 +197,22 @@ defineExpose({ handleSave });
         <h3 class="text-lg font-medium text-gray-900 dark:text-white border-b pb-2 dark:border-gray-700">外部服务</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">SubConverter后端地址</label>
-                <input type="text" v-model="settings.subConverter" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SubConverter后端地址</label>
+                <SubConverterSelector 
+                    v-model="settings.subConverter" 
+                    type="backend" 
+                    placeholder="选择后端地址" 
+                    :allowEmpty="false"
+                />
              </div>
              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">SubConverter配置文件</label>
-                <input type="text" v-model="settings.subConfig" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SubConverter配置文件</label>
+                <SubConverterSelector 
+                    v-model="settings.subConfig" 
+                    type="config" 
+                    placeholder="选择配置" 
+                    :allowEmpty="false"
+                />
              </div>
              <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Telegram Bot Token</label>
