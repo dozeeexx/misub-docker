@@ -197,50 +197,56 @@ export function getClientInfo(userAgent) {
     if (!userAgent) return { name: 'Unknown', className: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' };
     const ua = userAgent.toLowerCase();
 
-    // === Clash 系列客户端（按特异性从高到低排序，避免被通用 "clash" 匹配覆盖）===
-    // ClashX Pro - macOS 专业版
-    if (ua.includes('clashx pro')) return { name: 'ClashX Pro', className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' };
-    // ClashX - macOS 客户端
-    if (ua.includes('clashx')) return { name: 'ClashX', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' };
-    // Clash Verge (支持 clash-verge 和 clash.verge 两种格式)
-    if (ua.includes('clash-verge') || ua.includes('clash.verge') || ua.includes('verge')) return { name: 'Clash Verge', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' };
-    // Clash Nyanpasu
-    if (ua.includes('nyanpasu')) return { name: 'Nyanpasu', className: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300' };
-    // Clash Meta / Mihomo 核心
-    if (ua.includes('clash.meta') || ua.includes('clash-meta') || ua.includes('meta')) return { name: 'Clash Meta', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' };
-    // Mihomo (独立客户端)
-    if (ua.includes('mihomo')) return { name: 'Mihomo', className: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' };
-    // FlyClash - 飞翔Clash
-    if (ua.includes('flyclash')) return { name: 'FlyClash', className: 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' };
-    // 通用 Clash (作为兜底)
-    if (ua.includes('clash')) return { name: 'Clash', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' };
-
-    // === Karing - 新兴跨平台客户端 ===
+    // === 优先级最高：复合型客户端/内核 ===
+    // Karing - 包含 sing-box, mihomo 等关键字，必须最优先匹配
     if (ua.includes('karing')) return { name: 'Karing', className: 'bg-gradient-to-r from-pink-100 to-orange-100 text-pink-700 dark:from-pink-900/30 dark:to-orange-900/30 dark:text-pink-300' };
 
-    // === Sing-Box 系列 ===
-    if (ua.includes('sing-box') || ua.includes('singbox')) return { name: 'Sing-Box', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' };
-    // NekoBox - Sing-Box 图形化客户端
-    if (ua.includes('nekobox')) return { name: 'NekoBox', className: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300' };
-    // Nekoray - 跨平台图形化客户端
-    if (ua.includes('nekoray')) return { name: 'Nekoray', className: 'bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-900/20 dark:text-fuchsia-300' };
+    // Mihomo - 可能包含 ClashMeta，需优先于 Meta 匹配
+    if (ua.includes('mihomo')) return { name: 'Mihomo', className: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' };
 
-    // === iOS/macOS 客户端 ===
+    // === Sing-Box 衍生客户端 (需优先于通用 Sing-Box) ===
+    // NekoBox
+    if (ua.includes('nekobox')) return { name: 'NekoBox', className: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300' };
+    // Nekoray
+    if (ua.includes('nekoray')) return { name: 'Nekoray', className: 'bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-900/20 dark:text-fuchsia-300' };
+    // Hiddify
+    if (ua.includes('hiddify')) return { name: 'Hiddify', className: 'bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-300' };
+
+    // === Clash 具体变种 (按特异性排序) ===
+    // ClashX Pro
+    if (ua.includes('clashx pro')) return { name: 'ClashX Pro', className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' };
+    // ClashX
+    if (ua.includes('clashx')) return { name: 'ClashX', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' };
+    // Clash Verge
+    if (ua.includes('clash-verge') || ua.includes('clash.verge') || ua.includes('verge')) return { name: 'Clash Verge', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' };
+    // Nyanpasu
+    if (ua.includes('nyanpasu')) return { name: 'Nyanpasu', className: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300' };
+    // FlyClash
+    if (ua.includes('flyclash') || ua.includes('flclash')) return { name: 'FlyClash', className: 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' };
+
+    // === 通用内核匹配 ===
+    // Clash Meta 核心 (放在具体客户端之后)
+    if (ua.includes('clash.meta') || ua.includes('clash-meta') || ua.includes('meta')) return { name: 'Clash Meta', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' };
+
+    // Sing-Box 通用
+    if (ua.includes('sing-box') || ua.includes('singbox')) return { name: 'Sing-Box', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' };
+
+    // Clash 通用 (兜底)
+    if (ua.includes('clash')) return { name: 'Clash', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' };
+
+    // === iOS/macOS 客户端 (Shadowrocket, Surge, Loon, etc) ===
     if (ua.includes('shadowrocket')) return { name: 'Shadowrocket', className: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' };
     if (ua.includes('surge')) return { name: 'Surge', className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' };
     if (ua.includes('loon')) return { name: 'Loon', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' };
     if (ua.includes('quanx') || ua.includes('quantumult')) return { name: 'QuanX', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' };
     if (ua.includes('stash')) return { name: 'Stash', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' };
 
-    // === Windows/跨平台客户端 ===
+    // === Windows/安卓/其他 ===
     if (ua.includes('v2rayn')) return { name: 'v2rayN', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' };
     if (ua.includes('v2rayng')) return { name: 'v2rayNG', className: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300' };
-    if (ua.includes('hiddify')) return { name: 'Hiddify', className: 'bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-300' };
-
-    // === Android 客户端 ===
     if (ua.includes('surfboard')) return { name: 'Surfboard', className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300' };
 
-    // === 浏览器 ===
+    // === 浏览器/工具 ===
     if (
         ua.includes('chrome') ||
         ua.includes('firefox') ||
@@ -249,7 +255,6 @@ export function getClientInfo(userAgent) {
         ua.includes('mozilla')
     ) return { name: '浏览器', className: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-300' };
 
-    // === 命令行工具 ===
     if (
         ua.includes('curl') ||
         ua.includes('wget') ||
