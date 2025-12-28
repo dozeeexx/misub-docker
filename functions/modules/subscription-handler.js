@@ -53,7 +53,12 @@ export async function handleMisubRequest(context) {
 
         if (!isAuthenticated) {
             if (config.disguise.pageType === 'redirect' && config.disguise.redirectUrl) {
-                return Response.redirect(config.disguise.redirectUrl, 302);
+                let redirectUrl = config.disguise.redirectUrl.trim();
+                // Ensure URL has a protocol
+                if (!/^https?:\/\//i.test(redirectUrl)) {
+                    redirectUrl = 'https://' + redirectUrl;
+                }
+                return Response.redirect(redirectUrl, 302);
             } else {
                 return renderDisguisePage();
             }
