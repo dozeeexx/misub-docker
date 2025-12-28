@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 import Modal from '../forms/Modal.vue';
+import SubConverterSelector from '../forms/SubConverterSelector.vue';
 
 const props = defineProps({
   show: Boolean,
@@ -266,29 +267,29 @@ const handleDeselectAll = (listName, sourceArray) => {
             <div v-show="showAdvanced" class="mt-4 space-y-4 animate-fade-in-down">
                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                    <label for="profile-subconverter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label for="profile-subconverter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         自定义后端 (可选)
                     </label>
-                    <input
-                        type="text"
+                    <SubConverterSelector
                         id="profile-subconverter"
                         v-model="localProfile.subConverter"
+                        type="backend"
                         placeholder="留空则使用全局设置"
-                        class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
-                    >
+                        :allowEmpty="true"
+                    />
                     <p class="text-xs text-gray-400 mt-1">为此订阅组指定一个独立的 SubConverter 后端地址。</p>
                     </div>
                     <div>
-                    <label for="profile-subconfig" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label for="profile-subconfig" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         自定义远程配置 (可选)
                     </label>
-                    <input
-                        type="text"
+                    <SubConverterSelector
                         id="profile-subconfig"
                         v-model="localProfile.subConfig"
+                        type="config"
                         placeholder="留空则使用全局设置"
-                        class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
-                    >
+                        :allowEmpty="true"
+                    />
                     <p class="text-xs text-gray-400 mt-1">为此订阅组指定一个独立的 Subconverter 配置文件。</p>
                     </div>
                     <div>
