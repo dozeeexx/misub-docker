@@ -155,6 +155,7 @@ export async function handleMisubsSave(request, env) {
                 storageAdapter.put(KV_KEY_PROFILES, finalProfiles)
             ]);
         } catch (storageError) {
+            console.error('[API Error /misubs] Storage put failed:', storageError);
             return createJsonResponse({
                 success: false,
                 message: `数据保存失败: ${storageError.message || '存储服务暂时不可用，请稍后重试'}`
@@ -181,6 +182,7 @@ export async function handleMisubsSave(request, env) {
         });
 
     } catch (e) {
+        console.error('[API Error /misubs] Uncaught error:', e);
         return createJsonResponse({
             success: false,
             message: `保存失败: ${e.message || '服务器内部错误，请稍后重试'}`

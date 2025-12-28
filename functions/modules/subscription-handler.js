@@ -43,9 +43,9 @@ export async function handleMisubRequest(context) {
 
 
     const isBrowser = /Mozilla|Chrome|Safari|Edge|Opera/i.test(userAgentHeader) &&
-        !/clash|v2ray|surge|loon|shadowrocket|quantumult|stash|shadowsocks/i.test(userAgentHeader);
+        !/clash|v2ray|surge|loon|shadowrocket|quantumult|stash|shadowsocks|mihomo|meta|nekobox|nekoray|sfi|sfa|sfra/i.test(userAgentHeader);
 
-    if (config.disguise?.enabled && isBrowser) {
+    if (config.disguise?.enabled && isBrowser && !url.searchParams.has('callback_token')) {
         // [Smart Camouflage] Allow Admin Access
         // Check if the user has a valid admin session cookie
         const { authMiddleware } = await import('./auth-middleware.js');
@@ -53,7 +53,12 @@ export async function handleMisubRequest(context) {
 
         if (!isAuthenticated) {
             if (config.disguise.pageType === 'redirect' && config.disguise.redirectUrl) {
-                return Response.redirect(config.disguise.redirectUrl, 302);
+                let redirectUrl = config.disguise.redirectUrl.trim();
+                // Ensure URL has a protocol
+                if (!/^https?:\/\//i.test(redirectUrl)) {
+                    redirectUrl = 'https://' + redirectUrl;
+                }
+                return Response.redirect(redirectUrl, 302);
             } else {
                 return renderDisguisePage();
             }

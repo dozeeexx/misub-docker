@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, defineAsyncComponent } from 'vue';
 import { useDataStore } from '../stores/useDataStore.js';
+import { useBulkImportLogic } from '../composables/useBulkImportLogic.js'; // Added
 import { storeToRefs } from 'pinia';
 import SkeletonLoader from '../components/ui/SkeletonLoader.vue';
 import RightPanel from '../components/profiles/RightPanel.vue';
@@ -65,57 +66,15 @@ const trafficStats = computed(() => {
 });
 
 // --- Bulk Import Logic ---
-const showBulkImportModal = ref(false);
+const {
+  showModal: showBulkImportModal,
+  handleBulkImport
+} = useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk });
+
 const BulkImportModal = defineAsyncComponent(() => import('../components/modals/BulkImportModal.vue'));
-
-const handleBulkImport = (importText, colorTag) => {
-    if (!importText) return;
     
-    // Split by newlines and filter empty lines
-    const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
-    const validSubs = [];
-    const validNodes = [];
-
-    lines.forEach(line => {
-        const newItem = {
-            id: crypto.randomUUID(),
-            name: extractNodeName(line) || '未命名',
-            url: line,
-            enabled: true,
-            status: 'unchecked',
-            colorTag: colorTag || null,
-            // Default fields for subscriptions
-            exclude: '', 
-            customUserAgent: '', 
-            notes: ''
-        };
-
-        if (/^https?:\/\//.test(line)) {
-             validSubs.push(newItem);
-        } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line)) {
-             validNodes.push(newItem);
-        }
-    });
-
-    let message = '';
     
-    if (validSubs.length > 0) {
-        addSubscriptionsFromBulk(validSubs);
-        message += `成功导入 ${validSubs.length} 条订阅 `;
-    }
-    
-    if (validNodes.length > 0) {
-        addNodesFromBulk(validNodes);
-        message += `成功导入 ${validNodes.length} 个节点`;
-    }
 
-    if (message) {
-        showToast(message, 'success');
-    } else {
-        showToast('未检测到有效的链接', 'warning');
-    }
-    showBulkImportModal.value = false;
-};
 
 // --- Profile Modal Logic ---
 const {

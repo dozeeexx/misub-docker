@@ -7,6 +7,9 @@ import { useDataStore } from '../../../stores/useDataStore.js'; // Added
 import { useSubscriptions } from '../../../composables/useSubscriptions.js';
 import { useManualNodes } from '../../../composables/useManualNodes.js';
 import { useProfiles } from '../../../composables/useProfiles.js';
+import { useSubscriptionForms } from '../../../composables/useSubscriptionForms.js';
+import { useNodeForms } from '../../../composables/useNodeForms.js';
+import { useBulkImportLogic } from '../../../composables/useBulkImportLogic.js';
 import { storeToRefs } from 'pinia'; // Added
 
 // --- Component Imports ---
@@ -72,13 +75,32 @@ const {
 } = useProfiles(markDirty);
 // --- UI State ---
 
-const editingSubscription = ref(null);
-const isNewSubscription = ref(false);
-const showSubModal = ref(false);
-const editingNode = ref(null);
-const isNewNode = ref(false);
-const showNodeModal = ref(false);
-const showBulkImportModal = ref(false);
+// --- New Form Logic Composables ---
+const {
+  showModal: showSubModal,
+  isNew: isNewSubscription,
+  editingSubscription,
+  openAdd: handleAddSubscription,
+  openEdit: handleEditSubscription,
+  handleSave: handleSaveSubscription
+} = useSubscriptionForms({ addSubscription, updateSubscription });
+
+const {
+  showModal: showNodeModal,
+  isNew: isNewNode,
+  editingNode,
+  openAdd: handleAddNode,
+  openEdit: handleEditNode,
+  handleUrlInput: handleNodeUrlInput,
+  handleSave: handleSaveNode
+} = useNodeForms({ addNode, updateNode });
+
+const {
+  showModal: showBulkImportModal,
+  handleBulkImport
+} = useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk });
+
+// --- UI State ---
 const showDeleteSubsModal = ref(false);
 const showDeleteNodesModal = ref(false);
 const showSubscriptionImportModal = ref(false);
@@ -93,7 +115,7 @@ const previewProfileId = ref(null);
 const previewSubscriptionName = ref('');
 const previewSubscriptionUrl = ref('');
 const previewProfileName = ref('');
-const previewProfileName_ = ref(''); // fix potential unused var or re-usage
+
 
 // --- 初始化與生命週期 ---
 const initializeState = async () => {
@@ -302,75 +324,7 @@ const importBackup = () => {
   };
   input.click();
 };
-const handleBulkImport = (importText, colorTag) => {
-  if (!importText) return;
-  const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
-  const newSubs = [], newNodes = [];
-  for (const line of lines) {
-      const newItem = { id: crypto.randomUUID(), name: extractNodeName(line) || '未命名', url: line, enabled: true, status: 'unchecked', colorTag: colorTag || null };
-      if (/^https?:\/\//.test(line)) {
-          newSubs.push(newItem);
-      } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line)) {
-          newNodes.push(newItem);
-      }
-  }
-  if (newSubs.length > 0) addSubscriptionsFromBulk(newSubs);
-  if (newNodes.length > 0) addNodesFromBulk(newNodes);
-  showToast(`成功导入 ${newSubs.length} 条订阅和 ${newNodes.length} 个手动节点，请点击保存`, 'success');
-};
-const handleAddSubscription = () => {
-  isNewSubscription.value = true;
-  editingSubscription.value = { name: '', url: '', enabled: true, exclude: '', customUserAgent: '', notes: '' }; // 新增 notes
-  showSubModal.value = true;
-};
-const handleEditSubscription = (subId) => {
-  const sub = subscriptions.value.find(s => s.id === subId);
-  if (sub) {
-    isNewSubscription.value = false;
-    editingSubscription.value = { ...sub };
-    showSubModal.value = true;
-  }
-};
-const handleSaveSubscription = () => {
-  if (!editingSubscription.value || !editingSubscription.value.url) { showToast('订阅链接不能为空', 'error'); return; }
-  if (!/^https?:\/\//.test(editingSubscription.value.url)) { showToast('请输入有效的 http:// 或 https:// 订阅链接', 'error'); return; }
-  
-  if (isNewSubscription.value) {
-    addSubscription({ ...editingSubscription.value, id: crypto.randomUUID() });
-  } else {
-    updateSubscription(editingSubscription.value);
-  }
-  showSubModal.value = false;
-};
-const handleAddNode = () => {
-  isNewNode.value = true;
-  editingNode.value = { id: crypto.randomUUID(), name: '', url: '', enabled: true, colorTag: null };
-  showNodeModal.value = true;
-};
-const handleEditNode = (nodeId) => {
-  const node = manualNodes.value.find(n => n.id === nodeId);
-  if (node) {
-    isNewNode.value = false;
-    editingNode.value = { ...node };
-    showNodeModal.value = true;
-  }
-};
-const handleNodeUrlInput = (event) => {
-  if (!editingNode.value) return;
-  const newUrl = event.target.value;
-  if (newUrl && !editingNode.value.name) {
-    editingNode.value.name = extractNodeName(newUrl);
-  }
-};
-const handleSaveNode = () => {
-    if (!editingNode.value || !editingNode.value.url) { showToast('节点链接不能为空', 'error'); return; }
-    if (isNewNode.value) {
-        addNode(editingNode.value);
-    } else {
-        updateNode(editingNode.value);
-    }
-    showNodeModal.value = false;
-};
+// Old handlers removed. Replaced by composables.
 
 const formatBytes = (bytes, decimals = 2) => {
   if (!+bytes || bytes < 0) return '0 B';
@@ -450,7 +404,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           @change-page="changeSubsPage"
           @update-node-count="handleUpdateNodeCount"
           @refresh-all="batchUpdateAllSubscriptions"
-          @edit="handleEditSubscription"
+          @edit="(id) => handleEditSubscription(subscriptions.find(s => s.id === id))"
           @toggle-sort="isSortingSubs = !isSortingSubs"
           @mark-dirty="markDirty"
           @delete-all="showDeleteSubsModal = true"
@@ -470,7 +424,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
           :active-color-filter="activeColorFilter"
           @add="handleAddNode"
           @delete="handleDeleteNodeWithCleanup"
-          @edit="handleEditNode"
+          @edit="(id) => handleEditNode(manualNodes.find(n => n.id === id))"
           @change-page="changeManualNodesPage"
           @update:search-term="newVal => searchTerm.value = newVal"
           @update:view-mode="setViewMode"
@@ -517,7 +471,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
   
   <ProfileModal v-if="showProfileModal" v-model:show="showProfileModal" :profile="editingProfile" :is-new="isNewProfile" :all-subscriptions="subscriptions" :all-manual-nodes="manualNodes" @save="handleSaveProfile" size="2xl" />
   
-  <Modal v-if="editingNode" v-model:show="showNodeModal" @confirm="handleSaveNode">
+  <Modal v-if="editingNode" v-model:show="showNodeModal" @confirm="handleSaveNode" @vue:mounted="console.log('NodeModal Mounted, data:', editingNode)">
     <template #title><h3 class="text-lg font-bold text-gray-800 dark:text-white">{{ isNewNode ? '新增手动节点' : '编辑手动节点' }}</h3></template>
     <template #body>
       <div class="space-y-4">
@@ -552,7 +506,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
     </template>
   </Modal>
 
-  <Modal v-if="editingSubscription" v-model:show="showSubModal" @confirm="handleSaveSubscription">
+  <Modal v-if="editingSubscription" v-model:show="showSubModal" @confirm="handleSaveSubscription" @vue:mounted="console.log('SubModal Mounted, data:', editingSubscription)">
     <template #title><h3 class="text-lg font-bold text-gray-800 dark:text-white">{{ isNewSubscription ? '新增订阅' : '编辑订阅' }}</h3></template>
     <template #body>
       <div class="space-y-4">
