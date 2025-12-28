@@ -371,8 +371,8 @@ export function parseNodeList(content) {
             }
         }
 
-        // 3. 添加 Emoji (保持预览一致性)
-        fixedUrl = addFlagEmoji(fixedUrl);
+        // 3. 添加 Emoji (已移至 applyNodeTransformPipeline 统一处理，遵循配置)
+        // fixedUrl = addFlagEmoji(fixedUrl);
 
         // 4. 解析信息
         const nodeInfo = parseNodeInfo(fixedUrl);

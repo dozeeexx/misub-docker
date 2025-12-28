@@ -5,6 +5,8 @@ import { useDataStore } from '../stores/useDataStore.js';
 import { useSubscriptions } from '../composables/useSubscriptions.js';
 import { useManualNodes } from '../composables/useManualNodes.js';
 import { useProfiles } from '../composables/useProfiles.js';
+import { useSubscriptionForms } from '../composables/useSubscriptionForms.js'; // Added
+import { useBulkImportLogic } from '../composables/useBulkImportLogic.js'; // Added
 import SubscriptionPanel from '../components/subscriptions/SubscriptionPanel.vue';
 import Modal from '../components/forms/Modal.vue';
 import { useToastStore } from '../stores/toast.js';
@@ -14,12 +16,9 @@ const { showToast } = useToastStore();
 const { markDirty } = dataStore;
 
 // State
+// State
 const isSortingSubs = ref(false);
-const editingSubscription = ref(null);
-const isNewSubscription = ref(false);
-const showSubModal = ref(false);
 const showDeleteSubsModal = ref(false);
-const showBulkImportModal = ref(false);
 
 const {
   subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions,
@@ -32,32 +31,20 @@ const { addNodesFromBulk } = useManualNodes(markDirty);
 
 const { cleanupSubscriptions, cleanupAllSubscriptions } = useProfiles(markDirty);
 
-const handleAddSubscription = () => {
-  isNewSubscription.value = true;
-  editingSubscription.value = { name: '', url: '', enabled: true, exclude: '', customUserAgent: '', notes: '' };
-  showSubModal.value = true;
-};
+// Composables
+const {
+  showModal: showSubModal,
+  isNew: isNewSubscription,
+  editingSubscription,
+  openAdd: handleAddSubscription,
+  openEdit: handleEditSubscription,
+  handleSave: handleSaveSubscription
+} = useSubscriptionForms({ addSubscription, updateSubscription });
 
-const handleEditSubscription = (subId) => {
-  const sub = subscriptions.value.find(s => s.id === subId);
-  if (sub) {
-    isNewSubscription.value = false;
-    editingSubscription.value = { ...sub };
-    showSubModal.value = true;
-  }
-};
-
-const handleSaveSubscription = () => {
-  if (!editingSubscription.value || !editingSubscription.value.url) { showToast('订阅链接不能为空', 'error'); return; }
-  if (!/^https?:\/\//.test(editingSubscription.value.url)) { showToast('请输入有效的 http:// 或 https:// 订阅链接', 'error'); return; }
-  
-  if (isNewSubscription.value) {
-    addSubscription({ ...editingSubscription.value, id: crypto.randomUUID() });
-  } else {
-    updateSubscription(editingSubscription.value);
-  }
-  showSubModal.value = false;
-};
+const {
+  showModal: showBulkImportModal,
+  handleBulkImport
+} = useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk });
 
 const handleDeleteSubscriptionWithCleanup = (subId) => {
     deleteSubscription(subId);
@@ -89,54 +76,6 @@ const handlePreviewSubscription = (subscriptionId) => {
 
 // Bulk Import Logic
 const BulkImportModal = defineAsyncComponent(() => import('../components/modals/BulkImportModal.vue'));
-const handleBulkImport = (importText, colorTag) => {
-    if (!importText) return;
-    
-    // Split by newlines and filter empty lines
-    const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
-    const validSubs = [];
-    const validNodes = [];
-
-    lines.forEach(line => {
-        const newItem = {
-            id: crypto.randomUUID(),
-            name: extractNodeName(line) || '未命名',
-            url: line,
-            enabled: true,
-            status: 'unchecked',
-            colorTag: colorTag || null,
-            // Default fields for subscriptions
-            exclude: '', 
-            customUserAgent: '', 
-            notes: ''
-        };
-
-        if (/^https?:\/\//.test(line)) {
-             validSubs.push(newItem);
-        } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line)) {
-             validNodes.push(newItem);
-        }
-    });
-
-    let message = '';
-    
-    if (validSubs.length > 0) {
-        addSubscriptionsFromBulk(validSubs);
-        message += `成功导入 ${validSubs.length} 条订阅 `;
-    }
-    
-    if (validNodes.length > 0) {
-        addNodesFromBulk(validNodes);
-        message += `成功导入 ${validNodes.length} 个节点`;
-    }
-
-    if (message) {
-        showToast(message, 'success');
-    } else {
-        showToast('未检测到有效的链接', 'warning');
-    }
-    showBulkImportModal.value = false;
-};
 </script>
 
 <template>
@@ -154,7 +93,7 @@ const handleBulkImport = (importText, colorTag) => {
       @change-page="changeSubsPage"
       @update-node-count="handleUpdateNodeCount"
       @refresh-all="batchUpdateAllSubscriptions"
-      @edit="handleEditSubscription"
+      @edit="(id) => handleEditSubscription(subscriptions.find(s => s.id === id))"
       @toggle-sort="isSortingSubs = !isSortingSubs"
       @mark-dirty="markDirty"
       @delete-all="showDeleteSubsModal = true"

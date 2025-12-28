@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useDataStore } from '../stores/useDataStore.js';
 import { useToastStore } from '../stores/toast.js';
 import { fetchSettings, saveSettings } from '../lib/api.js';
@@ -15,7 +16,7 @@ import SystemSettings from '../components/settings/sections/SystemSettings.vue';
 
 const dataStore = useDataStore();
 const { showToast } = useToastStore();
-const { subscriptions, profiles } = dataStore;
+const { subscriptions, profiles } = storeToRefs(dataStore);
 const { manualNodes } = useManualNodes(() => {});
 
 const activeTab = ref('basic');
@@ -147,8 +148,8 @@ const handleMigrationSuccess = () => {
 const exportBackup = () => {
   try {
     const backupData = {
-      subscriptions: subscriptions.value || [],
-      manualNodes: manualNodes.value || [],
+      subscriptions: (subscriptions.value || []).filter(item => item.url && /^https?:\/\//.test(item.url)),
+      manualNodes: (manualNodes.value || []),
       profiles: profiles.value || [],
     };
     const jsonString = JSON.stringify(backupData, null, 2);

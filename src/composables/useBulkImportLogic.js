@@ -1,0 +1,61 @@
+import { ref } from 'vue';
+import { useToastStore } from '../stores/toast.js';
+import { extractNodeName } from '../lib/utils.js';
+
+export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk }) {
+    const { showToast } = useToastStore();
+    const showModal = ref(false);
+
+    const handleBulkImport = (importText, colorTag) => {
+        if (!importText) return;
+
+        const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
+        const validSubs = [];
+        const validNodes = [];
+
+        lines.forEach(line => {
+            const newItem = {
+                id: crypto.randomUUID(),
+                name: extractNodeName(line) || '未命名',
+                url: line,
+                enabled: true,
+                status: 'unchecked',
+                colorTag: colorTag || null,
+                // Default fields for subscriptions
+                exclude: '',
+                customUserAgent: '',
+                notes: ''
+            };
+
+            if (/^https?:\/\//.test(line)) {
+                validSubs.push(newItem);
+            } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line)) {
+                validNodes.push(newItem);
+            }
+        });
+
+        let message = '';
+
+        if (validSubs.length > 0) {
+            addSubscriptionsFromBulk(validSubs);
+            message += `成功导入 ${validSubs.length} 条订阅 `;
+        }
+
+        if (validNodes.length > 0) {
+            addNodesFromBulk(validNodes);
+            message += `成功导入 ${validNodes.length} 个节点`;
+        }
+
+        if (message) {
+            showToast(message, 'success');
+        } else {
+            showToast('未检测到有效的链接', 'warning');
+        }
+        showModal.value = false;
+    };
+
+    return {
+        showModal,
+        handleBulkImport
+    };
+}

@@ -2,6 +2,7 @@
 import { ref, defineAsyncComponent } from 'vue';
 import { useDataStore } from '../stores/useDataStore.js';
 import { useManualNodes } from '../composables/useManualNodes.js';
+import { useNodeForms } from '../composables/useNodeForms.js'; // Added
 import { useToastStore } from '../stores/toast.js';
 import { extractNodeName } from '../lib/utils.js';
 import ManualNodePanel from '../components/nodes/ManualNodePanel.vue';
@@ -15,9 +16,6 @@ const { markDirty } = dataStore;
 // Component Logic Reuse
 const isSortingNodes = ref(false);
 const manualNodeViewMode = ref(localStorage.getItem('manualNodeViewMode') || 'card');
-const editingNode = ref(null);
-const isNewNode = ref(false);
-const showNodeModal = ref(false);
 const showDeleteNodesModal = ref(false);
 const showBatchDeleteModal = ref(false);
 const batchDeleteIds = ref([]);
@@ -31,6 +29,16 @@ const {
   manualNodeGroups, renameGroup, deleteGroup,
   activeColorFilter, setColorFilter, batchUpdateColor, batchDeleteNodes
 } = useManualNodes(markDirty);
+
+const {
+  showModal: showNodeModal,
+  isNew: isNewNode,
+  editingNode,
+  openAdd: handleAddNode,
+  openEdit: handleEditNode,
+  handleUrlInput: handleNodeUrlInput,
+  handleSave: handleSaveNode
+} = useNodeForms({ addNode, updateNode });
 
 // Actions
 const setViewMode = (mode) => {
@@ -59,38 +67,7 @@ const handleDeduplicateNodes = () => {
   showToast('已完成去重，请手动保存', 'success');
 };
 
-const handleAddNode = () => {
-  isNewNode.value = true;
-  editingNode.value = { id: crypto.randomUUID(), name: '', url: '', enabled: true };
-  showNodeModal.value = true;
-};
-
-const handleEditNode = (nodeId) => {
-  const node = manualNodes.value.find(n => n.id === nodeId);
-  if (node) {
-    isNewNode.value = false;
-    editingNode.value = { ...node };
-    showNodeModal.value = true;
-  }
-};
-
-const handleNodeUrlInput = (event) => {
-  if (!editingNode.value) return;
-  const newUrl = event.target.value;
-  if (newUrl && !editingNode.value.name) {
-    editingNode.value.name = extractNodeName(newUrl);
-  }
-};
-
-const handleSaveNode = () => {
-    if (!editingNode.value || !editingNode.value.url) { showToast('节点链接不能为空', 'error'); return; }
-    if (isNewNode.value) {
-        addNode(editingNode.value);
-    } else {
-        updateNode(editingNode.value);
-    }
-    showNodeModal.value = false;
-};
+// Old Handlers Removed
 
 const handleBatchDeleteRequest = (ids) => {
     if (ids && ids.length > 0) {
@@ -123,7 +100,7 @@ const confirmBatchDelete = () => {
       :active-color-filter="activeColorFilter"
       @add="handleAddNode"
       @delete="handleDeleteNodeWithCleanup"
-      @edit="handleEditNode"
+      @edit="(id) => handleEditNode(manualNodes.find(n => n.id === id))"
       @change-page="changeManualNodesPage"
       @update:search-term="newVal => searchTerm.value = newVal"
       @update:view-mode="setViewMode"
