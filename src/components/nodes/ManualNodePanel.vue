@@ -329,17 +329,17 @@ onUnmounted(() => {
       </div>
       <div class="flex items-center gap-2 w-full sm:w-auto">
         <!-- Color Filter -->
-        <div class="hidden md:flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mr-2">
+        <div class="hidden md:flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 mr-2 shrink-0">
             <button 
                 @click="emit('set-color-filter', null)"
-                class="px-3 py-1 text-xs font-medium rounded-md transition-all"
+                class="px-2 py-0.5 text-[11px] font-medium rounded-md transition-all"
                 :class="!activeColorFilter ? 'bg-white dark:bg-gray-700 shadow-xs text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
             >全部</button>
             <button 
                 v-for="color in ['red', 'orange', 'green', 'blue']" 
                 :key="color"
                 @click="emit('set-color-filter', color)"
-                class="w-6 h-6 mx-1 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+                class="w-5 h-5 mx-0.5 rounded-full flex items-center justify-center transition-transform hover:scale-110"
                 :class="[
                     `bg-${color}-500`,
                     activeColorFilter === color ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-gray-900 scale-110' : 'opacity-70 hover:opacity-100'

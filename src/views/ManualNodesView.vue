@@ -8,6 +8,7 @@ import { extractNodeName } from '../lib/utils.js';
 import ManualNodePanel from '../components/nodes/ManualNodePanel.vue';
 import Modal from '../components/forms/Modal.vue';
 import ManualNodeEditModal from '../components/modals/ManualNodeEditModal.vue';
+import ManualNodeDedupModal from '../components/modals/ManualNodeDedupModal.vue';
 import SubscriptionImportModal from '../components/modals/SubscriptionImportModal.vue';
 
 const dataStore = useDataStore();
@@ -21,11 +22,13 @@ const showDeleteNodesModal = ref(false);
 const showBatchDeleteModal = ref(false);
 const batchDeleteIds = ref([]);
 const showSubscriptionImportModal = ref(false);
+const showDedupModal = ref(false);
+const dedupPlan = ref(null);
 
 const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
-  addNodesFromBulk, autoSortNodes, deduplicateNodes,
+  addNodesFromBulk, autoSortNodes, deduplicateNodes, buildDedupPlan, applyDedupPlan,
   reorderManualNodes, cleanupNodes, cleanupAllNodes,
   manualNodeGroups, renameGroup, deleteGroup,
   activeColorFilter, setColorFilter, batchUpdateColor, batchDeleteNodes
@@ -64,8 +67,13 @@ const handleAutoSortNodes = () => {
 };
 
 const handleDeduplicateNodes = () => {
-  deduplicateNodes();
-  showToast('已完成去重，请手动保存', 'success');
+  const plan = buildDedupPlan();
+  if (!plan || plan.removeCount === 0) {
+    showToast('没有发现重复的节点。', 'info');
+    return;
+  }
+  dedupPlan.value = plan;
+  showDedupModal.value = true;
 };
 
 // Old Handlers Removed
@@ -120,11 +128,16 @@ const confirmBatchDelete = () => {
     />
 
     <ManualNodeEditModal
-        v-model:show="showNodeModal"
-        :is-new="isNewNode"
-        :editing-node="editingNode"
-        @confirm="handleSaveNode"
-        @input-url="handleNodeUrlInput"
+      v-model:show="showNodeModal"
+      :is-new="isNewNode"
+      :editing-node="editingNode"
+      @confirm="handleSaveNode"
+      @input-url="handleNodeUrlInput"
+    />
+    <ManualNodeDedupModal
+      v-model:show="showDedupModal"
+      :plan="dedupPlan"
+      @confirm="applyDedupPlan(dedupPlan); showDedupModal = false; dedupPlan = null"
     />
 
     <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodesWithCleanup">

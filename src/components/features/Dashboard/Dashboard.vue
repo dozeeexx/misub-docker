@@ -20,6 +20,7 @@ import ManualNodePanel from '../../nodes/ManualNodePanel.vue';
 import Modal from '../../forms/Modal.vue';
 import SubscriptionEditModal from '../../modals/SubscriptionEditModal.vue';
 import ManualNodeEditModal from '../../modals/ManualNodeEditModal.vue';
+import ManualNodeDedupModal from '../../modals/ManualNodeDedupModal.vue';
 import SkeletonLoader from '../../ui/SkeletonLoader.vue';
 import StatusIndicator from '../../ui/StatusIndicator.vue';
 
@@ -66,7 +67,7 @@ const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes, deduplicateNodes,
-  reorderManualNodes, activeColorFilter, setColorFilter, batchUpdateColor, batchDeleteNodes
+  reorderManualNodes, activeColorFilter, setColorFilter, batchUpdateColor, batchDeleteNodes, buildDedupPlan, applyDedupPlan
 } = useManualNodes(markDirty);
 
 const {
@@ -109,6 +110,8 @@ const showSubscriptionImportModal = ref(false);
 const showLogModal = ref(false);
 const showBatchDeleteModal = ref(false);
 const batchDeleteIds = ref([]);
+const showDedupModal = ref(false);
+const dedupPlan = ref(null);
 
 // 节点预览相关状态
 const showNodePreviewModal = ref(false);
@@ -214,8 +217,13 @@ const handleAutoSortNodes = () => {
 };
 
 const handleDeduplicateNodes = () => {
-    deduplicateNodes();
-    showToast('已完成去重，请手动保存', 'success');
+    const plan = buildDedupPlan();
+    if (!plan || plan.removeCount === 0) {
+        showToast('没有发现重复的节点。', 'info');
+        return;
+    }
+    dedupPlan.value = plan;
+    showDedupModal.value = true;
 };
 
 const handleBatchDeleteRequest = (ids) => {
@@ -480,6 +488,11 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
     :editing-node="editingNode"
     @confirm="handleSaveNode"
     @input-url="handleNodeUrlInput"
+  />
+  <ManualNodeDedupModal
+    v-model:show="showDedupModal"
+    :plan="dedupPlan"
+    @confirm="applyDedupPlan(dedupPlan); showDedupModal = false; dedupPlan = null"
   />
 
   <SubscriptionEditModal
