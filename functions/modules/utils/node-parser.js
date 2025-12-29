@@ -609,6 +609,19 @@ export function validateSnellNode(url) {
             return { valid: false, error: '不是 Snell 协议 URL' };
         }
 
+        // 提前验证端口，避免 URL 解析在端口范围错误时直接抛出
+        const portMatch = url.match(/:(\d+)(?:[/?#]|$)/);
+        if (portMatch) {
+            const portNumber = parseInt(portMatch[1]);
+            if (portNumber < 1 || portNumber > 65535) {
+                return {
+                    valid: false,
+                    error: `端口号无效: ${portNumber} (范围: 1-65535)`,
+                    details: { port: portNumber }
+                };
+            }
+        }
+
         const proxy = parseSnellUrl(url);
         if (!proxy) {
             return { valid: false, error: '无效的 Snell URL 格式' };

@@ -212,5 +212,23 @@ ss=Test SS,1.2.3.4,8388,aes-256-gcm,password123
             const result = parseQuantumultXConfig('')
             expect(result).toEqual([])
         })
+
+        it('应解析VMess配置并生成有效URL', () => {
+            const config = `
+[server_local]
+vmess=Test VMess, vmess.example.com, 443, auto, uuid-1234, 0, net=ws, host=example.com, path=/ws
+`
+            const result = parseQuantumultXConfig(config)
+
+            expect(result).toHaveLength(1)
+            const node = result[0]
+            expect(node.protocol).toBe('vmess')
+
+            const decoded = JSON.parse(atob(node.url.replace('vmess://', '')))
+            expect(decoded.add).toBe('vmess.example.com')
+            expect(decoded.net).toBe('ws')
+            expect(decoded.path).toBe('/ws')
+            expect(decoded.host).toBe('example.com')
+        })
     })
 })
