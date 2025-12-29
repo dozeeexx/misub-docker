@@ -4,7 +4,7 @@
  */
 
 import { formatBytes, prependNodeName, getProcessedUserAgent } from './utils.js';
-import { addFlagEmoji, fixNodeUrlEncoding } from '../utils/node-utils.js';
+import { addFlagEmoji, fixNodeUrlEncoding, removeFlagEmoji } from '../utils/node-utils.js';
 import { extractValidNodes } from './utils/node-parser.js';
 import { sendEnhancedTgNotification } from './notifications.js';
 import { applyNodeTransformPipeline } from '../utils/node-transformer.js';
@@ -302,10 +302,14 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         .map(line => line.trim())
         .filter(Boolean);
 
+    const normalizedLines = shouldAddEmoji
+        ? combinedLines
+        : combinedLines.map(line => removeFlagEmoji(line));
+
     const nodeTransformConfig = profilePrefixSettings?.nodeTransform ?? config.nodeTransform;
     const outputLines = nodeTransformConfig?.enabled
-        ? applyNodeTransformPipeline(combinedLines, { ...nodeTransformConfig, enableEmoji: shouldAddEmoji })
-        : [...new Set(combinedLines)];
+        ? applyNodeTransformPipeline(normalizedLines, { ...nodeTransformConfig, enableEmoji: shouldAddEmoji })
+        : [...new Set(normalizedLines)];
     const uniqueNodesString = outputLines.join('\n');
 
     let finalNodeList = uniqueNodesString;

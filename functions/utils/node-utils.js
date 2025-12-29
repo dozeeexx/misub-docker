@@ -107,6 +107,69 @@ export function addFlagEmoji(link) {
     }
 }
 
+export function removeFlagEmoji(link) {
+    if (!link) return link;
+
+    const stripFlagEmoji = (name) => {
+        if (!name) return name;
+        let cleaned = name;
+        const patterns = [
+            /[\u{1F1E6}-\u{1F1FF}]{2}/gu, // 区旗字母对
+            /\u{1F3F4}[\u{E0061}-\u{E007A}]{2,}\u{E007F}/gu, // 标签序列旗帜
+            /\u{1F3F3}\uFE0F?\u200D\u{1F308}/gu, // 彩虹旗
+            /\u{1F3F3}\uFE0F?\u200D\u{26A7}/gu, // 跨性别旗
+            /[\u{1F3F1}\u{1F3F3}\u{1F3F4}\u{1F6A9}\u{1F3C1}\u{1F38C}]/gu // 常见旗帜符号
+        ];
+        for (const pattern of patterns) {
+            cleaned = cleaned.replace(pattern, '');
+        }
+        return cleaned.replace(/\s{2,}/g, ' ').trim();
+    };
+    const decodeVmessPayload = (raw) => {
+        try {
+            let base64Part = raw;
+            if (base64Part.includes('%')) {
+                base64Part = decodeURIComponent(base64Part);
+            }
+            base64Part = base64Part.replace(/\s+/g, '');
+            base64Part = base64Part.replace(/-/g, '+').replace(/_/g, '/');
+            while (base64Part.length % 4 !== 0) {
+                base64Part += '=';
+            }
+            return JSON.parse(new TextDecoder('utf-8').decode(Uint8Array.from(atob(base64Part), c => c.charCodeAt(0))));
+        } catch (e) {
+            return null;
+        }
+    };
+
+    if (link.startsWith('vmess://')) {
+        try {
+            const payload = link.substring('vmess://'.length);
+            const nodeConfig = decodeVmessPayload(payload);
+            if (!nodeConfig || typeof nodeConfig !== 'object') return link;
+            if (nodeConfig.ps) {
+                nodeConfig.ps = stripFlagEmoji(nodeConfig.ps);
+                const newJsonString = JSON.stringify(nodeConfig);
+                const newBase64Part = btoa(unescape(encodeURIComponent(newJsonString)));
+                return 'vmess://' + newBase64Part;
+            }
+            return link;
+        } catch (e) {
+            return link;
+        }
+    }
+
+    const hashIndex = link.lastIndexOf('#');
+    if (hashIndex === -1) return link;
+    try {
+        const originalName = decodeURIComponent(link.substring(hashIndex + 1));
+        const newName = stripFlagEmoji(originalName);
+        return link.substring(0, hashIndex + 1) + encodeURIComponent(newName);
+    } catch (e) {
+        return link;
+    }
+}
+
 /**
  * [核心修复] 修复节点URL中的编码问题（包含 Hysteria2 密码解码）
  */

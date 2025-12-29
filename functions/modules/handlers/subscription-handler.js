@@ -72,7 +72,7 @@ async function handleProfileMode(request, env, profileId, userAgent) {
 
     // 并行获取HTTP订阅节点
     const subscriptionResults = await Promise.all(
-        targetSubscriptions.map(sub => fetchSubscriptionNodes(sub.url, sub.name, userAgent, sub.customUserAgent))
+        targetSubscriptions.map(sub => fetchSubscriptionNodes(sub.url, sub.name, userAgent, sub.customUserAgent, false, sub.exclude))
     );
 
     // 合并所有结果
@@ -150,7 +150,7 @@ async function handleSingleSubscriptionMode(request, env, subscriptionId, userAg
     }
 
     // HTTP订阅：获取节点
-    const result = await fetchSubscriptionNodes(subscription.url, subscription.name, userAgent, subscription.customUserAgent);
+    const result = await fetchSubscriptionNodes(subscription.url, subscription.name, userAgent, subscription.customUserAgent, false, subscription.exclude);
 
     return {
         success: true,
@@ -173,7 +173,7 @@ async function handleSingleSubscriptionMode(request, env, subscriptionId, userAg
  */
 async function handleDirectUrlMode(subscriptionUrl, userAgent) {
     const debug = subscriptionUrl.includes('b0b422857bb46aba65da8234c84f38c6');
-    const result = await fetchSubscriptionNodes(subscriptionUrl, '预览订阅', userAgent, null, debug);
+    const result = await fetchSubscriptionNodes(subscriptionUrl, '预览订阅', userAgent, null, debug, '');
 
     return {
         success: true,
@@ -196,7 +196,7 @@ async function handleDirectUrlMode(subscriptionUrl, userAgent) {
  * @param {boolean} debug - 是否启用调试日志
  * @returns {Promise<Object>} 节点获取结果
  */
-async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUserAgent = null, debug = false) {
+async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUserAgent = null, debug = false, excludeRules = '') {
     // 自动检测调试 Token，无论哪种模式都能触发
     const shouldDebug = debug || (url && url.includes('b0b422857bb46aba65da8234c84f38c6'));
 
@@ -245,7 +245,10 @@ async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUs
 
         // 传递 debug 标志给解析器前，我们先在这里打印一下
         // 注意：parseNodeList 目前还不支持 debug 参数，我们只能在外部打印结果
-        const parsedNodes = parseNodeList(text);
+        let parsedNodes = parseNodeList(text);
+        if (excludeRules && excludeRules.trim()) {
+            parsedNodes = applyExcludeRulesToNodes(parsedNodes, excludeRules);
+        }
 
         // if (shouldDebug) {
         //     console.log(`[DEBUG PREVIEW] Parsed ${parsedNodes.length} nodes.`);
@@ -274,6 +277,101 @@ async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUs
             error: e.message
         };
     }
+}
+
+function applyExcludeRulesToNodes(nodes, ruleText) {
+    if (!ruleText || !ruleText.trim()) return nodes;
+    const lines = ruleText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    if (lines.length === 0) return nodes;
+
+    const dividerIndex = lines.findIndex(line => line === '---');
+    const hasDivider = dividerIndex !== -1;
+
+    const excludeLines = hasDivider
+        ? lines.slice(0, dividerIndex)
+        : lines.filter(line => !line.toLowerCase().startsWith('keep:'));
+
+    const keepLines = hasDivider
+        ? lines.slice(dividerIndex + 1)
+        : lines.filter(line => line.toLowerCase().startsWith('keep:'));
+
+    const excludeRules = buildRuleSet(excludeLines, false);
+    const keepRules = buildRuleSet(keepLines, true);
+
+    const whitelistOnly = !hasDivider && keepRules.hasRules;
+    const shouldApplyWhitelist = (hasDivider && keepRules.hasRules) || whitelistOnly;
+
+    const afterExclude = whitelistOnly
+        ? [...nodes]
+        : filterNodes(nodes, excludeRules, 'exclude');
+
+    return shouldApplyWhitelist
+        ? filterNodes(afterExclude, keepRules, 'include')
+        : afterExclude;
+}
+
+function buildRuleSet(lines, stripKeepPrefix = false) {
+    const protocols = new Set();
+    const patterns = [];
+
+    for (const rawLine of lines) {
+        let line = rawLine.trim();
+        if (!line || line === '---') continue;
+
+        if (stripKeepPrefix && line.toLowerCase().startsWith('keep:')) {
+            line = line.substring('keep:'.length).trim();
+        }
+        if (!line) continue;
+
+        if (line.toLowerCase().startsWith('proto:')) {
+            const parts = line.substring('proto:'.length)
+                .split(',')
+                .map(p => p.trim().toLowerCase())
+                .filter(Boolean);
+            parts.forEach(p => protocols.add(p));
+            continue;
+        }
+
+        patterns.push(line);
+    }
+
+    const nameRegex = buildSafeRegex(patterns);
+    return {
+        protocols,
+        nameRegex,
+        hasRules: protocols.size > 0 || Boolean(nameRegex)
+    };
+}
+
+function buildSafeRegex(patterns) {
+    if (!patterns.length) return null;
+    try {
+        return new RegExp(patterns.join('|'), 'i');
+    } catch (e) {
+        console.warn('Invalid include/exclude regex, skipped:', e.message);
+        return null;
+    }
+}
+
+function filterNodes(nodes, rules, mode = 'exclude') {
+    if (!rules || !rules.hasRules) return nodes;
+    const isInclude = mode === 'include';
+
+    return nodes.filter(node => {
+        const protocol = (node.protocol || '').toLowerCase();
+        const name = node.name || '';
+        const protocolHit = protocol && rules.protocols.has(protocol);
+        const nameHit = rules.nameRegex ? rules.nameRegex.test(name) : false;
+
+        if (isInclude) {
+            return protocolHit || nameHit;
+        }
+        return !(protocolHit || nameHit);
+    });
 }
 
 /**
