@@ -84,7 +84,8 @@ export async function handleNodeCountRequest(request, env) {
             // 2. 处理节点数请求的结果
             if (responses[1].status === 'fulfilled' && responses[1].value.ok) {
                 const nodeCountResponse = responses[1].value;
-                const text = await nodeCountResponse.text();
+                const buffer = await nodeCountResponse.arrayBuffer();
+                const text = new TextDecoder('utf-8').decode(buffer);
 
 
 
@@ -112,10 +113,15 @@ export async function handleNodeCountRequest(request, env) {
 
                     try {
                         const cleanedText = text.replace(/\s/g, '');
+                        let normalized = cleanedText.replace(/-/g, '+').replace(/_/g, '/');
+                        const padding = normalized.length % 4;
+                        if (padding) {
+                            normalized += '='.repeat(4 - padding);
+                        }
                         const base64Regex = /^[A-Za-z0-9+\/=]+$/;
-                        if (base64Regex.test(cleanedText) && cleanedText.length >= 20) {
+                        if (base64Regex.test(normalized) && normalized.length >= 20) {
                             // console.log(`[DEBUG] Node count API: Base64 content detected, decoding...`);
-                            const binaryString = atob(cleanedText);
+                            const binaryString = atob(normalized);
                             const bytes = new Uint8Array(binaryString.length);
                             for (let i = 0; i < binaryString.length; i++) {
                                 bytes[i] = binaryString.charCodeAt(i);

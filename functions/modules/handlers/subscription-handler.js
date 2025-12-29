@@ -247,6 +247,14 @@ async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUs
         // 传递 debug 标志给解析器前，我们先在这里打印一下
         // 注意：parseNodeList 目前还不支持 debug 参数，我们只能在外部打印结果
         let parsedNodes = parseNodeList(text);
+
+        if (parsedNodes.length === 0) {
+            const fallbackBase64 = encodeArrayBufferToBase64(buffer);
+            const fallbackNodes = parseNodeList(fallbackBase64);
+            if (fallbackNodes.length > 0) {
+                parsedNodes = fallbackNodes;
+            }
+        }
         if (excludeRules && excludeRules.trim()) {
             parsedNodes = applyExcludeRulesToNodes(parsedNodes, excludeRules);
         }
@@ -475,4 +483,21 @@ export async function handleSubscriptionNodesRequest(request, env) {
             error: `获取节点列表失败: ${e.message}`
         }, 500);
     }
+}
+
+
+/**
+ * ArrayBuffer -> Base64????????????
+ */
+function encodeArrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+    }
+
+    return btoa(binary);
 }

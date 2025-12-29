@@ -83,8 +83,16 @@ export function formatBytes(bytes, decimals = 2) {
  */
 export function isValidBase64(str) {
     const cleanStr = str.replace(/\s/g, '');
+    if (!cleanStr) return false;
+
+    let normalized = cleanStr.replace(/-/g, '+').replace(/_/g, '/');
+    const padding = normalized.length % 4;
+    if (padding) {
+        normalized += '='.repeat(4 - padding);
+    }
+
     const base64Regex = /^[A-Za-z0-9+\/=]+$/;
-    return base64Regex.test(cleanStr) && cleanStr.length > 20;
+    return base64Regex.test(normalized) && normalized.length > 20;
 }
 
 /**

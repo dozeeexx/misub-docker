@@ -227,11 +227,20 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
             // 使用统一的 node-parser 解析，确保与预览一致的过滤规则 (UUID校验, Hysteria1过滤, SS加密校验等)
             const parsedObjects = parseNodeList(text);
 
+            let fallbackParsedObjects = parsedObjects;
+            if (parsedObjects.length === 0) {
+                const fallbackText = await decodeBase64Content(encodeArrayBufferToBase64(buffer));
+                const fallbackNodes = parseNodeList(fallbackText);
+                if (fallbackNodes.length > 0) {
+                    fallbackParsedObjects = fallbackNodes;
+                }
+            }
+
             // if (debug) {
             //     console.log(`[DEBUG] Parsed ${parsedObjects.length} valid nodes using node-parser`);
             // }
 
-            let validNodes = parsedObjects.map(node => node.url);
+            let validNodes = fallbackParsedObjects.map(node => node.url);
 
             // if (debug) {
             //     console.log(`[DEBUG] Parsed ${validNodes.length} nodes for ${sub.url}`);
@@ -670,4 +679,21 @@ function decodeVmessName(nodeLink) {
     } catch (e) {
         return '';
     }
+}
+
+
+/**
+ * ArrayBuffer -> Base64????????????
+ */
+function encodeArrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+    }
+
+    return btoa(binary);
 }

@@ -321,7 +321,7 @@ async function handleExternalFetchRequest(request, env) {
 }
 
 /**
- * ArrayBuffer -> Base64 (??????????)
+ * ArrayBuffer -> Base64????????????
  */
 function encodeArrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
