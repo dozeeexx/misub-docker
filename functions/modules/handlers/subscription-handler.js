@@ -229,7 +229,8 @@ async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUs
             };
         }
 
-        let text = await response.text();
+        const buffer = await response.arrayBuffer();
+        let text = new TextDecoder('utf-8').decode(buffer);
 
         // if (shouldDebug) {
         //     console.log(`[DEBUG PREVIEW] Original response length: ${text.length}`);

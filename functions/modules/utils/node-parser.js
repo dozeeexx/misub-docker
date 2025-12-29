@@ -214,14 +214,19 @@ export function extractValidNodes(text) {
         }
     }
 
-    // 2. 尝试 Base64 解码
+        // 2. ?????? Base64 ??????
     let processedText = text;
     try {
         const cleanedText = text.replace(/\s/g, '');
-        // 简单的 Base64 特征检查
+        // ????????? Base64 ????????????
+        let normalized = cleanedText.replace(/-/g, '+').replace(/_/g, '/');
+        const padding = normalized.length % 4;
+        if (padding) {
+            normalized += '='.repeat(4 - padding);
+        }
         const base64Regex = /^[A-Za-z0-9+\/=]+$/;
-        if (base64Regex.test(cleanedText) && cleanedText.length > 20) {
-            const binaryString = atob(cleanedText);
+        if (base64Regex.test(normalized) && normalized.length > 20) {
+            const binaryString = atob(normalized);
             const bytes = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++) {
                 bytes[i] = binaryString.charCodeAt(i);
@@ -229,7 +234,7 @@ export function extractValidNodes(text) {
             processedText = new TextDecoder('utf-8').decode(bytes);
         }
     } catch (e) {
-        // 解码失败使用原文
+        // ????????????????????????
     }
 
     // 3. 正则提取链接 (ss://, vmess:// 等)

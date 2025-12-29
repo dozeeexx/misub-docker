@@ -198,7 +198,8 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                 // }
                 return '';
             }
-            let text = await response.text();
+            const buffer = await response.arrayBuffer();
+            let text = new TextDecoder('utf-8').decode(buffer);
 
             // if (debug) {
             //     console.log(`[DEBUG] Response for ${sub.url} length: ${text.length}`);
@@ -375,13 +376,18 @@ async function decodeBase64Content(text) {
         const cleanedText = text.replace(/\s/g, '');
         const { isValidBase64 } = await import('../utils/format-utils.js');
         if (isValidBase64(cleanedText)) {
-            const binaryString = atob(cleanedText);
+            let normalized = cleanedText.replace(/-/g, '+').replace(/_/g, '/');
+            const padding = normalized.length % 4;
+            if (padding) {
+                normalized += '='.repeat(4 - padding);
+            }
+            const binaryString = atob(normalized);
             const bytes = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
             return new TextDecoder('utf-8').decode(bytes);
         }
     } catch (e) {
-        // Base64解码失败，使用原始内容
+        // Base64?????????????????????????????????
     }
     return text;
 }

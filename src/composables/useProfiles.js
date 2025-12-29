@@ -97,7 +97,7 @@ export function useProfiles(markDirty) {
     const profile = profiles.value.find(p => p.id === profileId || p.customId === profileId);
     if (!profile) return;
     const identifier = profile.customId || profile.id;
-    const link = `${window.location.origin}/${token}/${identifier}`;
+    const link = `${window.location.origin}/sub/${token}/${identifier}`;
     navigator.clipboard.writeText(link);
     showToast('订阅组分享链接已复制！', 'success');
   };
