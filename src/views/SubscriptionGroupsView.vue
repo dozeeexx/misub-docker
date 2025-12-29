@@ -9,6 +9,7 @@ import { useSubscriptionForms } from '../composables/useSubscriptionForms.js'; /
 import { useBulkImportLogic } from '../composables/useBulkImportLogic.js'; // Added
 import SubscriptionPanel from '../components/subscriptions/SubscriptionPanel.vue';
 import Modal from '../components/forms/Modal.vue';
+import SubscriptionEditModal from '../components/modals/SubscriptionEditModal.vue';
 import { useToastStore } from '../stores/toast.js';
 
 const dataStore = useDataStore();
@@ -105,33 +106,12 @@ const BulkImportModal = defineAsyncComponent(() => import('../components/modals/
     </SubscriptionPanel>
 
     <!-- Dialogs -->
-    <Modal v-if="editingSubscription" v-model:show="showSubModal" @confirm="handleSaveSubscription">
-        <template #title><h3 class="text-lg font-bold text-gray-800 dark:text-white">{{ isNewSubscription ? '新增订阅' : '编辑订阅' }}</h3></template>
-        <template #body>
-            <div class="space-y-4">
-                <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">订阅名称</label><input type="text" v-model="editingSubscription.name" placeholder="（可选）自动获取" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs dark:text-white"></div>
-                <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300">订阅链接</label><input type="text" v-model="editingSubscription.url" placeholder="https://..." class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs dark:text-white"></div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">包含/排除节点</label>
-                    <textarea v-model="editingSubscription.exclude" placeholder="排除模式 (默认)&#10;proto:vless&#10;---&#10;包含模式: keep:HK" rows="5" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs dark:text-white"></textarea>
-                </div>
-                <div>
-                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">自定义 User-Agent</label>
-                     <select v-model="editingSubscription.customUserAgent" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md dark:text-white">
-                        <option value="">使用默认 UA</option>
-                        <option value="clash.meta">Clash Meta</option>
-                        <option value="v2rayN/7.23">v2rayN</option>
-                        <option value="Shadowrocket/1.9.0">Shadowrocket</option>
-                        <option value="Mozilla/5.0">Mozilla</option>
-                     </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">备注</label>
-                    <textarea v-model="editingSubscription.notes" placeholder="官网、价格等..." rows="2" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md dark:text-white"></textarea>
-                </div>
-            </div>
-        </template>
-    </Modal>
+    <SubscriptionEditModal
+        v-model:show="showSubModal"
+        :is-new="isNewSubscription"
+        :editing-subscription="editingSubscription"
+        @confirm="handleSaveSubscription"
+    />
 
     <Modal v-model:show="showDeleteSubsModal" @confirm="handleDeleteAllSubscriptionsWithCleanup">
         <template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅</h3></template>
