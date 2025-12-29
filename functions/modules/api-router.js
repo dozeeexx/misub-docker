@@ -266,21 +266,23 @@ async function handleExternalFetchRequest(request, env) {
 
         const contentType = response.headers.get('content-type') || '';
 
-        // 读取内容
-        const content = await response.text();
-
-        // 检查内容大小限制
-        if (content.length > 10 * 1024 * 1024) { // 10MB limit
+        // ????????????????????????????????????Base64??????
+        const buffer = await response.arrayBuffer();
+        if (buffer.byteLength > 10 * 1024 * 1024) { // 10MB limit
             return createErrorResponse('Response content too large (max 10MB limit)', 413);
         }
 
-        // console.log(`[External Fetch] Success: ${content.length} bytes, type: ${contentType}`);
+        const content = new TextDecoder('utf-8').decode(buffer);
+        const contentBase64 = encodeArrayBufferToBase64(buffer);
 
-        // 返回带有元数据的响应
+        // console.log(`[External Fetch] Success: ${content.length} chars, type: ${contentType}`);
+
+        // ??????????????????????????????
         return new Response(JSON.stringify({
-            content: content,
-            contentType: contentType,
-            size: content.length,
+            content,
+            contentBase64,
+            contentType,
+            size: buffer.byteLength,
             url: externalUrl,
             success: true
         }), {
@@ -316,4 +318,20 @@ async function handleExternalFetchRequest(request, env) {
 
         return createErrorResponse(errorMessage, 500);
     }
+}
+
+/**
+ * ArrayBuffer -> Base64 (??????????????????????????????)
+ */
+function encodeArrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+    }
+
+    return btoa(binary);
 }

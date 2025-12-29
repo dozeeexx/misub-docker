@@ -51,23 +51,34 @@ const isValidUrl = (url) => {
 const smartBase64Decode = (text) => {
   const cleanText = text.trim().replace(/\s/g, '');
 
-  // 检查是否为有效的Base64
-  if (/^[A-Za-z0-9+\/=]+$/.test(cleanText) && cleanText.length % 4 === 0) {
+  const normalizeBase64 = (value) => {
+    let normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padding = normalized.length % 4;
+    if (padding) {
+      normalized += '='.repeat(4 - padding);
+    }
+    return normalized;
+  };
+
+  // ????????????????????????Base64
+  const normalizedText = normalizeBase64(cleanText);
+  if (/^[A-Za-z0-9+/=]+$/.test(normalizedText)) {
     try {
-      return atob(cleanText);
+      return atob(normalizedText);
     } catch (e) {
       return text;
     }
   }
 
-  // 尝试URL编码后Base64解码
+  // ??????URL?????????Base64??????
   try {
     const urlDecoded = decodeURIComponent(cleanText);
-    if (/^[A-Za-z0-9+\/=]+$/.test(urlDecoded)) {
-      return atob(urlDecoded);
+    const normalizedDecoded = normalizeBase64(urlDecoded);
+    if (/^[A-Za-z0-9+/=]+$/.test(normalizedDecoded)) {
+      return atob(normalizedDecoded);
     }
   } catch (e) {
-    // 忽略URL解码错误
+    // ??????URL????????????
   }
 
   return text;
@@ -411,7 +422,14 @@ const importSubscription = async () => {
 
     parseStatus.value = `正在解析订阅内容...`;
 
-    const { nodes, method } = parseNodes(responseData.content);
+    let { nodes, method } = parseNodes(responseData.content);
+
+    if (nodes.length === 0 && responseData.contentBase64) {
+      parseStatus.value = '????????????????????????????????????Base64??????...';
+      const fallback = parseNodes(responseData.contentBase64);
+      nodes = fallback.nodes;
+      method = fallback.method ? `${fallback.method} (Base64??????)` : 'Base64??????';
+    }
 
     if (nodes.length > 0) {
       // 去重处理
