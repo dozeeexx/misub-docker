@@ -98,8 +98,10 @@ export function prependNodeName(link, prefix) {
 
 /**
  * [新增] 从节点链接中提取主机和端口
+ * 支持 VMess 的 JSON Base64、SS/SSR 的编码片段等特殊格式，
+ * 如果无法解析会返回包含回退文本的对象。
  * @param {string} url - 节点链接
- * @returns {{host: string, port: string}}
+ * @returns {{host: string, port: string}} - 解析失败时返回 { host: '解析失败', port: 'N/A' }
  */
 export function extractHostAndPort(url) {
     if (!url) return { host: '', port: '' };

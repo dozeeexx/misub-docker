@@ -87,7 +87,7 @@ function convertShadowsocksToUrl(proxy) {
 /**
  * ShadowsocksR配置转换为URL
  */
-function convertShadowsockRToUrl(proxy) {
+function convertShadowsocksRToUrl(proxy) {
     try {
         if (!proxy.server || !proxy.port || !proxy.password) {
             return null;
@@ -338,7 +338,7 @@ export function convertClashProxyToUrl(proxy) {
             return convertShadowsocksToUrl(proxy);
         case 'ssr':
         case 'shadowsocksr':
-            return convertShadowsockRToUrl(proxy);
+            return convertShadowsocksRToUrl(proxy);
         case 'trojan':
             return convertTrojanToUrl(proxy);
         case 'vless':
@@ -478,27 +478,37 @@ export function parseSurgeConfig(content) {
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
+        const lowerLine = line.toLowerCase();
+        const equalIndex = line.indexOf('=');
+        const valuePrefix = equalIndex !== -1
+            ? line.slice(equalIndex + 1).split(',')[0].trim().toLowerCase()
+            : '';
 
         // 匹配代理规则
-        if (line.toLowerCase().startsWith('[proxy]') || line.toLowerCase().startsWith('[proxies]')) {
+        if (lowerLine.startsWith('[proxy]') || lowerLine.startsWith('[proxies]')) {
             // Surge代理配置
             continue;
         }
 
         // 解析不同类型的代理
-        if (line.toLowerCase().startsWith('vmess')) {
+        if (lowerLine.startsWith('vmess') || valuePrefix === 'vmess') {
             const node = parseSurgeVmess(line);
             if (node) nodes.push(node);
-        } else if (line.toLowerCase().startsWith('ss')) {
+        } else if (lowerLine.startsWith('ss') || valuePrefix === 'ss') {
             const node = parseSurgeSS(line);
             if (node) nodes.push(node);
-        } else if (line.toLowerCase().startsWith('trojan')) {
+        } else if (lowerLine.startsWith('trojan') || valuePrefix === 'trojan') {
             const node = parseSurgeTrojan(line);
             if (node) nodes.push(node);
-        } else if (line.toLowerCase().startsWith('http-proxy') || line.toLowerCase().startsWith('https-proxy')) {
+        } else if (
+            lowerLine.startsWith('http-proxy') ||
+            lowerLine.startsWith('https-proxy') ||
+            valuePrefix === 'http-proxy' ||
+            valuePrefix === 'https-proxy'
+        ) {
             const node = parseSurgeHTTP(line);
             if (node) nodes.push(node);
-        } else if (line.toLowerCase().startsWith('snell')) {
+        } else if (lowerLine.startsWith('snell') || valuePrefix === 'snell') {
             const node = parseSurgeSnell(line);
             if (node) nodes.push(node);
         }
@@ -708,12 +718,12 @@ export function parseQuantumultXConfig(content) {
 /**
  * 解析Quantumult X VMess配置
  */
-function parseQuantumletXVmess(line) {
+function parseQuantumultXVmess(line) {
     try {
-        const parts = line.split('=');
-        if (parts.length < 2) return null;
+        const equalIndex = line.indexOf('=');
+        if (equalIndex === -1) return null;
 
-        const config = parts[1];
+        const config = line.slice(equalIndex + 1);
         const params = config.split(',').map(p => p.trim());
 
         if (params.length < 6) return null;
@@ -772,10 +782,10 @@ function parseQuantumletXVmess(line) {
  */
 function parseQuantumultXSS(line) {
     try {
-        const parts = line.split('=');
-        if (parts.length < 2) return null;
+        const equalIndex = line.indexOf('=');
+        if (equalIndex === -1) return null;
 
-        const config = parts[1];
+        const config = line.slice(equalIndex + 1);
         const params = config.split(',').map(p => p.trim());
 
         if (params.length < 5) return null;
@@ -804,10 +814,10 @@ function parseQuantumultXSS(line) {
  */
 function parseQuantumultXTrojan(line) {
     try {
-        const parts = line.split('=');
-        if (parts.length < 2) return null;
+        const equalIndex = line.indexOf('=');
+        if (equalIndex === -1) return null;
 
-        const config = parts[1];
+        const config = line.slice(equalIndex + 1);
         const params = config.split(',').map(p => p.trim());
 
         if (params.length < 4) return null;
@@ -834,10 +844,10 @@ function parseQuantumultXTrojan(line) {
  */
 function parseQuantumultXHTTP(line) {
     try {
-        const parts = line.split('=');
-        if (parts.length < 2) return null;
+        const equalIndex = line.indexOf('=');
+        if (equalIndex === -1) return null;
 
-        const config = parts[1];
+        const config = line.slice(equalIndex + 1);
         const params = config.split(',').map(p => p.trim());
 
         if (params.length < 3) return null;
