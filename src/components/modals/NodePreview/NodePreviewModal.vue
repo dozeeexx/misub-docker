@@ -9,6 +9,10 @@ const props = defineProps({
   subscriptionUrl: String,
   profileId: String,
   profileName: String,
+  apiEndpoint: {
+    type: String,
+    default: '/api/subscription_nodes'
+  }
 });
 
 const emit = defineEmits(['update:show']);
@@ -113,6 +117,13 @@ watch(() => props.show, (newVal) => {
   }
 });
 
+onMounted(() => {
+  if (props.show) {
+    loadNodes();
+  }
+  window.addEventListener('keydown', handleKeydown);
+});
+
 // 监听筛选条件变化，重置页码
 watch([protocolFilter, regionFilter, searchQuery], () => {
   currentPage.value = 1;
@@ -140,9 +151,9 @@ const loadNodes = async () => {
       throw new Error('缺少必要的参数');
     }
 
-    console.log('Sending API request with data:', requestData);
+    console.log('[Preview] Sending request to:', props.apiEndpoint, requestData);
 
-    const response = await fetch('/api/subscription_nodes', {
+    const response = await fetch(props.apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -150,6 +161,8 @@ const loadNodes = async () => {
       credentials: 'include',
       body: JSON.stringify(requestData),
     });
+
+    console.log('[Preview] Response status:', response.status);
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -165,10 +178,13 @@ const loadNodes = async () => {
           throw new Error('认证失败，请重新登录后再试');
         }
       }
+      const errorText = await response.text();
+      console.error('[Preview] Error text:', errorText);
       throw new Error(`请求失败: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('[Preview] Data received:', data);
 
     if (!data.success) {
       throw new Error(data.error || '获取节点失败');
@@ -360,10 +376,6 @@ const handleKeydown = (e) => {
     emit('update:show', false);
   }
 };
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeydown);
-});
 </script>
 
 <template>

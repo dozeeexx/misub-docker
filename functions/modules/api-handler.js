@@ -237,3 +237,44 @@ export async function handleSettingsSave(request, env) {
         return createErrorResponse('保存设置失败', 'APIHandler', 500);
     }
 }
+
+/**
+ * 处理公开订阅组获取API
+ * @param {Object} env - Cloudflare环境对象
+ * @returns {Promise<Response>} HTTP响应
+ */
+export async function handlePublicProfilesRequest(env) {
+    try {
+        const storageAdapter = await getStorageAdapter(env);
+        const [profiles, settings] = await Promise.all([
+            storageAdapter.get(KV_KEY_PROFILES).then(res => res || []),
+            storageAdapter.get(KV_KEY_SETTINGS).then(res => res || {})
+        ]);
+
+        const profileToken = settings.profileToken || 'profiles';
+
+        // 过滤出公开且启用的订阅组
+        const publicProfiles = profiles
+            .filter(p => p.isPublic && p.enabled)
+            .map(p => ({
+                id: p.id,
+                name: p.name,
+                description: p.description || '',
+                customId: p.customId,
+                updatedAt: p.updatedAt,
+                subscriptionCount: (p.subscriptions || []).length,
+                manualNodeCount: (p.manualNodes || []).length,
+            }));
+
+        return createJsonResponse({
+            success: true,
+            data: publicProfiles,
+            config: {
+                profileToken
+            }
+        });
+    } catch (e) {
+        console.error('[API Error /public/profiles]', e);
+        return createErrorResponse('获取公开订阅组失败', 'APIHandler', 500);
+    }
+}

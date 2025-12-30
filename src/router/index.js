@@ -7,12 +7,19 @@ const ManualNodesView = () => import('../views/ManualNodesView.vue');
 const MySubscriptionsView = () => import('../views/MySubscriptionsView.vue');
 const SettingsView = () => import('../views/SettingsView.vue');
 
+const PublicProfilesView = () => import('../views/PublicProfilesView.vue');
+const HomeView = () => import('../views/HomeView.vue'); // [NEW] Wrapper View
+
 const routes = [
     {
-        path: '/',
-        name: 'Dashboard',
-        component: DashboardView,
-        meta: { title: '仪表盘' }
+        path: '/',  // Root path is HomeView (Smart Wrapper)
+        name: 'Home',
+        component: HomeView,
+        meta: { title: '首页', isPublic: true } // Publicly accessible, view handles content
+    },
+    {
+        path: '/dashboard', // Explicit dashboard route redirects to home or is alias
+        redirect: '/'
     },
     {
         path: '/groups',
@@ -37,6 +44,18 @@ const routes = [
         name: 'Settings',
         component: SettingsView,
         meta: { title: '设置' }
+    },
+    {
+        path: '/',
+        name: 'PublicProfiles',
+        component: PublicProfilesView,
+        meta: { title: '发现订阅', isPublic: true }
+    },
+    {
+        path: '/login',
+        name: 'Login',
+        component: () => import('../components/modals/Login.vue'),
+        meta: { title: '登录', isPublic: false } // Actually handled by App.vue logic, but good to have a route
     }
 ];
 

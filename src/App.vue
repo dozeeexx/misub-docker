@@ -1,5 +1,6 @@
 <script setup>
 import { defineAsyncComponent, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router'; // [NEW]
 import { useThemeStore } from './stores/theme';
 import { useSessionStore } from './stores/session';
 import { useToastStore } from './stores/toast';
@@ -17,6 +18,7 @@ const PWADevTools = defineAsyncComponent(() => import('./components/features/PWA
 const Dashboard = defineAsyncComponent(() => import('./components/features/Dashboard/Dashboard.vue'));
 const Header = defineAsyncComponent(() => import('./components/layout/Header.vue'));
 
+const route = useRoute(); // [NEW]
 const themeStore = useThemeStore();
 const { theme } = storeToRefs(themeStore);
 const { initTheme } = themeStore;
@@ -66,17 +68,36 @@ const handleDiscard = async () => {
     :class="theme" 
     class="min-h-screen flex flex-col text-gray-800 dark:text-gray-200 transition-colors duration-300 bg-gray-100 dark:bg-gray-950"
   >
-    <NavBar v-if="layoutMode === 'modern'" :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
-    <Header v-else :is-logged-in="sessionState === 'loggedIn'" @logout="logout" />
+    <!-- Show NavBar if logged in and modern mode OR if public route and modern mode -->
+    <NavBar 
+      v-if="(sessionState === 'loggedIn' || route.meta.isPublic) && layoutMode === 'modern'" 
+      :is-logged-in="sessionState === 'loggedIn'" 
+      @logout="logout" 
+    />
+    <!-- Show Header if logged in and legacy mode OR if public route and legacy mode -->
+    <Header 
+      v-else-if="(sessionState === 'loggedIn' || route.meta.isPublic)" 
+      :is-logged-in="sessionState === 'loggedIn'" 
+      @logout="logout" 
+    />
+    
+    <!-- IF NOT LOGGED IN, BUT PUBLIC ROUTE (like /explore or /): SHOW HEADER (optional) or just nothing? 
+         The PublicProfilesView has its own header design usually. 
+         Let's keep it clean. If public route, we might not want the main app header if the view handles it.
+         But wait, PublicProfilesView doesn't have a navigation header in the code I saw, just a hero.
+         We might want a simple header or none. The user requested "adding a login button to the top right".
+         So PublicProfilesView will handle its own top bar.
+    -->
 
     <main 
       class="grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"
       :class="{
-        'flex items-center justify-center': sessionState !== 'loggedIn' && sessionState !== 'loading',
+        'flex items-center justify-center': sessionState !== 'loggedIn' && sessionState !== 'loading' && !route.meta.isPublic,
       }"
     >
       <div v-if="sessionState === 'loading'" class="flex justify-center p-8">Loading...</div>
       
+      <!-- LOGGED IN VIEW -->
       <template v-else-if="sessionState === 'loggedIn'">
           <Transition name="slide-fade">
             <div v-if="layoutMode === 'modern' && (isDirty || saveState === 'success')" 
@@ -103,7 +124,17 @@ const handleDiscard = async () => {
 
           <Dashboard v-else />
       </template>
+
+      <!-- PUBLIC ROUTE VIEW (Not logged in, but isPublic) -->
+      <template v-else-if="route.meta.isPublic">
+         <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+      </template>
       
+      <!-- LOGIN VIEW (Not logged in, not public) -->
       <Login v-else :login="login" />
 
     </main>

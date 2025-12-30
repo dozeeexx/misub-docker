@@ -50,15 +50,25 @@ const emit = defineEmits(['delete', 'change', 'edit', 'copy-link', 'preview', 'm
     </p>
 
     <div class="flex justify-between items-center mt-3">
-      <label class="relative inline-flex items-center cursor-pointer">
-        <input type="checkbox" :checked="profile.enabled" @change="$emit('change', { ...profile, enabled: $event.target.checked })" class="sr-only peer">
-        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-indigo-600 dark:peer-checked:bg-green-600"></div>
-        <span class="ml-3 text-sm font-medium text-gray-600 dark:text-gray-300">{{ profile.enabled ? '已启用' : '已禁用' }}</span>
-      </label>
+      <div class="flex items-center gap-4">
+        <!-- 启用开关 -->
+        <label class="relative inline-flex items-center cursor-pointer" title="启用/禁用订阅组">
+          <input type="checkbox" :checked="profile.enabled" @change="$emit('change', { ...profile, enabled: $event.target.checked })" class="sr-only peer">
+          <div class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-indigo-600 dark:peer-checked:bg-green-600"></div>
+          <span class="ml-2 text-xs font-medium text-gray-600 dark:text-gray-400">启用</span>
+        </label>
 
-      <button @click="emit('copy-link')" class="text-sm font-semibold px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-xs flex items-center gap-2">
-         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-        复制
+        <!-- 公开开关 -->
+        <label class="relative inline-flex items-center cursor-pointer" title="在公开页展示">
+          <input type="checkbox" :checked="profile.isPublic" @change="$emit('change', { ...profile, isPublic: $event.target.checked })" class="sr-only peer">
+          <div class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-500"></div>
+          <span class="ml-2 text-xs font-medium text-gray-600 dark:text-gray-400">公开</span>
+        </label>
+      </div>
+
+      <button @click="emit('copy-link')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-300 transition-colors shadow-xs flex items-center gap-1">
+         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+         复制
       </button>
     </div>
 

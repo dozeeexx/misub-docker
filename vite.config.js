@@ -141,7 +141,6 @@ export default defineConfig({
         enabled: true,
         type: 'module',
 
-        navigateFallbackAllowlist: [/^\/$/],
         navigateFallbackDenylist: [
           /^\/sub\/.*/,
           /^\/[^/]+\/[^/]+(\?.*)?$/
@@ -187,13 +186,8 @@ export default defineConfig({
     },
     // 压缩配置
     minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // 移除console.log
-        drop_debugger: true, // 移除debugger
-        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
-      }
-    }
+
+    // terserOptions removed for debugging
   },
   // 开发服务器配置
   server: {
@@ -206,40 +200,7 @@ export default defineConfig({
         target: 'http://127.0.0.1:8787',
         changeOrigin: true,
       },
-      // Catch-all proxy for custom subscription paths (e.g. /test1/work)
-      // Use bypass to exclude static assets, Vite internals, and SPA routes
-      '^/.*': {
-        target: 'http://127.0.0.1:8787',
-        changeOrigin: true,
-        bypass: (req) => {
-          const url = req.url;
-          const pureUrl = url.split('?')[0];
-
-          // 1. Exclude Vite internals (@fs, @vite, etc.)
-          if (url.startsWith('/@') || url.includes('/node_modules/') || url.startsWith('/src/')) {
-            return url;
-          }
-
-          // 2. Exclude static assets by extension
-          if (/\.(js|css|html|json|png|jpg|jpeg|svg|ico|woff2|woff|ttf|map|webmanifest)$/.test(pureUrl)) {
-            return url;
-          }
-
-          // 3. Exclude known SPA routes
-          const spaRoutes = ['/', '/groups', '/nodes', '/subscriptions', '/settings', '/login', '/dashboard', '/profile'];
-          if (spaRoutes.some(route => pureUrl === route || pureUrl.startsWith(route + '/'))) {
-            return url;
-          }
-
-          // 4. Exclude specific PWA files if not caught by extension
-          if (pureUrl === '/dev-sw.js' || pureUrl === '/registerSW.js') {
-            return url;
-          }
-
-          // Otherwise, allow proxy (return undefined/false)
-          return undefined;
-        }
-      }
+      // Catch-all proxy removed to fix SPA fallback
     }
   },
   // 依赖优化

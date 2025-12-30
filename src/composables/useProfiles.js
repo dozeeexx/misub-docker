@@ -33,6 +33,9 @@ export function useProfiles(markDirty) {
     const index = profiles.value.findIndex(p => p.id === updatedProfile.id);
     if (index !== -1) {
       profiles.value[index].enabled = updatedProfile.enabled;
+      if (updatedProfile.isPublic !== undefined) {
+        profiles.value[index].isPublic = updatedProfile.isPublic;
+      }
       markDirty();
     }
   };
