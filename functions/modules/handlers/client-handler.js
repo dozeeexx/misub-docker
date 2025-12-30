@@ -152,6 +152,20 @@ const DEFAULT_CLIENTS = [
 ];
 
 /**
+ * Robust UUID generator
+ * Falls back to Math.random if crypto.randomUUID is not available
+ */
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
  * Handle client management requests
  * @param {Request} request 
  * @param {Object} env 
@@ -159,6 +173,11 @@ const DEFAULT_CLIENTS = [
 export async function handleClientRequest(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
+
+    // Guard against missing KV binding
+    if (!env.MISUB_KV) {
+        return createErrorResponse('KV binding MISUB_KV is missing', 500);
+    }
 
     try {
         if (request.method === 'GET') {
@@ -180,7 +199,12 @@ export async function handleClientRequest(request, env) {
                 });
             }
 
-            const body = await request.json();
+            let body;
+            try {
+                body = await request.json();
+            } catch (e) {
+                return createErrorResponse('Invalid JSON body', 400);
+            }
 
             // Allow batch update or single add/update
             let clients = await env.MISUB_KV.get(KV_KEY_CLIENTS, 'json') || [];
@@ -190,11 +214,15 @@ export async function handleClientRequest(request, env) {
                 clients = body;
             } else {
                 // Single add/update
+                if (!body.name) {
+                    return createErrorResponse('Client name is required', 400);
+                }
+
                 const index = clients.findIndex(c => c.id === body.id);
                 if (index !== -1) {
                     clients[index] = { ...clients[index], ...body };
                 } else {
-                    if (!body.id) body.id = crypto.randomUUID();
+                    if (!body.id) body.id = generateUUID();
                     clients.push(body);
                 }
             }
@@ -214,7 +242,12 @@ export async function handleClientRequest(request, env) {
             }
 
             let clients = await env.MISUB_KV.get(KV_KEY_CLIENTS, 'json') || [];
+            const originalLength = clients.length;
             clients = clients.filter(c => c.id !== id);
+
+            if (clients.length === originalLength) {
+                return createErrorResponse('Client not found', 404);
+            }
 
             await env.MISUB_KV.put(KV_KEY_CLIENTS, JSON.stringify(clients));
             return createJsonResponse({
@@ -226,6 +259,6 @@ export async function handleClientRequest(request, env) {
         return createErrorResponse('Method Not Allowed', 405);
     } catch (e) {
         console.error('[Client Handler Error]', e);
-        return createErrorResponse(e.message, 500);
+        return createErrorResponse(`Operation failed: ${e.message}`, 500);
     }
 }
