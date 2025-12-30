@@ -31,6 +31,7 @@ import { createJsonResponse } from './modules/utils.js';
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
+    console.log(`[Worker Entry] Request: ${request.method} ${url.pathname}`);
 
     try {
         // 路由分发
@@ -68,7 +69,8 @@ export async function onRequest(context) {
                 '/settings',
                 '/login',
                 '/dashboard',
-                '/profile'
+                '/profile',
+                '/explore' // [新增] 公开页面
             ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
 
             if (!isStaticAsset && !isSpaRoute && url.pathname !== '/') {
@@ -91,7 +93,8 @@ export async function onRequest(context) {
 
             // Route protection for SPA pages
             // If accessing a protected route without auth, redirect to login
-            if (isSpaRoute && url.pathname !== '/login') {
+            // [Fix] Exclude /explore from auth check
+            if (isSpaRoute && url.pathname !== '/login' && !url.pathname.startsWith('/explore')) {
                 const { authMiddleware } = await import('./modules/auth-middleware.js');
                 const isAuthenticated = await authMiddleware(request, env);
                 if (!isAuthenticated) {
@@ -104,7 +107,16 @@ export async function onRequest(context) {
             }
 
             // Continue to static assets or root
-            return next();
+            let response = await next();
+
+            // [Fix] SPA Fallback: If asset not found (404) and it's an SPA route, serve index.html
+            if (response.status === 404 && isSpaRoute) {
+                // Clone the request to fetch index.html, preventing mutation issues
+                const indexUrl = new URL('/', request.url);
+                response = await env.ASSETS.fetch(new Request(indexUrl, request));
+            }
+
+            return response;
         }
     } catch (error) {
         // 全局错误处理

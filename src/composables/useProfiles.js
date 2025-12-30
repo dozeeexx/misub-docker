@@ -33,6 +33,9 @@ export function useProfiles(markDirty) {
     const index = profiles.value.findIndex(p => p.id === updatedProfile.id);
     if (index !== -1) {
       profiles.value[index].enabled = updatedProfile.enabled;
+      if (updatedProfile.isPublic !== undefined) {
+        profiles.value[index].isPublic = updatedProfile.isPublic;
+      }
       markDirty();
     }
   };
@@ -97,7 +100,7 @@ export function useProfiles(markDirty) {
     const profile = profiles.value.find(p => p.id === profileId || p.customId === profileId);
     if (!profile) return;
     const identifier = profile.customId || profile.id;
-    const link = `${window.location.origin}/sub/${token}/${identifier}`;
+    const link = `${window.location.origin}/${token}/${identifier}`;
     navigator.clipboard.writeText(link);
     showToast('订阅组分享链接已复制！', 'success');
   };

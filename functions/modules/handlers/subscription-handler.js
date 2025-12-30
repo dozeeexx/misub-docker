@@ -431,6 +431,48 @@ export function determineRequestMode(requestData) {
 }
 
 /**
+ * 处理公开订阅组预览请求
+ * @param {Object} request - HTTP请求对象
+ * @param {Object} env - Cloudflare环境对象
+ * @returns {Promise<Response>} HTTP响应
+ */
+export async function handlePublicPreviewRequest(request, env) {
+    if (request.method !== 'POST') {
+        return createJsonResponse('Method Not Allowed', 405);
+    }
+
+    try {
+        const requestData = await request.json();
+        console.log('[Backend] Public Preview Request:', JSON.stringify(requestData));
+        const { profileId, userAgent = 'MiSub-Public-Preview/1.0' } = requestData;
+
+        if (!profileId) {
+            return createJsonResponse({ error: 'Missing profile ID' }, 400);
+        }
+
+        // 验证是否为公开订阅组
+        const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
+        const allProfiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+        const profile = allProfiles.find(p => (p.customId && p.customId === profileId) || p.id === profileId);
+
+        if (!profile || !profile.enabled || !profile.isPublic) {
+            return createJsonResponse({ error: 'Profile not found or not public' }, 404);
+        }
+
+        // 调用 handleProfileMode 获取节点
+        // 注意：handleProfileMode 内部会再次获取 profiles 和 subscriptions，
+        // 虽然有一次额外的 KV 读取，但为了复用逻辑是值得的。
+        const result = await handleProfileMode(request, env, profile.id, userAgent);
+        console.log('[Backend] Preview result stats:', result.success, 'Nodes:', result.nodes ? result.nodes.length : 0);
+
+        return createJsonResponse(result);
+
+    } catch (e) {
+        return createErrorResponse(`Preview failed: ${e.message}`, 500);
+    }
+}
+
+/**
  * 处理订阅节点请求的主要入口
  * @param {Object} request - HTTP请求对象
  * @param {Object} env - Cloudflare环境对象

@@ -164,6 +164,8 @@ watch(() => props.profile, (newProfile) => {
       manualNodes: [], 
       customId: '', 
       expiresAt: '',
+      isPublic: false, // [新增]
+      description: '', // [新增]
       prefixSettings: {
         enableManualNodes: null,
         enableSubscriptions: null,
@@ -248,6 +250,42 @@ const handleDeselectAll = (listName, sourceArray) => {
                 class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
               >
                <p class="text-xs text-gray-400 mt-1">设置后，订阅链接会更短，如 /token/home</p>
+            </div>
+        </div>
+
+        <!-- [新增] Public Display & Description -->
+        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                    <input
+                        type="checkbox"
+                        id="profile-is-public"
+                        v-model="localProfile.isPublic"
+                        class="h-4 w-4 rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <label for="profile-is-public" class="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        公开展示 (Public)
+                    </label>
+                </div>
+                <span class="text-xs text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full" v-if="localProfile.isPublic">
+                    将在公开页显示
+                </span>
+            </div>
+            
+            <div v-if="localProfile.isPublic" class="animate-fade-in-down">
+                <label for="profile-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    公开页描述 / 简介
+                </label>
+                <textarea
+                    id="profile-description"
+                    v-model="localProfile.description"
+                    rows="2"
+                    placeholder="简要介绍此订阅组的内容，将在公开页面展示。"
+                    class="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+                ></textarea>
+            </div>
+            <div v-else class="text-xs text-gray-400">
+                开启后，任何人均可通过公开页面查看此订阅组的名称和简介，并获取订阅链接。
             </div>
         </div>
 

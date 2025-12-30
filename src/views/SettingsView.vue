@@ -13,6 +13,7 @@ import ServiceSettings from '../components/settings/sections/ServiceSettings.vue
 import ProcessingSettings from '../components/settings/sections/ProcessingSettings.vue';
 import WebSettings from '../components/settings/sections/WebSettings.vue';
 import SystemSettings from '../components/settings/sections/SystemSettings.vue';
+import ClientSettings from '../components/settings/sections/ClientSettings.vue';
 
 const dataStore = useDataStore();
 const { showToast } = useToastStore();
@@ -62,6 +63,7 @@ const currentTabLabel = computed(() => {
         case 'service': return '服务集成';
         case 'pipeline': return '节点处理';
         case 'web': return 'Web访问';
+        case 'client': return '客户端管理';
         case 'system': return '系统设置';
         default: return '设置';
     }
@@ -240,6 +242,7 @@ onMounted(() => {
                 <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
                 <ProcessingSettings v-show="activeTab === 'pipeline'" :settings="settings" :prefixConfig="prefixConfig" v-model:nodeTransform="nodeTransform" />
                 <WebSettings v-show="activeTab === 'web'" :disguiseConfig="disguiseConfig" />
+                <ClientSettings v-show="activeTab === 'client'" />
                 <SystemSettings v-show="activeTab === 'system'" :settings="settings" :exportBackup="exportBackup" :importBackup="importBackup" @migrate="handleOpenMigrationModal" />
             </div>
 

@@ -6,10 +6,11 @@
 import { StorageFactory, DataMigrator } from '../storage-adapter.js';
 import { createJsonResponse, createErrorResponse } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout } from './auth-middleware.js';
-import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave } from './api-handler.js';
+import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave, handlePublicProfilesRequest } from './api-handler.js';
 import { handleCronTrigger } from './notifications.js';
 import {
-    handleSubscriptionNodesRequest
+    handleSubscriptionNodesRequest,
+    handlePublicPreviewRequest
 } from './handlers/subscription-handler.js';
 import {
     handleDebugSubscriptionRequest,
@@ -24,10 +25,12 @@ import {
     handleCleanNodesRequest,
     handleHealthCheckRequest
 } from './handlers/node-handler.js';
+import { handleClientRequest } from './handlers/client-handler.js';
 
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
 const KV_KEY_SUBS = 'misub_subscriptions_v1';
+const KV_KEY_PROFILES = 'misub_profiles_v1'; // Ensure this is defined if used
 
 /**
  * 处理主要的API请求
@@ -37,7 +40,9 @@ const KV_KEY_SUBS = 'misub_subscriptions_v1';
  */
 export async function handleApiRequest(request, env) {
     const url = new URL(request.url);
+    console.log(`[API Router] Incoming request: ${request.method} ${url.pathname}`);
     const path = url.pathname.replace(/^\/api/, '');
+    console.log(`[API Router] Parsed path: ${path}`);
 
     // [新增] 数据存储迁移接口 (KV -> D1)
     if (path === '/migrate_to_d1') {
@@ -51,9 +56,7 @@ export async function handleApiRequest(request, env) {
                     message: 'D1 数据库未配置，请检查 wrangler.toml 配置'
                 }, 400);
             }
-
             const migrationResult = await DataMigrator.migrateKVToD1(env);
-
             if (migrationResult.errors.length > 0) {
                 return createJsonResponse({
                     success: false,
@@ -62,7 +65,6 @@ export async function handleApiRequest(request, env) {
                     partialSuccess: migrationResult
                 }, 500);
             }
-
             return createJsonResponse({
                 success: true,
                 message: '数据已成功迁移到 D1 数据库',
@@ -107,8 +109,20 @@ export async function handleApiRequest(request, env) {
         return await handleLogin(request, env);
     }
 
+    if (path === '/public/profiles') {
+        return await handlePublicProfilesRequest(env);
+    }
+
+    if (path === '/public/preview') {
+        return await handlePublicPreviewRequest(request, env);
+    }
+
+    // Public GET access for clients
+    if (path.startsWith('/clients') && request.method === 'GET') {
+        return await handleClientRequest(request, env);
+    }
+
     // Special handling for /data to return 200 OK for unauthenticated requests
-    // This prevents the browser from logging a 401 error in the console
     if (path === '/data') {
         if (!await authMiddleware(request, env)) {
             return createJsonResponse({
@@ -123,11 +137,14 @@ export async function handleApiRequest(request, env) {
         return createJsonResponse({ error: 'Unauthorized' }, 401);
     }
 
+    // Auth-only route for client management (POST, DELETE, etc.)
+    if (path.startsWith('/clients')) {
+        return await handleClientRequest(request, env);
+    }
+
     switch (path) {
         case '/logout':
             return await handleLogout();
-
-        // case '/data': moved up due to special auth handling
 
         case '/misubs':
             return await handleMisubsSave(request, env);
