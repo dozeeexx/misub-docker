@@ -84,7 +84,7 @@ watch(isCollapsed, (newVal) => {
   emit('collapse-change', newVal);
 });
 
-// 处理过滤��值变化
+// 处理过滤器值变化
 const handleFilterChange = (filter, value) => {
   localValues.value[filter.key] = value;
 

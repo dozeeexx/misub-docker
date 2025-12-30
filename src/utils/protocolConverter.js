@@ -178,15 +178,15 @@ function convertVlessToUrl(proxy) {
         if (proxy.network === 'ws' && proxy['ws-opts']) {
             params.set('type', 'ws');
             if (proxy['ws-opts'].path) {
-                params.set('path', encodeURIComponent(proxy['ws-opts'].path));
+                params.set('path', proxy['ws-opts'].path);
             }
             if (proxy['ws-opts']['headers']?.Host) {
-                params.set('host', encodeURIComponent(proxy['ws-opts']['headers'].Host));
+                params.set('host', proxy['ws-opts']['headers'].Host);
             }
         } else if (proxy.network === 'grpc' && proxy['grpc-opts']) {
             params.set('type', 'grpc');
             if (proxy['grpc-opts']['grpc-service-name']) {
-                params.set('serviceName', encodeURIComponent(proxy['grpc-opts']['grpc-service-name']));
+                params.set('serviceName', proxy['grpc-opts']['grpc-service-name']);
             }
         }
 
@@ -203,13 +203,13 @@ function convertVlessToUrl(proxy) {
             params.set('security', 'reality');
             if (proxy['reality-opts']) {
                 if (proxy['reality-opts']['public-key']) {
-                    params.set('publicKey', encodeURIComponent(proxy['reality-opts']['public-key']));
+                    params.set('publicKey', proxy['reality-opts']['public-key']);
                 }
                 if (proxy['reality-opts']['short-id']) {
                     params.set('shortId', proxy['reality-opts']['short-id']);
                 }
                 if (proxy['reality-opts']['spider-x']) {
-                    params.set('spiderX', encodeURIComponent(proxy['reality-opts']['spider-x']));
+                    params.set('spiderX', proxy['reality-opts']['spider-x']);
                 }
             }
         }
@@ -610,7 +610,7 @@ function parseSurgeVmess(line) {
  */
 function parseSurgeSS(line) {
     try {
-        const parts = line.match(/(\w+)\s*=\s*(.+)$/);
+        const parts = line.match(/^([^=]+?)\s*=\s*(.+)$/);
         if (!parts) return null;
 
         const params = parts[2].split(',').map(p => p.trim());
@@ -637,7 +637,7 @@ function parseSurgeSS(line) {
  */
 function parseSurgeTrojan(line) {
     try {
-        const parts = line.match(/(\w+)\s*=\s*(.+)$/);
+        const parts = line.match(/^([^=]+?)\s*=\s*(.+)$/);
         if (!parts) return null;
 
         const params = parts[2].split(',').map(p => p.trim());
@@ -663,7 +663,7 @@ function parseSurgeTrojan(line) {
  */
 function parseSurgeHTTP(line) {
     try {
-        const parts = line.match(/(\w+)\s*=\s*(.+)$/);
+        const parts = line.match(/^([^=]+?)\s*=\s*(.+)$/);
         if (!parts) return null;
 
         const params = parts[2].split(',').map(p => p.trim());

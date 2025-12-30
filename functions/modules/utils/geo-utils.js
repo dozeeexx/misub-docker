@@ -221,7 +221,7 @@ export function parseNodeInfo(nodeUrl) {
     // 如果没有名称，从URL生成一个
     if (!nodeName) {
         // 从URL中提取一些信息作为名称
-        const urlWithoutProtocol = nodeUrl.replace(/^[^:]*:\/\/\/\//, '');
+        const urlWithoutProtocol = nodeUrl.replace(/^[^:]*:\/\//, '');
         const urlParts = urlWithoutProtocol.split(/[:@?#]/);
         nodeName = urlParts[0] || '未命名节点';
     }
