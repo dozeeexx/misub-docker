@@ -34,7 +34,7 @@ const DEFAULT_CLIENTS = [
         icon: '💻',
         bgColor: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600',
         description: 'Windows 平台最流行的 V2Ray/Xray 客户端，功能强大且易于使用。',
-        platforms: ['windows'],
+        platforms: ['windows', 'linux'],
         url: 'https://github.com/2dust/v2rayN/releases',
         repo: '2dust/v2rayN',
         version: null
@@ -89,7 +89,7 @@ const DEFAULT_CLIENTS = [
         icon: '📦',
         bgColor: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600',
         description: 'iOS 平台上强大的基于规则的代理实用工具，支持多种协议。',
-        platforms: ['ios'],
+        platforms: ['ios', 'macos'],
         url: 'https://apps.apple.com/us/app/stash-rule-based-proxy/id1596063349',
         repo: null,
         version: null
@@ -100,7 +100,7 @@ const DEFAULT_CLIENTS = [
         icon: '🎈',
         bgColor: 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600',
         description: 'iOS 平台功能强大的网络工具，界面简洁优雅，支持插件扩展。',
-        platforms: ['ios'],
+        platforms: ['ios', 'macos'],
         url: 'https://apps.apple.com/us/app/loon/id1373567447',
         repo: null,
         version: null
@@ -122,7 +122,7 @@ const DEFAULT_CLIENTS = [
         icon: '🦋',
         bgColor: 'bg-pink-50 dark:bg-pink-900/30 text-pink-600',
         description: '基于 Flutter 开发的多平台 Clash 客户端，界面美观流畅。',
-        platforms: ['windows', 'macos', 'linux', 'android', 'ios'],
+        platforms: ['windows', 'linux', 'android'],
         url: 'https://github.com/chen08209/FlClash/releases',
         repo: 'chen08209/FlClash',
         version: null
@@ -147,6 +147,28 @@ const DEFAULT_CLIENTS = [
         platforms: ['windows', 'android'],
         url: 'https://github.com/GtxFury/FlyClash/releases',
         repo: 'GtxFury/FlyClash',
+        version: null
+    },
+    {
+        id: 'karing',
+        name: 'Karing',
+        icon: '🦌',
+        bgColor: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600',
+        description: '简单的兼容 Clash/V2ray/Sing-box 的全平台客户端。',
+        platforms: ['windows', 'macos', 'linux', 'android', 'ios'],
+        url: 'https://github.com/KaringX/karing/releases',
+        repo: 'KaringX/karing',
+        version: null
+    },
+    {
+        id: 'quantumultx',
+        name: 'Quantumult X',
+        icon: '❌',
+        bgColor: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600',
+        description: 'iOS 平台功能强大的网络工具，界面精美，支持脚本。',
+        platforms: ['ios'],
+        url: 'https://apps.apple.com/us/app/quantumult-x/id1443988620',
+        repo: null,
         version: null
     }
 ];
