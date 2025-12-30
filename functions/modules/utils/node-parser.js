@@ -194,7 +194,8 @@ export function extractValidNodes(text) {
 
     // 1. 尝试解析为 Clash YAML
     // 只有当包含 proxies 关键字时才尝试，避免普通文本解析报错
-    if (text.includes('proxies:') || text.includes('Proxy:')) {
+    const lowerText = text.toLowerCase();
+    if (/\bproxies\s*:/.test(lowerText)) {
         try {
             const yamlObj = yaml.load(text);
             // 兼容 proxies 和 Proxy 字段
@@ -214,17 +215,17 @@ export function extractValidNodes(text) {
         }
     }
 
-        // 2. ?????? Base64 ??????
+    // 2. 尝试解码 Base64 订阅内容
     let processedText = text;
     try {
         const cleanedText = text.replace(/\s/g, '');
-        // ????????? Base64 ????????????
+        // 标准化 URL-safe Base64，便于后续解码
         let normalized = cleanedText.replace(/-/g, '+').replace(/_/g, '/');
         const padding = normalized.length % 4;
         if (padding) {
             normalized += '='.repeat(4 - padding);
         }
-        const base64Regex = /^[A-Za-z0-9+\/=]+$/;
+        const base64Regex = /^[A-Za-z0-9+/=]+$/;
         if (base64Regex.test(normalized) && normalized.length > 20) {
             const binaryString = atob(normalized);
             const bytes = new Uint8Array(binaryString.length);
@@ -234,7 +235,7 @@ export function extractValidNodes(text) {
             processedText = new TextDecoder('utf-8').decode(bytes);
         }
     } catch (e) {
-        // ????????????????????????
+        // Base64 解码失败则继续按照纯文本处理
     }
 
     // 3. 正则提取链接 (ss://, vmess:// 等)

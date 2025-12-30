@@ -1,12 +1,12 @@
 /**
- * z���
+ * 空状态组件
  * @author MiSub Team
  */
 
 <script setup>
 import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
   filteredCount: {
     type: Number,
     default: 0
@@ -31,35 +31,31 @@ defineProps({
 
 defineEmits(['reset', 'refresh']);
 
-// 9n�>:���
-const displayTitle = computed(() => {
-  if (title) return title;
+  if (props.title) return props.title;
+  if (props.totalCount === 0) {
+    return '暂无数据';
+  } else if (props.filteredCount === 0) {
+    return '没有符合条件的结果';
+  return '暂无内容';
 
-  if (totalCount === 0) {
-    return '����pn';
-  } else if (filteredCount === 0) {
-    return '�	~09M���';
-  }
-  return '��pn';
+  if (props.description) return props.description;
+  if (props.totalCount === 0) {
+    return '当前还没有可用的数据，尝试添加新的订阅或节点。';
+  } else if (props.filteredCount === 0) {
+    return '调整筛选条件或重置过滤器以查看全部内容。';
+  return '暂无可展示的内容，请稍后重试。';
 });
 
-const displayDescription = computed(() => {
-  if (description) return description;
+  return props.totalCount > 0 && props.filteredCount === 0;
+        v-if="props.icon === 'search'"
+        v-else-if="props.icon === 'folder'"
+        v-else-if="props.icon === 'node'"
+        重置过滤
 
-  if (totalCount === 0) {
-    return 'SM�-�	�(������Mn����';
-  } else if (filteredCount === 0) {
-    return '�t��a�"s.�e�~��';
-  }
-  return '�	�>:�pn';
-});
-
-const showResetButton = computed(() => {
-  return totalCount > 0 && filteredCount === 0;
-});
-</script>
-
-<template>
+        刷新列表
+    <div v-if="props.totalCount > 0" class="mt-6 text-xs text-gray-400 dark:text-gray-500">
+      共 {{ props.totalCount }} 项，已过滤 {{ props.filteredCount }} 项
+</template>
   <div class="flex flex-col items-center justify-center py-12 px-4">
     <!-- � -->
     <div class="flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full mb-4">
