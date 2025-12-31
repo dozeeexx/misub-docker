@@ -39,6 +39,21 @@ const toggleNodeSelection = (nodeId) => {
     }
 };
 
+const isAllSelected = computed(() => {
+    if (paginatedNodes.value.length === 0) return false;
+    return paginatedNodes.value.every(node => selectedNodeIds.value.has(node.id));
+});
+
+const toggleSelectAll = () => {
+    if (isAllSelected.value) {
+        // Deselect all on current page
+        paginatedNodes.value.forEach(node => selectedNodeIds.value.delete(node.id));
+    } else {
+        // Select all on current page
+        paginatedNodes.value.forEach(node => selectedNodeIds.value.add(node.id));
+    }
+};
+
 const handleBatchColor = (color) => {
     emit('batch-update-color', Array.from(selectedNodeIds.value), color);
     // Maintain selection? Or clear? Usually clear after action.
@@ -400,9 +415,15 @@ onUnmounted(() => {
 
     <!-- Selection Toolbar -->
     <Transition name="slide-fade-sm">
-        <div v-if="isSelectionMode && selectedNodeIds.size > 0" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] sm:w-auto max-w-xl bg-white dark:bg-gray-800 shadow-xl rounded-2xl sm:rounded-full px-4 py-3 sm:px-6 sm:py-3 flex flex-col sm:flex-row items-center justify-between sm:justify-center gap-3 sm:gap-4 z-50 border border-gray-200 dark:border-gray-700">
+        <div v-if="isSelectionMode" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] sm:w-auto max-w-xl bg-white dark:bg-gray-800 shadow-xl rounded-2xl sm:rounded-full px-4 py-3 sm:px-6 sm:py-3 flex flex-col sm:flex-row items-center justify-between sm:justify-center gap-3 sm:gap-4 z-50 border border-gray-200 dark:border-gray-700">
             
             <div class="flex items-center justify-between w-full sm:w-auto gap-4">
+                <button 
+                  @click="toggleSelectAll" 
+                  class="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 whitespace-nowrap"
+                >
+                  {{ isAllSelected ? '取消全选' : '全选本页' }}
+                </button>
                 <span class="text-sm font-medium text-gray-600 dark:text-gray-300 whitespace-nowrap">已选 {{ selectedNodeIds.size }}</span>
             </div>
 
@@ -429,7 +450,7 @@ onUnmounted(() => {
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
                         删除
                     </button>
-                    <button @click="selectedNodeIds.clear(); isSelectionMode = false" class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white whitespace-nowrap px-2 py-1 bg-gray-100 sm:bg-transparent rounded-md sm:rounded-none">取消</button>
+                    <button @click="selectedNodeIds.clear(); isSelectionMode = false" class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white whitespace-nowrap px-2 py-1 bg-gray-100 sm:bg-transparent rounded-md sm:rounded-none">退出</button>
                  </div>
             </div>
         </div>

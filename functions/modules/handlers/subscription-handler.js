@@ -443,7 +443,6 @@ export async function handlePublicPreviewRequest(request, env) {
 
     try {
         const requestData = await request.json();
-        console.log('[Backend] Public Preview Request:', JSON.stringify(requestData));
         const { profileId, userAgent = 'MiSub-Public-Preview/1.0' } = requestData;
 
         if (!profileId) {
@@ -463,7 +462,6 @@ export async function handlePublicPreviewRequest(request, env) {
         // 注意：handleProfileMode 内部会再次获取 profiles 和 subscriptions，
         // 虽然有一次额外的 KV 读取，但为了复用逻辑是值得的。
         const result = await handleProfileMode(request, env, profile.id, userAgent);
-        console.log('[Backend] Preview result stats:', result.success, 'Nodes:', result.nodes ? result.nodes.length : 0);
 
         return createJsonResponse(result);
 

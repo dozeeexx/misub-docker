@@ -1,16 +1,17 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
-import { extractNodeName } from '../../../lib/utils.js';
+import { formatBytes } from '../../../lib/utils.js';
 import { useToastStore } from '../../../stores/toast.js';
 import { useUIStore } from '../../../stores/ui.js';
-import { useDataStore } from '../../../stores/useDataStore.js'; // Added
+import { useDataStore } from '../../../stores/useDataStore.js';
 import { useSubscriptions } from '../../../composables/useSubscriptions.js';
 import { useManualNodes } from '../../../composables/useManualNodes.js';
 import { useProfiles } from '../../../composables/useProfiles.js';
 import { useSubscriptionForms } from '../../../composables/useSubscriptionForms.js';
 import { useNodeForms } from '../../../composables/useNodeForms.js';
 import { useBulkImportLogic } from '../../../composables/useBulkImportLogic.js';
-import { storeToRefs } from 'pinia'; // Added
+import { useBackupLogic } from '../../../composables/useBackupLogic.js';
+import { storeToRefs } from 'pinia';
 
 // --- Component Imports ---
 import RightPanel from '../../profiles/RightPanel.vue';
@@ -102,6 +103,9 @@ const {
   showModal: showBulkImportModal,
   handleBulkImport
 } = useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk });
+
+// 使用备份 composable
+const { exportBackup, importBackup } = useBackupLogic();
 
 // --- UI State ---
 const showDeleteSubsModal = ref(false);
@@ -271,81 +275,8 @@ const handleProfileReorder = (fromIndex, toIndex) => {
   markDirty();
 };
 
-// --- Backup & Restore ---
-const exportBackup = () => {
-  try {
-    const backupData = {
-      subscriptions: subscriptions.value,
-      manualNodes: manualNodes.value,
-      profiles: profiles.value,
-    };
-
-    const jsonString = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
-    a.download = `misub-backup-${timestamp}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    showToast('备份已成功导出', 'success');
-  } catch (error) {
-    console.error('Backup export failed:', error);
-    showToast('备份导出失败', 'error');
-  }
-};
-
-const importBackup = () => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'application/json';
-
-  input.onchange = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result);
-        if (!data || !Array.isArray(data.subscriptions) || !Array.isArray(data.manualNodes) || !Array.isArray(data.profiles)) {
-          throw new Error('无效的备份文件格式');
-        }
-
-        if (confirm('这将覆盖您当前的所有数据（需要手动保存后生效），确定要从备份中恢复吗？')) {
-          // Merge subscriptions and manual nodes as they are stored together in the backend/store
-          const mergedSubscriptions = [...data.subscriptions, ...data.manualNodes];
-          dataStore.overwriteSubscriptions(mergedSubscriptions);
-          dataStore.overwriteProfiles(data.profiles);
-          markDirty();
-          showToast('数据已从备份恢复，请点击“保存更改”以持久化', 'success');
-          uiStore.hide(); // Close settings modal after import
-        }
-      } catch (error) {
-        console.error('Backup import failed:', error);
-        showToast(`备份导入失败: ${error.message}`, 'error');
-      }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-};
-// Old handlers removed. Replaced by composables.
-
-const formatBytes = (bytes, decimals = 2) => {
-  if (!+bytes || bytes < 0) return '0 B';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
-  if (i < 0) return '0 B';
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-};
+// 备份函数由 useBackupLogic 提供
+// 格式化函数由 utils.js 提供
 const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemainingTraffic.value));
 
 </script>

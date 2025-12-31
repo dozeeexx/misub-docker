@@ -31,7 +31,6 @@ import { createJsonResponse } from './modules/utils.js';
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
-    console.log(`[Worker Entry] Request: ${request.method} ${url.pathname}`);
 
     try {
         // 路由分发

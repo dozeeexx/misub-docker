@@ -61,7 +61,7 @@ const emit = defineEmits(['delete', 'change', 'edit', 'copy-link', 'preview', 'm
         <!-- 公开开关 -->
         <label class="relative inline-flex items-center cursor-pointer" title="在公开页展示">
           <input type="checkbox" :checked="profile.isPublic" @change="$emit('change', { ...profile, isPublic: $event.target.checked })" class="sr-only peer">
-          <div class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-500"></div>
+          <div class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-500 dark:peer-checked:bg-blue-500"></div>
           <span class="ml-2 text-xs font-medium text-gray-600 dark:text-gray-400">公开</span>
         </label>
       </div>
