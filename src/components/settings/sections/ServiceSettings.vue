@@ -291,10 +291,20 @@ const showUsageGuide = ref(false);
               <div>
                 <p class="font-medium mb-1">📤 推送方式</p>
                 <ul class="space-y-0.5 ml-4 text-xs">
-                  <li>• 单个：直接发送节点链接</li>
-                  <li>• 批量：一次多个（每行一个）</li>
+                  <li>• <strong class="text-green-800 dark:text-green-200">直接发送节点链接</strong>（无需命令）</li>
+                  <li>• 单个：发送一条链接</li>
+                  <li>• 批量：一次多条（每行一个）</li>
                   <li>• 协议：SS, VMess, Trojan, Hysteria 等</li>
                 </ul>
+              </div>
+
+              <!-- 示例 -->
+              <div>
+                <p class="font-medium mb-1">💡 示例</p>
+                <div class="bg-green-100 dark:bg-green-800 px-2 py-1 rounded text-xs space-y-0.5">
+                  <div class="font-mono">ss://YWVz...#香港节点</div>
+                  <div class="text-green-700 dark:text-green-300">👆 复制粘贴，直接发送即可</div>
+                </div>
               </div>
 
               <!-- 注意事项 -->
