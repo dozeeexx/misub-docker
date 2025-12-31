@@ -115,6 +115,12 @@ export async function handleApiRequest(request, env) {
         return await handlePublicPreviewRequest(request, env);
     }
 
+    // Telegram Push Bot Webhook (公开接口，内部验证)
+    if (path === '/telegram/webhook') {
+        const { handleTelegramWebhook } = await import('./handlers/telegram-webhook-handler.js');
+        return await handleTelegramWebhook(request, env);
+    }
+
     // Public GET access for clients
     if (path.startsWith('/clients') && request.method === 'GET') {
         return await handleClientRequest(request, env);
