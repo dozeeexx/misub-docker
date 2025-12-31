@@ -123,22 +123,13 @@ function createConcurrencyLimiter(limit) {
     });
 }
 
-
-
 export async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '', profilePrefixSettings = null) {
-    const shouldPrependManualNodes = profilePrefixSettings?.enableManualNodes ??
-        config.prefixConfig?.enableManualNodes ??
-        config.prependSubName ?? true;
+    const shouldPrependManualNodes = profilePrefixSettings?.enableManualNodes ?? true;
+    const shouldAddEmoji = false;
 
-    const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ??
-        config.prefixConfig?.manualNodePrefix ??
-        '手动节点';
+    // 手动节点前缀文本
+    const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ?? '\u624b\u52a8\u8282\u70b9';
 
-    const shouldAddEmoji = profilePrefixSettings?.enableNodeEmoji ??
-        config.prefixConfig?.enableNodeEmoji ??
-        true;
-
-    // --- 处理手动节点 ---
     const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
         if (node.isExpiredNode) {
             return node.url;
@@ -280,9 +271,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                 }
             }
 
-            const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ??
-                config.prefixConfig?.enableSubscriptions ??
-                config.prependSubName ?? true;
+            const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
 
             return (shouldPrependSubscriptions && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
@@ -306,7 +295,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         ? combinedLines
         : combinedLines.map(line => removeFlagEmoji(line));
 
-    const nodeTransformConfig = profilePrefixSettings?.nodeTransform ?? config.nodeTransform;
+    const nodeTransformConfig = profilePrefixSettings?.nodeTransform;
     const outputLines = nodeTransformConfig?.enabled
         ? applyNodeTransformPipeline(normalizedLines, { ...nodeTransformConfig, enableEmoji: shouldAddEmoji })
         : [...new Set(normalizedLines)];

@@ -317,7 +317,7 @@ export async function getCallbackToken(env) {
 export function migrateConfigSettings(config) {
     const migratedConfig = { ...config };
 
-    // [Fix] 强制转换为布尔值，防止 KV 中存储了字符串 "false" 导致判断错误
+    // [Fix] 强制转换为布尔值，防止 KV 中存储了字符串"false"导致判断错误
     const toBoolean = (val) => {
         if (typeof val === 'string') {
             return val.toLowerCase() === 'true';
@@ -331,42 +331,10 @@ export function migrateConfigSettings(config) {
     if (migratedConfig.hasOwnProperty('enableTrafficNode')) {
         migratedConfig.enableTrafficNode = toBoolean(migratedConfig.enableTrafficNode);
     }
-    if (migratedConfig.hasOwnProperty('prependSubName')) {
-        migratedConfig.prependSubName = toBoolean(migratedConfig.prependSubName);
-    }
-
-
-    // 如果没有新的 prefixConfig，但有老的 prependSubName，则创建默认的 prefixConfig
-    if (!migratedConfig.prefixConfig) {
-        const fallbackEnabled = migratedConfig.prependSubName ?? true;
-        migratedConfig.prefixConfig = {
-            enableManualNodes: fallbackEnabled,
-            enableSubscriptions: fallbackEnabled,
-            manualNodePrefix: '手动节点'
-        };
-    }
-
-    // 确保 prefixConfig 的所有字段都存在
-    if (!migratedConfig.prefixConfig.hasOwnProperty('enableManualNodes')) {
-        migratedConfig.prefixConfig.enableManualNodes = migratedConfig.prependSubName ?? true;
-    }
-    if (!migratedConfig.prefixConfig.hasOwnProperty('enableSubscriptions')) {
-        migratedConfig.prefixConfig.enableSubscriptions = migratedConfig.prependSubName ?? true;
-    }
-    if (!migratedConfig.prefixConfig.hasOwnProperty('manualNodePrefix')) {
-        migratedConfig.prefixConfig.manualNodePrefix = '手动节点';
-    }
-    if (!migratedConfig.prefixConfig.hasOwnProperty('enableNodeEmoji')) {
-        migratedConfig.prefixConfig.enableNodeEmoji = true;
-    }
-
-    // [Fix] Ensure prefixConfig booleans are also cleaning
-    migratedConfig.prefixConfig.enableManualNodes = toBoolean(migratedConfig.prefixConfig.enableManualNodes);
-    migratedConfig.prefixConfig.enableSubscriptions = toBoolean(migratedConfig.prefixConfig.enableSubscriptions);
-    migratedConfig.prefixConfig.enableNodeEmoji = toBoolean(migratedConfig.prefixConfig.enableNodeEmoji);
 
     return migratedConfig;
 }
+
 
 /**
  * 创建标准JSON响应

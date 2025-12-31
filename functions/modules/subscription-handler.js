@@ -358,6 +358,7 @@ export async function handleMisubRequest(context) {
         const currentProfile = profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier) : null;
         const generationSettings = {
             ...(currentProfile?.prefixSettings || {}),
+            nodeTransform: currentProfile?.nodeTransform,
             name: subName
         };
 

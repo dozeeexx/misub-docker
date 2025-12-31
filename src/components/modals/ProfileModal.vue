@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import Modal from '../forms/Modal.vue';
 import SubConverterSelector from '../forms/SubConverterSelector.vue';
+import NodeTransformSettings from '../settings/NodeTransformSettings.vue';
 
 const props = defineProps({
   show: Boolean,
@@ -18,6 +19,51 @@ const subscriptionSearchTerm = ref('');
 const nodeSearchTerm = ref('');
 const activeManualNodeColorFilter = ref(null);
 const showAdvanced = ref(false);
+const uiText = {
+  prefixTitle: '\u8282\u70b9\u524d\u7f00\u8bbe\u7f6e',
+  manualPrefixLabel: '\u624b\u52a8\u8282\u70b9\u524d\u7f00',
+  manualPrefixToggle: '\u624b\u52a8\u8282\u70b9\u524d\u7f00',
+  subscriptionPrefixToggle: '\u673a\u573a\u8ba2\u9605\u524d\u7f00',
+  enable: '\u542f\u7528',
+  disable: '\u7981\u7528',
+  nodeTransformTitle: '\u8282\u70b9\u51c0\u5316\u7ba1\u9053'
+};
+const prefixToggleOptions = [
+  { label: '\u542f\u7528', value: true },
+  { label: '\u7981\u7528', value: false }
+];
+
+const createDefaultNodeTransform = () => ({
+  enabled: false,
+  rename: {
+    regex: { enabled: false, rules: [] },
+    template: {
+      enabled: false,
+      template: '{emoji}{region}-{protocol}-{index}',
+      indexStart: 1,
+      indexPad: 2,
+      indexScope: 'regionProtocol',
+      regionAlias: {},
+      protocolAlias: { hysteria2: 'hy2' }
+    }
+  },
+  dedup: {
+    enabled: false,
+    mode: 'serverPort',
+    includeProtocol: false,
+    prefer: { protocolOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] }
+  },
+  sort: {
+    enabled: false,
+    nameIgnoreEmoji: true,
+    keys: [
+      { key: 'region', order: 'asc', customOrder: ['??', '??', '??', '???', '??', '??', '??', '??', '??', '???'] },
+      { key: 'protocol', order: 'asc', customOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] },
+      { key: 'name', order: 'asc' }
+    ]
+  }
+});
+
 
 // 国家/地区代码到旗帜和中文名称的映射
 const countryCodeMap = {
@@ -149,11 +195,23 @@ watch(() => props.profile, (newProfile) => {
     // 初始化前缀设置
     if (!profileCopy.prefixSettings) {
       profileCopy.prefixSettings = {
-        enableManualNodes: null,
-        enableSubscriptions: null,
-        manualNodePrefix: '',
-        enableNodeEmoji: null
+        enableManualNodes: true,
+        enableSubscriptions: true,
+        manualNodePrefix: '\u624b\u52a8\u8282\u70b9'
       };
+    }
+    profileCopy.prefixSettings.enableManualNodes =
+      profileCopy.prefixSettings.enableManualNodes ?? true;
+    profileCopy.prefixSettings.enableSubscriptions =
+      profileCopy.prefixSettings.enableSubscriptions ?? true;
+    if (!profileCopy.prefixSettings.manualNodePrefix) {
+      profileCopy.prefixSettings.manualNodePrefix = '\u624b\u52a8\u8282\u70b9';
+    }
+    if (Object.prototype.hasOwnProperty.call(profileCopy.prefixSettings, 'enableNodeEmoji')) {
+      delete profileCopy.prefixSettings.enableNodeEmoji;
+    }
+    if (!profileCopy.nodeTransform) {
+      profileCopy.nodeTransform = createDefaultNodeTransform();
     }
     localProfile.value = profileCopy;
   } else {
@@ -167,11 +225,11 @@ watch(() => props.profile, (newProfile) => {
       isPublic: false, // [新增]
       description: '', // [新增]
       prefixSettings: {
-        enableManualNodes: null,
-        enableSubscriptions: null,
-        manualNodePrefix: '',
-        enableNodeEmoji: null // [新增] 初始化为 null (使用全局设置)
-      }
+        enableManualNodes: true,
+        enableSubscriptions: true,
+        manualNodePrefix: '\u624b\u52a8\u8282\u70b9'
+      },
+      nodeTransform: createDefaultNodeTransform()
     };
   }
 }, { deep: true, immediate: true });
@@ -346,59 +404,48 @@ const handleDeselectAll = (listName, sourceArray) => {
 
                 <!-- Prefix Settings -->
                 <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-100 dark:border-gray-700">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">前缀设置 (覆盖全局)</label>
-                    <div class="space-y-3">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">手动节点前缀</span>
-                                    <select 
-                                        v-model="localProfile.prefixSettings.enableManualNodes" 
-                                        class="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-                                    >
-                                        <option :value="null">默认</option>
-                                        <option :value="true">启用</option>
-                                        <option :value="false">禁用</option>
-                                    </select>
-                                </div>
-                                <input 
-                                    v-if="localProfile.prefixSettings.enableManualNodes === true"
-                                    type="text" 
-                                    v-model="localProfile.prefixSettings.manualNodePrefix" 
-                                    placeholder="自定义前缀"
-                                    class="block w-full px-2 py-1 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-                                >
-                            </div>
-                            
-                            <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">订阅节点前缀</span>
-                                    <select 
-                                        v-model="localProfile.prefixSettings.enableSubscriptions" 
-                                        class="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-                                    >
-                                        <option :value="null">默认</option>
-                                        <option :value="true">启用</option>
-                                        <option :value="false">禁用</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">节点国旗 Emoji</span>
-                                    <select
-                                        v-model="localProfile.prefixSettings.enableNodeEmoji"
-                                        class="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-                                    >
-                                        <option :value="null">默认</option>
-                                        <option :value="true">启用</option>
-                                        <option :value="false">禁用</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ uiText.prefixTitle }}</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div class="sm:col-span-2">
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ uiText.manualPrefixLabel }}</label>
+                        <input
+                          type="text"
+                          v-model="localProfile.prefixSettings.manualNodePrefix"
+                          class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ uiText.manualPrefixToggle }}</label>
+                        <select
+                          v-model="localProfile.prefixSettings.enableManualNodes"
+                          class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                        >
+                          <option v-for="option in prefixToggleOptions" :key="String(option.value)" :value="option.value">
+                            {{ option.label }}
+                          </option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ uiText.subscriptionPrefixToggle }}</label>
+                        <select
+                          v-model="localProfile.prefixSettings.enableSubscriptions"
+                          class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+                        >
+                          <option v-for="option in prefixToggleOptions" :key="String(option.value)" :value="option.value">
+                            {{ option.label }}
+                          </option>
+                        </select>
+                      </div>
                     </div>
+                </div>
+
+                <!-- Node Transform Settings -->
+                <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-100 dark:border-gray-700">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ uiText.nodeTransformTitle }}</label>
+                    <NodeTransformSettings
+                        :model-value="localProfile.nodeTransform"
+                        @update:model-value="val => localProfile.nodeTransform = val"
+                    />
                 </div>
             </div>
         </div>

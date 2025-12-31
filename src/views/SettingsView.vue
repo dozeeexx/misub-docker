@@ -14,9 +14,7 @@ import ClientSettings from '../components/settings/sections/ClientSettings.vue';
 // 使用 composable 获取所有设置相关的状态和函数
 const {
   settings,
-  prefixConfig,
   disguiseConfig,
-  nodeTransform,
   isLoading,
   isSaving,
   showMigrationModal,
@@ -89,14 +87,14 @@ onMounted(() => {
             <div class="flex-1 p-6">
                 <BasicSettings v-show="activeTab === 'basic'" :settings="settings" />
                 <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
-                <ProcessingSettings v-show="activeTab === 'pipeline'" :settings="settings" :prefixConfig="prefixConfig" v-model:nodeTransform="nodeTransform" />
+                <ProcessingSettings v-show="activeTab === 'pipeline'" :settings="settings" />
                 <WebSettings v-show="activeTab === 'web'" :disguiseConfig="disguiseConfig" />
                 <ClientSettings v-show="activeTab === 'client'" />
                 <SystemSettings v-show="activeTab === 'system'" :settings="settings" :exportBackup="exportBackup" :importBackup="importBackup" @migrate="handleOpenMigrationModal" />
             </div>
 
             <!-- Footer Actions -->
-            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end sticky bottom-0 z-10 backdrop-blur-sm rounded-b-lg">
+            <div class="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end sticky bottom-0 z-10 backdrop-blur-sm rounded-b-lg">
                 <button 
                     @click="handleSave" 
                     :disabled="isSaving || hasWhitespace || !isStorageTypeValid"

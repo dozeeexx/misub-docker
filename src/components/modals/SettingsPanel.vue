@@ -14,9 +14,7 @@ import SystemSettings from '../settings/sections/SystemSettings.vue';
 
 const {
   settings,
-  prefixConfig,
   disguiseConfig,
-  nodeTransform,
   isLoading,
   isSaving,
   showMigrationModal,
@@ -67,8 +65,6 @@ defineExpose({ handleSave });
           <ProcessingSettings 
             v-show="activeTab === 'pipeline'"
             :settings="settings" 
-            :prefixConfig="prefixConfig" 
-            v-model:nodeTransform="nodeTransform" 
           />
           
           <!-- Web访问 -->
@@ -100,7 +96,7 @@ defineExpose({ handleSave });
         </div>
 
         <!-- 保存按钮 (固定在底部) -->
-        <div class="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end sticky bottom-0 bg-white dark:bg-gray-900 pb-4 z-30">
+        <div class="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end sticky bottom-0 bg-gray-50/80 dark:bg-gray-800/80 pb-4 z-30 backdrop-blur-sm">
           <button 
             @click="handleSave" 
             :disabled="isSaving || hasWhitespace || !isStorageTypeValid"

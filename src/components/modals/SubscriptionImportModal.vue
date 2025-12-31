@@ -60,7 +60,7 @@ const smartBase64Decode = (text) => {
     return normalized;
   };
 
-  // ????????????????????????Base64
+  // 尝试标准 Base64 解码
   const normalizedText = normalizeBase64(cleanText);
   if (/^[A-Za-z0-9+/=]+$/.test(normalizedText)) {
     try {
@@ -70,7 +70,7 @@ const smartBase64Decode = (text) => {
     }
   }
 
-  // ??????URL?????????Base64??????
+  // 尝试 URL 解码后再做 Base64 解码
   try {
     const urlDecoded = decodeURIComponent(cleanText);
     const normalizedDecoded = normalizeBase64(urlDecoded);
@@ -78,7 +78,7 @@ const smartBase64Decode = (text) => {
       return atob(normalizedDecoded);
     }
   } catch (e) {
-    // ??????URL????????????
+    // URL 解码失败，忽略
   }
 
   return text;
@@ -425,10 +425,10 @@ const importSubscription = async () => {
     let { nodes, method } = parseNodes(responseData.content);
 
     if (nodes.length === 0 && responseData.contentBase64) {
-      parseStatus.value = '????????????????????????????????????Base64??????...';
+      parseStatus.value = '未解析到有效节点，尝试 Base64 兜底解析...';
       const fallback = parseNodes(responseData.contentBase64);
       nodes = fallback.nodes;
-      method = fallback.method ? `${fallback.method} (Base64??????)` : 'Base64??????';
+      method = fallback.method ? `${fallback.method} (Base64??)` : 'Base64??';
     }
 
     if (nodes.length > 0) {

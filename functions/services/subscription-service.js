@@ -135,18 +135,11 @@ function createConcurrencyLimiter(limit) {
  */
 export async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '', profilePrefixSettings = null, debug = false) {
     // 判断是否启用手动节点前缀
-    const shouldPrependManualNodes = profilePrefixSettings?.enableManualNodes ??
-        config.prefixConfig?.enableManualNodes ??
-        config.prependSubName ?? true;
-
-    const shouldAddEmoji = profilePrefixSettings?.enableNodeEmoji ??
-        config.prefixConfig?.enableNodeEmoji ??
-        true;
+    const shouldPrependManualNodes = profilePrefixSettings?.enableManualNodes ?? true;
+    const shouldAddEmoji = false;
 
     // 手动节点前缀文本
-    const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ??
-        config.prefixConfig?.manualNodePrefix ??
-        '手动节点';
+    const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ?? '\u624b\u52a8\u8282\u70b9';
 
     const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
         if (node.isExpiredNode) {
@@ -258,9 +251,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
             // }
 
             // 判断是否启用订阅前缀
-            const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ??
-                config.prefixConfig?.enableSubscriptions ??
-                config.prependSubName ?? true;
+            const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
 
             return (shouldPrependSubscriptions && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
@@ -285,7 +276,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         ? combinedLines
         : combinedLines.map(line => removeFlagEmoji(line));
 
-    const nodeTransformConfig = profilePrefixSettings?.nodeTransform ?? config.nodeTransform;
+    const nodeTransformConfig = profilePrefixSettings?.nodeTransform;
     const outputLines = nodeTransformConfig?.enabled
         ? applyNodeTransformPipeline(normalizedLines, { ...nodeTransformConfig, enableEmoji: shouldAddEmoji })
         : [...new Set(normalizedLines)];
@@ -396,7 +387,7 @@ async function decodeBase64Content(text) {
             return new TextDecoder('utf-8').decode(bytes);
         }
     } catch (e) {
-        // Base64?????????????????????????????????
+        // Base64 解码失败则返回原文本
     }
     return text;
 }
@@ -549,7 +540,7 @@ function applyFilterRules(validNodes, sub) {
 
     if (lines.length === 0) return validNodes;
 
-    // ???????--- ??????--- ????????? keep: ?????
+    // 规则分割：--- 为分隔，keep: 为白名单
     const dividerIndex = lines.findIndex(line => line === '---');
     const hasDivider = dividerIndex !== -1;
 
@@ -681,9 +672,8 @@ function decodeVmessName(nodeLink) {
     }
 }
 
-
 /**
- * ArrayBuffer -> Base64????????????
+ * ArrayBuffer -> Base64 ??
  */
 function encodeArrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);

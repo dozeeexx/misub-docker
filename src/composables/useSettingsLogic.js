@@ -20,25 +20,12 @@ export function useSettingsLogic() {
     const showMigrationModal = ref(false);
 
     // 嵌套配置对象
-    const prefixConfig = ref({
-        enableManualNodes: true,
-        enableSubscriptions: true,
-        manualNodePrefix: '手动节点',
-        enableNodeEmoji: true
-    });
-
     const disguiseConfig = ref({
         enabled: false,
         pageType: 'default',
         redirectUrl: ''
     });
 
-    const nodeTransform = ref({
-        enabled: false,
-        rename: { regex: { enabled: false, rules: [] }, template: { enabled: false, template: '{emoji}{region}-{protocol}-{index}' } },
-        dedup: { enabled: false, mode: 'serverPort', includeProtocol: false },
-        sort: { enabled: false, nameIgnoreEmoji: true, keys: [] }
-    });
 
     // ========== 计算属性 ==========
     const hasWhitespace = computed(() => {
@@ -62,28 +49,6 @@ export function useSettingsLogic() {
             settings.value = await fetchSettings();
 
             // 初始化前缀配置
-            if (settings.value.prefixConfig) {
-                prefixConfig.value = {
-                    enableManualNodes: settings.value.prefixConfig.enableManualNodes ?? true,
-                    enableSubscriptions: settings.value.prefixConfig.enableSubscriptions ?? true,
-                    manualNodePrefix: settings.value.prefixConfig.manualNodePrefix ?? '手动节点',
-                    enableNodeEmoji: settings.value.prefixConfig.enableNodeEmoji ?? true
-                };
-            } else {
-                const fallback = settings.value.prependSubName ?? true;
-                prefixConfig.value = {
-                    enableManualNodes: fallback,
-                    enableSubscriptions: fallback,
-                    manualNodePrefix: '手动节点',
-                    enableNodeEmoji: true
-                };
-            }
-
-            // 初始化节点转换配置
-            if (settings.value.nodeTransform) {
-                nodeTransform.value = settings.value.nodeTransform;
-            }
-
             // 初始化伪装配置
             if (settings.value.disguise) {
                 disguiseConfig.value = {
@@ -123,10 +88,12 @@ export function useSettingsLogic() {
 
             const settingsToSave = {
                 ...settings.value,
-                prefixConfig: prefixConfig.value,
-                nodeTransform: nodeTransform.value,
                 disguise: disguiseConfig.value
             };
+
+            delete settingsToSave.prefixConfig;
+            delete settingsToSave.prependSubName;
+            delete settingsToSave.nodeTransform;
 
             const result = await saveSettings(settingsToSave);
             if (result.success) {
@@ -156,9 +123,7 @@ export function useSettingsLogic() {
     return {
         // 状态
         settings,
-        prefixConfig,
         disguiseConfig,
-        nodeTransform,
         isLoading,
         isSaving,
         showMigrationModal,

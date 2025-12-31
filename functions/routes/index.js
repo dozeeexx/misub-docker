@@ -20,13 +20,6 @@ const defaultSettings = {
     profileToken: 'profiles',
     subConverter: 'url.v1.mk',
     subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full.ini',
-    prependSubName: true,
-    prefixConfig: {
-        enableManualNodes: true,
-        enableSubscriptions: true,
-        manualNodePrefix: '手动节点',
-        enableNodeEmoji: true
-    },
     NotifyThresholdDays: 3,
     NotifyThresholdPercent: 90,
     storageType: 'kv'
@@ -248,6 +241,10 @@ export async function handleSettingsRequest(request, env) {
             const storageAdapter = await getStorageAdapter(env);
             const oldSettings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
             const finalSettings = { ...oldSettings, ...newSettings };
+
+            delete finalSettings.prefixConfig;
+            delete finalSettings.prependSubName;
+            delete finalSettings.nodeTransform;
 
             await storageAdapter.put(KV_KEY_SETTINGS, finalSettings);
 

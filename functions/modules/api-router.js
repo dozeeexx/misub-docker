@@ -287,7 +287,7 @@ async function handleExternalFetchRequest(request, env) {
 
         const contentType = response.headers.get('content-type') || '';
 
-        // ????????????????????????????????????Base64??????
+        // 读取响应体并生成 Base64 兜底内容
         const buffer = await response.arrayBuffer();
         if (buffer.byteLength > 10 * 1024 * 1024) { // 10MB limit
             return createErrorResponse('Response content too large (max 10MB limit)', 413);
@@ -298,7 +298,7 @@ async function handleExternalFetchRequest(request, env) {
 
         // console.log(`[External Fetch] Success: ${content.length} chars, type: ${contentType}`);
 
-        // ??????????????????????????????
+        // 返回包含原文与 Base64 的结果
         return new Response(JSON.stringify({
             content,
             contentBase64,
@@ -342,7 +342,7 @@ async function handleExternalFetchRequest(request, env) {
 }
 
 /**
- * ArrayBuffer -> Base64????????????
+ * ArrayBuffer -> Base64 ??
  */
 function encodeArrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
