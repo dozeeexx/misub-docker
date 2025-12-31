@@ -32,8 +32,8 @@ async function getTelegramPushConfig(env) {
         allowed_user_ids: config.allowed_user_ids ||
             (env.TELEGRAM_PUSH_ALLOWED_USERS?.split(',') || []),
         rate_limit: config.rate_limit || {
-            max_per_minute: 50,
-            max_per_day: 300
+            max_per_minute: 1000,
+            max_per_day: 10000
         }
     };
 }

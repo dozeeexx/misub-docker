@@ -378,7 +378,7 @@ const showUsageGuide = ref(false);
                 <ul class="space-y-0.5 ml-4 text-xs">
                   <li>• 节点在 <strong>手动节点</strong> 页面查看</li>
                   <li>• 需在 <strong>订阅组</strong> 中勾选使用</li>
-                  <li>• 限制：50/分钟，300/天</li>
+                  <li>• 限制：1000/分钟，10000/天</li>
                 </ul>
               </div>
             </div>
