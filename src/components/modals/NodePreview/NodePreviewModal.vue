@@ -22,7 +22,7 @@ const loading = ref(false);
 const error = ref('');
 const allNodes = ref([]); // 存储所有节点
 const currentPage = ref(1);
-const pageSize = ref(20);
+const pageSize = ref(24);
 const viewMode = ref('list'); // 'list' 或 'card'
 
 // 响应式视图模式 - 移动端强制卡片视图
