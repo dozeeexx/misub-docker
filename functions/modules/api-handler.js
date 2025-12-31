@@ -224,7 +224,6 @@ export async function handleSettingsSave(request, env) {
         // 清除节点缓存（设置变更可能影响节点处理逻辑）
         try {
             await clearAllNodeCaches(storageAdapter);
-            console.log('[API] Cleared node caches after settings update');
         } catch (cacheError) {
             console.warn('[API] Failed to clear node caches:', cacheError.message);
         }

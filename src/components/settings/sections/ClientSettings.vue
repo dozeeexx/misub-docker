@@ -68,8 +68,7 @@ const handleAdd = () => {
         description: '',
         platforms: [],
         url: '',
-        repo: '',
-        bgColor: 'bg-gray-50 dark:bg-gray-700/50 text-gray-600'
+        repo: ''
     };
     showEditModal.value = true;
 };
@@ -148,12 +147,12 @@ onMounted(fetchClients);
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div v-for="client in clients" :key="client.id" 
-                 class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow group">
-                
-                <div class="flex justify-between items-start gap-2">
-                    <div class="flex items-start gap-3 min-w-0 flex-1">
-                        <div class="h-12 w-12 rounded-lg flex items-center justify-center text-2xl shrink-0" :class="client.bgColor">
-                            {{ client.icon }}
+                 class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 pb-10 md:pb-4 hover:shadow-md transition-shadow group">
+                    
+                    <div class="flex items-start gap-3 min-w-0">
+                        <div class="h-12 w-12 rounded-lg flex items-center justify-center text-2xl shrink-0 bg-gray-50 dark:bg-gray-700/50 text-gray-600 overflow-hidden">
+                            <img v-if="client.icon && client.icon.includes('/')" :src="client.icon" :alt="client.name" class="w-full h-full object-contain p-2" />
+                            <span v-else>{{ client.icon }}</span>
                         </div>
                         <div class="min-w-0 flex-1">
                             <h4 class="font-bold text-gray-900 dark:text-white truncate pr-1">{{ client.name }}</h4>
@@ -167,66 +166,98 @@ onMounted(fetchClients);
                         </div>
                     </div>
                     
-                    <div class="flex gap-1 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <button @click.stop="handleEdit(client)" class="p-1.5 text-blue-600 bg-blue-50 dark:bg-blue-900/30 md:bg-transparent hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full md:rounded-md">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <!-- Mobile Actions (Bottom Right, Smaller) -->
+                    <div class="absolute bottom-3 right-3 flex gap-1">
+                        <button @click.stop="handleEdit(client)" class="!min-w-0 !min-h-0 w-7 h-7 flex items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
-                        <button @click.stop="handleDelete(client.id)" class="p-1.5 text-red-600 bg-red-50 dark:bg-red-900/30 md:bg-transparent hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full md:rounded-md">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        <button @click.stop="handleDelete(client.id)" class="!min-w-0 !min-h-0 w-7 h-7 flex items-center justify-center bg-red-50 dark:bg-red-900/30 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 rounded transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                     </div>
-                </div>
             </div>
         </div>
 
-        <Modal v-model:show="showEditModal" :title="isNew ? '新增客户端' : '编辑客户端'" width="md:max-w-xl">
+        <Modal v-model:show="showEditModal" :title="isNew ? '新增客户端' : '编辑客户端'" size="5xl">
             <template #body>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-4 gap-4">
-                         <div class="col-span-3">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">名称</label>
-                            <input v-model="editingClient.name" type="text" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+                        <!-- Left Column: Visual Identity (30-40%) -->
+                        <div class="md:col-span-5 lg:col-span-4">
+                            <div class="bg-gray-50 dark:bg-gray-700/30 rounded-2xl p-6 flex flex-col items-center gap-6 h-full border border-gray-100 dark:border-gray-700/50">
+                                <div class="text-center space-y-2 w-full">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">图标预览</label>
+                                    <div class="aspect-square w-full max-w-[180px] mx-auto rounded-3xl flex items-center justify-center text-6xl bg-white dark:bg-gray-800 text-gray-600 border-2 border-dashed border-gray-200 dark:border-gray-600 overflow-hidden shadow-sm">
+                                        <img v-if="editingClient.icon && editingClient.icon.includes('/')" :src="editingClient.icon" :alt="editingClient.name" class="w-full h-full object-contain p-4" />
+                                        <span v-else>{{ editingClient.icon || '?' }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="w-full space-y-2">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">图标设置</label>
+                                    <div class="relative rounded-lg shadow-sm">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 sm:text-sm">🖼️</span>
+                                        </div>
+                                        <input v-model="editingClient.icon" type="text" placeholder="输入图片 URL 或 Emoji" class="block w-full pl-10 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2.5">
+                                    </div>
+                                    <p class="text-xs text-center text-gray-400 dark:text-gray-500">支持 SVG, PNG 或 Emoji</p>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">图标 (Emoji)</label>
-                            <input v-model="editingClient.icon" type="text" class="mt-1 block w-full text-center rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        </div>
-                    </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">简介</label>
-                        <textarea v-model="editingClient.description" rows="2" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
-                    </div>
+                        <!-- Right Column: Form Details (60-70%) -->
+                        <div class="md:col-span-7 lg:col-span-8 flex flex-col gap-6">
+                            <!-- Basic Info -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">客户端名称 <span class="text-red-500">*</span></label>
+                                    <input v-model="editingClient.name" type="text" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2.5 text-lg font-medium" placeholder="例如: Clash Verge">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">简介描述</label>
+                                    <textarea v-model="editingClient.description" rows="3" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-3 resize-none" placeholder="简短描述该客户端的特点..."></textarea>
+                                </div>
+                            </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">支持平台</label>
-                        <div class="flex flex-wrap gap-2">
-                            <label v-for="opt in platformOptions" :key="opt.value" 
-                                class="inline-flex items-center px-3 py-1 rounded-full cursor-pointer transition-colors border select-none"
-                                :class="editingClient.platforms.includes(opt.value) 
-                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-300' 
-                                    : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
-                            >
-                                <input type="checkbox" :value="opt.value" v-model="editingClient.platforms" class="hidden">
-                                <span class="text-xs font-medium">{{ opt.label }}</span>
-                            </label>
-                        </div>
-                    </div>
+                            <!-- Platforms Grid -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">支持平台</label>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                    <label v-for="opt in platformOptions" :key="opt.value" 
+                                        class="cursor-pointer group relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 select-none text-center"
+                                        :class="editingClient.platforms.includes(opt.value) 
+                                            ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-200 dark:border-indigo-500/50 text-indigo-700 dark:text-indigo-300 shadow-sm ring-1 ring-indigo-500/20' 
+                                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                    >
+                                        <input type="checkbox" :value="opt.value" v-model="editingClient.platforms" class="hidden">
+                                        <span class="text-sm font-medium">{{ opt.label }}</span>
+                                        <div v-if="editingClient.platforms.includes(opt.value)" class="absolute top-2 right-2 w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                    </label>
+                                </div>
+                            </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">下载链接 / 官网</label>
-                        <input v-model="editingClient.url" type="text" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">GitHub Repo (可选)</label>
-                            <input v-model="editingClient.repo" type="text" placeholder="user/repo" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <p class="mt-1 text-xs text-gray-500">用于自动获取最新版本号</p>
-                        </div>
-                        <div>
-                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">背景颜色类 (Tailwind)</label>
-                             <input v-model="editingClient.bgColor" type="text" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <!-- Links -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">下载链接 / 官网</label>
+                                    <div class="mt-1 flex rounded-lg shadow-sm">
+                                        <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 sm:text-sm">🔗</span>
+                                        <input v-model="editingClient.url" type="text" class="flex-1 min-w-0 block w-full px-3 py-2.5 rounded-none rounded-r-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="https://...">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">GitHub Repo</label>
+                                    <div class="mt-1 flex rounded-lg shadow-sm">
+                                        <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 sm:text-sm">
+                                            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" /></svg>
+                                        </span>
+                                        <input v-model="editingClient.repo" type="text" class="flex-1 min-w-0 block w-full px-3 py-2.5 rounded-none rounded-r-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="owner/repo">
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">用于显示版本号 (可选)</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
