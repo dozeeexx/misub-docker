@@ -43,10 +43,36 @@ const webhookUrl = computed(() => {
   return `${window.location.origin}/api/telegram/webhook`;
 });
 
+// Webhook 设置链接（自动生成）
+const setWebhookUrl = computed(() => {
+  const botToken = telegramPushConfig.value.bot_token;
+  const secret = telegramPushConfig.value.webhook_secret;
+  
+  if (!botToken) {
+    return '';
+  }
+  
+  let url = `https://api.telegram.org/bot${botToken}/setWebhook?url=${encodeURIComponent(webhookUrl.value)}`;
+  
+  if (secret) {
+    url += `&secret_token=${encodeURIComponent(secret)}`;
+  }
+  
+  return url;
+});
+
 // 复制 Webhook URL
 function copyWebhookUrl() {
   navigator.clipboard.writeText(webhookUrl.value);
   // 可以添加 toast 提示
+}
+
+// 复制 Webhook 设置链接
+function copySetWebhookUrl() {
+  if (setWebhookUrl.value) {
+    navigator.clipboard.writeText(setWebhookUrl.value);
+    // 可以添加 toast 提示
+  }
 }
 
 // 折叠状态
@@ -98,181 +124,220 @@ const showUsageGuide = ref(false);
     <h3 class="text-lg font-medium text-gray-900 dark:text-white border-b pb-2 dark:border-gray-700 mt-8">Telegram 推送 Bot</h3>
     <div class="space-y-4">
       <!-- 启用开关 -->
-      <div class="flex items-center">
-        <input 
-          type="checkbox" 
-          id="telegram-push-enabled"
-          v-model="telegramPushConfig.enabled"
-          class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">启用节点推送功能</label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">通过 Telegram Bot 快速推送代理节点</p>
+        </div>
+        <button
+          type="button"
+          @click="telegramPushConfig = { ...telegramPushConfig, enabled: !telegramPushConfig.enabled }"
+          :class="[
+            'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2',
+            telegramPushConfig.enabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'
+          ]"
         >
-        <label for="telegram-push-enabled" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-          启用节点推送功能
-        </label>
+          <span
+            :class="[
+              'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+              telegramPushConfig.enabled ? 'translate-x-5' : 'translate-x-0'
+            ]"
+          />
+        </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Bot Token -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            推送 Bot Token
-          </label>
-          <input 
-            type="password" 
-            v-model="telegramPushConfig.bot_token" 
-            placeholder="123456:ABC-DEF..."
-            :disabled="!telegramPushConfig.enabled"
-            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white disabled:opacity-50"
-          >
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">独立的 Bot，用于接收节点推送</p>
+      <!-- 配置内容（无折叠动画） -->
+      <div v-if="telegramPushConfig.enabled" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Bot Token -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              推送 Bot Token
+            </label>
+            <input 
+              type="text" 
+              v-model="telegramPushConfig.bot_token" 
+              placeholder="123456:ABC-DEF..."
+              class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+            >
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">独立的 Bot，用于接收节点推送</p>
+          </div>
+
+          <!-- Webhook Secret -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Webhook Secret（可选）
+            </label>
+            <input 
+              type="text" 
+              v-model="telegramPushConfig.webhook_secret" 
+              placeholder="随机字符串"
+              class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+            >
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">用于验证 Webhook 请求来源</p>
+          </div>
         </div>
 
-        <!-- Webhook Secret -->
+        <!-- 白名单用户 ID -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Webhook Secret（可选）
+            允许的用户 ID（白名单）
           </label>
-          <input 
-            type="text" 
-            v-model="telegramPushConfig.webhook_secret" 
-            placeholder="随机字符串"
-            :disabled="!telegramPushConfig.enabled"
-            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white disabled:opacity-50"
-          >
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">用于验证 Webhook 请求来源</p>
+          <textarea 
+            v-model="allowedUsersStr"
+            rows="2"
+            placeholder="123456789, 987654321"
+            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
+          ></textarea>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            多个 ID 用逗号分隔。只有这些用户可以通过 Bot 推送节点。
+            <a href="https://t.me/userinfobot" target="_blank" class="text-indigo-600 hover:text-indigo-500">
+              获取你的 User ID
+            </a>
+          </p>
         </div>
-      </div>
 
-      <!-- 白名单用户 ID -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          允许的用户 ID（白名单）
-        </label>
-        <textarea 
-          v-model="allowedUsersStr"
-          :disabled="!telegramPushConfig.enabled"
-          rows="2"
-          placeholder="123456789, 987654321"
-          class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white disabled:opacity-50"
-        ></textarea>
-        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          多个 ID 用逗号分隔。只有这些用户可以通过 Bot 推送节点。
-          <a href="https://t.me/userinfobot" target="_blank" class="text-indigo-600 hover:text-indigo-500">
-            获取你的 User ID
-          </a>
-        </p>
-      </div>
+        <!-- Webhook URL -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Webhook URL
+          </label>
+          <div class="mt-1 flex rounded-md shadow-xs">
+            <input 
+              type="text" 
+              :value="webhookUrl"
+              readonly
+              class="flex-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md sm:text-sm dark:text-white"
+            >
+            <button 
+              @click="copyWebhookUrl"
+              type="button"
+              class="inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-hidden"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            用于接收 Telegram 消息的回调地址
+          </p>
+        </div>
 
-      <!-- Webhook URL -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Webhook URL
-        </label>
-        <div class="mt-1 flex rounded-md shadow-xs">
-          <input 
-            type="text" 
-            :value="webhookUrl"
-            readonly
-            class="flex-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md sm:text-sm dark:text-white"
-          >
-          <button 
-            @click="copyWebhookUrl"
+        <!-- Webhook 设置链接（自动生成） -->
+        <div v-if="setWebhookUrl">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Webhook 设置链接（自动生成）
+          </label>
+          <div class="mt-1 flex rounded-md shadow-xs">
+            <input 
+              type="text" 
+              :value="setWebhookUrl"
+              readonly
+              class="flex-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md sm:text-sm dark:text-white font-mono text-xs"
+            >
+            <button 
+              @click="copySetWebhookUrl"
+              type="button"
+              class="inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-hidden"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <strong>使用方法：</strong>复制此链接 → 在浏览器地址栏粘贴 → 回车访问 → 看到 "ok":true 即成功
+          </p>
+        </div>
+        <div v-else class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
+          <p class="text-xs text-yellow-700 dark:text-yellow-300">
+            💡 填写 Bot Token 后，将自动生成 Webhook 设置链接
+          </p>
+        </div>
+
+        <!-- 快速帮助 -->
+        <div class="flex flex-col sm:flex-row gap-2">
+          <!-- 配置步骤按钮 -->
+          <button
+            @click="showSetupGuide = !showSetupGuide"
             type="button"
-            class="inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-hidden"
+            class="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors flex-1"
+            :class="showSetupGuide 
+              ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300' 
+              : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
           >
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+            <span>配置步骤</span>
+            <svg 
+              class="h-4 w-4 transition-transform ml-auto sm:ml-0" 
+              :class="showSetupGuide ? 'rotate-180' : ''"
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <!-- 使用说明按钮 -->
+          <button
+            @click="showUsageGuide = !showUsageGuide"
+            type="button"
+            class="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors flex-1"
+            :class="showUsageGuide 
+              ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300' 
+              : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+          >
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            <span>使用说明</span>
+            <svg 
+              class="h-4 w-4 transition-transform ml-auto sm:ml-0" 
+              :class="showUsageGuide ? 'rotate-180' : ''"
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
         </div>
-        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          在 BotFather 中使用 /setwebhook 命令设置此 URL
-        </p>
-      </div>
 
-      <!-- 快速帮助 -->
-      <div class="flex flex-col sm:flex-row gap-2">
-        <!-- 配置步骤按钮 -->
-        <button
-          @click="showSetupGuide = !showSetupGuide"
-          type="button"
-          class="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors flex-1"
-          :class="showSetupGuide 
-            ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300' 
-            : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
-        >
-          <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-          </svg>
-          <span>配置步骤</span>
-          <svg 
-            class="h-4 w-4 transition-transform ml-auto sm:ml-0" 
-            :class="showSetupGuide ? 'rotate-180' : ''"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        <!-- 使用说明按钮 -->
-        <button
-          @click="showUsageGuide = !showUsageGuide"
-          type="button"
-          class="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors flex-1"
-          :class="showUsageGuide 
-            ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300' 
-            : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
-        >
-          <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-          </svg>
-          <span>使用说明</span>
-          <svg 
-            class="h-4 w-4 transition-transform ml-auto sm:ml-0" 
-            :class="showUsageGuide ? 'rotate-180' : ''"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- 配置步骤内容（可折叠） -->
-      <transition
-        enter-active-class="transition-all duration-200 ease-out"
-        enter-from-class="opacity-0 max-h-0"
-        enter-to-class="opacity-100 max-h-96"
-        leave-active-class="transition-all duration-200 ease-in"
-        leave-from-class="opacity-100 max-h-96"
-        leave-to-class="opacity-0 max-h-0"
-      >
-        <div v-show="showSetupGuide" class="overflow-hidden">
+        <!-- 配置步骤内容（无折叠动画） -->
+        <div v-if="showSetupGuide" class="overflow-hidden">
           <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div class="text-sm text-blue-700 dark:text-blue-300">
-              <ol class="list-decimal list-inside space-y-1.5">
-                <li>在 Telegram 中找到 <a href="https://t.me/botfather" target="_blank" class="underline hover:text-blue-600">@BotFather</a>，创建新的 Bot</li>
-                <li>将获得的 Bot Token 填入上方</li>
-                <li>复制 Webhook URL，使用命令：<code class="bg-blue-100 dark:bg-blue-800 px-1.5 py-0.5 rounded text-xs">/setwebhook</code></li>
-                <li>获取你的 <a href="https://t.me/userinfobot" target="_blank" class="underline hover:text-blue-600">Telegram User ID</a> 并添加到白名单</li>
-                <li>保存设置后，向 Bot 发送节点链接即可推送</li>
+              <ol class="list-decimal list-inside space-y-2">
+                <li>
+                  <strong>创建 Bot：</strong>在 Telegram 中找到 
+                  <a href="https://t.me/botfather" target="_blank" class="underline hover:text-blue-600">@BotFather</a>
+                  ，发送 <code class="bg-blue-100 dark:bg-blue-800 px-1.5 py-0.5 rounded text-xs">/newbot</code>
+                </li>
+                <li><strong>填写配置：</strong>将获得的 Bot Token 和 Webhook Secret（可选）填入上方</li>
+                <li>
+                  <strong>添加白名单：</strong>获取你的 
+                  <a href="https://t.me/userinfobot" target="_blank" class="underline hover:text-blue-600">Telegram User ID</a>
+                  并添加到白名单
+                </li>
+                <li>
+                  <strong>设置 Webhook：</strong>
+                  <div class="mt-1 ml-6 space-y-1">
+                    <div>① 复制上方自动生成的 "Webhook 设置链接"</div>
+                    <div>② 在浏览器地址栏粘贴并访问</div>
+                    <div>③ 看到 <code class="bg-blue-100 dark:bg-blue-800 px-1.5 py-0.5 rounded text-xs">"ok":true</code> 即成功</div>
+                  </div>
+                </li>
+                <li><strong>开始使用：</strong>保存设置后，向 Bot 发送节点链接即可推送</li>
               </ol>
             </div>
           </div>
         </div>
-      </transition>
 
-      <!-- 使用说明内容（可折叠） -->
-      <transition
-        enter-active-class="transition-all duration-200 ease-out"
-        enter-from-class="opacity-0 max-h-0"
-        enter-to-class="opacity-100 max-h-[600px]"
-        leave-active-class="transition-all duration-200 ease-in"
-        leave-from-class="opacity-100 max-h-[600px]"
-        leave-to-class="opacity-0 max-h-0"
-      >
+        <!-- 使用说明内容（无折叠动画） -->
         <div v-show="showUsageGuide" class="overflow-hidden">
           <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
             <div class="text-sm text-green-700 dark:text-green-300 space-y-3">
@@ -319,7 +384,7 @@ const showUsageGuide = ref(false);
             </div>
           </div>
         </div>
-      </transition>
+      </div>
     </div>
   </div>
 </template>
