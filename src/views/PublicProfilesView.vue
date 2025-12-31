@@ -254,8 +254,9 @@ onMounted(async () => {
                     >
                         <div class="flex items-start justify-between">
                             <div class="flex items-center gap-4">
-                                <div class="h-14 w-14 rounded-xl flex items-center justify-center text-3xl shadow-sm" :class="client.bgColor">
-                                    {{ client.icon }}
+                                <div class="h-14 w-14 rounded-xl flex items-center justify-center text-3xl shadow-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 overflow-hidden">
+                                     <img v-if="client.icon && client.icon.includes('/')" :src="client.icon" :alt="client.name" class="w-full h-full object-contain p-2" />
+                                     <span v-else>{{ client.icon }}</span>
                                 </div>
                                 <div>
                                     <div class="flex items-center gap-2">
