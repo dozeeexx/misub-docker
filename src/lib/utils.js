@@ -266,3 +266,18 @@ export function getClientInfo(userAgent) {
 
     return { name: 'Other', className: 'bg-gray-50 text-gray-500 dark:bg-gray-800/50 dark:text-gray-500' };
 }
+
+/**
+ * 格式化字节数为人类可读的格式
+ * @param {number} bytes - 字节数
+ * @param {number} decimals - 小数位数,默认为 2
+ * @returns {string} 格式化后的字符串,如 "1.5 GB"
+ */
+export function formatBytes(bytes, decimals = 2) {
+    if (!+bytes || bytes < 0) return '0 B';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}

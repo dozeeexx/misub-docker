@@ -1,11 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useDataStore } from '../stores/useDataStore.js';
-import { useToastStore } from '../stores/toast.js';
-import { fetchSettings, saveSettings } from '../lib/api.js';
-import { useManualNodes } from '../composables/useManualNodes.js';
 import MigrationModal from '../components/modals/MigrationModal.vue';
+import { useSettingsLogic } from '../composables/useSettingsLogic.js';
 
 import SettingsSidebar from '../components/settings/SettingsSidebar.vue';
 import BasicSettings from '../components/settings/sections/BasicSettings.vue';
@@ -15,47 +11,26 @@ import WebSettings from '../components/settings/sections/WebSettings.vue';
 import SystemSettings from '../components/settings/sections/SystemSettings.vue';
 import ClientSettings from '../components/settings/sections/ClientSettings.vue';
 
-const dataStore = useDataStore();
-const { showToast } = useToastStore();
-const { subscriptions, profiles } = storeToRefs(dataStore);
-const { manualNodes } = useManualNodes(() => {});
+// 使用 composable 获取所有设置相关的状态和函数
+const {
+  settings,
+  prefixConfig,
+  disguiseConfig,
+  nodeTransform,
+  isLoading,
+  isSaving,
+  showMigrationModal,
+  hasWhitespace,
+  isStorageTypeValid,
+  loadSettings,
+  handleSave,
+  handleMigrationSuccess,
+  exportBackup,
+  importBackup,
+} = useSettingsLogic();
 
+// 仅新布局需要的状态
 const activeTab = ref('basic');
-const isLoading = ref(false);
-const isSaving = ref(false);
-const showMigrationModal = ref(false);
-const settings = ref({});
-
-// Nested configuration objects
-const prefixConfig = ref({
-  enableManualNodes: true,
-  enableSubscriptions: true,
-  manualNodePrefix: '手动节点',
-  enableNodeEmoji: true
-});
-
-const disguiseConfig = ref({
-  enabled: false,
-  pageType: 'default',
-  redirectUrl: ''
-});
-
-const nodeTransform = ref({
-  enabled: false,
-  rename: { regex: { enabled: false, rules: [] }, template: { enabled: false, template: '{emoji}{region}-{protocol}-{index}' } },
-  dedup: { enabled: false, mode: 'serverPort', includeProtocol: false },
-  sort: { enabled: false, nameIgnoreEmoji: true, keys: [] }
-});
-
-const hasWhitespace = computed(() => {
-  const fieldsCheck = ['FileName', 'mytoken', 'profileToken', 'subConverter', 'subConfig', 'BotToken', 'ChatID'];
-  for (const key of fieldsCheck) {
-    if (settings.value[key] && /\s/.test(settings.value[key])) return true;
-  }
-  return false;
-});
-
-const isStorageTypeValid = computed(() => ['kv', 'd1'].includes(settings.value.storageType));
 
 const currentTabLabel = computed(() => {
     switch(activeTab.value) {
@@ -69,138 +44,12 @@ const currentTabLabel = computed(() => {
     }
 });
 
-const loadSettings = async () => {
-  isLoading.value = true;
-  try {
-    settings.value = await fetchSettings();
-    if (settings.value.prefixConfig) {
-      prefixConfig.value = {
-        enableManualNodes: settings.value.prefixConfig.enableManualNodes ?? true,
-        enableSubscriptions: settings.value.prefixConfig.enableSubscriptions ?? true,
-        manualNodePrefix: settings.value.prefixConfig.manualNodePrefix ?? '手动节点',
-        enableNodeEmoji: settings.value.prefixConfig.enableNodeEmoji ?? true
-      };
-    } else {
-      const fallback = settings.value.prependSubName ?? true;
-      prefixConfig.value = {
-        enableManualNodes: fallback,
-        enableSubscriptions: fallback,
-        manualNodePrefix: '手动节点',
-        enableNodeEmoji: true
-      };
-    }
-    if (settings.value.nodeTransform) {
-      nodeTransform.value = settings.value.nodeTransform;
-    }
-    // 初始化伪装配置
-    if (settings.value.disguise) {
-      disguiseConfig.value = {
-        enabled: settings.value.disguise.enabled ?? false,
-        pageType: settings.value.disguise.pageType ?? 'default',
-        redirectUrl: settings.value.disguise.redirectUrl ?? ''
-      };
-    }
-    // Ensure storageType has a default
-    if (!settings.value.storageType) {
-        settings.value.storageType = 'kv';
-    }
-  } catch (error) {
-    showToast('加载设置失败', 'error');
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const handleSave = async () => {
-  if (hasWhitespace.value) { showToast('输入项中不能包含空格', 'error'); return; }
-  if (!isStorageTypeValid.value) { showToast('存储类型设置无效', 'error'); return; }
-
-  isSaving.value = true;
-  try {
-    if (!settings.value.storageType) settings.value.storageType = 'kv';
-    const settingsToSave = {
-      ...settings.value,
-      prefixConfig: prefixConfig.value,
-      nodeTransform: nodeTransform.value,
-      disguise: disguiseConfig.value
-    };
-    const result = await saveSettings(settingsToSave);
-    if (result.success) {
-      showToast('设置已保存，页面将自动刷新...', 'success');
-      setTimeout(() => window.location.reload(), 1500);
-    } else {
-      throw new Error(result.message || '保存失败');
-    }
-  } catch (error) {
-    showToast(error.message, 'error');
-    isSaving.value = false;
-  }
-};
-
+// 仅新布局需要的函数
 const handleOpenMigrationModal = () => {
     showMigrationModal.value = true;
 };
 
-const handleMigrationSuccess = () => {
-    settings.value.storageType = 'd1';
-    showToast('数据迁移成功！系统已切换为 D1 存储', 'success');
-};
-
-// Backup Logic
-const exportBackup = () => {
-  try {
-    const backupData = {
-      subscriptions: (subscriptions.value || []).filter(item => item.url && /^https?:\/\//.test(item.url)),
-      manualNodes: (manualNodes.value || []),
-      profiles: profiles.value || [],
-    };
-    const jsonString = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
-    a.download = `misub-backup-${timestamp}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('备份已成功导出', 'success');
-  } catch (error) {
-    console.error('Backup export failed:', error);
-    showToast('备份导出失败', 'error');
-  }
-};
-
-const importBackup = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json';
-    input.onchange = (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                if (!data || !Array.isArray(data.subscriptions)) {
-                     throw new Error('无效的备份文件格式');
-                }
-                if (confirm('确定要从备份中恢复吗？所有当前数据将被覆盖。')) {
-                    const merged = [...(data.subscriptions||[]), ...(data.manualNodes||[])];
-                    dataStore.overwriteSubscriptions(merged);
-                    dataStore.overwriteProfiles(data.profiles || []);
-                    dataStore.markDirty();
-                    showToast('数据已恢复，请保存', 'success');
-                }
-            } catch (err) {
-                 showToast('导入失败: ' + err.message, 'error');
-            }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
-};
+// 备份函数已由 composable 提供
 
 onMounted(() => {
   loadSettings();
