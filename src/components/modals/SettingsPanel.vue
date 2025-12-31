@@ -1,9 +1,10 @@
 <script setup>
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import MigrationModal from './MigrationModal.vue';
 import { useSettingsLogic } from '../../composables/useSettingsLogic.js';
 
-// 导入新布局的设置组件
+// 导入侧边栏和设置组件
+import SettingsSidebar from '../settings/SettingsSidebar.vue';
 import BasicSettings from '../settings/sections/BasicSettings.vue';
 import ServiceSettings from '../settings/sections/ServiceSettings.vue';
 import ProcessingSettings from '../settings/sections/ProcessingSettings.vue';
@@ -11,7 +12,6 @@ import WebSettings from '../settings/sections/WebSettings.vue';
 import ClientSettings from '../settings/sections/ClientSettings.vue';
 import SystemSettings from '../settings/sections/SystemSettings.vue';
 
-// 使用 composable 获取所有设置相关的状态和函数
 const {
   settings,
   prefixConfig,
@@ -29,6 +29,9 @@ const {
   importBackup,
 } = useSettingsLogic();
 
+// 添加标签页状态 (与新布局一致)
+const activeTab = ref('basic');
+
 // 组件挂载时加载设置
 onMounted(() => {
   loadSettings();
@@ -40,59 +43,77 @@ defineExpose({ handleSave });
 
 <template>
   <div class="p-4 sm:p-6 w-full max-w-full overflow-x-hidden">
-      <div v-if="isLoading" class="text-center p-8">
-        <p class="text-gray-500">正在加载设置...</p>
-      </div>
-      <div v-else class="space-y-6">
-        <!-- 使用共享组件 -->
-        <BasicSettings :settings="settings" />
-        
-        <ServiceSettings :settings="settings" />
-        
-        <ProcessingSettings 
-          :settings="settings" 
-          :prefixConfig="prefixConfig" 
-          v-model:nodeTransform="nodeTransform" 
-        />
-        
-        <WebSettings :disguiseConfig="disguiseConfig" />
-        
-        <!-- 新增客户端管理功能 -->
-        <ClientSettings />
-        
-        <!-- 流量统计节点开关 -->
-        <div>
-            <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+    <div v-if="isLoading" class="text-center p-8">
+      <p class="text-gray-500">正在加载设置...</p>
+    </div>
+    <div v-else class="flex flex-col md:flex-row gap-6">
+      <!-- 侧边栏导航 -->
+      <aside class="md:w-48 flex-shrink-0">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+          <SettingsSidebar v-model:activeTab="activeTab" />
+        </div>
+      </aside>
+
+      <!-- 设置内容区域 -->
+      <main class="flex-1 min-w-0">
+        <div class="space-y-6">
+          <!-- 基础设置 -->
+          <BasicSettings v-show="activeTab === 'basic'" :settings="settings" />
+          
+          <!-- 服务集成 -->
+          <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
+          
+          <!-- 节点处理 -->
+          <ProcessingSettings 
+            v-show="activeTab === 'pipeline'"
+            :settings="settings" 
+            :prefixConfig="prefixConfig" 
+            v-model:nodeTransform="nodeTransform" 
+          />
+          
+          <!-- Web访问 -->
+          <WebSettings v-show="activeTab === 'web'" :disguiseConfig="disguiseConfig" />
+          
+          <!-- 客户端管理 -->
+          <ClientSettings v-show="activeTab === 'client'" />
+          
+          <!-- 系统设置 -->
+          <div v-show="activeTab === 'system'" class="space-y-6">
+            <!-- 流量统计节点开关 -->
+            <div>
+              <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                 <div>
-                   <p class="text-sm font-medium text-gray-700 dark:text-gray-300">显示流量统计节点</p>
-                   <p class="text-xs text-gray-500 dark:text-gray-400">虚拟节点显示剩余流量</p>
+                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300">显示流量统计节点</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">虚拟节点显示剩余流量</p>
                 </div>
                 <label class="toggle-switch"><input type="checkbox" v-model="settings.enableTrafficNode"><span class="slider"></span></label>
+              </div>
             </div>
+            
+            <SystemSettings 
+              :settings="settings" 
+              :exportBackup="exportBackup" 
+              :importBackup="importBackup" 
+              @migrate="showMigrationModal = true" 
+            />
+          </div>
         </div>
-        
-        <SystemSettings 
-          :settings="settings" 
-          :exportBackup="exportBackup" 
-          :importBackup="importBackup" 
-          @migrate="showMigrationModal = true" 
-        />
 
-        <!-- Save Button -->
-        <div class="pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end sticky bottom-0 bg-white dark:bg-gray-800 pb-4 z-30">
-            <button 
-                @click="handleSave" 
-                :disabled="isSaving || hasWhitespace || !isStorageTypeValid"
-                class="px-6 py-2 rounded-lg text-white font-medium shadow-md transition-all"
-                :class="isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg'"
-            >
-                {{ isSaving ? '保存中...' : '保存设置' }}
-            </button>
+        <!-- 保存按钮 (固定在底部) -->
+        <div class="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end sticky bottom-0 bg-white dark:bg-gray-900 pb-4 z-30">
+          <button 
+            @click="handleSave" 
+            :disabled="isSaving || hasWhitespace || !isStorageTypeValid"
+            class="px-6 py-2 rounded-lg text-white font-medium shadow-md transition-all"
+            :class="isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg'"
+          >
+            {{ isSaving ? '保存中...' : '保存设置' }}
+          </button>
         </div>
-      </div>
+      </main>
+    </div>
 
-      
-      <MigrationModal v-model:show="showMigrationModal" @success="handleMigrationSuccess" />
+    <MigrationModal v-model:show="showMigrationModal" @success="handleMigrationSuccess" />
   </div>
 </template>
 
