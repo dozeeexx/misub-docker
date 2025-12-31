@@ -40,9 +40,7 @@ const KV_KEY_PROFILES = 'misub_profiles_v1'; // Ensure this is defined if used
  */
 export async function handleApiRequest(request, env) {
     const url = new URL(request.url);
-    console.log(`[API Router] Incoming request: ${request.method} ${url.pathname}`);
     const path = url.pathname.replace(/^\/api/, '');
-    console.log(`[API Router] Parsed path: ${path}`);
 
     // [新增] 数据存储迁移接口 (KV -> D1)
     if (path === '/migrate_to_d1') {
