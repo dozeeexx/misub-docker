@@ -698,5 +698,25 @@ export async function handleMisubRequest(context) {
         }));
     }
 
+    // 提供回退的 Base64 输出，避免客户端直接收到 502
+    if (combinedNodeList) {
+        const fallbackHeaders = new Headers({
+            "Content-Type": "text/plain; charset=utf-8",
+            'Cache-Control': 'no-store, no-cache',
+            'X-MiSub-Fallback': 'base64'
+        });
+
+        // 保留缓存状态提示，便于客户端诊断
+        Object.entries(cacheHeaders).forEach(([key, value]) => {
+            fallbackHeaders.set(key, value);
+        });
+
+        // 附带简短错误信息，防止 header 过长
+        fallbackHeaders.set('X-MiSub-Error', errorMessage.slice(0, 200));
+
+        const fallbackContent = btoa(unescape(encodeURIComponent(combinedNodeList)));
+        return new Response(fallbackContent, { headers: fallbackHeaders, status: 200 });
+    }
+
     return new Response(`Error connecting to subconverter: ${errorMessage}`, { status: 502 });
 }
