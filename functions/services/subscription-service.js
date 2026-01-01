@@ -199,17 +199,6 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
             //     console.log(`[DEBUG] Response snippet (first 500 chars): ${text.substring(0, 500)}`);
             // }
 
-            // 智能内容类型检测 - 更精确的判断条件
-            if (text.includes('proxies:') && text.includes('rules:')) {
-                // 这是完整的Clash配置文件，不是节点列表
-                // if (debug) console.log(`[DEBUG] Detected Clash config for ${sub.url}, ignoring.`);
-                return '';
-            } else if (text.includes('outbounds') && text.includes('inbounds') && text.includes('route')) {
-                // 这是完整的Singbox配置文件，不是节点列表
-                // if (debug) console.log(`[DEBUG] Detected Singbox config for ${sub.url}, ignoring.`);
-                return '';
-            }
-
             text = await decodeBase64Content(text);
 
             // if (debug) {
