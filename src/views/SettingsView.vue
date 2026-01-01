@@ -6,7 +6,7 @@ import { useSettingsLogic } from '../composables/useSettingsLogic.js';
 import SettingsSidebar from '../components/settings/SettingsSidebar.vue';
 import BasicSettings from '../components/settings/sections/BasicSettings.vue';
 import ServiceSettings from '../components/settings/sections/ServiceSettings.vue';
-import ProcessingSettings from '../components/settings/sections/ProcessingSettings.vue';
+
 import WebSettings from '../components/settings/sections/WebSettings.vue';
 import SystemSettings from '../components/settings/sections/SystemSettings.vue';
 import ClientSettings from '../components/settings/sections/ClientSettings.vue';
@@ -34,7 +34,7 @@ const currentTabLabel = computed(() => {
     switch(activeTab.value) {
         case 'basic': return '基础设置';
         case 'service': return '服务集成';
-        case 'pipeline': return '节点处理';
+
         case 'web': return 'Web访问';
         case 'client': return '客户端管理';
         case 'system': return '系统设置';
@@ -87,7 +87,7 @@ onMounted(() => {
             <div class="flex-1 p-6">
                 <BasicSettings v-show="activeTab === 'basic'" :settings="settings" />
                 <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
-                <ProcessingSettings v-show="activeTab === 'pipeline'" :settings="settings" />
+
                 <WebSettings v-show="activeTab === 'web'" :disguiseConfig="disguiseConfig" />
                 <ClientSettings v-show="activeTab === 'client'" />
                 <SystemSettings v-show="activeTab === 'system'" :settings="settings" :exportBackup="exportBackup" :importBackup="importBackup" @migrate="handleOpenMigrationModal" />

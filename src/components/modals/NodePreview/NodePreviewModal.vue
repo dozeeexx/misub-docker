@@ -24,6 +24,7 @@ const allNodes = ref([]); // 存储所有节点
 const currentPage = ref(1);
 const pageSize = ref(24);
 const viewMode = ref('list'); // 'list' 或 'card'
+const showProcessed = ref(false); // 是否显示处理后的节点名称
 
 // 响应式视图模式 - 移动端强制卡片视图
 const effectiveViewMode = computed(() => {
@@ -112,6 +113,7 @@ watch(() => props.show, (newVal) => {
     protocolFilter.value = 'all';
     regionFilter.value = 'all';
     searchQuery.value = '';
+    showProcessed.value = false;  // 重置处理开关
     error.value = '';
     allNodes.value = [];
   }
@@ -129,6 +131,11 @@ watch([protocolFilter, regionFilter, searchQuery], () => {
   currentPage.value = 1;
 });
 
+// 监听 showProcessed 变化，重新加载节点
+watch(showProcessed, () => {
+  loadNodes();
+});
+
 // 加载节点数据
 const loadNodes = async () => {
   if (!props.show) return;
@@ -143,6 +150,8 @@ const loadNodes = async () => {
 
     if (props.profileId) {
       requestData.profileId = props.profileId;
+      // 仅在订阅组模式下传递 applyTransform 参数
+      requestData.applyTransform = showProcessed.value;
     } else if (props.subscriptionId) {
       requestData.subscriptionId = props.subscriptionId;
     } else if (props.subscriptionUrl) {
@@ -277,6 +286,45 @@ const getProtocolStyle = (protocol) => {
   return styles[protocol] || styles.unknown;
 };
 
+// 获取地区 Emoji
+const getRegionEmoji = (region) => {
+  if (!region) return '🌐';
+  
+  // 常见国家/地区映射
+  const regionMap = {
+    'HK': '🇭🇰', 'Hong Kong': '🇭🇰', '香港': '🇭🇰',
+    'TW': '🇹🇼', 'Taiwan': '🇹🇼', '台湾': '🇹🇼',
+    'JP': '🇯🇵', 'Japan': '🇯🇵', '日本': '🇯🇵',
+    'US': '🇺🇸', 'United States': '🇺🇸', '美国': '🇺🇸',
+    'SG': '🇸🇬', 'Singapore': '🇸🇬', '新加坡': '🇸🇬',
+    'KR': '🇰🇷', 'Korea': '🇰🇷', '韩国': '🇰🇷',
+    'UK': '🇬🇧', 'United Kingdom': '🇬🇧', '英国': '🇬🇧',
+    'DE': '🇩🇪', 'Germany': '🇩🇪', '德国': '🇩🇪',
+    'FR': '🇫🇷', 'France': '🇫🇷', '法国': '🇫🇷',
+    'RU': '🇷🇺', 'Russia': '🇷🇺', '俄罗斯': '🇷🇺',
+    'CA': '🇨🇦', 'Canada': '🇨🇦', '加拿大': '🇨🇦',
+    'MO': '🇲🇴', 'Macao': '🇲🇴', '澳门': '🇲🇴',
+    'CN': '🇨🇳', 'China': '🇨🇳', '中国': '🇨🇳',
+    'IN': '🇮🇳', 'India': '🇮🇳', '印度': '🇮🇳',
+    'NL': '🇳🇱', 'Netherlands': '🇳🇱', '荷兰': '🇳🇱',
+    'AU': '🇦🇺', 'Australia': '🇦🇺', '澳大利亚': '🇦🇺',
+    'TH': '🇹🇭', 'Thailand': '🇹🇭', '泰国': '🇹🇭',
+    'VN': '🇻🇳', 'Vietnam': '🇻🇳', '越南': '🇻🇳',
+    'ID': '🇮🇩', 'Indonesia': '🇮🇩', '印尼': '🇮🇩',
+    'MY': '🇲🇾', 'Malaysia': '🇲🇾', '马来西亚': '🇲🇾',
+    'PH': '🇵🇭', 'Philippines': '🇵🇭', '菲律宾': '🇵🇭',
+    'TR': '🇹🇷', 'Turkey': '🇹🇷', '土耳其': '🇹🇷',
+  };
+
+  if (regionMap[region]) return regionMap[region];
+  
+  // 尝试在字符串中查找 Emoji
+  const emojiMatch = region.match(/(\p{Emoji_Presentation}|\p{Extended_Pictographic})/u);
+  if (emojiMatch) return emojiMatch[0];
+
+  return '🌐';
+};
+
 // 解析节点信息
 const parseNodeInfo = (node) => {
   const result = {
@@ -406,8 +454,9 @@ const handleKeydown = (e) => {
       </div>
 
       <!-- 统计信息 -->
-      <div v-if="!loading && !error && Object.keys(protocolStats).length > 0" class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div v-if="!loading && !error && Object.keys(protocolStats).length > 0" class="px-4 sm:px-6 py-2 sm:py-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+        <!-- 桌面端统计布局 -->
+        <div class="hidden lg:grid grid-cols-4 gap-4">
           <div class="text-center">
             <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ allNodes.length }}</div>
             <div class="text-xs text-gray-500 dark:text-gray-400">总节点数</div>
@@ -425,90 +474,164 @@ const handleKeydown = (e) => {
             <div class="text-xs text-gray-500 dark:text-gray-400">总页数</div>
           </div>
         </div>
+
+        <!-- 移动端统计布局 (彩色标签) -->
+        <div class="lg:hidden grid grid-cols-4 gap-2 text-xs">
+          <div class="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded px-2 py-1 text-center">
+            <div class="font-bold">{{ allNodes.length }}</div>
+            <div class="scale-90 opacity-80">节点</div>
+          </div>
+          <div class="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded px-2 py-1 text-center">
+             <div class="font-bold">{{ Object.keys(protocolStats).length }}</div>
+             <div class="scale-90 opacity-80">协议</div>
+          </div>
+          <div class="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded px-2 py-1 text-center">
+             <div class="font-bold">{{ Object.keys(regionStats).length }}</div>
+             <div class="scale-90 opacity-80">地区</div>
+          </div>
+          <div class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded px-2 py-1 text-center">
+             <div class="font-bold">{{ totalPages }}</div>
+             <div class="scale-90 opacity-80">页数</div>
+          </div>
+        </div>
       </div>
 
       <!-- 筛选控件 - 统一响应式布局 -->
       <div v-if="!loading && !error && Object.keys(protocolStats).length > 0" class="px-3 sm:px-6 py-2 sm:py-4 border-b border-gray-200 dark:border-gray-700">
         <!-- 响应式网格布局 -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <!-- 协议筛选 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-              协议类型
-            </label>
-            <select
-              v-model="protocolFilter"
-              class="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">全部协议 ({{ allNodes.length }})</option>
-              <option v-for="protocol in availableProtocols" :key="protocol" :value="protocol">
-                {{ protocol.toUpperCase() }} ({{ protocolStats[protocol]?.count || 0 }}) - {{ protocolStats[protocol]?.percentage || 0 }}%
-              </option>
-            </select>
-          </div>
+        <!-- 移动端：Grid (1列用于搜索，2列用于筛选)，桌面端维持原样 -->
+        <div class="flex flex-col lg:grid lg:grid-cols-4 gap-3 sm:gap-4 lg:items-end">
 
-          <!-- 地区筛选 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-              地区筛选
-            </label>
-            <select
-              v-model="regionFilter"
-              class="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">全部地区 ({{ allNodes.length }})</option>
-              <option v-for="region in availableRegions" :key="region" :value="region">
-                {{ region }} ({{ regionStats[region]?.count || 0 }}) - {{ regionStats[region]?.percentage || 0 }}%
-              </option>
-            </select>
-          </div>
-
-          <!-- 搜索 -->
-          <div>
+          <!-- 搜索 (移动端置顶) -->
+          <div class="w-full">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
               节点搜索
             </label>
-            <div class="relative">
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="搜索节点名称、协议或地区..."
-                class="w-full px-2 sm:px-3 py-1.5 sm:py-2 pr-8 sm:pr-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3">
-                <svg class="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <input
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="搜索..."
+                  class="w-full px-2 sm:px-3 py-1.5 sm:py-2 pr-8 sm:pr-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3">
+                  <svg class="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
               </div>
+
+              <!-- 处理模式 toggler (仅移动端、订阅组且非公开页显示) -->
+              <button
+                v-if="profileId && apiEndpoint !== '/api/public/preview'"
+                @click="showProcessed = !showProcessed"
+                :class="showProcessed ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600'"
+                class="lg:hidden flex-shrink-0 w-9 border rounded-lg hover:opacity-90 transition-colors flex items-center justify-center"
+                title="切换显示原始/处理后节点名称"
+              >
+                <!-- 原材料 Icon -->
+                <svg v-if="!showProcessed" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                <!-- 魔法棒 Icon -->
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+              </button>
             </div>
           </div>
 
-          <!-- 视图切换 (仅大屏桌面端显示) -->
-          <div class="hidden lg:block">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-              显示模式
-            </label>
-            <div class="flex items-center gap-1 sm:gap-2">
-              <button
-                @click="viewMode = 'list'"
-                :class="viewMode === 'list' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
-                class="w-9 h-9 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
-                title="列表视图"
+          <!-- 筛选器组 (移动端并排) -->
+          <div class="grid grid-cols-2 gap-3 lg:contents">
+            <!-- 协议筛选 -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                协议类型
+              </label>
+              <select
+                v-model="protocolFilter"
+                class="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16"></path>
-                </svg>
-              </button>
-              <button
-                @click="viewMode = 'card'"
-                :class="viewMode === 'card' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
-                class="w-9 h-9 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
-                title="卡片视图"
+                <option value="all">全部</option>
+                <option v-for="protocol in availableProtocols" :key="protocol" :value="protocol">
+                  {{ protocol.toUpperCase() }}
+                </option>
+              </select>
+            </div>
+
+            <!-- 地区筛选 -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                地区筛选
+              </label>
+              <select
+                v-model="regionFilter"
+                class="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"></path>
-                </svg>
-              </button>
+                <option value="all">全部</option>
+                <option v-for="region in availableRegions" :key="region" :value="region">
+                  {{ region }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+
+
+          <!-- 视图切换 & 规则处理 (Desktop Combined) -->
+          <div class="hidden lg:flex gap-6">
+            <!-- 视图切换 -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                显示模式
+              </label>
+              <div class="flex items-center gap-1 sm:gap-2">
+                <button
+                  @click="viewMode = 'list'"
+                  :class="viewMode === 'list' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
+                  class="w-9 h-9 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+                  title="列表视图"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16"></path>
+                  </svg>
+                </button>
+                <button
+                  @click="viewMode = 'card'"
+                  :class="viewMode === 'card' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
+                  class="w-9 h-9 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+                  title="卡片视图"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- 规则处理 -->
+            <div v-if="profileId && apiEndpoint !== '/api/public/preview'">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                规则处理
+              </label>
+              <div class="flex items-center gap-1 sm:gap-2">
+                <button
+                  @click="showProcessed = !showProcessed"
+                  :class="showProcessed ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
+                  class="w-9 h-9 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+                  title="切换显示模式：原始 / 处理后"
+                >
+                   <!-- 魔法棒 Icon (处理后) -->
+                   <svg v-if="showProcessed" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                  </svg>
+                   <!-- 原材料 Icon (原始) -->
+                   <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -575,7 +698,7 @@ const handleKeydown = (e) => {
                   <div class="bg-white dark:bg-gray-800" style="width: 950px;">
                     <div
                       v-for="(node, index) in paginatedNodes"
-                      :key="node.url"
+                      :key="`${node.url}_${index}`"
                       class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <div class="grid grid-cols-12 gap-2 px-4 py-3 items-center min-h-[3rem]" style="width: 950px;">
@@ -653,12 +776,61 @@ const handleKeydown = (e) => {
               </div>
             </div>
 
-            <!-- 卡片视图 (移动端和桌面端) -->
+            <!-- 卡片视图 container -->
             <div v-else class="flex-1 overflow-y-auto">
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-1">
+              <!-- 移动端 Mini List-Card 视图 -->
+              <div class="block lg:hidden">
+                <div 
+                  v-for="(node, index) in paginatedNodes" 
+                  :key="`${node.url}_${index}`"
+                  class="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800"
+                  style="height: 64px;"
+                >
+                  <!-- 左侧：图标与信息 -->
+                  <div class="flex items-center gap-3 flex-1 min-w-0 pr-2">
+                    
+                    <!-- 中间：名称与标签 -->
+                    <div class="flex flex-col min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
+                          {{ parseNodeInfo(node).name }}
+                        </span>
+                      </div>
+                      <div class="flex items-center gap-2 mt-1">
+                        <span
+                          class="text-[10px] bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded uppercase font-bold"
+                          :class="getProtocolStyle(parseNodeInfo(node).protocol)"
+                        >
+                          {{ parseNodeInfo(node).protocol }}
+                        </span>
+                         <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+                          {{ parseNodeInfo(node).server }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 右侧：操作按钮 -->
+                  <button
+                    @click="copyNodeUrl(node, node.url)"
+                    class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-gray-50 dark:bg-gray-700/50 text-gray-400 active:bg-indigo-50 active:text-indigo-600"
+                    :class="{ 'text-green-600 bg-green-50': copiedNodeId === node.url }"
+                  >
+                    <svg v-if="copiedNodeId !== node.url" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 01-2-2V5a2 2 0 012-2h4.586"></path>
+                    </svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 桌面端常规卡片视图 -->
+              <div class="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-1">
                 <div
-                  v-for="node in paginatedNodes"
-                  :key="node.url"
+                  v-for="(node, index) in paginatedNodes"
+                  :key="`${node.url}_${index}`"
                   class="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 hover:shadow-md transition-shadow"
                 >
                   <div class="flex items-start justify-between gap-3">

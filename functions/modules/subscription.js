@@ -125,10 +125,18 @@ function createConcurrencyLimiter(limit) {
 
 export async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '', profilePrefixSettings = null) {
     const shouldPrependManualNodes = profilePrefixSettings?.enableManualNodes ?? true;
-    const shouldAddEmoji = false;
+
+    // 判断是否需要添加 Emoji：当模板重命名启用且模板包含 {emoji} 时启用
+    const nodeTransformConfig = profilePrefixSettings?.nodeTransform;
+    const templateEnabled = nodeTransformConfig?.enabled && nodeTransformConfig?.rename?.template?.enabled;
+    const templateContainsEmoji = templateEnabled && (nodeTransformConfig?.rename?.template?.template || '').includes('{emoji}');
+    const shouldAddEmoji = templateContainsEmoji;
 
     // 手动节点前缀文本
     const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ?? '\u624b\u52a8\u8282\u70b9';
+
+    // [重要] 当智能重命名模板启用时，跳过前缀添加，因为智能重命名会完全覆盖节点名称
+    const skipPrefixDueToRenaming = templateEnabled;
 
     const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
         if (node.isExpiredNode) {
@@ -140,7 +148,9 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                 processedUrl = addFlagEmoji(processedUrl);
             }
 
-            return shouldPrependManualNodes ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
+            // 只有在智能重命名未启用时才添加前缀
+            const shouldAddPrefix = shouldPrependManualNodes && !skipPrefixDueToRenaming;
+            return shouldAddPrefix ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
         }
     }).join('\n');
 
@@ -271,9 +281,11 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                 }
             }
 
+            // 判断是否启用订阅前缀（智能重命名启用时跳过）
             const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
+            const shouldAddSubPrefix = shouldPrependSubscriptions && !skipPrefixDueToRenaming;
 
-            return (shouldPrependSubscriptions && sub.name)
+            return (shouldAddSubPrefix && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
         } catch (e) {
@@ -295,7 +307,6 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         ? combinedLines
         : combinedLines.map(line => removeFlagEmoji(line));
 
-    const nodeTransformConfig = profilePrefixSettings?.nodeTransform;
     const outputLines = nodeTransformConfig?.enabled
         ? applyNodeTransformPipeline(normalizedLines, { ...nodeTransformConfig, enableEmoji: shouldAddEmoji })
         : [...new Set(normalizedLines)];

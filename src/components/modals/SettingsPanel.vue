@@ -7,7 +7,7 @@ import { useSettingsLogic } from '../../composables/useSettingsLogic.js';
 import SettingsSidebar from '../settings/SettingsSidebar.vue';
 import BasicSettings from '../settings/sections/BasicSettings.vue';
 import ServiceSettings from '../settings/sections/ServiceSettings.vue';
-import ProcessingSettings from '../settings/sections/ProcessingSettings.vue';
+
 import WebSettings from '../settings/sections/WebSettings.vue';
 import ClientSettings from '../settings/sections/ClientSettings.vue';
 import SystemSettings from '../settings/sections/SystemSettings.vue';
@@ -61,11 +61,7 @@ defineExpose({ handleSave });
           <!-- 服务集成 -->
           <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
           
-          <!-- 节点处理 -->
-          <ProcessingSettings 
-            v-show="activeTab === 'pipeline'"
-            :settings="settings" 
-          />
+
           
           <!-- Web访问 -->
           <WebSettings v-show="activeTab === 'web'" :disguiseConfig="disguiseConfig" />
@@ -75,16 +71,7 @@ defineExpose({ handleSave });
           
           <!-- 系统设置 -->
           <div v-show="activeTab === 'system'" class="space-y-6">
-            <!-- 流量统计节点开关 -->
-            <div>
-              <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                <div>
-                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300">显示流量统计节点</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">虚拟节点显示剩余流量</p>
-                </div>
-                <label class="toggle-switch"><input type="checkbox" v-model="settings.enableTrafficNode"><span class="slider"></span></label>
-              </div>
-            </div>
+
             
             <SystemSettings 
               :settings="settings" 
@@ -114,35 +101,5 @@ defineExpose({ handleSave });
 </template>
 
 <style scoped>
-/* Toggle Switch CSS - 仅用于流量统计节点开关 */
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-}
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
-  border-radius: 34px;
-}
-.dark .slider { background-color: #4b5563; }
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-}
-input:checked + .slider { background-color: #4f46e5; }
-.dark input:checked + .slider { background-color: #16a34a; }
-input:checked + .slider:before { transform: translateX(20px); }
+
 </style>
