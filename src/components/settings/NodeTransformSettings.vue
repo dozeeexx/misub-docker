@@ -40,14 +40,14 @@ const config = ref({
 
 // --- 预览数据 ---
 const DEFAULT_MOCK_NODES = [
-  { name: '🇺🇸 美国 [高速] 01 @100M', region: 'US', protocol: 'vmess', server: 'us1.gw' },
-  { name: 'Hong Kong 01 | IPLC [VIP]', region: 'HK', protocol: 'trojan', server: 'hk1.gw' },
-  { name: '🇯🇵 日本 BGP [专线]', region: 'JP', protocol: 'vless', server: 'jp1.gw' },
-  { name: '新加坡 SG-02 [流媒体]', region: 'SG', protocol: 'shadowsocks', server: 'sg2.gw' },
-  { name: '🇹🇼 台湾 Hysteria2 [0.5倍率]', region: 'TW', protocol: 'hysteria2', server: 'tw1.gw' },
-  { name: '🇰🇷 South Korea SK [原生]', region: 'KR', protocol: 'ss', server: 'kr1.gw' },
-  { name: '🇩🇪 德国法兰克福 CN2', region: 'DE', protocol: 'vmess', server: 'de1.gw' },
-  { name: '⛔️ 到期时间: 2099-12-31', region: 'US', protocol: 'trojan', server: 'info.gw' }
+  { name: '🇺🇸 美国 [高速] 01 @100M', region: 'US', protocol: 'vmess', server: 'us1.gw', port: '443' },
+  { name: 'Hong Kong 01 | IPLC [VIP]', region: 'HK', protocol: 'trojan', server: 'hk1.gw', port: '8443' },
+  { name: '🇯🇵 日本 BGP [专线]', region: 'JP', protocol: 'vless', server: 'jp1.gw', port: '443' },
+  { name: '新加坡 SG-02 [流媒体]', region: 'SG', protocol: 'shadowsocks', server: 'sg2.gw', port: '8388' },
+  { name: '🇹🇼 台湾 Hysteria2 [0.5倍率]', region: 'TW', protocol: 'hysteria2', server: 'tw1.gw', port: '443' },
+  { name: '🇰🇷 South Korea SK [原生]', region: 'KR', protocol: 'ss', server: 'kr1.gw', port: '443' },
+  { name: '🇩🇪 德国法兰克福 CN2', region: 'DE', protocol: 'vmess', server: 'de1.gw', port: '443' },
+  { name: '⛔️ 到期时间: 2099-12-31', region: 'US', protocol: 'trojan', server: 'info.gw', port: '443' }
 ];
 const customNodeInput = ref('');
 const customMockNode = ref(null);
@@ -68,7 +68,8 @@ const addCustomNode = () => {
         name: customNodeInput.value,
         region: 'US', // 模拟数据，实际无法探测
         protocol: 'vmess',
-        server: 'custom.gw'
+        server: 'custom.gw',
+        port: '443'
     };
 };
 
@@ -94,23 +95,25 @@ const previewResult = computed(() => {
     // 2. 模板重命名
     if (config.value.rename.template.enabled) {
       const tpl = config.value.rename.template.template || '';
-      const region = node.region;
-      const emoji = getEmoji(node.region);
+      const regionCode = node.region;  // 地区代码，如 'US'
+      const regionZh = REGION_NAMES[regionCode] || regionCode;  // 中文地区名，如 '美国'
+      const emoji = getEmoji(regionCode);
       const protocol = node.protocol;
       const idx = String(index + config.value.rename.template.indexStart).padStart(config.value.rename.template.indexPad, '0');
       
       let processed = tpl
         .replace(/{name}/g, newName)
-        .replace(/{region}/g, region)
+        .replace(/{region}/g, regionCode)  // {region} 返回地区代码
         .replace(/{emoji}/g, emoji)
         .replace(/{protocol}/g, protocol)
         .replace(/{index}/g, idx)
         .replace(/{server}/g, node.server)
+        .replace(/{port}/g, node.port || '')
         
         // Modifiers
-        .replace(/{region:UPPER}/g, region.toUpperCase())
-        .replace(/{region:lower}/g, region.toLowerCase())
-        .replace(/{region:zh}/g, REGION_NAMES[region] || region)
+        .replace(/{region:UPPER}/g, regionCode.toUpperCase())  // {region:UPPER} 返回大写地区代码
+        .replace(/{region:lower}/g, regionCode.toLowerCase())
+        .replace(/{region:zh}/g, regionZh)  // {region:zh} 返回中文地区名
         .replace(/{protocol:UPPER}/g, protocol.toUpperCase())
         .replace(/{protocol:Title}/g, protocol.charAt(0).toUpperCase() + protocol.slice(1))
         .replace(/{name:UPPER}/g, newName.toUpperCase())
@@ -123,14 +126,29 @@ const previewResult = computed(() => {
   });
 });
 
+// 地区代码 -> 中文名称映射
 const REGION_NAMES = {
     'US': '美国', 'HK': '香港', 'JP': '日本', 'SG': '新加坡', 'TW': '台湾', 'KR': '韩国', 
-    'DE': '德国', 'GB': '英国', 'TR': '土耳其', 'FR': '法国', 'CA': '加拿大', 'AU': '澳大利亚'
+    'DE': '德国', 'GB': '英国', 'UK': '英国', 'TR': '土耳其', 'FR': '法国', 'CA': '加拿大', 'AU': '澳大利亚',
+    'NL': '荷兰', 'RU': '俄罗斯', 'IN': '印度', 'MY': '马来西亚', 'TH': '泰国', 'VN': '越南',
+    'PH': '菲律宾', 'ID': '印尼', 'CH': '瑞士', 'IT': '意大利', 'ES': '西班牙', 'BR': '巴西',
+    'AR': '阿根廷', 'MX': '墨西哥', 'ZA': '南非', 'EG': '埃及', 'IL': '以色列', 'AE': '阿联酋',
+    'SA': '沙特', 'PL': '波兰', 'CZ': '捷克', 'HU': '匈牙利', 'RO': '罗马尼亚', 'BG': '保加利亚',
+    'GR': '希腊', 'PT': '葡萄牙', 'SE': '瑞典', 'NO': '挪威', 'DK': '丹麦', 'FI': '芬兰', 'AT': '奥地利'
 };
 
-function getEmoji(region) {
-    const map = { US: '🇺🇸', HK: '🇭🇰', JP: '🇯🇵', SG: '🇸🇬' };
-    return map[region] || '🏳️';
+// 获取地区 Emoji
+function getEmoji(regionCode) {
+    const map = { 
+        US: '🇺🇸', HK: '🇭🇰', JP: '🇯🇵', SG: '🇸🇬', TW: '🇹🇼', KR: '🇰🇷',
+        GB: '🇬🇧', UK: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷', CA: '🇨🇦', AU: '🇦🇺',
+        NL: '🇳🇱', RU: '🇷🇺', IN: '🇮🇳', TR: '🇹🇷', MY: '🇲🇾', TH: '🇹🇭',
+        VN: '🇻🇳', PH: '🇵🇭', ID: '🇮🇩', CH: '🇨🇭', IT: '🇮🇹', ES: '🇪🇸',
+        BR: '🇧🇷', AR: '🇦🇷', MX: '🇲🇽', ZA: '🇿🇦', EG: '🇪🇬', IL: '🇮🇱',
+        AE: '🇦🇪', SA: '🇸🇦', PL: '🇵🇱', CZ: '🇨🇿', HU: '🇭🇺', RO: '🇷🇴',
+        BG: '🇧🇬', GR: '🇬🇷', PT: '🇵🇹', SE: '🇸🇪', NO: '🇳🇴', DK: '🇩🇰', FI: '🇫🇮', AT: '🇦🇹'
+    };
+    return map[regionCode] || '🏁';
 }
 
 // --- 规则构建器 ---

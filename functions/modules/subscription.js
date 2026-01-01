@@ -125,7 +125,12 @@ function createConcurrencyLimiter(limit) {
 
 export async function generateCombinedNodeList(context, config, userAgent, misubs, prependedContent = '', profilePrefixSettings = null) {
     const shouldPrependManualNodes = profilePrefixSettings?.enableManualNodes ?? true;
-    const shouldAddEmoji = false;
+
+    // 判断是否需要添加 Emoji：当模板重命名启用且模板包含 {emoji} 时启用
+    const nodeTransformConfig = profilePrefixSettings?.nodeTransform;
+    const templateEnabled = nodeTransformConfig?.enabled && nodeTransformConfig?.rename?.template?.enabled;
+    const templateContainsEmoji = templateEnabled && (nodeTransformConfig?.rename?.template?.template || '').includes('{emoji}');
+    const shouldAddEmoji = templateContainsEmoji;
 
     // 手动节点前缀文本
     const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ?? '\u624b\u52a8\u8282\u70b9';
@@ -295,7 +300,6 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         ? combinedLines
         : combinedLines.map(line => removeFlagEmoji(line));
 
-    const nodeTransformConfig = profilePrefixSettings?.nodeTransform;
     const outputLines = nodeTransformConfig?.enabled
         ? applyNodeTransformPipeline(normalizedLines, { ...nodeTransformConfig, enableEmoji: shouldAddEmoji })
         : [...new Set(normalizedLines)];
