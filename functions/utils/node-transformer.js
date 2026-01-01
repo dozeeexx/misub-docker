@@ -3,7 +3,7 @@
  * 支持：正则重命名、模板重命名、智能去重、排序
  */
 
-import { extractNodeRegion, getRegionEmoji } from '../modules/utils/geo-utils.js';
+import { extractNodeRegion, getRegionEmoji, REGION_KEYWORDS } from '../modules/utils/geo-utils.js';
 
 // ============ 默认配置 ============
 
@@ -12,6 +12,8 @@ const DEFAULT_SORT_KEYS = [
     { key: 'protocol', order: 'asc', customOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] },
     { key: 'name', order: 'asc' }
 ];
+
+const REGION_CODE_TO_ZH = buildRegionCodeToZhMap();
 
 // ============ 工具函数 ============
 
@@ -332,9 +334,46 @@ function choosePreferred(existing, candidate, protocolOrder) {
     return rank(candidate.protocol) < rank(existing.protocol) ? candidate : existing;
 }
 
+function buildRegionCodeToZhMap() {
+    const map = {};
+    for (const [zhName, keywords] of Object.entries(REGION_KEYWORDS || {})) {
+        if (!Array.isArray(keywords)) continue;
+        for (const keyword of keywords) {
+            const code = String(keyword || '').trim();
+            if (/^[A-Za-z]{2,3}$/.test(code)) {
+                const upper = code.toUpperCase();
+                if (!map[upper]) map[upper] = zhName;
+            }
+        }
+    }
+    if (map['GB'] && !map['UK']) map['UK'] = map['GB'];
+    return map;
+}
+
+function toRegionZh(value) {
+    const region = String(value || '').trim();
+    if (!region) return '';
+    if (/[\u4e00-\u9fa5]/.test(region)) return region;
+    const upper = region.toUpperCase();
+    return REGION_CODE_TO_ZH[upper] || region;
+}
+
+function applyModifier(key, value, modifier) {
+    const val = value == null ? '' : String(value);
+    switch (modifier) {
+        case 'UPPER': return val.toUpperCase();
+        case 'lower': return val.toLowerCase();
+        case 'Title': return val.charAt(0).toUpperCase() + val.slice(1);
+        case 'zh': return key === 'region' ? toRegionZh(val) : val;
+        default: return val;
+    }
+}
+
 function renderTemplate(template, vars) {
-    return String(template || '').replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => {
-        const v = vars[key];
+    return String(template || '').replace(/\{([a-zA-Z0-9_]+)(?::([a-zA-Z]+))?\}/g, (_, key, modifier) => {
+        if (!Object.prototype.hasOwnProperty.call(vars, key)) return '';
+        let v = vars[key];
+        if (modifier) v = applyModifier(key, v, modifier);
         return v == null ? '' : String(v);
     }).trim();
 }
