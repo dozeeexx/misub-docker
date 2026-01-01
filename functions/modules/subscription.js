@@ -135,6 +135,9 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
     // 手动节点前缀文本
     const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ?? '\u624b\u52a8\u8282\u70b9';
 
+    // [重要] 当智能重命名模板启用时，跳过前缀添加，因为智能重命名会完全覆盖节点名称
+    const skipPrefixDueToRenaming = templateEnabled;
+
     const processedManualNodes = misubs.filter(sub => !sub.url.toLowerCase().startsWith('http')).map(node => {
         if (node.isExpiredNode) {
             return node.url;
@@ -145,7 +148,9 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                 processedUrl = addFlagEmoji(processedUrl);
             }
 
-            return shouldPrependManualNodes ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
+            // 只有在智能重命名未启用时才添加前缀
+            const shouldAddPrefix = shouldPrependManualNodes && !skipPrefixDueToRenaming;
+            return shouldAddPrefix ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
         }
     }).join('\n');
 
@@ -276,9 +281,11 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                 }
             }
 
+            // 判断是否启用订阅前缀（智能重命名启用时跳过）
             const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
+            const shouldAddSubPrefix = shouldPrependSubscriptions && !skipPrefixDueToRenaming;
 
-            return (shouldPrependSubscriptions && sub.name)
+            return (shouldAddSubPrefix && sub.name)
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
         } catch (e) {
