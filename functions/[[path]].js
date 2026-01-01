@@ -59,6 +59,7 @@ export async function onRequest(context) {
             // 静态文件处理
             const isStaticAsset = /^\/(assets|@vite|src)\/./.test(url.pathname) || /\.\w+$/.test(url.pathname);
 
+
             // SPA 路由白名单：这些请求应该交由前端路由处理，而不是作为订阅请求
             // [修复] 增加更多可能的SPA路由，防止被误判为订阅请求
             const isSpaRoute = [
@@ -71,6 +72,7 @@ export async function onRequest(context) {
                 '/profile',
                 '/explore' // [新增] 公开页面
             ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
+
 
             if (!isStaticAsset && !isSpaRoute && url.pathname !== '/') {
                 // 如果是浏览器请求且看起来像是一个页面访问，优先尝试返回 SPA
@@ -93,7 +95,9 @@ export async function onRequest(context) {
             // Route protection for SPA pages
             // If accessing a protected route without auth, redirect to login
             // [Fix] Exclude /explore from auth check
-            if (isSpaRoute && url.pathname !== '/login' && !url.pathname.startsWith('/explore')) {
+            // [Fix] Skip auth check on localhost to avoid port 8787/5173 sync issues during dev
+            const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
+            if (isSpaRoute && url.pathname !== '/login' && !url.pathname.startsWith('/explore') && !isLocalhost) {
                 const { authMiddleware } = await import('./modules/auth-middleware.js');
                 const isAuthenticated = await authMiddleware(request, env);
                 if (!isAuthenticated) {
@@ -108,11 +112,29 @@ export async function onRequest(context) {
             // Continue to static assets or root
             let response = await next();
 
-            // [Fix] SPA Fallback: If asset not found (404) and it's an SPA route, serve index.html
-            if (response.status === 404 && isSpaRoute) {
-                // Clone the request to fetch index.html, preventing mutation issues
+            // [Fix] SPA Fallback: If asset not found (404) and it's an SPA route OR it's an HTML request, serve index.html
+            const acceptHeader = request.headers.get('Accept') || '';
+            const isHtmlRequest = acceptHeader.includes('text/html');
+
+            if (response.status === 404 && (isSpaRoute || isHtmlRequest)) {
+                // Clone the request to fetch index.html
                 const indexUrl = new URL('/', request.url);
-                response = await env.ASSETS.fetch(new Request(indexUrl, request));
+                const indexResponse = await env.ASSETS.fetch(new Request(indexUrl, request));
+
+                // If index.html exists (e.g. in production or after build), return it
+                if (indexResponse.status === 200) {
+                    return indexResponse;
+                }
+
+                // If index.html is missing (likely local dev serving 'public' dir), redirect to Vite dev server
+                // This assumes standard Vite port 5173.
+                return new Response(`Redirecting to frontend dev server...`, {
+                    status: 302,
+                    headers: {
+                        'Location': `http://localhost:5173${url.pathname}${url.search}`,
+                        'Content-Type': 'text/plain'
+                    }
+                });
             }
 
             return response;
