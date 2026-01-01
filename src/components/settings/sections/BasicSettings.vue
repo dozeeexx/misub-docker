@@ -29,6 +29,16 @@ defineProps({
           <span class="slider"></span>
         </label>
       </div>
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">显示流量统计节点</label>
+          <p class="text-xs text-gray-500 dark:text-gray-400">虚拟节点显示剩余流量</p>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" v-model="settings.enableTrafficNode">
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
   </div>
 </template>
