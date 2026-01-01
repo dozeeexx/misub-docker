@@ -7,6 +7,7 @@ import { StorageFactory } from '../../storage-adapter.js';
 import { createJsonResponse, createErrorResponse } from '../utils.js';
 import { extractNodeRegion, parseNodeInfo } from '../utils/geo-utils.js';
 import { parseNodeList, calculateProtocolStats, calculateRegionStats } from '../utils/node-parser.js';
+import { applyNodeTransformPipeline } from '../../utils/node-transformer.js';
 
 /**
  * 常量定义
@@ -20,9 +21,10 @@ const KV_KEY_PROFILES = 'misub_profiles_v1';
  * @param {Object} env - Cloudflare环境对象
  * @param {string} profileId - 订阅组ID
  * @param {string} userAgent - 用户代理
+ * @param {boolean} applyTransform - 是否应用节点转换规则（智能重命名、前缀等）
  * @returns {Promise<Object>} 处理结果
  */
-async function handleProfileMode(request, env, profileId, userAgent) {
+async function handleProfileMode(request, env, profileId, userAgent, applyTransform = false) {
     const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
 
     // 获取订阅组和所有数据
@@ -86,15 +88,42 @@ async function handleProfileMode(request, env, profileId, userAgent) {
         }
     });
 
-    // 生成统计信息
-    const protocolStats = calculateProtocolStats(allNodes);
-    const regionStats = calculateRegionStats(allNodes);
+    // 如果需要应用转换规则，则处理节点名称
+    let processedNodes = allNodes;
+    if (applyTransform && profile.nodeTransform?.enabled) {
+        // 提取节点 URL 列表
+        const nodeUrls = allNodes.map(node => node.url);
+
+        // 应用节点转换管道
+        const transformedUrls = applyNodeTransformPipeline(nodeUrls, {
+            ...profile.nodeTransform,
+            enableEmoji: profile.nodeTransform.rename?.template?.template?.includes('{emoji}') || false
+        });
+
+        // 更新节点名称
+        processedNodes = allNodes.map((node, index) => {
+            if (transformedUrls[index]) {
+                // 从转换后的 URL 中提取新的名称
+                const newNodeInfo = parseNodeInfo(transformedUrls[index]);
+                return {
+                    ...node,
+                    name: newNodeInfo.name,
+                    url: transformedUrls[index]
+                };
+            }
+            return node;
+        });
+    }
+
+    // 生成统计信息（使用处理后的节点）
+    const protocolStats = calculateProtocolStats(processedNodes);
+    const regionStats = calculateRegionStats(processedNodes);
 
     return {
         success: true,
         subscriptions: allResults,
-        nodes: allNodes,
-        totalCount: allNodes.length,
+        nodes: processedNodes,
+        totalCount: processedNodes.length,
         stats: {
             protocols: protocolStats,
             regions: regionStats
@@ -458,10 +487,10 @@ export async function handlePublicPreviewRequest(request, env) {
             return createJsonResponse({ error: 'Profile not found or not public' }, 404);
         }
 
-        // 调用 handleProfileMode 获取节点
+        // 调用 handleProfileMode 获取节点（公开页默认显示处理后的结果）
         // 注意：handleProfileMode 内部会再次获取 profiles 和 subscriptions，
         // 虽然有一次额外的 KV 读取，但为了复用逻辑是值得的。
-        const result = await handleProfileMode(request, env, profile.id, userAgent);
+        const result = await handleProfileMode(request, env, profile.id, userAgent, true);
 
         return createJsonResponse(result);
 
@@ -487,7 +516,8 @@ export async function handleSubscriptionNodesRequest(request, env) {
             url: subscriptionUrl,
             subscriptionId,
             profileId,
-            userAgent = 'MiSub-Node-Preview/1.0'
+            userAgent = 'MiSub-Node-Preview/1.0',
+            applyTransform = false  // 管理后台默认不应用转换，由前端控制
         } = requestData;
 
         // 验证必需参数
@@ -503,7 +533,7 @@ export async function handleSubscriptionNodesRequest(request, env) {
         let result;
         switch (mode) {
             case 'profile':
-                result = await handleProfileMode(request, env, profileId, userAgent);
+                result = await handleProfileMode(request, env, profileId, userAgent, applyTransform);
                 break;
             case 'subscription':
                 result = await handleSingleSubscriptionMode(request, env, subscriptionId, userAgent);

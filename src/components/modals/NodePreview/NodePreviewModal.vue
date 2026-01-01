@@ -24,6 +24,7 @@ const allNodes = ref([]); // 存储所有节点
 const currentPage = ref(1);
 const pageSize = ref(24);
 const viewMode = ref('list'); // 'list' 或 'card'
+const showProcessed = ref(false); // 是否显示处理后的节点名称
 
 // 响应式视图模式 - 移动端强制卡片视图
 const effectiveViewMode = computed(() => {
@@ -112,6 +113,7 @@ watch(() => props.show, (newVal) => {
     protocolFilter.value = 'all';
     regionFilter.value = 'all';
     searchQuery.value = '';
+    showProcessed.value = false;  // 重置处理开关
     error.value = '';
     allNodes.value = [];
   }
@@ -129,6 +131,11 @@ watch([protocolFilter, regionFilter, searchQuery], () => {
   currentPage.value = 1;
 });
 
+// 监听 showProcessed 变化，重新加载节点
+watch(showProcessed, () => {
+  loadNodes();
+});
+
 // 加载节点数据
 const loadNodes = async () => {
   if (!props.show) return;
@@ -143,6 +150,8 @@ const loadNodes = async () => {
 
     if (props.profileId) {
       requestData.profileId = props.profileId;
+      // 仅在订阅组模式下传递 applyTransform 参数
+      requestData.applyTransform = showProcessed.value;
     } else if (props.subscriptionId) {
       requestData.subscriptionId = props.subscriptionId;
     } else if (props.subscriptionUrl) {
@@ -429,8 +438,8 @@ const handleKeydown = (e) => {
 
       <!-- 筛选控件 - 统一响应式布局 -->
       <div v-if="!loading && !error && Object.keys(protocolStats).length > 0" class="px-3 sm:px-6 py-2 sm:py-4 border-b border-gray-200 dark:border-gray-700">
-        <!-- 响应式网格布局 -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- 响应式网格布局: 桌面端5列（当有处理模式时），否则4列 -->
+        <div :class="profileId && apiEndpoint !== '/api/public/preview' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4'">
           <!-- 协议筛选 -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
@@ -508,6 +517,31 @@ const handleKeydown = (e) => {
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"></path>
                 </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 处理模式开关 (仅订阅组模式且非公开页显示，桌面端与显示模式并列) -->
+          <div v-if="profileId && apiEndpoint !== '/api/public/preview'" class="hidden lg:block">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+              节点名称
+            </label>
+            <div class="flex items-center gap-1 sm:gap-2">
+              <button
+                @click="showProcessed = false"
+                :class="!showProcessed ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
+                class="px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
+                title="显示原始节点名称"
+              >
+                原始
+              </button>
+              <button
+                @click="showProcessed = true"
+                :class="showProcessed ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
+                class="px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
+                title="显示处理后的节点名称（应用智能重命名等规则）"
+              >
+                处理后
               </button>
             </div>
           </div>
