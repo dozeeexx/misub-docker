@@ -19,7 +19,16 @@ const heroConfig = computed(() => config.value.hero || {
     description: '浏览并获取由管理员分享的精选订阅组合，一键导入到您的客户端。'
 });
 const guestbookConfig = computed(() => config.value.guestbook || {});
+
 const showGuestbookModal = ref(false);
+
+const handleGuestbookTrigger = () => {
+    if (guestbookConfig.value && guestbookConfig.value.enabled === false) {
+        showToast('留言板功能已关闭', 'warning');
+        return;
+    }
+    showGuestbookModal.value = true;
+};
 
 const fetchPublicProfiles = async () => {
     try {
@@ -223,7 +232,7 @@ onMounted(async () => {
             <!-- Guestbook Trigger (Absolute Bottom Right) -->
             <div
                 class="absolute bottom-4 right-4 z-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pointer-events-none flex justify-end">
-                <button @click="showGuestbookModal = true"
+                <button @click="handleGuestbookTrigger"
                     class="pointer-events-auto inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-full shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:scale-105">
                     <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">

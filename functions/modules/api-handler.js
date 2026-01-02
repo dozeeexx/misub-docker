@@ -269,6 +269,18 @@ export async function handlePublicProfilesRequest(env) {
             description: settings.heroDescription || '浏览并获取由管理员分享的精选订阅组合，一键导入到您的客户端。'
         };
 
+        // Guestbook Config (Safe subset)
+        const guestbook = {
+            enabled: settings.guestbook?.enabled !== false, // Default to true if undefined? No, usually false? Wait, let's match handler logic.
+            // In handler: const guestbookConfig = settings.guestbook || DEFAULT_SETTINGS.guestbook;
+            // logic in handler: if (!guestbookConfig.enabled) ...
+            // So we should just pass provided value or default.
+            // Let's passed keys that are safe.
+            enabled: settings.guestbook?.enabled,
+            requireAudit: settings.guestbook?.requireAudit,
+            allowAnonymous: settings.guestbook?.allowAnonymous,
+        };
+
         // 过滤出公开且启用的订阅组
         const publicProfiles = profiles
             .filter(p => p.isPublic && p.enabled)
@@ -288,7 +300,8 @@ export async function handlePublicProfilesRequest(env) {
             config: {
                 profileToken,
                 announcement,
-                hero
+                hero,
+                guestbook
             }
         });
     } catch (e) {
