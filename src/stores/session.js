@@ -1,17 +1,32 @@
 
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { fetchInitialData, login as apiLogin } from '../lib/api';
+import { fetchInitialData, login as apiLogin, fetchPublicConfig } from '../lib/api';
 import { useDataStore } from './useDataStore';
 import router from '../router';
 
 export const useSessionStore = defineStore('session', () => {
   const sessionState = ref('loading'); // loading, loggedIn, loggedOut
   const initialData = ref(null);
+  const publicConfig = ref({ enablePublicPage: true }); // Default true until fetched
 
   async function checkSession() {
     try {
-      const data = await fetchInitialData();
+      // Parallel fetch of initial data (auth check) and public config
+      // Note: fetchInitialData throws if unauthorized, fetchPublicConfig does not.
+      const [data, pConfig] = await Promise.all([
+        fetchInitialData().catch(e => {
+          if (e.message === 'UNAUTHORIZED') return null;
+          throw e;
+        }),
+        fetchInitialData.name ? fetchPublicConfig() : Promise.resolve({}) // Ensure api function is available
+      ]);
+
+      // Update public config
+      if (pConfig) {
+        publicConfig.value = pConfig;
+      }
+
       if (data) {
         initialData.value = data;
 
@@ -24,9 +39,13 @@ export const useSessionStore = defineStore('session', () => {
         sessionState.value = 'loggedOut';
       }
     } catch (error) {
-      if (error.message !== 'UNAUTHORIZED') {
-        console.error("Session check failed:", error);
-      }
+      console.error("Session check failed:", error);
+      // Attempt to fetch public config separately if main data fetch failed critically
+      try {
+        const pConfig = await fetchPublicConfig();
+        if (pConfig) publicConfig.value = pConfig;
+      } catch (ignore) { }
+
       sessionState.value = 'loggedOut';
     }
   }
@@ -65,5 +84,5 @@ export const useSessionStore = defineStore('session', () => {
     router.push({ path: '/' });
   }
 
-  return { sessionState, initialData, checkSession, login, logout };
+  return { sessionState, initialData, publicConfig, checkSession, login, logout };
 });

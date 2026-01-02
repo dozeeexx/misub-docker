@@ -8,7 +8,7 @@ import SettingsSidebar from '../settings/SettingsSidebar.vue';
 import BasicSettings from '../settings/sections/BasicSettings.vue';
 import ServiceSettings from '../settings/sections/ServiceSettings.vue';
 
-import WebSettings from '../settings/sections/WebSettings.vue';
+
 import ClientSettings from '../settings/sections/ClientSettings.vue';
 import SystemSettings from '../settings/sections/SystemSettings.vue';
 
@@ -56,15 +56,14 @@ defineExpose({ handleSave });
       <main class="flex-1 min-w-0">
         <div class="space-y-6">
           <!-- 基础设置 -->
-          <BasicSettings v-show="activeTab === 'basic'" :settings="settings" />
+          <BasicSettings v-show="activeTab === 'basic'" :settings="settings" :disguiseConfig="disguiseConfig" />
           
           <!-- 服务集成 -->
           <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
           
 
           
-          <!-- Web访问 -->
-          <WebSettings v-show="activeTab === 'web'" :disguiseConfig="disguiseConfig" />
+
           
           <!-- 客户端管理 -->
           <ClientSettings v-show="activeTab === 'client'" />

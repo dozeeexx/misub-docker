@@ -6,7 +6,7 @@
 import { StorageFactory, DataMigrator } from '../storage-adapter.js';
 import { createJsonResponse, createErrorResponse } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout } from './auth-middleware.js';
-import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave, handlePublicProfilesRequest } from './api-handler.js';
+import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave, handlePublicProfilesRequest, handlePublicConfig } from './api-handler.js';
 import { handleCronTrigger } from './notifications.js';
 import {
     handleSubscriptionNodesRequest,
@@ -26,6 +26,12 @@ import {
     handleHealthCheckRequest
 } from './handlers/node-handler.js';
 import { handleClientRequest } from './handlers/client-handler.js';
+import {
+    handleGuestbookGet,
+    handleGuestbookPost,
+    handleGuestbookManageGet,
+    handleGuestbookManageAction
+} from './handlers/guestbook-handler.js';
 
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
@@ -107,12 +113,27 @@ export async function handleApiRequest(request, env) {
         return await handleLogin(request, env);
     }
 
+    if (path === '/public_config') {
+        return await handlePublicConfig(env);
+    }
+
     if (path === '/public/profiles') {
         return await handlePublicProfilesRequest(env);
     }
 
     if (path === '/public/preview') {
         return await handlePublicPreviewRequest(request, env);
+    }
+
+    // 留言板公开接口
+    if (path === '/public/guestbook') {
+        if (request.method === 'GET') {
+            return await handleGuestbookGet(env);
+        }
+        if (request.method === 'POST') {
+            return await handleGuestbookPost(request, env);
+        }
+        return createErrorResponse('Method Not Allowed', 405);
     }
 
     // Telegram Push Bot Webhook (公开接口，内部验证)
@@ -209,6 +230,15 @@ export async function handleApiRequest(request, env) {
                 return await handleSettingsSave(request, env);
             }
             return createJsonResponse('Method Not Allowed', 405);
+
+        case '/guestbook/manage':
+            if (request.method === 'GET') {
+                return await handleGuestbookManageGet(env);
+            }
+            if (request.method === 'POST') {
+                return await handleGuestbookManageAction(request, env);
+            }
+            return createErrorResponse('Method Not Allowed', 405);
 
         default:
             return createErrorResponse('API route not found', 404);

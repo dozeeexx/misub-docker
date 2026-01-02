@@ -12,7 +12,22 @@ export const DEFAULT_SETTINGS = {
     NotifyThresholdDays: 3,
     NotifyThresholdPercent: 90,
     enableTrafficNode: false,
-    storageType: 'kv'
+    enablePublicPage: true,
+    storageType: 'kv',
+    // 公告设置
+    announcement: {
+        enabled: false,           // 是否启用公告
+        title: '',                // 公告标题
+        content: '',              // 公告内容（支持富文本/Markdown）
+        type: 'info',             // 类型: 'info' | 'warning' | 'success'
+        dismissible: true,        // 是否可关闭
+        updatedAt: null           // 更新时间
+    },
+    // 留言板设置
+    guestbook: {
+        enabled: false,
+        allowAnonymous: true
+    }
 };
 
 export const DEFAULT_NODE_FORM = {

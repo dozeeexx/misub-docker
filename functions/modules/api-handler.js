@@ -252,6 +252,35 @@ export async function handlePublicProfilesRequest(env) {
 
         const profileToken = settings.profileToken || 'profiles';
 
+        // 获取公告配置（仅当启用时返回）
+        const announcement = settings.announcement?.enabled ? {
+            enabled: true, // [修复] 必须包含此字段，否则前端 v-if 判断会失败
+            title: settings.announcement.title || '',
+            content: settings.announcement.content || '',
+            type: settings.announcement.type || 'info',
+            dismissible: settings.announcement.dismissible !== false,
+            updatedAt: settings.announcement.updatedAt
+        } : null;
+
+        // Hero Configuration
+        const hero = {
+            title1: settings.heroTitle1 || '发现优质',
+            title2: settings.heroTitle2 || '订阅资源',
+            description: settings.heroDescription || '浏览并获取由管理员分享的精选订阅组合，一键导入到您的客户端。'
+        };
+
+        // Guestbook Config (Safe subset)
+        const guestbook = {
+            enabled: settings.guestbook?.enabled !== false, // Default to true if undefined? No, usually false? Wait, let's match handler logic.
+            // In handler: const guestbookConfig = settings.guestbook || DEFAULT_SETTINGS.guestbook;
+            // logic in handler: if (!guestbookConfig.enabled) ...
+            // So we should just pass provided value or default.
+            // Let's passed keys that are safe.
+            enabled: settings.guestbook?.enabled,
+            requireAudit: settings.guestbook?.requireAudit,
+            allowAnonymous: settings.guestbook?.allowAnonymous,
+        };
+
         // 过滤出公开且启用的订阅组
         const publicProfiles = profiles
             .filter(p => p.isPublic && p.enabled)
@@ -269,11 +298,36 @@ export async function handlePublicProfilesRequest(env) {
             success: true,
             data: publicProfiles,
             config: {
-                profileToken
+                profileToken,
+                announcement,
+                hero,
+                guestbook
             }
         });
     } catch (e) {
         console.error('[API Error /public/profiles]', e);
         return createErrorResponse('获取公开订阅组失败', 'APIHandler', 500);
+    }
+}
+
+/**
+ * 处理公开配置获取API
+ * @param {Object} env - Cloudflare环境对象
+ * @returns {Promise<Response>} HTTP响应
+ */
+export async function handlePublicConfig(env) {
+    try {
+        const storageAdapter = await getStorageAdapter(env);
+        const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+
+        // Merge with default settings to ensure enablePublicPage exists
+        const mergedSettings = { ...defaultSettings, ...settings };
+
+        return createJsonResponse({
+            enablePublicPage: mergedSettings.enablePublicPage
+        });
+    } catch (e) {
+        console.error('[API Error /public/config]', e);
+        return createErrorResponse('获取公开配置失败', 'APIHandler', 500);
     }
 }

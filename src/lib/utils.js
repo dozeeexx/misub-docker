@@ -219,12 +219,12 @@ export function getClientInfo(userAgent) {
     if (ua.includes('clashx pro')) return { name: 'ClashX Pro', className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' };
     // ClashX
     if (ua.includes('clashx')) return { name: 'ClashX', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' };
-    // Clash Verge
-    if (ua.includes('clash-verge') || ua.includes('clash.verge') || ua.includes('verge')) return { name: 'Clash Verge', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' };
+    // FlyClash (必须在 Clash Verge 之前匹配，因为其 UA 包含 "clash-verge" 字样)
+    if (ua.includes('flyclash') || ua.includes('flclash')) return { name: 'FlClash', className: 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' };
+    // Clash Verge (移除 'verge' 单独匹配，避免误匹配)
+    if (ua.includes('clash-verge') || ua.includes('clash.verge')) return { name: 'Clash Verge', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' };
     // Nyanpasu
     if (ua.includes('nyanpasu')) return { name: 'Nyanpasu', className: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300' };
-    // FlyClash
-    if (ua.includes('flyclash') || ua.includes('flclash')) return { name: 'FlyClash', className: 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' };
 
     // === 通用内核匹配 ===
     // Clash Meta 核心 (放在具体客户端之后)
