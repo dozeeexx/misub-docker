@@ -277,3 +277,25 @@ export async function handlePublicProfilesRequest(env) {
         return createErrorResponse('获取公开订阅组失败', 'APIHandler', 500);
     }
 }
+
+/**
+ * 处理公开配置获取API
+ * @param {Object} env - Cloudflare环境对象
+ * @returns {Promise<Response>} HTTP响应
+ */
+export async function handlePublicConfig(env) {
+    try {
+        const storageAdapter = await getStorageAdapter(env);
+        const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+
+        // Merge with default settings to ensure enablePublicPage exists
+        const mergedSettings = { ...defaultSettings, ...settings };
+
+        return createJsonResponse({
+            enablePublicPage: mergedSettings.enablePublicPage
+        });
+    } catch (e) {
+        console.error('[API Error /public/config]', e);
+        return createErrorResponse('获取公开配置失败', 'APIHandler', 500);
+    }
+}

@@ -6,7 +6,7 @@
 import { StorageFactory, DataMigrator } from '../storage-adapter.js';
 import { createJsonResponse, createErrorResponse } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout } from './auth-middleware.js';
-import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave, handlePublicProfilesRequest } from './api-handler.js';
+import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave, handlePublicProfilesRequest, handlePublicConfig } from './api-handler.js';
 import { handleCronTrigger } from './notifications.js';
 import {
     handleSubscriptionNodesRequest,
@@ -105,6 +105,10 @@ export async function handleApiRequest(request, env) {
 
     if (path === '/login') {
         return await handleLogin(request, env);
+    }
+
+    if (path === '/public_config') {
+        return await handlePublicConfig(env);
     }
 
     if (path === '/public/profiles') {

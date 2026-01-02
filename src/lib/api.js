@@ -158,6 +158,18 @@ export async function fetchSettings() {
     }
 }
 
+export async function fetchPublicConfig() {
+    try {
+        const response = await fetch(`/api/public_config`);
+        if (!response.ok) return { enablePublicPage: false }; // Default to secure if fail
+        const data = await response.json();
+        return data; // Expected { enablePublicPage: boolean }
+    } catch (error) {
+        console.error("Failed to fetch public config:", error);
+        return { enablePublicPage: false };
+    }
+}
+
 export async function saveSettings(settings) {
     try {
         const response = await fetch('/api/settings', {
