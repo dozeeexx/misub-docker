@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 
 const NodePreviewModal = defineAsyncComponent(() => import('../components/modals/NodePreview/NodePreviewModal.vue'));
 const AnnouncementCard = defineAsyncComponent(() => import('../components/features/AnnouncementCard.vue'));
+const GuestbookModal = defineAsyncComponent(() => import('../components/modals/GuestbookModal.vue'));
 
 const publicProfiles = ref([]);
 const loading = ref(true);
@@ -12,6 +13,8 @@ const error = ref(null);
 const { showToast } = useToastStore();
 const config = ref({});
 const announcement = computed(() => config.value.announcement);
+const guestbookConfig = computed(() => config.value.guestbook || {});
+const showGuestbookModal = ref(false);
 
 const fetchPublicProfiles = async () => {
     try {
@@ -25,6 +28,7 @@ const fetchPublicProfiles = async () => {
             publicProfiles.value = data.data;
             config.value = data.config || {};
             // Debug log
+            console.log('Guestbook Config:', config.value.guestbook);
             if (data.config && data.config.announcement) {
                 console.log('Announcement loaded:', data.config.announcement);
             } else {
@@ -206,7 +210,24 @@ onMounted(async () => {
                         class="mt-3 max-w-md mx-auto text-base text-gray-500 dark:text-gray-400 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
                         浏览并获取由管理员分享的精选订阅组合，一键导入到您的客户端。
                     </p>
+
+                    <!-- Old Trigger Removed -->
                 </div>
+            </div>
+
+            <!-- Guestbook Trigger (Absolute Bottom Right) -->
+            <div
+                class="absolute bottom-4 right-4 z-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pointer-events-none flex justify-end">
+                <button @click="showGuestbookModal = true"
+                    class="pointer-events-auto inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-full shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:scale-105">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                    <span>反馈</span>
+                    <span class="hidden sm:inline">与建议</span>
+                </button>
             </div>
         </div>
 
@@ -434,13 +455,13 @@ onMounted(async () => {
                 </div>
             </div>
 
-
-
-
         </div>
 
+        <!-- Modals -->
         <NodePreviewModal v-if="showPreviewModal" :show="showPreviewModal" @update:show="showPreviewModal = $event"
             :profile-id="previewProfileId" :profile-name="previewProfileName" api-endpoint="/api/public/preview" />
+
+        <GuestbookModal :show="showGuestbookModal" :config="guestbookConfig" @close="showGuestbookModal = false" />
     </div>
 </template>
 

@@ -22,6 +22,11 @@ export const DEFAULT_SETTINGS = {
         type: 'info',             // 类型: 'info' | 'warning' | 'success'
         dismissible: true,        // 是否可关闭
         updatedAt: null           // 更新时间
+    },
+    // 留言板设置
+    guestbook: {
+        enabled: false,
+        allowAnonymous: true
     }
 };
 

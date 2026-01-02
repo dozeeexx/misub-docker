@@ -7,6 +7,7 @@ import SettingsSidebar from '../components/settings/SettingsSidebar.vue';
 import BasicSettings from '../components/settings/sections/BasicSettings.vue';
 import ServiceSettings from '../components/settings/sections/ServiceSettings.vue';
 import AnnouncementSettings from '../components/settings/sections/AnnouncementSettings.vue';
+import GuestbookManagement from '../components/settings/sections/GuestbookManagement.vue';
 
 import SystemSettings from '../components/settings/sections/SystemSettings.vue';
 import ClientSettings from '../components/settings/sections/ClientSettings.vue';
@@ -35,6 +36,7 @@ const currentTabLabel = computed(() => {
     case 'basic': return '基础设置';
     case 'service': return '服务集成';
     case 'announcement': return '公告管理';
+    case 'guestbook': return '留言管理';
 
     case 'client': return '客户端管理';
     case 'system': return '系统设置';
@@ -93,6 +95,7 @@ onMounted(() => {
             <BasicSettings v-show="activeTab === 'basic'" :settings="settings" :disguiseConfig="disguiseConfig" />
             <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
             <AnnouncementSettings v-show="activeTab === 'announcement'" :settings="settings" />
+            <GuestbookManagement v-show="activeTab === 'guestbook'" :settings="settings" />
 
 
             <ClientSettings v-show="activeTab === 'client'" />
