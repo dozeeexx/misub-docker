@@ -13,7 +13,16 @@ export const DEFAULT_SETTINGS = {
     NotifyThresholdPercent: 90,
     enableTrafficNode: false,
     enablePublicPage: true,
-    storageType: 'kv'
+    storageType: 'kv',
+    // 公告设置
+    announcement: {
+        enabled: false,           // 是否启用公告
+        title: '',                // 公告标题
+        content: '',              // 公告内容（支持富文本/Markdown）
+        type: 'info',             // 类型: 'info' | 'warning' | 'success'
+        dismissible: true,        // 是否可关闭
+        updatedAt: null           // 更新时间
+    }
 };
 
 export const DEFAULT_NODE_FORM = {

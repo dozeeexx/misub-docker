@@ -252,6 +252,16 @@ export async function handlePublicProfilesRequest(env) {
 
         const profileToken = settings.profileToken || 'profiles';
 
+        // 获取公告配置（仅当启用时返回）
+        const announcement = settings.announcement?.enabled ? {
+            enabled: true, // [修复] 必须包含此字段，否则前端 v-if 判断会失败
+            title: settings.announcement.title || '',
+            content: settings.announcement.content || '',
+            type: settings.announcement.type || 'info',
+            dismissible: settings.announcement.dismissible !== false,
+            updatedAt: settings.announcement.updatedAt
+        } : null;
+
         // 过滤出公开且启用的订阅组
         const publicProfiles = profiles
             .filter(p => p.isPublic && p.enabled)
@@ -269,7 +279,8 @@ export async function handlePublicProfilesRequest(env) {
             success: true,
             data: publicProfiles,
             config: {
-                profileToken
+                profileToken,
+                announcement
             }
         });
     } catch (e) {

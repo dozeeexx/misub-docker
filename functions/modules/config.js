@@ -23,7 +23,16 @@ export const DEFAULT_SETTINGS = {
     NotifyThresholdDays: 3,
     NotifyThresholdPercent: 90,
     enableTrafficNode: false,
-    storageType: 'kv'
+    storageType: 'kv',
+    // 公告设置
+    announcement: {
+        enabled: false,
+        title: '',
+        content: '',
+        type: 'info',
+        dismissible: true,
+        updatedAt: null
+    }
 };
 
 // System constants

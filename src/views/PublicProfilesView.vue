@@ -1,15 +1,17 @@
 <script setup>
-import { ref, onMounted, defineAsyncComponent, nextTick } from 'vue';
+import { ref, onMounted, defineAsyncComponent, nextTick, computed } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import QRCode from 'qrcode';
 
 const NodePreviewModal = defineAsyncComponent(() => import('../components/modals/NodePreview/NodePreviewModal.vue'));
+const AnnouncementCard = defineAsyncComponent(() => import('../components/features/AnnouncementCard.vue'));
 
 const publicProfiles = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const { showToast } = useToastStore();
 const config = ref({});
+const announcement = computed(() => config.value.announcement);
 
 const fetchPublicProfiles = async () => {
     try {
@@ -22,12 +24,18 @@ const fetchPublicProfiles = async () => {
         if (data.success) {
             publicProfiles.value = data.data;
             config.value = data.config || {};
+            // Debug log
+            if (data.config && data.config.announcement) {
+                console.log('Announcement loaded:', data.config.announcement);
+            } else {
+                console.log('No announcement found in config');
+            }
         } else {
             error.value = data.message || '获取数据失败';
         }
     } catch (err) {
         error.value = err.message;
-        console.error(err);
+        console.error('Fetch error:', err);
     } finally {
         loading.value = false;
     }
@@ -204,6 +212,9 @@ onMounted(async () => {
 
         <!-- Content Section -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+            <!-- Announcement Section -->
+            <AnnouncementCard v-if="announcement && announcement.enabled" :announcement="announcement" />
 
             <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <div v-for="i in 6" :key="i"
