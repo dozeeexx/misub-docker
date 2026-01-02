@@ -15,6 +15,7 @@ const detectedPlatform = ref(null);
 
 const detectPlatform = () => {
     const ua = navigator.userAgent;
+    if (/HarmonyOS|OpenHarmony/.test(ua)) return 'HarmonyOS';
     if (/iPhone|iPad|iPod/.test(ua)) return 'ios';
     if (/Android/.test(ua)) return 'android';
     if (/Mac/.test(ua) && !/iPhone|iPad|iPod/.test(ua)) return 'macos';
@@ -27,11 +28,12 @@ const detectPlatform = () => {
 const urlSchemeMap = {
     'clash-verge-rev': 'clash://install-config?url={url}&name={name}',
     'clash-party': 'clash://install-config?url={url}&name={name}',
+    'clashbox': 'clash://install-config?url={url}&name={name}',
     'v2rayn': 'v2rayng://install-config?url={url}',
     'v2rayng': 'v2rayng://install-config?url={url}',
     'shadowrocket': 'shadowrocket://add/sub://{url_base64}?remark={name}',
     'hiddify': 'hiddify://import/{url}',
-    'nekobox': 'nekobox://install-config?url={url}',
+    'nekobox': 'nekobox://install-config?name={name}&type=SUBSCRIPTION&url={url}',
     'stash': 'stash://install-config?url={url}&name={name}',
     'loon': 'loon://import?sub={url}&name={name}',
     'surge': 'surge:///install-config?url={url}',
@@ -104,7 +106,8 @@ const getPlatformLabel = (platform) => {
         android: 'Android',
         windows: 'Windows',
         macos: 'macOS',
-        linux: 'Linux'
+        linux: 'Linux',
+        HarmonyOS: 'HarmonyOS'
     };
     return map[platform] || platform;
 };
@@ -215,7 +218,8 @@ onMounted(() => {
                                     <li>请确保您已安装对应的客户端应用</li>
                                     <li>点击后将自动打开客户端并添加订阅</li>
                                     <li>部分浏览器可能需要您手动确认打开应用</li>
-                                    <li class="text-amber-600 dark:text-amber-400 font-medium">若安装了多个同类软件（如多个 Clash 版本），系统将调用默认关联的程序打开</li>
+                                    <li class="text-amber-600 dark:text-amber-400 font-medium">若安装了多个同类软件（如多个 Clash
+                                        版本），系统将调用默认关联的程序打开</li>
                                 </ul>
                             </div>
                         </div>
