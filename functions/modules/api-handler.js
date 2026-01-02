@@ -262,6 +262,13 @@ export async function handlePublicProfilesRequest(env) {
             updatedAt: settings.announcement.updatedAt
         } : null;
 
+        // Hero Configuration
+        const hero = {
+            title1: settings.heroTitle1 || '发现优质',
+            title2: settings.heroTitle2 || '订阅资源',
+            description: settings.heroDescription || '浏览并获取由管理员分享的精选订阅组合，一键导入到您的客户端。'
+        };
+
         // 过滤出公开且启用的订阅组
         const publicProfiles = profiles
             .filter(p => p.isPublic && p.enabled)
@@ -280,7 +287,8 @@ export async function handlePublicProfilesRequest(env) {
             data: publicProfiles,
             config: {
                 profileToken,
-                announcement
+                announcement,
+                hero
             }
         });
     } catch (e) {
