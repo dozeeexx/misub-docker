@@ -275,15 +275,6 @@ wrangler d1 execute misub --file=schema.sql --remote
 - **客户端识别升级** - 增强对 Surge、Stash 等客户端的 User-Agent 识别准确度
 - **API 修正** - 修复公开配置接口字段缺失问题，增强后端数据安全性
 
-### v2.0.0 (2025-12-22)
-
-**新增功能:**
-- ✨ 订阅备注功能 - 记录官网、价格等信息
-- ✨ 自定义 User-Agent - 解决机场 UA 限制
-- ✨ Snell 协议完整支持 - 包含 reuse/tfo 参数
-- ✨ Snell 协议完整支持 - 包含 reuse/tfo 参数
-- ✨ Surge 配置解析增强 - 支持更多参数
-
 ### v2.1.0 (2025-12-30)
 
 **新增功能:**
@@ -296,6 +287,15 @@ wrangler d1 execute misub --file=schema.sql --remote
 - 🎨 优化订阅卡片显示
 - 🐛 修复 SS2022 节点错误
 - 📚 完善文档和使用说明
+
+### v2.0.0 (2025-12-22)
+
+**新增功能:**
+- ✨ 订阅备注功能 - 记录官网、价格等信息
+- ✨ 自定义 User-Agent - 解决机场 UA 限制
+- ✨ Snell 协议完整支持 - 包含 reuse/tfo 参数
+- ✨ Snell 协议完整支持 - 包含 reuse/tfo 参数
+- ✨ Surge 配置解析增强 - 支持更多参数
 
 ### v1.5.0
 
