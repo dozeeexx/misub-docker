@@ -383,7 +383,8 @@ export async function handleMisubRequest(context) {
     // [Log Deduplication] Skip logging for internal backend requests and Telegram bots
     const shouldSkipLogging = userAgentHeader.includes('MiSub-Backend') || userAgentHeader.includes('TelegramBot');
 
-    if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
+    // [Telegram Notification] Send notification if Bot credentials are configured (independent of access log setting)
+    if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
         const country = request.headers.get('CF-IPCountry') || 'N/A';
         const domain = url.hostname;
@@ -399,9 +400,12 @@ export async function handleMisubRequest(context) {
             }
         }
 
-        // 使用增强版TG通知，包含IP地理位置信息
+        // 使用增强版TG通知,包含IP地理位置信息
         context.waitUntil(sendEnhancedTgNotification(config, '🛰️ *订阅被访问*', clientIp, additionalData));
+    }
 
+    // [Access Log] Record access log and stats if enabled
+    if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
         // [Log Deduplication]
         // Removed the premature LogService.addLog here.
         // We will pass the log metadata to generateCombinedNodeList (or log manually for cache hits)

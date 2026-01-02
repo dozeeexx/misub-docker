@@ -335,7 +335,7 @@ const switchToVisual = () => {
                 <!-- 模式选择 -->
                 <div class="flex gap-2">
                   <button @click="ruleMode = 'exclude'" :class="[
-                    'px-3 py-1.5 text-sm font-medium rounded-lg transition-all',
+                    'flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all !min-h-0 !min-w-0',
                     ruleMode === 'exclude'
                       ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
                       : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -343,7 +343,7 @@ const switchToVisual = () => {
                     排除模式
                   </button>
                   <button @click="ruleMode = 'keep'" :class="[
-                    'px-3 py-1.5 text-sm font-medium rounded-lg transition-all',
+                    'flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all !min-h-0 !min-w-0',
                     ruleMode === 'keep'
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
                       : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -357,7 +357,7 @@ const switchToVisual = () => {
                   <div class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">📍 地区</div>
                   <div class="flex flex-wrap gap-1.5">
                     <button v-for="tag in presetRegions" :key="tag.pattern" @click="toggleTag(tag, 'region')" :class="[
-                      'px-2.5 py-1 text-xs font-medium rounded-lg transition-all',
+                      'px-2.5 py-1 text-xs sm:text-sm font-medium rounded-md transition-all !min-h-0 !min-w-0',
                       isSelected(tag.pattern)
                         ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 ring-1 ring-indigo-300 dark:ring-indigo-700'
                         : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -373,7 +373,7 @@ const switchToVisual = () => {
                   <div class="flex flex-wrap gap-1.5">
                     <button v-for="tag in presetProtocols" :key="tag.pattern" @click="toggleTag(tag, 'protocol')"
                       :class="[
-                        'px-2.5 py-1 text-xs font-medium rounded-lg transition-all',
+                        'px-2.5 py-1 text-xs sm:text-sm font-medium rounded-md transition-all !min-h-0 !min-w-0',
                         isSelected(tag.pattern)
                           ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 ring-1 ring-indigo-300 dark:ring-indigo-700'
                           : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -388,7 +388,7 @@ const switchToVisual = () => {
                   <div class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">🏷️ 关键词</div>
                   <div class="flex flex-wrap gap-1.5">
                     <button v-for="tag in presetKeywords" :key="tag.pattern" @click="toggleTag(tag, 'keyword')" :class="[
-                      'px-2.5 py-1 text-xs font-medium rounded-lg transition-all',
+                      'px-2.5 py-1 text-xs sm:text-sm font-medium rounded-md transition-all !min-h-0 !min-w-0',
                       isSelected(tag.pattern)
                         ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 ring-1 ring-indigo-300 dark:ring-indigo-700'
                         : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -405,7 +405,7 @@ const switchToVisual = () => {
                     <input type="text" v-model="customKeyword" @keyup.enter="addCustomKeyword" placeholder="输入关键字，回车添加"
                       class="flex-1 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 dark:text-white">
                     <button @click="addCustomKeyword"
-                      class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors">
+                      class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors !min-h-0 !min-w-0">
                       添加
                     </button>
                   </div>
@@ -419,16 +419,16 @@ const switchToVisual = () => {
                       - {{ ruleMode === 'keep' ? '仅保留匹配项' : '排除匹配项' }}
                     </span>
                   </div>
-                  <div class="flex flex-wrap gap-1.5 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <div class="flex flex-wrap gap-1.5 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                     <span v-for="(rule, index) in selectedRules" :key="index" :class="[
-                      'inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg',
+                      'inline-flex items-center gap-1 px-2.5 py-1 text-xs sm:text-sm font-medium rounded-md !min-h-0 !min-w-0',
                       rule.type === 'region' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200' :
                         rule.type === 'protocol' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200' :
                           rule.type === 'custom' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-200' :
                             'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200'
                     ]">
                       {{ rule.icon || '' }}{{ rule.label }}
-                      <button @click="removeRule(index)" class="ml-0.5 hover:text-red-500 transition-colors">
+                      <button @click="removeRule(index)" class="hover:text-red-500 transition-colors !min-h-0 !min-w-0">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M6 18L18 6M6 6l12 12" />
@@ -448,7 +448,7 @@ const switchToVisual = () => {
               <div v-else>
                 <div class="flex items-center gap-2 mb-2">
                   <span :class="['text-xs px-2 py-0.5 rounded-full', excludeRuleState.tagClass]">{{ excludeRuleState.tag
-                    }}</span>
+                  }}</span>
                 </div>
                 <textarea id="sub-edit-exclude" v-model="editingSubscription.exclude"
                   placeholder="[排除模式(默认)]&#10;proto:vless,trojan&#10;(过期|官网)&#10;---&#10;[包含模式(只保留匹配项)]&#10;keep:(香港|HK)&#10;keep:proto:ss"

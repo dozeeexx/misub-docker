@@ -271,11 +271,6 @@ export async function handlePublicProfilesRequest(env) {
 
         // Guestbook Config (Safe subset)
         const guestbook = {
-            enabled: settings.guestbook?.enabled !== false, // Default to true if undefined? No, usually false? Wait, let's match handler logic.
-            // In handler: const guestbookConfig = settings.guestbook || DEFAULT_SETTINGS.guestbook;
-            // logic in handler: if (!guestbookConfig.enabled) ...
-            // So we should just pass provided value or default.
-            // Let's passed keys that are safe.
             enabled: settings.guestbook?.enabled,
             requireAudit: settings.guestbook?.requireAudit,
             allowAnonymous: settings.guestbook?.allowAnonymous,

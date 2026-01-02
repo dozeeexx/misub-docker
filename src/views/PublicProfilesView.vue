@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 const NodePreviewModal = defineAsyncComponent(() => import('../components/modals/NodePreview/NodePreviewModal.vue'));
 const AnnouncementCard = defineAsyncComponent(() => import('../components/features/AnnouncementCard.vue'));
 const GuestbookModal = defineAsyncComponent(() => import('../components/modals/GuestbookModal.vue'));
+const QuickImportModal = defineAsyncComponent(() => import('../components/modals/QuickImportModal.vue'));
 
 const publicProfiles = ref([]);
 const loading = ref(true);
@@ -21,6 +22,8 @@ const heroConfig = computed(() => config.value.hero || {
 const guestbookConfig = computed(() => config.value.guestbook || {});
 
 const showGuestbookModal = ref(false);
+const showQuickImportModal = ref(false);
+const selectedProfileForImport = ref(null);
 
 const handleGuestbookTrigger = () => {
     if (guestbookConfig.value && guestbookConfig.value.enabled === false) {
@@ -126,6 +129,11 @@ const handlePreview = (profile) => {
     showPreviewModal.value = true;
 };
 
+const handleQuickImport = (profile) => {
+    selectedProfileForImport.value = profile;
+    showQuickImportModal.value = true;
+};
+
 // QR Code in Card
 const expandedQRCards = ref(new Set());
 const qrCanvasRefs = ref({});
@@ -183,9 +191,10 @@ const downloadQRCode = (profile) => {
 const getPlatformStyle = (p) => {
     const map = {
         windows: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
-        macos: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+        macos: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
         linux: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200',
         android: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
+        HarmonyOS: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
         ios: 'bg-gray-800 text-white dark:bg-white dark:text-gray-900'
     };
     return map[p] || 'bg-gray-100 text-gray-800';
@@ -294,20 +303,38 @@ onMounted(async () => {
                 <div v-for="profile in publicProfiles" :key="profile.id"
                     class="group relative bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xs border border-gray-100 dark:border-gray-700 hover:shadow-xl hover:border-indigo-100 dark:hover:border-indigo-900 transition-all duration-300 transform hover:-translate-y-1">
 
-                    <!-- QR Code Button - Top Right Corner -->
-                    <button @click="toggleQRCode(profile)"
-                        class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all hover:scale-110 group/qr"
-                        :class="{ 'bg-green-100 dark:bg-green-900/40': isQRExpanded(profile.id) }" title="查看二维码">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                        </svg>
-                        <!-- Tooltip -->
-                        <span
-                            class="absolute -bottom-8 right-0 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded opacity-0 group-hover/qr:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            {{ isQRExpanded(profile.id) ? '收起二维码' : '扫码导入' }}
-                        </span>
-                    </button>
+                    <!-- Top Right Buttons: Quick Import & QR Code -->
+                    <div class="absolute top-4 right-4 flex gap-2">
+                        <!-- Quick Import Button -->
+                        <button @click="handleQuickImport(profile)"
+                            class="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all hover:scale-110 group/import"
+                            title="一键导入">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <!-- Tooltip -->
+                            <span
+                                class="absolute -bottom-8 right-0 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded opacity-0 group-hover/import:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                一键导入
+                            </span>
+                        </button>
+
+                        <!-- QR Code Button -->
+                        <button @click="toggleQRCode(profile)"
+                            class="w-10 h-10 flex items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all hover:scale-110 group/qr"
+                            :class="{ 'bg-green-100 dark:bg-green-900/40': isQRExpanded(profile.id) }" title="查看二维码">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                            </svg>
+                            <!-- Tooltip -->
+                            <span
+                                class="absolute -bottom-8 right-0 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded opacity-0 group-hover/qr:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                {{ isQRExpanded(profile.id) ? '收起二维码' : '扫码导入' }}
+                            </span>
+                        </button>
+                    </div>
 
 
                     <div class="mb-4">
@@ -362,7 +389,7 @@ onMounted(async () => {
 
 
                     <p class="mt-4 text-center text-xs text-gray-400">
-                        点击按钮复制链接，或点击右上角查看二维码
+                        点击右上角一键导入或查看二维码
                     </p>
 
                     <!-- QR Code Overlay -->
@@ -476,6 +503,9 @@ onMounted(async () => {
             :profile-id="previewProfileId" :profile-name="previewProfileName" api-endpoint="/api/public/preview" />
 
         <GuestbookModal :show="showGuestbookModal" :config="guestbookConfig" @close="showGuestbookModal = false" />
+
+        <QuickImportModal :show="showQuickImportModal" :profile="selectedProfileForImport" :clients="clients"
+            :profile-token="config.profileToken || 'profiles'" @close="showQuickImportModal = false" />
     </div>
 </template>
 
