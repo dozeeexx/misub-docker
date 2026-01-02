@@ -191,9 +191,10 @@ const downloadQRCode = (profile) => {
 const getPlatformStyle = (p) => {
     const map = {
         windows: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
-        macos: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+        macos: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
         linux: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200',
         android: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
+        HarmonyOS: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
         ios: 'bg-gray-800 text-white dark:bg-white dark:text-gray-900'
     };
     return map[p] || 'bg-gray-100 text-gray-800';

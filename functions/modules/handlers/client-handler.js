@@ -155,6 +155,16 @@ const DEFAULT_CLIENTS = [
         url: 'https://apps.apple.com/us/app/quantumult-x/id1443988620',
         repo: null,
         version: null
+    },
+    {
+        id: 'clashbox',
+        name: 'ClashBox',
+        icon: '📦',
+        description: 'HarmonyOS NEXT 平台的原生 Clash 客户端，界面美观，性能强大。',
+        platforms: ['HarmonyOS'],
+        url: 'https://github.com/xiaobaigroup/ClashBox/releases',
+        repo: 'xiaobaigroup/ClashBox',
+        version: null
     }
 ];
 
