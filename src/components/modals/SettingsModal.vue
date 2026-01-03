@@ -28,7 +28,7 @@ const handleConfirm = () => {
     :show="show" 
     @update:show="emit('update:show', $event)" 
     @confirm="handleConfirm"
-    size="4xl"
+    size="5xl"
   >
     <template #title><h3 class="text-lg font-bold text-gray-800 dark:text-white">设置</h3></template>
     <template #body>

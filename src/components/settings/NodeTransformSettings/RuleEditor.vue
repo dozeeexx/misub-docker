@@ -199,7 +199,7 @@ const protocolOrderModel = computed({
         <span class="text-xs text-gray-500 self-center mr-1">⚡️ 快捷模板:</span>
         <button v-for="preset in templatePresets" :key="preset.label" @click="applyTemplate(preset.value)"
           :title="preset.desc"
-          class="px-2 py-1 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 transition-colors">{{
+          class="px-2 py-1 sm:px-2 sm:py-1 text-[12px] sm:text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 transition-colors !min-h-0 !min-w-0">{{
           preset.label }}</button>
       </div>
 
