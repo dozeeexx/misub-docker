@@ -70,7 +70,7 @@ const handleConfirm = () => {
             v-model="editingNode.url"
             rows="4"
             class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md dark:text-white"
-            @input="$emit('input-url')"
+            @input="$emit('input-url', $event)"
           ></textarea>
         </div>
       </div>
