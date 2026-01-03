@@ -1,6 +1,8 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 import DOMPurify from 'dompurify';
+import RulePreview from './NodeTransformSettings/RulePreview.vue';
+import RuleEditor from './NodeTransformSettings/RuleEditor.vue';
 
 const isDev = import.meta.env.DEV;
 
@@ -412,330 +414,28 @@ const insertTemplateTag = (tag) => {
     </div>
 
     <div v-if="config.enabled" class="space-y-6 animate-fade-in-down">
+      <RulePreview
+        :custom-node-input="customNodeInput"
+        :active-mock-nodes="activeMockNodes"
+        :preview-result="previewResult"
+        :get-highlighted-name="getHighlightedName"
+        @update:custom-node-input="customNodeInput = $event"
+        @add-custom-node="addCustomNode"
+      />
 
-      <!-- 1. 实时预览实验室 -->
-      <div
-        class="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-xl overflow-hidden">
-        <div class="px-4 py-2 bg-indigo-100/50 dark:bg-indigo-900/30 flex justify-between items-center">
-          <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 tracking-wider uppercase">✨ 效果实时预览 (Live
-            Preview)</span>
-        </div>
-        <div class="p-3 border-b border-indigo-100 dark:border-indigo-800/50">
-          <div class="flex gap-2">
-            <input v-model="customNodeInput" @input="addCustomNode" placeholder="👉 粘贴一个你的节点名称在这里进行测试..."
-              class="flex-1 text-xs border-0 bg-white dark:bg-gray-800/50 rounded-md ring-1 ring-indigo-200 dark:ring-indigo-800 focus:ring-indigo-500 px-2 py-1.5 dark:text-white">
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4 p-4 text-xs sm:text-sm">
-          <div class="space-y-2 opacity-60">
-            <p class="font-bold text-gray-500 text-xs mb-1">原始名称 (Before)</p>
-            <div v-for="(node, i) in activeMockNodes" :key="i"
-              class="truncate font-mono p-1 bg-white dark:bg-gray-800 rounded" v-html="getHighlightedName(node.name)">
-            </div>
-          </div>
-          <div class="space-y-2 relative">
-            <p class="font-bold text-indigo-600 dark:text-indigo-400 text-xs mb-1">处理结果 (After)</p>
-            <div v-for="(result, i) in previewResult" :key="'r' + i"
-              class="truncate font-mono p-1 bg-white dark:bg-gray-800 rounded shadow-sm ring-1 ring-indigo-100 dark:ring-indigo-900 text-gray-900 dark:text-white transition-all duration-300">
-              {{ result }}
-            </div>
-            <!-- 箭头 -->
-            <div class="absolute left-[-16px] top-8 bottom-0 flex flex-col justify-around text-indigo-300">
-              <span v-for="i in activeMockNodes.length" :key="i">➝</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. 积木式规则构建器 (Regex) -->
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-            <span>🪄 魔术清理</span>
-            <span class="text-xs font-normal text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">Regex
-              引擎</span>
-          </h4>
-          <label class="inline-flex items-center text-xs text-gray-500 dark:text-gray-400">
-            <input type="checkbox" v-model="config.rename.regex.enabled"
-              class="mr-1 rounded text-indigo-600 focus:ring-indigo-500">
-            启用清理
-          </label>
-        </div>
-
-        <div v-if="config.rename.regex.enabled"
-          class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-          <!-- 规则添加器 -->
-          <div class="flex flex-col sm:flex-row gap-2 mb-4">
-            <!-- 动作 -->
-            <select v-model="ruleBuilder.action"
-              class="text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-lg focus:ring-indigo-500 px-2 py-1.5 focus:border-indigo-500 dark:text-white">
-              <option value="remove">🗑️ 删除/包含</option>
-              <option value="replace">✏️ 替换为</option>
-              <option value="prefix">⏮️ 添加前缀</option>
-              <option value="suffix">⏭️ 添加后缀</option>
-            </select>
-
-            <!-- 对象 -->
-            <div class="flex-1 flex gap-2">
-              <select v-if="['remove', 'replace'].includes(ruleBuilder.action)" v-model="ruleBuilder.targetType"
-                class="text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-lg w-20 px-2 py-1.5 dark:text-white">
-                <option value="preset">⚡️ 预设</option>
-                <option value="custom">✍️ 手填</option>
-              </select>
-
-              <!-- 动态输入区 -->
-              <div class="flex-1 flex gap-2 w-full items-center">
-                <template v-if="['remove', 'replace'].includes(ruleBuilder.action)">
-                  <!-- 预设选择 -->
-                  <select v-if="ruleBuilder.targetType === 'preset'" v-model="ruleBuilder.preset"
-                    class="flex-1 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 dark:text-white">
-                    <option value="" disabled>请选择预设...</option>
-                    <option v-for="(v, k) in PRESETS" :key="k" :value="k">{{ v.label }}</option>
-                  </select>
-                  <!-- 自定义输入 -->
-                  <!-- 自定义输入 -->
-                  <div v-else class="flex-1 relative group">
-                    <input v-model="ruleBuilder.customInput" placeholder="输入关键字..."
-                      class="w-full text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 dark:text-white">
-                    <p
-                      class="absolute -bottom-5 left-1 text-[10px] text-gray-400 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white dark:bg-gray-800 px-1 rounded shadow-sm border border-gray-100 dark:border-gray-700">
-                      💡 提示: 支持用 <code class="bg-gray-100 dark:bg-gray-600 px-1 rounded">|</code> 分隔多个词 (例如: 倍率|VIP)</p>
-                  </div>
-                </template>
-
-                <!-- 替换内容输入 -->
-                <input v-if="['replace', 'prefix', 'suffix'].includes(ruleBuilder.action)"
-                  v-model="ruleBuilder.replacement" placeholder="输入文字..."
-                  class="flex-1 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 dark:text-white">
-              </div>
-            </div>
-
-            <div class="flex-shrink-0">
-              <button @click="addVisualRule" type="button"
-                class="w-full sm:w-auto px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
-                添加
-              </button>
-            </div>
-          </div>
-
-          <!-- 规则列表 -->
-          <div class="space-y-2 max-h-48 overflow-y-auto">
-            <div v-for="(rule, idx) in config.rename.regex.rules" :key="rule.pattern + '_' + idx"
-              class="flex items-center gap-2 text-xs bg-white dark:bg-gray-700 p-2 rounded-lg border border-gray-200 dark:border-gray-600 group hover:shadow-sm transition-shadow">
-
-              <!-- 排序按钮 -->
-              <div class="flex flex-col gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity">
-                <button @click="moveRule(idx, -1)" :disabled="idx === 0"
-                  class="hover:text-indigo-600 disabled:opacity-30"><svg class="w-3 h-3" fill="none"
-                    stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7"></path>
-                  </svg></button>
-                <button @click="moveRule(idx, 1)" :disabled="idx === config.rename.regex.rules.length - 1"
-                  class="hover:text-indigo-600 disabled:opacity-30"><svg class="w-3 h-3" fill="none"
-                    stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path>
-                  </svg></button>
-              </div>
-
-              <span
-                class="bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold">{{
-                  rule._meta?.action || 'Regex' }}</span>
-
-              <span class="flex-1 truncate font-mono text-gray-700 dark:text-gray-200">
-                <span v-if="rule._meta">
-                  {{ rule._meta.targetDisplay }}
-                  <span
-                    v-if="rule.replacement && rule._meta.action !== 'remove' && rule._meta.action !== 'prefix' && rule._meta.action !== 'suffix'"
-                    class="text-gray-400 mx-1">➝</span>
-                  <span v-if="rule.replacement && rule._meta.action !== 'remove'">{{ rule.replacement }}</span>
-                </span>
-                <span v-else class="text-gray-400">{{ rule.pattern }} <span v-if="rule.replacement">➝
-                    {{ rule.replacement }}</span></span>
-              </span>
-
-              <button type="button" @click="removeRegexRule(idx)"
-                class="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1 rounded transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                  </path>
-                </svg>
-              </button>
-            </div>
-            <div v-if="config.rename.regex.rules.length === 0"
-              class="text-center text-gray-400 text-xs py-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-              列表为空，请在上方添加规则
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. 智能重命名 (Template) -->
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-            <span>🏷️ 智能重命名</span>
-            <span
-              class="text-xs font-normal text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">Template
-              引擎</span>
-          </h4>
-          <label class="inline-flex items-center text-xs text-gray-500 dark:text-gray-400">
-            <input type="checkbox" v-model="config.rename.template.enabled"
-              class="mr-1 rounded text-indigo-600 focus:ring-indigo-500">
-            启用重命名
-          </label>
-        </div>
-
-        <div v-if="config.rename.template.enabled"
-          class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-          <!-- 快捷模板 -->
-          <div class="flex flex-wrap gap-2 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-            <span class="text-xs text-gray-500 self-center mr-1">⚡️ 快捷模板:</span>
-            <button v-for="preset in TEMPLATE_PRESETS" :key="preset.label" @click="applyTemplate(preset.value)"
-              :title="preset.desc"
-              class="px-2 py-1 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 transition-colors">{{
-              preset.label }}</button>
-          </div>
-
-          <!-- 变量行 -->
-          <div class="flex flex-wrap items-center text-xs gap-2 mb-2">
-            <span
-              class="text-xs font-semibold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">变量</span>
-            <button v-for="tag in ['{emoji}', '{region}', '{protocol}', '{index}', '{name}', '{server}']" :key="tag"
-              @click="insertTemplateTag(tag)" :title="tag === '{name}' ? '这是第1步清理后的剩余名称' : ''"
-              class="px-2 py-1 bg-white dark:bg-gray-700 border border-indigo-200 dark:border-gray-600 rounded-md text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-gray-600 transition-colors">+
-              {{ tag }}</button>
-          </div>
-
-          <!-- 修饰行 -->
-          <div class="flex flex-wrap items-center text-xs gap-2 mb-3">
-            <span
-              class="text-xs font-semibold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">修饰</span>
-
-            <!-- 地区修饰 -->
-            <div class="flex gap-1">
-              <button @click="insertTemplateTag('{region:UPPER}')"
-                class="px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
-                title="大写地区 (US)">US</button>
-              <button @click="insertTemplateTag('{region:lower}')"
-                class="px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
-                title="小写地区 (us)">us</button>
-              <button @click="insertTemplateTag('{region:zh}')"
-                class="px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 text-indigo-600 dark:text-indigo-400 font-medium"
-                title="中文地区 (美国)">中</button>
-            </div>
-
-            <span class="w-px h-3 bg-gray-300 dark:bg-gray-600 mx-1"></span>
-
-            <!-- 协议修饰 -->
-            <div class="flex gap-1">
-              <button @click="insertTemplateTag('{protocol:UPPER}')"
-                class="px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
-                title="大写协议 (VMESS)">PRO</button>
-              <button @click="insertTemplateTag('{protocol:Title}')"
-                class="px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
-                title="首字母大写 (Vmess)">Pro</button>
-            </div>
-
-            <span class="w-px h-3 bg-gray-300 dark:bg-gray-600 mx-1"></span>
-
-            <!-- 分隔符 -->
-            <div class="flex gap-1">
-              <button @click="insertTemplateTag(' - ')"
-                class="px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600">-</button>
-              <button @click="insertTemplateTag(' | ')"
-                class="px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600">|</button>
-              <button @click="insertTemplateTag(' ')"
-                class="px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
-                title="空格">␣</button>
-            </div>
-          </div>
-
-          <div class="relative">
-            <input v-model="config.rename.template.template"
-              class="block w-full text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 pl-3 pr-10 focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-              placeholder="点击上方标签构建模板...">
-          </div>
-
-          <!-- 高级选项 -->
-          <div class="mt-3 grid grid-cols-2 gap-4">
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-gray-500 dark:text-gray-400">序号起始:</span>
-              <input type="number" v-model.number="config.rename.template.indexStart"
-                class="w-16 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:text-white">
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-gray-500 dark:text-gray-400">序号补零:</span>
-              <input type="number" v-model.number="config.rename.template.indexPad"
-                class="w-16 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:text-white"
-                title="例如设为2，则1显示为01">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. 智能去重 (Reverted to Original) -->
-      <div class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between mb-2">
-          <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">👯 智能去重</h4>
-          <label class="inline-flex items-center text-xs text-gray-500 dark:text-gray-400">
-            <input type="checkbox" v-model="config.dedup.enabled"
-              class="mr-1 rounded text-indigo-600 focus:ring-indigo-500">
-            启用去重
-          </label>
-        </div>
-        <div v-if="config.dedup.enabled"
-          class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-xs text-gray-600 dark:text-gray-400">去重模式:</span>
-            <select v-model="config.dedup.mode"
-              class="flex-1 px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-              <option value="serverPort">服务器+端口 (推荐)</option>
-              <option value="url">完整 URL</option>
-            </select>
-          </div>
-          <div v-if="config.dedup.mode === 'serverPort'" class="space-y-3">
-            <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <input type="checkbox" v-model="config.dedup.includeProtocol"
-                class="rounded text-indigo-600 focus:ring-indigo-500">
-              去重时区分协议
-            </label>
-            <div class="space-y-1">
-              <span class="text-xs text-gray-600 dark:text-gray-400">协议优先级（逗号分隔，越靠前越优先保留）:</span>
-              <input v-model="protocolOrderText"
-                class="w-full px-2 py-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="vless, trojan, vmess, hysteria2, ss, ssr">
-            </div>
-          </div>
-          <p class="text-[10px] text-gray-400 mt-2">
-            {{ config.dedup.mode === 'serverPort'
-              ? '基于服务器地址和端口去重，可识别不同协议的相同节点'
-              : '基于完整 URL 去重，仅移除完全相同的节点' }}
-          </p>
-        </div>
-      </div>
-
-      <!-- 5. 节点排序 (Reverted to Original) -->
-      <div class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between mb-2">
-          <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">📶 节点排序</h4>
-          <label class="inline-flex items-center text-xs text-gray-500 dark:text-gray-400">
-            <input type="checkbox" v-model="config.sort.enabled"
-              class="mr-1 rounded text-indigo-600 focus:ring-indigo-500">
-            启用排序
-          </label>
-        </div>
-        <div v-if="config.sort.enabled"
-          class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700 space-y-2">
-          <p class="text-xs text-gray-400">默认排序规则: 地区(香港→台湾→日本...) → 协议 → 名称</p>
-          <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-            <input type="checkbox" v-model="config.sort.nameIgnoreEmoji"
-              class="rounded text-indigo-600 focus:ring-indigo-500">
-            排序时忽略国旗 Emoji
-          </label>
-        </div>
-      </div>
-
+      <RuleEditor
+        :config="config"
+        :rule-builder="ruleBuilder"
+        :presets="PRESETS"
+        :template-presets="TEMPLATE_PRESETS"
+        :protocol-order-text="protocolOrderText"
+        :add-visual-rule="addVisualRule"
+        :remove-regex-rule="removeRegexRule"
+        :move-rule="moveRule"
+        :apply-template="applyTemplate"
+        :insert-template-tag="insertTemplateTag"
+        @update:protocol-order-text="protocolOrderText = $event"
+      />
     </div>
   </div>
 </template>

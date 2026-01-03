@@ -8,6 +8,9 @@ import { convertClashProxyToUrl, batchConvertClashProxies, validateGeneratedUrl,
 import { handleError } from '../../utils/errorHandler.js';
 import { generateNodeId } from '../../utils/id.js';
 import { api, APIError } from '../../lib/http.js';
+import FormatDetector from './SubscriptionImport/FormatDetector.vue';
+import ImportForm from './SubscriptionImport/ImportForm.vue';
+import ParseResult from './SubscriptionImport/ParseResult.vue';
 
 const isDev = import.meta.env.DEV;
 
@@ -518,62 +521,19 @@ const importSubscription = async () => {
     <template #title>导入订阅</template>
     <template #body>
       <div class="space-y-4">
-        <!-- 说明信息 -->
-        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-          <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">支持的订阅格式：</h4>
-          <ul class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-            <li>• <strong>Base64编码</strong>：标准节点列表编码</li>
-            <li>• <strong>Clash配置</strong>：proxies/outbounds配置 (YAML)</li>
-            <li>• <strong>Sing-Box配置</strong>：outbounds配置 (YAML)</li>
-            <li>• <strong>Surge配置</strong>：代理节点配置</li>
-            <li>• <strong>Quantumult X配置</strong>：shadowsocks、vmess等配置</li>
-            <li>• <strong>纯文本格式</strong>：每行一个完整节点URL</li>
-            <li>• <strong>支持协议</strong>：VMess、VLESS、Trojan、Shadowsocks、ShadowsocksR、Hysteria、TUIC、SOCKS5、HTTP</li>
-          </ul>
-        </div>
-
-        <!-- URL输入 -->
-        <div>
-          <label for="subscription-url" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            订阅链接
-          </label>
-          <input id="subscription-url" v-model="subscriptionUrl" type="url"
-            placeholder="https://example.com/subscription-link"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
-            @keyup.enter="importSubscription" :disabled="isLoading" />
-        </div>
-
-        <!-- 状态信息 -->
-        <div v-if="isLoading || parseStatus || errorMessage || successMessage" class="space-y-2">
-          <!-- 加载状态 -->
-          <div v-if="isLoading" class="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            <span>{{ parseStatus || '正在处理...' }}</span>
-          </div>
-
-          <!-- 成功信息 -->
-          <div v-if="successMessage" class="flex items-center space-x-2 text-sm text-green-600 dark:text-green-400">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span>{{ successMessage }}</span>
-          </div>
-
-          <!-- 错误信息 -->
-          <div v-if="errorMessage" class="flex items-start space-x-2 text-sm text-red-600 dark:text-red-400">
-            <svg class="h-4 w-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z">
-              </path>
-            </svg>
-            <span>{{ errorMessage }}</span>
-          </div>
-        </div>
-
-        <!-- 提示信息 -->
-        <div class="text-xs text-gray-500 dark:text-gray-400">
-          <p>提示：导入的节点将被添加到手动节点列表，请确保节点链接格式正确。</p>
-        </div>
+        <FormatDetector />
+        <ImportForm
+          :subscription-url="subscriptionUrl"
+          :is-loading="isLoading"
+          @update:subscription-url="subscriptionUrl = $event"
+          @submit="importSubscription"
+        />
+        <ParseResult
+          :is-loading="isLoading"
+          :parse-status="parseStatus"
+          :error-message="errorMessage"
+          :success-message="successMessage"
+        />
       </div>
     </template>
   </Modal>
