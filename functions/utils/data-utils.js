@@ -66,4 +66,4 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
  * @param {number} decimals - 小数位数
  * @returns {string} - 格式化后的字符串
  */
-export { formatBytes } from '../../shared/utils.js';
+export { formatBytes } from '../../src/shared/utils.js';

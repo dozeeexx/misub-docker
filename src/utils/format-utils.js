@@ -9,7 +9,7 @@
  * @param {number} decimals - 小数位数
  * @returns {string} 格式化后的字符串
  */
-export { formatBytes } from '../../shared/utils.js';
+export { formatBytes } from '../shared/utils.js';
 
 /**
  * 格式化日期时间

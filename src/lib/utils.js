@@ -275,4 +275,4 @@ export function getClientInfo(userAgent) {
     return { name: 'Other', className: 'bg-gray-50 text-gray-500 dark:bg-gray-800/50 dark:text-gray-500' };
 }
 
-export { formatBytes } from '../../shared/utils.js';
+export { formatBytes } from '../shared/utils.js';

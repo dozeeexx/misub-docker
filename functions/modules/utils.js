@@ -60,7 +60,7 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
     }
 }
 
-export { formatBytes } from '../../shared/utils.js';
+export { formatBytes } from '../../src/shared/utils.js';
 
 /**
  * 检测字符串是否为有效的Base64格式
