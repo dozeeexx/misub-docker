@@ -210,8 +210,7 @@ export function extractValidNodes(text) {
                 if (nodes.length > 0) return nodes;
             }
         } catch (e) {
-            // YAML 解析失败，继续尝试其他格式
-            // console.warn('YAML parse failed, trying other formats');
+            console.debug('[NodeParser] YAML parse failed, trying other formats:', e);
         }
     }
 
@@ -235,7 +234,7 @@ export function extractValidNodes(text) {
             processedText = new TextDecoder('utf-8').decode(bytes);
         }
     } catch (e) {
-        // Base64 解码失败则继续按照纯文本处理
+        console.debug('[NodeParser] Base64 decode failed, using raw text:', e);
     }
 
     // 3. 正则提取链接 (ss://, vmess:// 等)
@@ -308,7 +307,9 @@ export function parseNodeList(content) {
                         try {
                             const decodedUser = atob(userInfo);
                             if (decodedUser.includes(':')) method = decodedUser.split(':')[0];
-                        } catch (e) { }
+                        } catch (e) {
+                            console.debug('[NodeParser] Failed to decode SS user info:', e);
+                        }
                     }
                 } else {
                     // 处理 Base64 格式 (SIP002) ss://base64(method:password@server:port)
@@ -328,19 +329,22 @@ export function parseNodeList(content) {
                             try {
                                 const decodedUser = atob(userInfoBase64);
                                 if (decodedUser.includes(':')) method = decodedUser.split(':')[0];
-                            } catch (e2) { }
+                            } catch (e2) {
+                                console.debug('[NodeParser] Failed to decode SS user info fallback:', e2);
+                            }
+                        } else {
+                            console.debug('[NodeParser] Failed to decode SS payload:', e);
                         }
                     }
                 }
             } catch (e) {
-                // 解析出错
+                console.debug('[NodeParser] Failed to extract SS cipher:', e);
             }
 
             // 2.2 验证加密算法
             if (method) {
                 const normalizedMethod = method.toLowerCase();
                 if (!SUPPORTED_SS_CIPHERS.includes(normalizedMethod)) {
-                    // console.log(`[Node Filter] Dropping SS node with legacy cipher: ${normalizedMethod}`);
                     return null;
                 }
             }
@@ -425,7 +429,7 @@ export function parseNodeList(content) {
                         }
                     }
                 } catch (e) {
-                    // 解码失败，回退到尝试直接提取
+                    console.debug('[NodeParser] VLESS decode failed, falling back to direct extraction:', e);
                 }
 
                 // 如果 Base64 解析失败，尝试从 URL 直接提取 (针对非标准 uuid@)
@@ -441,7 +445,6 @@ export function parseNodeList(content) {
                 // 包含 auto: 的 ID 会导致 isValidUUID 返回 false
                 if (!isValidUUID(id)) {
                     isValidNode = false;
-                    // console.log(`[Node Filter] Dropping invalid VLESS node (Invalid UUID): ${id}`);
                 }
             }
         } else if (nodeInfo.protocol === 'vmess') {
@@ -459,10 +462,9 @@ export function parseNodeList(content) {
                     const config = JSON.parse(jsonStr);
                     if (config && config.id && !isValidUUID(config.id)) {
                         isValidNode = false;
-                        // console.log(`[Node Filter] Dropping invalid VMess node (Invalid UUID): ${config.id}`);
                     }
                 } catch (e) {
-                    // 解码失败忽略，交给后续处理或保留
+                    console.debug('[NodeParser] VMess decode failed, keeping original node:', e);
                 }
             }
         }

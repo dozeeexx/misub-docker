@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 
+const isDev = import.meta.env.DEV;
+
 const props = defineProps({
   show: Boolean,
   // 订阅信息
@@ -160,7 +162,9 @@ const loadNodes = async () => {
       throw new Error('缺少必要的参数');
     }
 
-    console.log('[Preview] Sending request to:', props.apiEndpoint, requestData);
+    if (isDev) {
+      console.debug('[Preview] Sending request to:', props.apiEndpoint, requestData);
+    }
 
     const response = await fetch(props.apiEndpoint, {
       method: 'POST',
@@ -171,7 +175,9 @@ const loadNodes = async () => {
       body: JSON.stringify(requestData),
     });
 
-    console.log('[Preview] Response status:', response.status);
+    if (isDev) {
+      console.debug('[Preview] Response status:', response.status);
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -193,7 +199,9 @@ const loadNodes = async () => {
     }
 
     const data = await response.json();
-    console.log('[Preview] Data received:', data);
+    if (isDev) {
+      console.debug('[Preview] Data received:', data);
+    }
 
     if (!data.success) {
       throw new Error(data.error || '获取节点失败');
@@ -359,11 +367,15 @@ const parseNodeInfo = (node) => {
         result.server = nodeConfig.add || result.server;
         result.port = nodeConfig.port || result.port;
       } catch (e) {
-        // 如果解析失败，使用URL解析的结果
+        if (isDev) {
+          console.debug('[Preview] VMess parse failed, using URL fallback:', e);
+        }
       }
     }
   } catch (e) {
-    // 如果URL解析失败，尝试从字符串中提取
+    if (isDev) {
+      console.debug('[Preview] URL parse failed, falling back to regex:', e);
+    }
     const match = node.url.match(/@([^:\/]+):(\d+)/);
     if (match) {
       result.server = match[1];

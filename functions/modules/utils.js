@@ -289,7 +289,7 @@ export function log(level, message, data = null) {
             console.error(`[${timestamp}] ${message}`, data);
             break;
         default:
-            console.log(`[${timestamp}] ${message}`, data);
+            console.info(`[${timestamp}] ${message}`, data);
     }
 
     return logEntry;

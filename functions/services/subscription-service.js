@@ -60,7 +60,9 @@ async function fetchWithRetry(url, init = {}, options = {}) {
                     // 释放响应体，避免连接占用
                     try {
                         await response.body?.cancel();
-                    } catch { /* 忽略取消错误 */ }
+                    } catch (cancelError) {
+                        console.debug('[Retry] Failed to cancel response body:', cancelError);
+                    }
 
                     await new Promise(resolve => setTimeout(resolve, delay));
                     continue;
@@ -180,7 +182,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
     const fetchSingleSubscription = async (sub) => {
         try {
             if (debug) {
-                console.log(`[DEBUG] Fetching subscription: ${sub.url}`);
+                console.debug(`[DEBUG] Fetching subscription: ${sub.url}`);
             }
             const processedUserAgent = getProcessedUserAgent(userAgent, sub.url);
             const requestHeaders = { 'User-Agent': processedUserAgent };
@@ -197,25 +199,12 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
 
             if (!response.ok) {
                 console.warn(`订阅请求失败: ${sub.url}, 状态: ${response.status}`);
-                // if (debug) {
-                //     console.log(`[DEBUG] Failed response for ${sub.url}: Status ${response.status}`);
-                // }
                 return '';
             }
             const buffer = await response.arrayBuffer();
             let text = new TextDecoder('utf-8').decode(buffer);
 
-            // if (debug) {
-            //     console.log(`[DEBUG] Response for ${sub.url} length: ${text.length}`);
-            //     console.log(`[DEBUG] Response snippet (first 500 chars): ${text.substring(0, 500)}`);
-            // }
-
             text = await decodeBase64Content(text);
-
-            // if (debug) {
-            //     console.log(`[DEBUG] Decoded text content snippet (first 1000 chars):`);
-            //     console.log(text.substring(0, 1000));
-            // }
 
             // 使用统一的 node-parser 解析，确保与预览一致的过滤规则 (UUID校验, Hysteria1过滤, SS加密校验等)
             const parsedObjects = parseNodeList(text);
@@ -229,26 +218,11 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                 }
             }
 
-            // if (debug) {
-            //     console.log(`[DEBUG] Parsed ${parsedObjects.length} valid nodes using node-parser`);
-            // }
-
             let validNodes = fallbackParsedObjects.map(node => node.url);
-
-            // if (debug) {
-            //     console.log(`[DEBUG] Parsed ${validNodes.length} nodes for ${sub.url}`);
-            //     console.log(`[DEBUG] Nodes list (PRE-FILTER):`);
-            //     validNodes.forEach((node, index) => console.log(`[${index}] ${node}`));
-            // }
 
             // 应用过滤规则
             validNodes = applyFilterRules(validNodes, sub);
 
-            // if (debug) {
-            //     console.log(`[DEBUG] After filtering: ${validNodes.length} nodes for ${sub.url}`);
-            //     console.log(`[DEBUG] Nodes list (POST-FILTER):`);
-            //     validNodes.forEach((node, index) => console.log(`[${index}] ${node}`));
-            // }
 
             // 判断是否启用订阅前缀（智能重命名启用时跳过）
             const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
@@ -387,7 +361,7 @@ async function decodeBase64Content(text) {
             return new TextDecoder('utf-8').decode(bytes);
         }
     } catch (e) {
-        // Base64 解码失败则返回原文本
+        console.debug('[Subscription] Base64 decode failed, using raw text:', e);
     }
     return text;
 }
@@ -436,7 +410,7 @@ function applyManualNodeName(nodeUrl, customName) {
                 return 'vmess://' + newBase64Part;
             }
         } catch (e) {
-            // vmess 解析失败则降级为 fragment 替换
+            console.debug('[Subscription] VMess decode failed, falling back to fragment update:', e);
         }
     }
 

@@ -6,6 +6,8 @@ import { useToastStore } from '../stores/toast.js';
 import { fetchNodeCount, batchUpdateNodes } from '../lib/api.js';
 import { handleError } from '../utils/errorHandler.js';
 
+const isDev = import.meta.env.DEV;
+
 export function useSubscriptions(markDirty) {
   const { showToast } = useToastStore();
   const dataStore = useDataStore();
@@ -242,8 +244,10 @@ export function useSubscriptions(markDirty) {
             if (result.success && result.data.userInfo) {
               sub.userInfo = result.data.userInfo;
             }
-          } catch {
-            // ignore
+          } catch (error) {
+            if (isDev) {
+              console.debug('[Subscriptions] Failed to fetch node info during batch update:', error);
+            }
           }
         }
 

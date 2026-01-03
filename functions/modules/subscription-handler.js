@@ -988,7 +988,7 @@ async function fetchSubscriptionNodes(url, subscriptionName, userAgent, customUs
         };
     } catch (e) {
         if (shouldDebug) {
-            console.log(`[DEBUG PREVIEW] Error: ${e.message}`);
+            console.debug(`[DEBUG PREVIEW] Error: ${e.message}`);
         }
         return {
             subscriptionName,

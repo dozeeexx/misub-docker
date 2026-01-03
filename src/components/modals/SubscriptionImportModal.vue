@@ -7,6 +7,8 @@ import { extractNodeName } from '../../lib/utils.js';
 import { convertClashProxyToUrl, batchConvertClashProxies, validateGeneratedUrl, parseSurgeConfig, parseQuantumultXConfig } from '../../utils/protocolConverter.js';
 import { handleError } from '../../utils/errorHandler.js';
 
+const isDev = import.meta.env.DEV;
+
 const props = defineProps({
   show: Boolean,
   addNodesFromBulk: Function,
@@ -78,7 +80,9 @@ const smartBase64Decode = (text) => {
       return atob(normalizedDecoded);
     }
   } catch (e) {
-    // URL 解码失败，忽略
+    if (isDev) {
+      console.debug('[Parser] URL decode failed, using raw text:', e);
+    }
   }
 
   return text;
@@ -145,7 +149,9 @@ const parseYamlConfig = (content) => {
     // Clash格式
     if (parsedYaml.proxies && Array.isArray(parsedYaml.proxies)) {
       proxies = parsedYaml.proxies;
-      console.log(`[YAML Parser] Found Clash format with ${proxies.length} proxies`);
+      if (isDev) {
+        console.debug(`[YAML Parser] Found Clash format with ${proxies.length} proxies`);
+      }
     }
 
     // Sing-Box格式
@@ -157,7 +163,9 @@ const parseYamlConfig = (content) => {
         outbound.type !== 'selector' &&
         outbound.type !== 'urltest'
       );
-      console.log(`[YAML Parser] Found Sing-Box format with ${proxies.length} outbounds`);
+      if (isDev) {
+        console.debug(`[YAML Parser] Found Sing-Box format with ${proxies.length} outbounds`);
+      }
     }
 
     // 其他格式 - 尝试查找包含代理信息的字段
@@ -166,7 +174,9 @@ const parseYamlConfig = (content) => {
       for (const field of possibleFields) {
         if (parsedYaml[field] && Array.isArray(parsedYaml[field])) {
           proxies = parsedYaml[field];
-          console.log(`[YAML Parser] Found ${field} with ${proxies.length} entries`);
+          if (isDev) {
+            console.debug(`[YAML Parser] Found ${field} with ${proxies.length} entries`);
+          }
           break;
         }
       }
@@ -199,7 +209,9 @@ const parseYamlConfig = (content) => {
       nodes.push(node);
     }
 
-    console.log(`[YAML Parser] Successfully converted ${nodes.length} nodes`);
+    if (isDev) {
+      console.debug(`[YAML Parser] Successfully converted ${nodes.length} nodes`);
+    }
     return nodes;
 
   } catch (e) {
@@ -214,7 +226,9 @@ const parseYamlConfig = (content) => {
 const parseSurgeConfigFile = (content) => {
   try {
     const nodes = parseSurgeConfig(content);
-    console.log(`[Surge Parser] Found ${nodes.length} nodes`);
+    if (isDev) {
+      console.debug(`[Surge Parser] Found ${nodes.length} nodes`);
+    }
     return nodes;
   } catch (e) {
     console.error('Surge解析失败:', e);
@@ -228,7 +242,9 @@ const parseSurgeConfigFile = (content) => {
 const parseQuantumultXConfigFile = (content) => {
   try {
     const nodes = parseQuantumultXConfig(content);
-    console.log(`[QuantumultX Parser] Found ${nodes.length} nodes`);
+    if (isDev) {
+      console.debug(`[QuantumultX Parser] Found ${nodes.length} nodes`);
+    }
     return nodes;
   } catch (e) {
     console.error('QuantumultX解析失败:', e);
@@ -268,7 +284,9 @@ const parseNodes = (content) => {
   const nodes = [];
   let method = '';
 
-  console.log(`[Parser] Starting to parse ${content.length} characters`);
+  if (isDev) {
+    console.debug(`[Parser] Starting to parse ${content.length} characters`);
+  }
 
   // 方法1: 尝试Base64解码后解析
   try {
@@ -365,7 +383,9 @@ const parseNodes = (content) => {
     }
   }
 
-  console.log(`[Parser] Result: ${method} -> ${nodes.length} nodes`);
+  if (isDev) {
+    console.debug(`[Parser] Result: ${method} -> ${nodes.length} nodes`);
+  }
   return { nodes, method };
 };
 
@@ -473,7 +493,9 @@ const importSubscription = async () => {
       successMessage.value = successMsg;
 
       toastStore.showToast(successMsg, 'success');
-      console.log(`[Import] Success: Backend API, ${uniqueNodes.length} unique nodes, ${duplicateCount} duplicates`);
+      if (isDev) {
+        console.debug(`[Import] Success: Backend API, ${uniqueNodes.length} unique nodes, ${duplicateCount} duplicates`);
+      }
 
       setTimeout(() => {
         emit('update:show', false);

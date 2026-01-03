@@ -1,6 +1,8 @@
 import { ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 
+const isDev = import.meta.env.DEV;
+
 export function useSubscriptionForms({ addSubscription, updateSubscription }) {
     const { showToast } = useToastStore();
     const showModal = ref(false);
@@ -25,12 +27,16 @@ export function useSubscriptionForms({ addSubscription, updateSubscription }) {
             console.error('UseSubscriptionForms: openEdit called with null/undefined');
             return;
         }
-        console.log('UseSubscriptionForms: openEdit called with', sub);
+        if (isDev) {
+            console.debug('UseSubscriptionForms: openEdit called with', sub);
+        }
         isNew.value = false;
         // Deep copy to avoid mutating store state directly before save
         try {
             editingSubscription.value = JSON.parse(JSON.stringify(sub));
-            console.log('UseSubscriptionForms: editingSubscription set to', editingSubscription.value);
+            if (isDev) {
+                console.debug('UseSubscriptionForms: editingSubscription set to', editingSubscription.value);
+            }
             showModal.value = true;
         } catch (e) {
             console.error('UseSubscriptionForms: Failed to clone subscription', e);

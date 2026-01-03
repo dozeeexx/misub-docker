@@ -5,6 +5,8 @@
 
 import { ref, computed, watch } from 'vue';
 
+const isDev = import.meta.env.DEV;
+
 export function useNodePreview(props) {
   // 响应式数据
   const loading = ref(false);
@@ -115,7 +117,9 @@ export function useNodePreview(props) {
         throw new Error('缺少必要的参数');
       }
 
-      console.log('Sending API request with data:', requestData);
+      if (isDev) {
+        console.debug('Sending API request with data:', requestData);
+      }
 
       const response = await fetch('/api/subscription_nodes', {
         method: 'POST',

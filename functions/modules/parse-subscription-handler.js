@@ -29,7 +29,7 @@ export async function handleParseSubscription(request, env) {
         // 过滤掉无效节点
         const validNodes = parsedNodes.filter(node => node && node.url);
 
-        console.log(`[API /parse_subscription] Parsed ${validNodes.length} valid nodes from ${content.length} characters`);
+        console.info(`[API /parse_subscription] Parsed ${validNodes.length} valid nodes from ${content.length} characters`);
 
         return createJsonResponse({
             success: true,

@@ -2,6 +2,8 @@ import { ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import { extractNodeName } from '../lib/utils.js';
 
+const isDev = import.meta.env.DEV;
+
 export function useNodeForms({ addNode, updateNode }) {
     const { showToast } = useToastStore();
     const showModal = ref(false);
@@ -25,10 +27,14 @@ export function useNodeForms({ addNode, updateNode }) {
             console.error('UseNodeForms: openEdit called with null');
             return;
         }
-        console.log('UseNodeForms: openEdit called with', node);
+        if (isDev) {
+            console.debug('UseNodeForms: openEdit called with', node);
+        }
         isNew.value = false;
         editingNode.value = { ...node };
-        console.log('UseNodeForms: editingNode set to', editingNode.value);
+        if (isDev) {
+            console.debug('UseNodeForms: editingNode set to', editingNode.value);
+        }
         showModal.value = true;
     };
 

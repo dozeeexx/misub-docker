@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue';
 import { useToastStore } from '../../stores/toast.js';
 
+const isDev = import.meta.env.DEV;
+
 const { showToast } = useToastStore();
 const canInstall = ref(false);
 const deferredPrompt = ref(null);
@@ -105,12 +107,14 @@ const resetInstallState = () => {
   localStorage.removeItem('pwa-installed');
   isInstalled.value = false;
   canInstall.value = false;
-  console.log('🔄 PWA安装状态已重置');
-  console.log('重置后状态:', {
-    isInstalled: isInstalled.value,
-    canInstall: canInstall.value,
-    localStorage: localStorage.getItem('pwa-installed')
-  });
+  if (isDev) {
+    console.debug('🔄 PWA安装状态已重置');
+    console.debug('重置后状态:', {
+      isInstalled: isInstalled.value,
+      canInstall: canInstall.value,
+      localStorage: localStorage.getItem('pwa-installed')
+    });
+  }
   // 显示提示
   showToast('🔄 PWA状态已重置，刷新页面测试安装功能', 'info', 5000);
 };
@@ -146,7 +150,9 @@ onMounted(() => {
 
   // 监听appinstalled事件
   window.addEventListener('appinstalled', () => {
-    console.log('PWA已成功安装');
+    if (isDev) {
+      console.debug('PWA已成功安装');
+    }
     canInstall.value = false;
     isInstalled.value = true;
     localStorage.setItem('pwa-installed', 'true');

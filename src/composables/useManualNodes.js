@@ -5,6 +5,8 @@ import { useDataStore } from '../stores/useDataStore';
 import { useToastStore } from '../stores/toast';
 import { extractNodeName } from '../lib/utils.js';
 
+const isDev = import.meta.env.DEV;
+
 export function useManualNodes(markDirty) {
   const { showToast } = useToastStore();
   const dataStore = useDataStore();
@@ -226,7 +228,13 @@ export function useManualNodes(markDirty) {
     let s = String(input || '').trim().replace(/\s+/g, '');
     if (!s) return '';
     if (s.includes('%')) {
-      try { s = decodeURIComponent(s); } catch { }
+      try {
+        s = decodeURIComponent(s);
+      } catch (error) {
+        if (isDev) {
+          console.debug('[ManualNodes] URL decode failed, using raw text:', error);
+        }
+      }
     }
     s = s.replace(/-/g, '+').replace(/_/g, '/');
     while (s.length % 4 !== 0) s += '=';

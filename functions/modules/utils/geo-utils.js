@@ -259,7 +259,7 @@ export function parseNodeInfo(nodeUrl) {
                         nodeName = config.ps;
                     }
                 } catch (e) {
-                    // console.error('VMess Base64 Decode Error:', e);
+                    console.debug('[GeoUtils] VMess base64 decode failed:', e);
                 }
             }
         } else if (protocol === 'ss') {
@@ -298,7 +298,7 @@ export function parseNodeInfo(nodeUrl) {
                         port = hostPort[1].split('/')[0].split('?')[0];
                     }
                 } catch (e) {
-                    // console.error('SS Base64 Decode Error:', e);
+                    console.debug('[GeoUtils] SS base64 decode failed:', e);
                 }
             }
         } else {

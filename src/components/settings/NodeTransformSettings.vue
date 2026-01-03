@@ -1,6 +1,8 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 
+const isDev = import.meta.env.DEV;
+
 const props = defineProps({
   modelValue: {
     type: Object,
@@ -88,7 +90,11 @@ const previewResult = computed(() => {
           let flags = rule.flags || 'g';
           const regex = new RegExp(patternStr, flags);
           newName = newName.replace(regex, rule.replacement || '');
-        } catch (e) { }
+        } catch (e) {
+          if (isDev) {
+            console.debug('[NodeTransformSettings] Invalid regex rule:', rule, e);
+          }
+        }
       }
     }
 

@@ -3,6 +3,8 @@ import { ref, onMounted, defineAsyncComponent, nextTick, computed } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import QRCode from 'qrcode';
 
+const isDev = import.meta.env.DEV;
+
 const NodePreviewModal = defineAsyncComponent(() => import('../components/modals/NodePreview/NodePreviewModal.vue'));
 const AnnouncementCard = defineAsyncComponent(() => import('../components/features/AnnouncementCard.vue'));
 const GuestbookModal = defineAsyncComponent(() => import('../components/modals/GuestbookModal.vue'));
@@ -44,12 +46,17 @@ const fetchPublicProfiles = async () => {
         if (data.success) {
             publicProfiles.value = data.data;
             config.value = data.config || {};
-            // Debug log
-            console.log('Guestbook Config:', config.value.guestbook);
+            if (isDev) {
+                console.debug('Guestbook Config:', config.value.guestbook);
+            }
             if (data.config && data.config.announcement) {
-                console.log('Announcement loaded:', data.config.announcement);
+                if (isDev) {
+                    console.debug('Announcement loaded:', data.config.announcement);
+                }
             } else {
-                console.log('No announcement found in config');
+                if (isDev) {
+                    console.debug('No announcement found in config');
+                }
             }
         } else {
             error.value = data.message || '获取数据失败';

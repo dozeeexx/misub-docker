@@ -5,6 +5,8 @@ import { useSettingsStore } from './settings';
 import { useEditorStore } from './editor';
 import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
 
+const isDev = import.meta.env.DEV;
+
 // SessionStorage 缓存键
 const CACHE_KEY = 'misub_data_cache';
 const CACHE_TIMESTAMP_KEY = 'misub_data_cache_ts';
@@ -73,8 +75,10 @@ export const useDataStore = defineStore('data', () => {
         try {
             sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
             sessionStorage.setItem(CACHE_TIMESTAMP_KEY, String(Date.now()));
-        } catch {
-            // 忽略存储错误
+        } catch (error) {
+            if (isDev) {
+                console.debug('[DataStore] Failed to write cache:', error);
+            }
         }
     }
 
@@ -82,8 +86,10 @@ export const useDataStore = defineStore('data', () => {
         try {
             sessionStorage.removeItem(CACHE_KEY);
             sessionStorage.removeItem(CACHE_TIMESTAMP_KEY);
-        } catch {
-            // 忽略错误
+        } catch (error) {
+            if (isDev) {
+                console.debug('[DataStore] Failed to clear cache:', error);
+            }
         }
     }
 
@@ -197,7 +203,6 @@ export const useDataStore = defineStore('data', () => {
             let isDiffSave = false;
 
             if (subDiff || profileDiff) {
-                console.log('[Store] Diff detect:', { subDiff, profileDiff });
                 payload = {
                     diff: {
                         subscriptions: subDiff || undefined,
@@ -206,7 +211,6 @@ export const useDataStore = defineStore('data', () => {
                 };
                 isDiffSave = true;
             } else {
-                console.log('[Store] No diff detected, but save force called? Sending full overwrite just in case.');
                 payload = {
                     misubs: subscriptions.value,
                     profiles: profiles.value

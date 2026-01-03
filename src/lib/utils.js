@@ -1,6 +1,8 @@
 //
 // src/lib/utils.js
 //
+const isDev = import.meta.env.DEV;
+
 export function extractNodeName(url) {
     if (!url) return '';
     url = url.trim();
@@ -57,7 +59,9 @@ export function extractNodeName(url) {
                     const ssDecodedAtIndex = decodedSS.indexOf('@');
                     if (ssDecodedAtIndex !== -1) return decodedSS.substring(ssDecodedAtIndex + 1).split(':')[0] || '';
                 } catch (e) {
-                    // Base64解码失败时的回退处理
+                    if (isDev) {
+                        console.debug('[Utils] Failed to decode SS base64, using raw text:', e);
+                    }
                 }
                 return '';
             default:
@@ -134,7 +138,11 @@ export function extractHostAndPort(url) {
                 }
                 mainPart = atob(base64Part);
                 decoded = true;
-            } catch (e) { /* 解码失败则按原文处理 */ }
+            } catch (e) {
+                if (isDev) {
+                    console.debug('[Utils] Failed to decode base64 host segment, using raw text:', e);
+                }
+            }
         }
 
         // --- SSR 解码后专门处理 ---

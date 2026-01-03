@@ -284,7 +284,6 @@ async function handleExternalFetchRequest(request, env) {
         return createErrorResponse('URL too long (max 2048 characters)', 400);
     }
 
-    // console.log(`[External Fetch] Processing URL: ${externalUrl}`);
 
     try {
         // 创建带超时的请求
@@ -336,7 +335,6 @@ async function handleExternalFetchRequest(request, env) {
         const content = new TextDecoder('utf-8').decode(buffer);
         const contentBase64 = encodeArrayBufferToBase64(buffer);
 
-        // console.log(`[External Fetch] Success: ${content.length} chars, type: ${contentType}`);
 
         // 返回包含原文与 Base64 的结果
         return new Response(JSON.stringify({

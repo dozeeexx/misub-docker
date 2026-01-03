@@ -15,6 +15,18 @@ const DEFAULT_SORT_KEYS = [
 
 const REGION_CODE_TO_ZH = buildRegionCodeToZhMap();
 const REGION_ZH_TO_CODE = buildZhToCodeMap();
+const warnedRegexRules = new Set();
+
+function warnInvalidRegex(rule, error) {
+    const key = `${rule.pattern || ''}|${rule.flags || ''}`;
+    if (warnedRegexRules.has(key)) return;
+    warnedRegexRules.add(key);
+    console.warn('[NodeTransform] Invalid rename regex:', {
+        pattern: rule.pattern,
+        flags: rule.flags,
+        error: error?.message || String(error)
+    });
+}
 
 // ============ 工具函数 ============
 
@@ -28,7 +40,11 @@ function normalizeBase64(input) {
     if (!s) return '';
     // 处理可能被 URL 编码的 Base64
     if (s.includes('%')) {
-        try { s = decodeURIComponent(s); } catch { /* ignore */ }
+        try {
+            s = decodeURIComponent(s);
+        } catch (error) {
+            console.debug('[NodeTransform] Failed to decode base64 segment:', error);
+        }
     }
     s = s.replace(/-/g, '+').replace(/_/g, '/');
     while (s.length % 4 !== 0) s += '=';
@@ -164,7 +180,9 @@ function extractServerPort(url, protocol) {
                 return { server: parsed.hostname, port: parsed.port || '' };
             }
         }
-    } catch { }
+    } catch (error) {
+        console.debug('[NodeTransform] URL parse failed, falling back to manual parsing:', error);
+    }
 
     try {
         const main = url.split('#')[0];
@@ -176,7 +194,9 @@ function extractServerPort(url, protocol) {
             try {
                 const decoded = base64Decode(rest);
                 if (decoded.includes('@')) rest = decoded;
-            } catch { }
+            } catch (error) {
+                console.debug('[NodeTransform] SS base64 decode failed, using raw host segment:', error);
+            }
         }
 
         const at = rest.lastIndexOf('@');
@@ -312,7 +332,9 @@ function applyRegexRename(name, rules) {
         try {
             const re = new RegExp(rule.pattern, rule.flags || 'g');
             result = result.replace(re, rule.replacement || '');
-        } catch { }
+        } catch (error) {
+            warnInvalidRegex(rule, error);
+        }
     }
     return result.trim();
 }

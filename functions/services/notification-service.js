@@ -77,7 +77,7 @@ export async function sendEnhancedTgNotification(settings, type, clientIp, addit
             }
         }
     } catch (error) {
-        // 获取IP位置信息失败，忽略错误
+        console.debug('[NotificationService] Failed to fetch IP geolocation:', error);
     }
 
     // 构建完整消息
