@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { fetchInitialData, login as apiLogin, fetchPublicConfig } from '../lib/api';
+import { api } from '../lib/http.js';
 import { useDataStore } from './useDataStore';
 import router from '../router';
 
@@ -62,7 +63,11 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   async function logout() {
-    await fetch('/api/logout');
+    try {
+      await api.get('/api/logout');
+    } catch (error) {
+      console.warn('Logout request failed:', error);
+    }
     sessionState.value = 'loggedOut';
     initialData.value = null;
 

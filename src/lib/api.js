@@ -2,6 +2,8 @@
 // src/lib/api.js
 //
 
+import { api, APIError } from './http.js';
+
 /**
  * 统一的 API 错误处理辅助函数
  * @param {Error} error - 错误对象
@@ -14,7 +16,15 @@ function handleApiError(error, context = '') {
     let errorType = 'unknown';
     let errorMessage = '未知错误';
 
-    if (error.name === 'AbortError') {
+    if (error instanceof APIError) {
+        if (error.status === 401) {
+            errorType = 'auth';
+            errorMessage = '认证失败,请重新登录';
+        } else {
+            errorType = 'server';
+            errorMessage = error.message || `HTTP ${error.status}`;
+        }
+    } else if (error.name === 'AbortError') {
         errorType = 'timeout';
         errorMessage = '请求超时,请稍后重试';
     } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
@@ -44,21 +54,8 @@ export async function fetchInitialData() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒超时
 
-        const response = await fetch('/api/data', {
-            signal: controller.signal
-        });
-
+        const data = await api.get('/api/data', { signal: controller.signal });
         clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            if (response.status === 401) {
-                return { success: false, error: '认证失败,请重新登录', errorType: 'auth' };
-            }
-            return { success: false, error: `服务器错误 (${response.status})`, errorType: 'server' };
-        }
-
-        // 后端已经更新，会返回 { misubs, profiles, config }
-        const data = await response.json();
 
         // 检查新的认证状态响应 (200 OK with authenticated: false)
         if (data && data.authenticated === false) {
@@ -73,24 +70,16 @@ export async function fetchInitialData() {
 
 export async function login(password) {
     try {
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+        const data = await api.post('/api/login', { password });
+        return { success: true, data };
+    } catch (error) {
+        if (error instanceof APIError && error.status === 401) {
             return {
                 success: false,
-                error: errorData.message || errorData.error || '登录失败',
+                error: error.data?.message || error.data?.error || '登录失败',
                 errorType: 'auth'
             };
         }
-
-        const data = await response.json();
-        return { success: true, data };
-    } catch (error) {
         return handleApiError(error, 'login');
     }
 }
@@ -103,21 +92,7 @@ export async function saveMisubs(misubs, profiles) {
             return { success: false, error: '数据格式错误：misubs 和 profiles 必须是数组', errorType: 'validation' };
         }
 
-        const response = await fetch('/api/misubs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            // 将 misubs 和 profiles 一起发送
-            body: JSON.stringify({ misubs, profiles })
-        });
-
-        // 检查HTTP状态码
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.message || errorData.error || `服务器错误 (${response.status})`;
-            return { success: false, error: errorMessage, errorType: 'server' };
-        }
-
-        return await response.json();
+        return await api.post('/api/misubs', { misubs, profiles });
     } catch (error) {
         return handleApiError(error, 'saveMisubs');
     }
@@ -128,25 +103,9 @@ export async function fetchNodeCount(subUrl) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
 
-        const res = await fetch('/api/node_count', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: subUrl }),
-            signal: controller.signal
-        });
-
+        const data = await api.post('/api/node_count', { url: subUrl }, { signal: controller.signal });
         clearTimeout(timeoutId);
 
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            return {
-                success: false,
-                error: errorData.message || errorData.error || `HTTP ${res.status}`,
-                errorType: 'server'
-            };
-        }
-
-        const data = await res.json();
         return { success: true, data }; // data 包含 { count, userInfo }
     } catch (error) {
         return handleApiError(error, 'fetchNodeCount');
@@ -155,13 +114,7 @@ export async function fetchNodeCount(subUrl) {
 
 export async function fetchSettings() {
     try {
-        const response = await fetch(`/api/settings?t=${Date.now()}`);
-
-        if (!response.ok) {
-            return { success: false, error: '获取设置失败', errorType: 'server' };
-        }
-
-        const data = await response.json();
+        const data = await api.get(`/api/settings?t=${Date.now()}`);
         return { success: true, data };
     } catch (error) {
         return handleApiError(error, 'fetchSettings');
@@ -170,13 +123,7 @@ export async function fetchSettings() {
 
 export async function fetchPublicConfig() {
     try {
-        const response = await fetch(`/api/public_config`);
-
-        if (!response.ok) {
-            return { success: false, error: '获取公开配置失败', errorType: 'server' };
-        }
-
-        const data = await response.json();
+        const data = await api.get('/api/public_config');
         return { success: true, data };
     } catch (error) {
         return handleApiError(error, 'fetchPublicConfig');
@@ -185,20 +132,7 @@ export async function fetchPublicConfig() {
 
 export async function saveSettings(settings) {
     try {
-        const response = await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(settings)
-        });
-
-        // 检查HTTP状态码
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.message || errorData.error || `服务器错误 (${response.status})`;
-            return { success: false, error: errorMessage, errorType: 'server' };
-        }
-
-        return await response.json();
+        return await api.post('/api/settings', settings);
     } catch (error) {
         return handleApiError(error, 'saveSettings');
     }
@@ -211,20 +145,7 @@ export async function saveSettings(settings) {
  */
 export async function batchUpdateNodes(subscriptionIds) {
     try {
-        const response = await fetch('/api/batch_update_nodes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subscriptionIds })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.message || errorData.error || `服务器错误 (${response.status})`;
-            return { success: false, error: errorMessage, errorType: 'server' };
-        }
-
-        const result = await response.json();
-        return result;
+        return await api.post('/api/batch_update_nodes', { subscriptionIds });
     } catch (error) {
         return handleApiError(error, 'batchUpdateNodes');
     }
@@ -236,26 +157,16 @@ export async function batchUpdateNodes(subscriptionIds) {
  */
 export async function migrateToD1() {
     try {
-        const response = await fetch('/api/migrate_to_d1', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.message || errorData.error || `服务器错误 (${response.status})`;
-            // Pass through details if available (e.g. for migration errors)
+        return await api.post('/api/migrate_to_d1');
+    } catch (error) {
+        if (error instanceof APIError) {
             return {
                 success: false,
-                error: errorMessage,
+                error: error.message,
                 errorType: 'server',
-                details: errorData.details || errorData.errors
+                details: error.data?.details || error.data?.errors
             };
         }
-
-        const result = await response.json();
-        return result;
-    } catch (error) {
         return handleApiError(error, 'migrateToD1');
     }
 }
@@ -268,20 +179,7 @@ export async function migrateToD1() {
  */
 export async function testSubscription(url, userAgent) {
     try {
-        const response = await fetch('/api/debug_subscription', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, userAgent })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.message || errorData.error || `服务器错误 (${response.status})`;
-            return { success: false, error: errorMessage, errorType: 'server' };
-        }
-
-        const result = await response.json();
-        return result;
+        return await api.post('/api/debug_subscription', { url, userAgent });
     } catch (error) {
         return handleApiError(error, 'testSubscription');
     }

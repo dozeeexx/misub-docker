@@ -5,6 +5,7 @@ import { ref, computed, onMounted, watch } from 'vue'; // Added watch
 import Modal from '../forms/Modal.vue';
 import { useToastStore } from '../../stores/toast';
 import { getClientInfo } from '../../lib/utils';
+import { api } from '../../lib/http.js';
 
 const props = defineProps({
   show: Boolean,
@@ -43,9 +44,7 @@ const fetchLogs = async () => {
     isLoading.value = true;
     try {
         // Cache busting with explicit timestamp
-        const response = await fetch(`/api/logs?t=${Date.now()}`);
-        if (!response.ok) throw new Error('Failed to fetch logs');
-        const data = await response.json();
+        const data = await api.get(`/api/logs?t=${Date.now()}`);
         logs.value = data.data || [];
         // Reset to first page on refresh
         currentPage.value = 1;
@@ -60,8 +59,7 @@ const clearLogs = async () => {
     if (!confirm('确定要清空所有日志吗？')) return;
     
     try {
-        const response = await fetch('/api/logs', { method: 'DELETE' });
-        if (!response.ok) throw new Error('Failed to clear logs');
+        await api.del('/api/logs');
         logs.value = [];
         currentPage.value = 1;
         showToast('日志已清空', 'success');

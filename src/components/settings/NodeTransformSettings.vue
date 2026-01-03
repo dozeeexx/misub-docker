@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
+import DOMPurify from 'dompurify';
 
 const isDev = import.meta.env.DEV;
 
@@ -198,9 +199,20 @@ const applyTemplate = (tpl) => {
   config.value.rename.template.template = tpl;
 };
 
+const sanitizePlainText = (value) => DOMPurify.sanitize(value, {
+  ALLOWED_TAGS: [],
+  ALLOWED_ATTR: []
+});
+
+const sanitizeHighlightedHtml = (value) => DOMPurify.sanitize(value, {
+  ALLOWED_TAGS: ['span'],
+  ALLOWED_ATTR: ['class']
+});
+
 const getHighlightedName = (name) => {
+  const safeName = sanitizePlainText(String(name ?? ''));
   // 如果规则构建器没有内容，直接返回原名
-  if (!ruleBuilder.value.customInput && ruleBuilder.value.targetType !== 'preset') return name;
+  if (!ruleBuilder.value.customInput && ruleBuilder.value.targetType !== 'preset') return safeName;
 
   let pattern = '';
   if (ruleBuilder.value.targetType === 'preset') {
@@ -217,7 +229,7 @@ const getHighlightedName = (name) => {
     }
   }
 
-  if (!pattern) return name;
+  if (!pattern) return safeName;
 
   try {
     let flags = 'g';
@@ -229,9 +241,10 @@ const getHighlightedName = (name) => {
 
     const regex = new RegExp(`(${pattern})`, flags);
     // Highlight matches with red strikethrough
-    return name.replace(regex, '<span class="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 line-through decoration-red-500">$1</span>');
+    const highlighted = safeName.replace(regex, '<span class="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 line-through decoration-red-500">$1</span>');
+    return sanitizeHighlightedHtml(highlighted);
   } catch (e) {
-    return name;
+    return safeName;
   }
 };
 

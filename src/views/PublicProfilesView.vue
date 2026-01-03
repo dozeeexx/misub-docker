@@ -2,6 +2,7 @@
 import { ref, onMounted, defineAsyncComponent, nextTick, computed } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import QRCode from 'qrcode';
+import { api } from '../lib/http.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -38,11 +39,7 @@ const handleGuestbookTrigger = () => {
 const fetchPublicProfiles = async () => {
     try {
         loading.value = true;
-        const response = await fetch('/api/public/profiles');
-        if (!response.ok) {
-            throw new Error('Failed to fetch profiles');
-        }
-        const data = await response.json();
+        const data = await api.get('/api/public/profiles');
         if (data.success) {
             publicProfiles.value = data.data;
             config.value = data.config || {};
@@ -69,16 +66,17 @@ const fetchPublicProfiles = async () => {
     }
 };
 
-const copyLink = (profile) => {
+const copyLink = async (profile) => {
     const token = config.value.profileToken || 'profiles';
     const identifier = profile.customId || profile.id;
     const link = `${window.location.origin}/${token}/${identifier}`;
 
-    navigator.clipboard.writeText(link).then(() => {
+    try {
+        await navigator.clipboard.writeText(link);
         showToast('订阅链接已复制到剪贴板', 'success');
-    }).catch(() => {
+    } catch (e) {
         showToast('复制失败，请手动复制', 'error');
-    });
+    }
 };
 
 
@@ -87,12 +85,9 @@ const clients = ref([]);
 
 const fetchClients = async () => {
     try {
-        const response = await fetch('/api/clients');
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.data && data.data.length > 0) {
-                clients.value = data.data;
-            }
+        const data = await api.get('/api/clients');
+        if (data.success && data.data && data.data.length > 0) {
+            clients.value = data.data;
         }
     } catch (e) {
         console.error('Failed to fetch clients', e);

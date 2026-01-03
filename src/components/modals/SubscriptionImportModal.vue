@@ -7,6 +7,7 @@ import { extractNodeName } from '../../lib/utils.js';
 import { convertClashProxyToUrl, batchConvertClashProxies, validateGeneratedUrl, parseSurgeConfig, parseQuantumultXConfig } from '../../utils/protocolConverter.js';
 import { handleError } from '../../utils/errorHandler.js';
 import { generateNodeId } from '../../utils/id.js';
+import { api, APIError } from '../../lib/http.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -411,37 +412,34 @@ const importSubscription = async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000); // 20秒超时
 
-    const response = await fetch('/api/fetch_external_url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    let responseData;
+    try {
+      responseData = await api.post('/api/fetch_external_url', {
         url: subscriptionUrl.value,
         timeout: 15000
-      }),
-      signal: controller.signal
-    });
+      }, {
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error instanceof APIError) {
+        const errorMsg = error.data?.error || error.data?.message || error.message || `HTTP ${error.status}`;
 
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMsg = errorData.error || `HTTP ${response.status}`;
-
-      // 根据错误类型提供友好的错误信息
-      if (response.status === 408 || errorMsg.includes('timeout')) {
-        throw new Error('请求超时，请检查网络连接或稍后重试');
-      } else if (response.status === 413 || errorMsg.includes('too large')) {
-        throw new Error('订阅内容过大，请使用较小的订阅链接');
-      } else if (errorMsg.includes('DNS')) {
-        throw new Error('域名解析失败，请检查订阅链接是否正确');
-      } else if (response.status >= 500) {
-        throw new Error('服务器错误，请稍后重试');
-      } else {
+        // 根据错误类型提供友好的错误信息
+        if (error.status === 408 || errorMsg.includes('timeout')) {
+          throw new Error('请求超时，请检查网络连接或稍后重试');
+        } else if (error.status === 413 || errorMsg.includes('too large')) {
+          throw new Error('订阅内容过大，请使用较小的订阅链接');
+        } else if (errorMsg.includes('DNS')) {
+          throw new Error('域名解析失败，请检查订阅链接是否正确');
+        } else if (error.status >= 500) {
+          throw new Error('服务器错误，请稍后重试');
+        }
         throw new Error(errorMsg);
       }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const responseData = await response.json();
 
     if (!responseData.success) {
       throw new Error(responseData.error || '获取订阅内容失败');
@@ -450,19 +448,9 @@ const importSubscription = async () => {
     parseStatus.value = `正在解析订阅内容...`;
 
     // [重构] 调用后端解析API
-    const parseResponse = await fetch('/api/parse_subscription', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: responseData.content
-      })
+    const parseResult = await api.post('/api/parse_subscription', {
+      content: responseData.content
     });
-
-    if (!parseResponse.ok) {
-      throw new Error('解析订阅失败');
-    }
-
-    const parseResult = await parseResponse.json();
 
     if (!parseResult.success) {
       throw new Error(parseResult.error || '解析订阅失败');

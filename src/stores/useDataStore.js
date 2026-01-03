@@ -5,6 +5,7 @@ import { useSettingsStore } from './settings';
 import { useEditorStore } from './editor';
 import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
 import { TIMING } from '../constants/timing.js';
+import { api } from '../lib/http.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -138,10 +139,7 @@ export const useDataStore = defineStore('data', () => {
 
         isLoading.value = true;
         try {
-            const response = await fetch('/api/data');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            const data = await response.json();
+            const data = await api.get('/api/data');
 
             if (data.error) {
                 throw new Error(data.error);
@@ -201,18 +199,7 @@ export const useDataStore = defineStore('data', () => {
             }
 
 
-            const response = await fetch('/api/misubs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            });
-
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            const result = await response.json();
+            const result = await api.post('/api/misubs', payload);
 
 
             if (!result.success) {
@@ -258,17 +245,7 @@ export const useDataStore = defineStore('data', () => {
     async function saveSettings(newSettings) {
         editorStore.setLoading(true);
         try {
-            const response = await fetch('/api/settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(newSettings)
-            });
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            const result = await response.json();
+            const result = await api.post('/api/settings', newSettings);
 
             if (!result.success) {
                 throw new Error(result.message || '保存设置失败');
