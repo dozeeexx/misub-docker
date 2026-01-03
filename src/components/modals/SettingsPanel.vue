@@ -7,6 +7,8 @@ import { useSettingsLogic } from '../../composables/useSettingsLogic.js';
 import SettingsSidebar from '../settings/SettingsSidebar.vue';
 import BasicSettings from '../settings/sections/BasicSettings.vue';
 import ServiceSettings from '../settings/sections/ServiceSettings.vue';
+import AnnouncementSettings from '../settings/sections/AnnouncementSettings.vue';
+import GuestbookManagement from '../settings/sections/GuestbookManagement.vue';
 
 
 import ClientSettings from '../settings/sections/ClientSettings.vue';
@@ -60,11 +62,13 @@ defineExpose({ handleSave });
           
           <!-- 服务集成 -->
           <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
-          
 
-          
+          <!-- 公告管理 -->
+          <AnnouncementSettings v-show="activeTab === 'announcement'" :settings="settings" />
 
-          
+          <!-- 留言管理 -->
+          <GuestbookManagement v-show="activeTab === 'guestbook'" :settings="settings" />
+
           <!-- 客户端管理 -->
           <ClientSettings v-show="activeTab === 'client'" />
           
