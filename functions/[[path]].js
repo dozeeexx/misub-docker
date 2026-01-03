@@ -6,7 +6,6 @@
  * - utils.js: 工具函数
  * - auth-middleware.js: 认证中间件
  * - notifications.js: 通知功能
- * - subscription.js: 订阅处理
  * - subscription-handler.js: 订阅请求处理
  * - api-handler.js: API处理
  * - api-router.js: API路由
