@@ -32,6 +32,7 @@ import {
     handleGuestbookManageGet,
     handleGuestbookManageAction
 } from './handlers/guestbook-handler.js';
+import { handleParseSubscription } from './parse-subscription-handler.js';
 
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
@@ -206,6 +207,9 @@ export async function handleApiRequest(request, env) {
 
         case '/preview/content':
             return await handlePreviewContentRequest(request, env);
+
+        case '/parse_subscription':
+            return await handleParseSubscription(request, env);
 
         case '/logs':
             if (request.method === 'GET') {

@@ -180,6 +180,12 @@ const parseYamlConfig = (content) => {
     const convertedProxies = batchConvertClashProxies(proxies);
 
     for (const proxy of convertedProxies) {
+      // [FIX] 验证生成的URL
+      if (!validateGeneratedUrl(proxy.url)) {
+        console.warn(`[YAML Parser] 跳过无效节点: ${proxy.name}`);
+        continue;
+      }
+
       const node = {
         id: crypto.randomUUID(),
         name: proxy.name || 'Unknown',
@@ -422,16 +428,38 @@ const importSubscription = async () => {
 
     parseStatus.value = `正在解析订阅内容...`;
 
-    let { nodes, method } = parseNodes(responseData.content);
+    // [重构] 调用后端解析API
+    const parseResponse = await fetch('/api/parse_subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: responseData.content
+      })
+    });
 
-    if (nodes.length === 0 && responseData.contentBase64) {
-      parseStatus.value = '未解析到有效节点，尝试 Base64 兜底解析...';
-      const fallback = parseNodes(responseData.contentBase64);
-      nodes = fallback.nodes;
-      method = fallback.method ? `${fallback.method} (Base64??)` : 'Base64??';
+    if (!parseResponse.ok) {
+      throw new Error('解析订阅失败');
     }
 
-    if (nodes.length > 0) {
+    const parseResult = await parseResponse.json();
+
+    if (!parseResult.success) {
+      throw new Error(parseResult.error || '解析订阅失败');
+    }
+
+    const backendNodes = parseResult.data.nodes || [];
+
+    if (backendNodes.length > 0) {
+      // 转换为前端格式
+      const nodes = backendNodes.map(node => ({
+        id: crypto.randomUUID(),
+        name: node.name || 'Unknown',
+        url: node.url,
+        enabled: true,
+        protocol: node.protocol || 'unknown',
+        source: 'import'
+      }));
+
       // 去重处理
       const uniqueNodes = nodes.filter((node, index, self) =>
         index === self.findIndex(n => n.url === node.url)
@@ -445,7 +473,7 @@ const importSubscription = async () => {
       successMessage.value = successMsg;
 
       toastStore.showToast(successMsg, 'success');
-      console.log(`[Import] Success: ${method}, ${uniqueNodes.length} unique nodes, ${duplicateCount} duplicates`);
+      console.log(`[Import] Success: Backend API, ${uniqueNodes.length} unique nodes, ${duplicateCount} duplicates`);
 
       setTimeout(() => {
         emit('update:show', false);
@@ -474,13 +502,8 @@ const importSubscription = async () => {
 </script>
 
 <template>
-  <Modal
-    :show="show"
-    @update:show="emit('update:show', $event)"
-    @confirm="importSubscription"
-    confirm-text="导入"
-    :confirm-disabled="isLoading || !subscriptionUrl.trim()"
-  >
+  <Modal :show="show" @update:show="emit('update:show', $event)" @confirm="importSubscription" confirm-text="导入"
+    :confirm-disabled="isLoading || !subscriptionUrl.trim()">
     <template #title>导入订阅</template>
     <template #body>
       <div class="space-y-4">
@@ -503,15 +526,10 @@ const importSubscription = async () => {
           <label for="subscription-url" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             订阅链接
           </label>
-          <input
-            id="subscription-url"
-            v-model="subscriptionUrl"
-            type="url"
+          <input id="subscription-url" v-model="subscriptionUrl" type="url"
             placeholder="https://example.com/subscription-link"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
-            @keyup.enter="importSubscription"
-            :disabled="isLoading"
-          />
+            @keyup.enter="importSubscription" :disabled="isLoading" />
         </div>
 
         <!-- 状态信息 -->
@@ -533,7 +551,9 @@ const importSubscription = async () => {
           <!-- 错误信息 -->
           <div v-if="errorMessage" class="flex items-start space-x-2 text-sm text-red-600 dark:text-red-400">
             <svg class="h-4 w-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z">
+              </path>
             </svg>
             <span>{{ errorMessage }}</span>
           </div>

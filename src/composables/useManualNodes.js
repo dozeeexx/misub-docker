@@ -12,8 +12,26 @@ export function useManualNodes(markDirty) {
 
   // Manual Nodes are items in subscriptions that are NOT http/https
   // We filter from the shared store state
+  // [FIX] 添加更严格的验证,确保只识别有效的手工节点
   const manualNodes = computed(() => {
-    return (allSubscriptions.value || []).filter(item => !item.url || !/^https?:\/\//.test(item.url));
+    return (allSubscriptions.value || []).filter(item => {
+      // 必须有 url 字段
+      if (!item.url) return false;
+
+      // url 必须是字符串
+      if (typeof item.url !== 'string') return false;
+
+      // url 不能为空字符串或只有空格
+      const trimmedUrl = item.url.trim();
+      if (!trimmedUrl) return false;
+
+      // 排除 http/https 订阅
+      if (/^https?:\/\//i.test(trimmedUrl)) return false;
+
+      // 必须是有效的节点协议 (ss://, vmess://, vless://, trojan://, etc.)
+      const validProtocols = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy2|tuic|snell|naive|socks5|http):\/\//i;
+      return validProtocols.test(trimmedUrl);
+    });
   });
 
   const manualNodesCurrentPage = ref(1);
