@@ -84,7 +84,7 @@ export async function handleMisubsSave(request, env) {
 
         // 步骤1.5: 检查是否为 Diff 模式
         if (diff) {
-            console.log('[API] Processing Diff Patch...');
+            console.info('[API] Processing Diff Patch...');
             // 获取当前数据
             const [currentMisubs, currentProfiles] = await Promise.all([
                 storageAdapter.get(KV_KEY_SUBS).then(res => res || []),
@@ -136,15 +136,15 @@ export async function handleMisubsSave(request, env) {
                 const notificationPromises = finalMisubs
                     .filter(sub => sub && sub.url && sub.url.startsWith('http'))
                     .map(sub => checkAndNotify(sub, settings, env).catch(notifyError => {
-                        // 通知失败不影响保存流程
+                        console.warn('[API] Notification failed for subscription:', sub?.name || sub?.url, notifyError);
                     }));
 
                 // 并行处理通知，但不等待完成
                 Promise.all(notificationPromises).catch(e => {
-                    // 部分通知处理失败
+                    console.warn('[API] Notification batch error:', e);
                 });
             } catch (notificationError) {
-                // 通知系统错误，继续保存流程
+                console.warn('[API] Notification system error:', notificationError);
             }
         }
 
@@ -165,7 +165,7 @@ export async function handleMisubsSave(request, env) {
         // 步骤6.5: 清除节点缓存（订阅变动后确保拉取最新数据）
         try {
             const cacheResult = await clearAllNodeCaches(storageAdapter);
-            console.log(`[API] Cleared ${cacheResult.cleared} node caches after subscription update`);
+            console.info(`[API] Cleared ${cacheResult.cleared} node caches after subscription update`);
         } catch (cacheError) {
             // 缓存清除失败不影响保存结果
             console.warn('[API] Failed to clear node caches:', cacheError.message);

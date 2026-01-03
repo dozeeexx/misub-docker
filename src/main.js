@@ -3,7 +3,8 @@ import { createPinia } from 'pinia'
 import './assets/main.css'
 import App from './App.vue'
 import router from './router'
-import { handleError } from './utils/errorHandler.js'
+import { handleError, setToastHandler, configureErrorMonitoring } from './utils/errorHandler.js'
+import { useToastStore } from './stores/toast.js'
 
 // 全局错误处理
 if (typeof window !== 'undefined') {
@@ -51,5 +52,8 @@ app.config.errorHandler = (error, instance, info) => {
 };
 
 app.use(pinia)
+const toastStore = useToastStore(pinia)
+setToastHandler(toastStore.showToast)
+configureErrorMonitoring({ endpoint: import.meta.env.VITE_ERROR_REPORT_URL })
 app.use(router) // Use Router
 app.mount('#app')

@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useToastStore } from '../../../stores/toast.js';
+import { api } from '../../../lib/http.js';
 
 const props = defineProps({
     settings: {
@@ -17,23 +18,30 @@ const filterStatus = ref('all'); // all, pending, approved, replied
 const replyingId = ref(null);
 const replyContent = ref('');
 
-// 确保 guestbook settings 存在
-const guestbookConfig = computed(() => {
+const defaultGuestbookConfig = {
+    enabled: false,
+    allowAnonymous: true
+};
+
+const ensureGuestbookConfig = () => {
     if (!props.settings.guestbook) {
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-        props.settings.guestbook = {
-            enabled: false,
-            allowAnonymous: true
-        };
+        props.settings.guestbook = { ...defaultGuestbookConfig };
     }
-    return props.settings.guestbook;
+};
+
+ensureGuestbookConfig();
+
+watch(() => props.settings.guestbook, (val) => {
+    if (!val) ensureGuestbookConfig();
 });
+
+// 确保 guestbook settings 存在
+const guestbookConfig = computed(() => props.settings.guestbook || defaultGuestbookConfig);
 
 const fetchMessages = async () => {
     loading.value = true;
     try {
-        const res = await fetch('/api/guestbook/manage');
-        const data = await res.json();
+        const data = await api.get('/api/guestbook/manage');
         if (data.success) {
             messages.value = data.data;
         } else {
@@ -59,12 +67,7 @@ const filteredMessages = computed(() => {
 
 const handleAction = async (action, id, payload = {}) => {
     try {
-        const res = await fetch('/api/guestbook/manage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action, id, ...payload })
-        });
-        const data = await res.json();
+        const data = await api.post('/api/guestbook/manage', { action, id, ...payload });
 
         if (data.success) {
             showToast('操作成功', 'success');

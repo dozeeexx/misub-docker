@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useToastStore } from '../../../stores/toast';
 import Modal from '../../forms/Modal.vue';
+import { api } from '../../../lib/http.js';
 
 const clients = ref([]);
 const loading = ref(false);
@@ -24,8 +25,7 @@ const platformOptions = [
 const fetchClients = async () => {
     loading.value = true;
     try {
-        const res = await fetch('/api/clients');
-        const data = await res.json();
+        const data = await api.get('/api/clients');
         if (data.success) {
             clients.value = data.data || [];
         } else {
@@ -47,8 +47,7 @@ const handleInit = () => {
 const executeReset = async () => {
     loading.value = true;
     try {
-        const res = await fetch('/api/clients/init', { method: 'POST' });
-        const data = await res.json();
+        const data = await api.post('/api/clients/init');
         if (data.success) {
             clients.value = data.data;
             showToast('重置成功', 'success');
@@ -86,12 +85,7 @@ const handleSave = async () => {
 
     saving.value = true;
     try {
-        const res = await fetch('/api/clients', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(editingClient.value)
-        });
-        const data = await res.json();
+        const data = await api.post('/api/clients', editingClient.value);
         if (data.success) {
             showToast('保存成功', 'success');
             showEditModal.value = false;
@@ -119,8 +113,7 @@ const handleDelete = (id) => {
 const executeDelete = async () => {
     if (!clientToDeleteId.value) return;
     try {
-        const res = await fetch(`/api/clients?id=${clientToDeleteId.value}`, { method: 'DELETE' });
-        const data = await res.json();
+        const data = await api.del(`/api/clients?id=${clientToDeleteId.value}`);
         if (data.success) {
             clients.value = data.data;
             showToast('已删除', 'success');

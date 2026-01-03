@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import DOMPurify from 'dompurify';
 
 const props = defineProps({
     announcement: {
@@ -10,6 +11,19 @@ const props = defineProps({
 
 const isVisible = ref(true);
 const isExpanded = ref(false); // 默认折叠
+
+const allowedContentTags = ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li'];
+const allowedContentAttrs = ['href', 'target', 'rel'];
+
+const sanitizedContent = computed(() => {
+    const rawContent = props.announcement?.content?.trim()
+        ? props.announcement.content
+        : '暂无详细内容';
+    return DOMPurify.sanitize(rawContent, {
+        ALLOWED_TAGS: allowedContentTags,
+        ALLOWED_ATTR: allowedContentAttrs
+    });
+});
 
 const toggleExpand = () => {
     isExpanded.value = !isExpanded.value;
@@ -102,7 +116,7 @@ onMounted(() => {
                 <!-- Expandable Content -->
                 <div v-show="isExpanded" class="mt-4 pt-4 border-t border-black/5 dark:border-white/5 animate-fade-in">
                     <div class="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 break-words"
-                        v-html="announcement.content || '暂无详细内容'">
+                        v-html="sanitizedContent">
                     </div>
                     <div v-if="announcement.updatedAt"
                         class="mt-4 text-xs text-gray-400 dark:text-gray-500 flex justify-end">

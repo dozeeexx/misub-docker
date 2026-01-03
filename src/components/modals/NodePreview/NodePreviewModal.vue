@@ -1,5 +1,12 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
+import { api, APIError } from '../../../lib/http.js';
+import NodeFilters from './components/NodeFilters.vue';
+import NodeList from './components/NodeList.vue';
+import NodeCard from './components/NodeCard.vue';
+import NodePagination from './components/NodePagination.vue';
+
+const isDev = import.meta.env.DEV;
 
 const props = defineProps({
   show: Boolean,
@@ -160,40 +167,14 @@ const loadNodes = async () => {
       throw new Error('缺少必要的参数');
     }
 
-    console.log('[Preview] Sending request to:', props.apiEndpoint, requestData);
-
-    const response = await fetch(props.apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(requestData),
-    });
-
-    console.log('[Preview] Response status:', response.status);
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        // 尝试重新获取数据来检查认证状态
-        try {
-          const testResponse = await fetch('/api/data');
-          if (testResponse.status === 401) {
-            throw new Error('认证失败，请重新登录后再试');
-          } else {
-            throw new Error('认证异常，请刷新页面后重试');
-          }
-        } catch (testErr) {
-          throw new Error('认证失败，请重新登录后再试');
-        }
-      }
-      const errorText = await response.text();
-      console.error('[Preview] Error text:', errorText);
-      throw new Error(`请求失败: ${response.status} ${response.statusText}`);
+    if (isDev) {
+      console.debug('[Preview] Sending request to:', props.apiEndpoint, requestData);
     }
 
-    const data = await response.json();
-    console.log('[Preview] Data received:', data);
+    const data = await api.post(props.apiEndpoint, requestData);
+    if (isDev) {
+      console.debug('[Preview] Data received:', data);
+    }
 
     if (!data.success) {
       throw new Error(data.error || '获取节点失败');
@@ -231,8 +212,13 @@ const loadNodes = async () => {
 
   } catch (err) {
     // 提供更友好的错误信息
-    if (err.message.includes('认证失败')) {
-      error.value = '认证失败，请重新登录后再试';
+    if (err instanceof APIError && err.status === 401) {
+      try {
+        await api.get('/api/data');
+        error.value = '认证异常，请刷新页面后重试';
+      } catch (testErr) {
+        error.value = '认证失败，请重新登录后再试';
+      }
     } else if (err.message.includes('网络')) {
       error.value = '网络连接失败，请检查网络连接';
     } else {
@@ -359,11 +345,15 @@ const parseNodeInfo = (node) => {
         result.server = nodeConfig.add || result.server;
         result.port = nodeConfig.port || result.port;
       } catch (e) {
-        // 如果解析失败，使用URL解析的结果
+        if (isDev) {
+          console.debug('[Preview] VMess parse failed, using URL fallback:', e);
+        }
       }
     }
   } catch (e) {
-    // 如果URL解析失败，尝试从字符串中提取
+    if (isDev) {
+      console.debug('[Preview] URL parse failed, falling back to regex:', e);
+    }
     const match = node.url.match(/@([^:\/]+):(\d+)/);
     if (match) {
       result.server = match[1];
@@ -379,43 +369,6 @@ const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
   }
-};
-
-// 生成页码数组
-const getPageNumbers = () => {
-  const pages = [];
-  const current = currentPage.value;
-  const total = totalPages.value;
-
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) {
-      pages.push(i);
-    }
-  } else {
-    if (current <= 3) {
-      for (let i = 1; i <= 5; i++) {
-        pages.push(i);
-      }
-      pages.push('...');
-      pages.push(total);
-    } else if (current >= total - 2) {
-      pages.push(1);
-      pages.push('...');
-      for (let i = total - 4; i <= total; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-      pages.push('...');
-      for (let i = current - 1; i <= current + 1; i++) {
-        pages.push(i);
-      }
-      pages.push('...');
-      pages.push(total);
-    }
-  }
-
-  return pages;
 };
 
 // 键盘事件处理
@@ -497,145 +450,24 @@ const handleKeydown = (e) => {
       </div>
 
       <!-- 筛选控件 - 统一响应式布局 -->
-      <div v-if="!loading && !error && Object.keys(protocolStats).length > 0" class="px-3 sm:px-6 py-2 sm:py-4 border-b border-gray-200 dark:border-gray-700">
-        <!-- 响应式网格布局 -->
-        <!-- 移动端：Grid (1列用于搜索，2列用于筛选)，桌面端维持原样 -->
-        <div class="flex flex-col lg:grid lg:grid-cols-4 gap-3 sm:gap-4 lg:items-end">
-
-          <!-- 搜索 (移动端置顶) -->
-          <div class="w-full">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-              节点搜索
-            </label>
-            <div class="flex gap-2">
-              <div class="relative flex-1">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="搜索..."
-                  class="w-full px-2 sm:px-3 py-1.5 sm:py-2 pr-8 sm:pr-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-                <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3">
-                  <svg class="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
-                </div>
-              </div>
-
-              <!-- 处理模式 toggler (仅移动端、订阅组且非公开页显示) -->
-              <button
-                v-if="profileId && apiEndpoint !== '/api/public/preview'"
-                @click="showProcessed = !showProcessed"
-                :class="showProcessed ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600'"
-                class="lg:hidden flex-shrink-0 w-9 border rounded-lg hover:opacity-90 transition-colors flex items-center justify-center"
-                title="切换显示原始/处理后节点名称"
-              >
-                <!-- 原材料 Icon -->
-                <svg v-if="!showProcessed" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                </svg>
-                <!-- 魔法棒 Icon -->
-                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- 筛选器组 (移动端并排) -->
-          <div class="grid grid-cols-2 gap-3 lg:contents">
-            <!-- 协议筛选 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-                协议类型
-              </label>
-              <select
-                v-model="protocolFilter"
-                class="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="all">全部</option>
-                <option v-for="protocol in availableProtocols" :key="protocol" :value="protocol">
-                  {{ protocol.toUpperCase() }}
-                </option>
-              </select>
-            </div>
-
-            <!-- 地区筛选 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-                地区筛选
-              </label>
-              <select
-                v-model="regionFilter"
-                class="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="all">全部</option>
-                <option v-for="region in availableRegions" :key="region" :value="region">
-                  {{ region }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-
-
-          <!-- 视图切换 & 规则处理 (Desktop Combined) -->
-          <div class="hidden lg:flex gap-6">
-            <!-- 视图切换 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-                显示模式
-              </label>
-              <div class="flex items-center gap-1 sm:gap-2">
-                <button
-                  @click="viewMode = 'list'"
-                  :class="viewMode === 'list' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
-                  class="w-9 h-9 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
-                  title="列表视图"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16"></path>
-                  </svg>
-                </button>
-                <button
-                  @click="viewMode = 'card'"
-                  :class="viewMode === 'card' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
-                  class="w-9 h-9 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
-                  title="卡片视图"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- 规则处理 -->
-            <div v-if="profileId && apiEndpoint !== '/api/public/preview'">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-                规则处理
-              </label>
-              <div class="flex items-center gap-1 sm:gap-2">
-                <button
-                  @click="showProcessed = !showProcessed"
-                  :class="showProcessed ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'"
-                  class="w-9 h-9 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
-                  title="切换显示模式：原始 / 处理后"
-                >
-                   <!-- 魔法棒 Icon (处理后) -->
-                   <svg v-if="showProcessed" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                  </svg>
-                   <!-- 原材料 Icon (原始) -->
-                   <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <NodeFilters
+        v-if="!loading && !error && Object.keys(protocolStats).length > 0"
+        class="px-3 sm:px-6 py-2 sm:py-4 border-b border-gray-200 dark:border-gray-700"
+        :search-query="searchQuery"
+        :protocol-filter="protocolFilter"
+        :region-filter="regionFilter"
+        :view-mode="viewMode"
+        :show-processed="showProcessed"
+        :available-protocols="availableProtocols"
+        :available-regions="availableRegions"
+        :profile-id="profileId"
+        :api-endpoint="apiEndpoint"
+        @update:search-query="searchQuery = $event"
+        @update:protocol-filter="protocolFilter = $event"
+        @update:region-filter="regionFilter = $event"
+        @update:view-mode="viewMode = $event"
+        @update:show-processed="showProcessed = $event"
+      />
 
       <!-- 节点列表 -->
       <div class="flex-1 overflow-hidden" style="min-height: 0;">
@@ -677,303 +509,36 @@ const handleKeydown = (e) => {
           <!-- 节点列表/卡片视图 -->
           <div v-else class="h-full flex flex-col">
             <!-- 简洁列表视图 (仅大屏桌面端) -->
-            <div v-if="effectiveViewMode === 'list'" class="hidden lg:flex flex-1 overflow-hidden">
-              <div class="h-full overflow-y-auto">
-                <!-- 简单的表格 -->
-                <div class="w-full flex justify-center px-6">
-                  <div style="width: 950px;">
-                  <!-- 表头 -->
-                  <div class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                    <div class="grid grid-cols-12 gap-2 px-4 py-3 text-xs font-medium text-gray-600 dark:text-gray-400 min-h-[3rem] flex items-center" style="width: 950px;">
-                      <div class="col-span-4">节点名称</div>
-                      <div class="col-span-3 hidden sm:block">服务器</div>
-                      <div class="col-span-2 hidden md:block text-center">端口</div>
-                      <div class="col-span-1 hidden sm:block">类型</div>
-                      <div class="col-span-1 hidden sm:block">地区</div>
-                      <div class="col-span-1">操作</div>
-                    </div>
-                  </div>
-
-                  <!-- 数据行 -->
-                  <div class="bg-white dark:bg-gray-800" style="width: 950px;">
-                    <div
-                      v-for="(node, index) in paginatedNodes"
-                      :key="`${node.url}_${index}`"
-                      class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                    >
-                      <div class="grid grid-cols-12 gap-2 px-4 py-3 items-center min-h-[3rem]" style="width: 950px;">
-                        <!-- 节点名称 -->
-                        <div class="col-span-4">
-                          <span class="text-sm text-gray-900 dark:text-white block overflow-hidden" :title="parseNodeInfo(node).name" style="text-overflow: ellipsis; white-space: nowrap;">
-                            {{ parseNodeInfo(node).name }}
-                          </span>
-                        </div>
-
-                        <!-- 服务器 (桌面端) -->
-                        <div class="col-span-3 hidden sm:block">
-                          <span class="text-sm text-gray-600 dark:text-gray-400 font-mono block overflow-hidden" :title="parseNodeInfo(node).server" style="text-overflow: ellipsis; white-space: nowrap;">
-                            {{ parseNodeInfo(node).server }}
-                          </span>
-                        </div>
-
-                        <!-- 端口 (桌面端) -->
-                        <div class="col-span-2 hidden md:block text-center">
-                          <span class="text-sm text-gray-600 dark:text-gray-400 font-mono block" style="min-width: 50px;">
-                            {{ parseNodeInfo(node).port }}
-                          </span>
-                        </div>
-
-                        <!-- 类型 (桌面端) -->
-                        <div class="col-span-1 hidden sm:block">
-                          <span
-                            class="inline-flex items-center justify-center px-2 py-1 rounded text-xs font-medium"
-                            :class="getProtocolStyle(parseNodeInfo(node).protocol)"
-                            style="min-width: 60px;"
-                          >
-                            {{ parseNodeInfo(node).protocol.toUpperCase() }}
-                          </span>
-                        </div>
-
-                        <!-- 地区 (桌面端) -->
-                        <div class="col-span-1 hidden sm:block">
-                          <span class="inline-flex items-center justify-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" style="min-width: 60px;">
-                            {{ parseNodeInfo(node).region }}
-                          </span>
-                        </div>
-
-                        <!-- 操作 (所有设备) -->
-                        <div class="col-span-1 flex justify-center">
-                          <button
-                            @click="copyNodeUrl(node, node.url)"
-                            class="inline-flex items-center justify-center w-8 h-8 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-150"
-                            :class="{ 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20': copiedNodeId === node.url }"
-                          >
-                            <svg
-                              v-if="copiedNodeId !== node.url"
-                              class="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            <svg
-                              v-else
-                              class="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <NodeList
+              v-if="effectiveViewMode === 'list'"
+              :nodes="paginatedNodes"
+              :copied-node-id="copiedNodeId"
+              :parse-node-info="parseNodeInfo"
+              :get-protocol-style="getProtocolStyle"
+              @copy="copyNodeUrl"
+            />
 
             <!-- 卡片视图 container -->
-            <div v-else class="flex-1 overflow-y-auto">
-              <!-- 移动端 Mini List-Card 视图 -->
-              <div class="block lg:hidden">
-                <div 
-                  v-for="(node, index) in paginatedNodes" 
-                  :key="`${node.url}_${index}`"
-                  class="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800"
-                  style="height: 64px;"
-                >
-                  <!-- 左侧：图标与信息 -->
-                  <div class="flex items-center gap-3 flex-1 min-w-0 pr-2">
-                    
-                    <!-- 中间：名称与标签 -->
-                    <div class="flex flex-col min-w-0">
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
-                          {{ parseNodeInfo(node).name }}
-                        </span>
-                      </div>
-                      <div class="flex items-center gap-2 mt-1">
-                        <span
-                          class="text-[10px] bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded uppercase font-bold"
-                          :class="getProtocolStyle(parseNodeInfo(node).protocol)"
-                        >
-                          {{ parseNodeInfo(node).protocol }}
-                        </span>
-                         <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">
-                          {{ parseNodeInfo(node).server }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- 右侧：操作按钮 -->
-                  <button
-                    @click="copyNodeUrl(node, node.url)"
-                    class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-gray-50 dark:bg-gray-700/50 text-gray-400 active:bg-indigo-50 active:text-indigo-600"
-                    :class="{ 'text-green-600 bg-green-50': copiedNodeId === node.url }"
-                  >
-                    <svg v-if="copiedNodeId !== node.url" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 01-2-2V5a2 2 0 012-2h4.586"></path>
-                    </svg>
-                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- 桌面端常规卡片视图 -->
-              <div class="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-1">
-                <div
-                  v-for="(node, index) in paginatedNodes"
-                  :key="`${node.url}_${index}`"
-                  class="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 hover:shadow-md transition-shadow"
-                >
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="flex-1 min-w-0">
-                      <!-- 节点名称和协议标签 -->
-                      <div class="flex items-center gap-2 mb-2">
-                        <h4 class="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {{ parseNodeInfo(node).name }}
-                        </h4>
-                        <span
-                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                          :class="getProtocolStyle(parseNodeInfo(node).protocol)"
-                        >
-                          {{ parseNodeInfo(node).protocol.toUpperCase() }}
-                        </span>
-                      </div>
-
-                      <!-- 地区标签 -->
-                      <div class="mb-2">
-                        <span
-                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                        >
-                          {{ parseNodeInfo(node).region }}
-                        </span>
-                      </div>
-
-                      <!-- 服务器信息 -->
-                      <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                        <div class="font-mono truncate">{{ parseNodeInfo(node).server }}</div>
-                        <div class="font-mono">端口: {{ parseNodeInfo(node).port }}</div>
-                      </div>
-                    </div>
-
-                    <!-- 复制按钮 -->
-                    <button
-                      @click="copyNodeUrl(node, node.url)"
-                      class="flex-shrink-0 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors group"
-                      :class="{ 'bg-green-100 dark:bg-green-900': copiedNodeId === node.url }"
-                    >
-                      <svg
-                        v-if="copiedNodeId !== node.url"
-                        class="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      <svg
-                        v-else
-                        class="w-4 h-4 text-green-600 dark:text-green-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <NodeCard
+              v-else
+              :nodes="paginatedNodes"
+              :copied-node-id="copiedNodeId"
+              :parse-node-info="parseNodeInfo"
+              :get-protocol-style="getProtocolStyle"
+              @copy="copyNodeUrl"
+            />
           </div>
         </div>
       </div>
 
-      <!-- 分页控件 - 移动端简化版本 -->
-      <div v-if="!loading && !error && totalPages > 1" class="p-4 sm:p-6 pt-2 sm:pt-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
-        <!-- 桌面端完整分页 -->
-        <div v-if="currentPage > 0" class="hidden sm:flex items-center justify-between">
-          <div class="text-sm text-gray-700 dark:text-gray-300">
-            显示第 {{ ((currentPage - 1) * pageSize) + 1 }} - {{ Math.min(currentPage * pageSize, filteredTotalCount) }} 项，共 {{ filteredTotalCount }} 项
-          </div>
-          <div class="flex items-center space-x-2">
-            <!-- 上一页 -->
-            <button
-              @click="goToPage(currentPage - 1)"
-              :disabled="currentPage <= 1"
-              class="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              上一页
-            </button>
-
-            <!-- 页码 -->
-            <div class="flex space-x-1">
-              <button
-                v-for="page in getPageNumbers()"
-                :key="page"
-                @click="page !== '...' && goToPage(page)"
-                :class="{
-                  'px-3 py-1 rounded-md border text-sm font-medium transition-colors': true,
-                  'bg-indigo-600 border-indigo-600 text-white': page === currentPage,
-                  'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600': page !== currentPage && page !== '...',
-                  'opacity-50 cursor-not-allowed': page === '...'
-                }"
-                :disabled="page === '...'"
-              >
-                {{ page }}
-              </button>
-            </div>
-
-            <!-- 下一页 -->
-            <button
-              @click="goToPage(currentPage + 1)"
-              :disabled="currentPage >= totalPages"
-              class="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              下一页
-            </button>
-          </div>
-        </div>
-
-        <!-- 移动端简化分页 -->
-        <div class="sm:hidden">
-          <div class="flex items-center justify-between mb-3">
-            <div class="text-sm text-gray-700 dark:text-gray-300">
-              {{ currentPage }} / {{ totalPages }} 页
-            </div>
-            <div class="text-sm text-gray-500 dark:text-gray-400">
-              共 {{ filteredTotalCount }} 项
-            </div>
-          </div>
-          <div class="flex items-center justify-center space-x-4">
-            <button
-              @click="goToPage(currentPage - 1)"
-              :disabled="currentPage <= 1"
-              class="flex-1 max-w-[100px] px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              上一页
-            </button>
-            <span class="px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400">
-              {{ currentPage }}
-            </span>
-            <button
-              @click="goToPage(currentPage + 1)"
-              :disabled="currentPage >= totalPages"
-              class="flex-1 max-w-[100px] px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              下一页
-            </button>
-          </div>
-        </div>
-      </div>
+      <NodePagination
+        v-if="!loading && !error"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :page-size="pageSize"
+        :total-items="filteredTotalCount"
+        @go-to-page="goToPage"
+      />
     </div>
   </div>
 </template>

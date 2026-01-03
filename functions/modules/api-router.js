@@ -11,7 +11,7 @@ import { handleCronTrigger } from './notifications.js';
 import {
     handleSubscriptionNodesRequest,
     handlePublicPreviewRequest
-} from './handlers/subscription-handler.js';
+} from './subscription-handler.js';
 import {
     handleDebugSubscriptionRequest,
     handleSystemInfoRequest,
@@ -26,12 +26,14 @@ import {
     handleHealthCheckRequest
 } from './handlers/node-handler.js';
 import { handleClientRequest } from './handlers/client-handler.js';
+import { handleErrorReportRequest } from './handlers/error-report-handler.js';
 import {
     handleGuestbookGet,
     handleGuestbookPost,
     handleGuestbookManageGet,
     handleGuestbookManageAction
 } from './handlers/guestbook-handler.js';
+import { handleParseSubscription } from './parse-subscription-handler.js';
 
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
@@ -142,6 +144,11 @@ export async function handleApiRequest(request, env) {
         return await handleTelegramWebhook(request, env);
     }
 
+    // Error report endpoint (public)
+    if (path === '/system/error_report') {
+        return await handleErrorReportRequest(request, env);
+    }
+
     // Public GET access for clients
     if (path.startsWith('/clients') && request.method === 'GET') {
         return await handleClientRequest(request, env);
@@ -206,6 +213,9 @@ export async function handleApiRequest(request, env) {
 
         case '/preview/content':
             return await handlePreviewContentRequest(request, env);
+
+        case '/parse_subscription':
+            return await handleParseSubscription(request, env);
 
         case '/logs':
             if (request.method === 'GET') {
@@ -274,7 +284,6 @@ async function handleExternalFetchRequest(request, env) {
         return createErrorResponse('URL too long (max 2048 characters)', 400);
     }
 
-    // console.log(`[External Fetch] Processing URL: ${externalUrl}`);
 
     try {
         // 创建带超时的请求
@@ -326,7 +335,6 @@ async function handleExternalFetchRequest(request, env) {
         const content = new TextDecoder('utf-8').decode(buffer);
         const contentBase64 = encodeArrayBufferToBase64(buffer);
 
-        // console.log(`[External Fetch] Success: ${content.length} chars, type: ${contentType}`);
 
         // 返回包含原文与 Base64 的结果
         return new Response(JSON.stringify({

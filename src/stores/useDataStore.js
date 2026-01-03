@@ -1,30 +1,28 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { useToastStore } from './toast';
-import { useSubscriptionStore } from './subscriptions';
-import { useProfileStore } from './profiles';
 import { useSettingsStore } from './settings';
 import { useEditorStore } from './editor';
-import { calculateDiff } from '../lib/diff.js';
 import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
+import { TIMING } from '../constants/timing.js';
+import { api } from '../lib/http.js';
+
+const isDev = import.meta.env.DEV;
 
 // SessionStorage 缓存键
 const CACHE_KEY = 'misub_data_cache';
 const CACHE_TIMESTAMP_KEY = 'misub_data_cache_ts';
-const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存有效期
+const CACHE_TTL = TIMING.CACHE_TTL_MS;
 
 export const useDataStore = defineStore('data', () => {
     const { showToast } = useToastStore();
 
-    // Sub-stores
-    const subscriptionStore = useSubscriptionStore();
-    const profileStore = useProfileStore();
     const settingsStore = useSettingsStore();
     const editorStore = useEditorStore();
 
-    // --- State Proxies (maintain reactivity for storeToRefs) ---
-    const subscriptions = computed(() => subscriptionStore.items);
-    const profiles = computed(() => profileStore.items);
+    // --- State ---
+    const subscriptions = ref([]);
+    const profiles = ref([]);
     const settings = computed(() => settingsStore.config);
     // Editor state is handled by local refs below to solve the "direct assignment" requirement from instructions
 
@@ -50,8 +48,8 @@ export const useDataStore = defineStore('data', () => {
     const hasDataLoaded = computed(() => !!lastUpdated.value); // Derived from local ref
 
     // --- Getters ---
-    const activeSubscriptions = computed(() => subscriptionStore.activeItems);
-    const activeProfiles = computed(() => profileStore.activeItems);
+    const activeSubscriptions = computed(() => subscriptions.value.filter(sub => sub.enabled));
+    const activeProfiles = computed(() => profiles.value.filter(profile => profile.enabled));
 
     // --- Actions ---
 
@@ -79,8 +77,10 @@ export const useDataStore = defineStore('data', () => {
         try {
             sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
             sessionStorage.setItem(CACHE_TIMESTAMP_KEY, String(Date.now()));
-        } catch {
-            // 忽略存储错误
+        } catch (error) {
+            if (isDev) {
+                console.debug('[DataStore] Failed to write cache:', error);
+            }
         }
     }
 
@@ -88,8 +88,10 @@ export const useDataStore = defineStore('data', () => {
         try {
             sessionStorage.removeItem(CACHE_KEY);
             sessionStorage.removeItem(CACHE_TIMESTAMP_KEY);
-        } catch {
-            // 忽略错误
+        } catch (error) {
+            if (isDev) {
+                console.debug('[DataStore] Failed to clear cache:', error);
+            }
         }
     }
 
@@ -99,13 +101,13 @@ export const useDataStore = defineStore('data', () => {
 
         try {
             const cleanSubs = (data.misubs || []).map(sub => ({ ...sub, isUpdating: false }));
-            subscriptionStore.setItems(cleanSubs);
-            profileStore.setItems(data.profiles || []);
+            subscriptions.value = cleanSubs;
+            profiles.value = data.profiles || [];
             settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config });
 
             lastSavedData = {
-                subscriptions: JSON.parse(JSON.stringify(subscriptionStore.items)),
-                profiles: JSON.parse(JSON.stringify(profileStore.items))
+                subscriptions: JSON.parse(JSON.stringify(subscriptions.value)),
+                profiles: JSON.parse(JSON.stringify(profiles.value))
             };
 
             lastUpdated.value = new Date();
@@ -137,23 +139,20 @@ export const useDataStore = defineStore('data', () => {
 
         isLoading.value = true;
         try {
-            const response = await fetch('/api/data');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            const data = await response.json();
+            const data = await api.get('/api/data');
 
             if (data.error) {
                 throw new Error(data.error);
             }
 
             const cleanSubs = (data.misubs || []).map(sub => ({ ...sub, isUpdating: false }));
-            subscriptionStore.setItems(cleanSubs);
-            profileStore.setItems(data.profiles || []);
+            subscriptions.value = cleanSubs;
+            profiles.value = data.profiles || [];
             settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config });
 
             lastSavedData = {
-                subscriptions: JSON.parse(JSON.stringify(subscriptionStore.items)),
-                profiles: JSON.parse(JSON.stringify(profileStore.items))
+                subscriptions: JSON.parse(JSON.stringify(subscriptions.value)),
+                profiles: JSON.parse(JSON.stringify(profiles.value))
             };
 
             lastUpdated.value = new Date();
@@ -182,7 +181,7 @@ export const useDataStore = defineStore('data', () => {
         try {
 
 
-            const sanitizedSubs = subscriptionStore.items.map(sub => {
+            const sanitizedSubs = subscriptions.value.map(sub => {
                 const { isUpdating, ...rest } = sub;
                 return rest;
             });
@@ -190,35 +189,8 @@ export const useDataStore = defineStore('data', () => {
             // Always send full payload to ensure order is preserved exactly as seen in UI
             const payload = {
                 misubs: sanitizedSubs,
-                profiles: profileStore.items
+                profiles: profiles.value
             };
-            const isDiffSave = false;
-
-            /* Diff logic removed to fix ordering issue
-            // Calculate diffs
-            const subDiff = calculateDiff(lastSavedData.subscriptions, subscriptionStore.items);
-            const profileDiff = calculateDiff(lastSavedData.profiles, profileStore.items);
-
-            let payload = {};
-            let isDiffSave = false;
-
-            if (subDiff || profileDiff) {
-                console.log('[Store] Diff detect:', { subDiff, profileDiff });
-                payload = {
-                    diff: {
-                        subscriptions: subDiff || undefined,
-                        profiles: profileDiff || undefined
-                    }
-                };
-                isDiffSave = true;
-            } else {
-                console.log('[Store] No diff detected, but save force called? Sending full overwrite just in case.');
-                payload = {
-                    misubs: subscriptionStore.items,
-                    profiles: profileStore.items
-                };
-            }
-            */
 
             // Fallback: If we don't have lastSavedData initialized (e.g. error on load?), do full save.
             if (!lastSavedData.subscriptions && !lastSavedData.profiles) {
@@ -227,18 +199,7 @@ export const useDataStore = defineStore('data', () => {
             }
 
 
-            const response = await fetch('/api/misubs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            });
-
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            const result = await response.json();
+            const result = await api.post('/api/misubs', payload);
 
 
             if (!result.success) {
@@ -248,14 +209,14 @@ export const useDataStore = defineStore('data', () => {
             // Important: Update snapshot on success
             if (result.data) {
                 // If backend returns data, use it (source of truth)
-                if (result.data.misubs) subscriptionStore.setItems(result.data.misubs);
-                if (result.data.profiles) profileStore.setItems(result.data.profiles);
+                if (result.data.misubs) subscriptions.value = result.data.misubs;
+                if (result.data.profiles) profiles.value = result.data.profiles;
             }
 
             // Refresh snapshot
             lastSavedData = {
-                subscriptions: JSON.parse(JSON.stringify(subscriptionStore.items)),
-                profiles: JSON.parse(JSON.stringify(profileStore.items))
+                subscriptions: JSON.parse(JSON.stringify(subscriptions.value)),
+                profiles: JSON.parse(JSON.stringify(profiles.value))
             };
 
             showToast('数据已保存', 'success');
@@ -284,17 +245,7 @@ export const useDataStore = defineStore('data', () => {
     async function saveSettings(newSettings) {
         editorStore.setLoading(true);
         try {
-            const response = await fetch('/api/settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(newSettings)
-            });
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            const result = await response.json();
+            const result = await api.post('/api/settings', newSettings);
 
             if (!result.success) {
                 throw new Error(result.message || '保存设置失败');
@@ -314,31 +265,40 @@ export const useDataStore = defineStore('data', () => {
 
     // --- Helper Proxies ---
     function addSubscription(subscription) {
-        subscriptionStore.add(subscription);
+        subscriptions.value.unshift(subscription);
     }
 
     function overwriteSubscriptions(items) {
-        subscriptionStore.setItems(items);
+        subscriptions.value = items;
     }
 
     function removeSubscription(id) {
-        subscriptionStore.remove(id);
+        const index = subscriptions.value.findIndex(s => s.id === id);
+        if (index !== -1) {
+            subscriptions.value.splice(index, 1);
+        }
     }
 
     function updateSubscription(id, updates) {
-        subscriptionStore.update(id, updates);
+        const index = subscriptions.value.findIndex(s => s.id === id);
+        if (index !== -1) {
+            subscriptions.value[index] = { ...subscriptions.value[index], ...updates };
+        }
     }
 
     function addProfile(profile) {
-        profileStore.add(profile);
+        profiles.value.unshift(profile);
     }
 
     function overwriteProfiles(items) {
-        profileStore.setItems(items);
+        profiles.value = items;
     }
 
     function removeProfile(id) {
-        profileStore.remove(id);
+        const index = profiles.value.findIndex(p => p.id === id || p.customId === id);
+        if (index !== -1) {
+            profiles.value.splice(index, 1);
+        }
     }
 
     // --- Dirty State Proxies ---
@@ -354,7 +314,7 @@ export const useDataStore = defineStore('data', () => {
     }
 
     return {
-        // State (Computed proxies)
+        // State
         subscriptions,
         profiles,
         settings,

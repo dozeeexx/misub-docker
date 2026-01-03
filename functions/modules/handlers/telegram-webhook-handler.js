@@ -254,7 +254,7 @@ async function handleNodeInput(chatId, text, userId, env) {
         const message = formatSuccessMessage(addedNodes);
         await sendTelegramMessage(chatId, message, env);
 
-        console.log(`[Telegram Push] User ${userId} added ${addedNodes.length} nodes`);
+        console.info(`[Telegram Push] User ${userId} added ${addedNodes.length} nodes`);
 
         return createJsonResponse({ ok: true });
 

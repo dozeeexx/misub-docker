@@ -13,6 +13,8 @@ import { useBulkImportLogic } from '../../../composables/useBulkImportLogic.js';
 import { useBackupLogic } from '../../../composables/useBackupLogic.js';
 import { storeToRefs } from 'pinia';
 
+const isDev = import.meta.env.DEV;
+
 // --- Component Imports ---
 import RightPanel from '../../profiles/RightPanel.vue';
 import ProfilePanel from '../../profiles/ProfilePanel.vue';
@@ -40,7 +42,9 @@ const dataStore = useDataStore();
 const { settings, isDirty, isLoading } = storeToRefs(dataStore); // Use store refs
 const config = settings; // Compatibility alias for template
 const { clearDirty } = dataStore; // Don't destructure markDirty directly
-console.log('Dashboard: setup running');
+if (isDev) {
+  console.debug('Dashboard: setup running');
+}
 
 const saveState = ref('idle');
 
@@ -129,14 +133,18 @@ const previewProfileName = ref('');
 
 // --- 初始化與生命週期 ---
 const initializeState = async () => {
-    console.log('Dashboard: initializeState started');
+    if (isDev) {
+      console.debug('Dashboard: initializeState started');
+    }
     try {
         // fetchData 内部会检查数据是否已加载，避免重复请求
         await dataStore.fetchData();
-        console.log('Dashboard: fetchData completed', {
+        if (isDev) {
+          console.debug('Dashboard: fetchData completed', {
             subs: subscriptions.value?.length,
             nodes: manualNodes.value?.length
-        });
+          });
+        }
         clearDirty();
     } catch (e) {
         console.error('Dashboard: initializeState error', e);

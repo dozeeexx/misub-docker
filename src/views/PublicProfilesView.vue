@@ -2,6 +2,10 @@
 import { ref, onMounted, defineAsyncComponent, nextTick, computed } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import QRCode from 'qrcode';
+import { api } from '../lib/http.js';
+import ProfileGrid from '../components/public/ProfileGrid.vue';
+
+const isDev = import.meta.env.DEV;
 
 const NodePreviewModal = defineAsyncComponent(() => import('../components/modals/NodePreview/NodePreviewModal.vue'));
 const AnnouncementCard = defineAsyncComponent(() => import('../components/features/AnnouncementCard.vue'));
@@ -36,20 +40,21 @@ const handleGuestbookTrigger = () => {
 const fetchPublicProfiles = async () => {
     try {
         loading.value = true;
-        const response = await fetch('/api/public/profiles');
-        if (!response.ok) {
-            throw new Error('Failed to fetch profiles');
-        }
-        const data = await response.json();
+        const data = await api.get('/api/public/profiles');
         if (data.success) {
             publicProfiles.value = data.data;
             config.value = data.config || {};
-            // Debug log
-            console.log('Guestbook Config:', config.value.guestbook);
+            if (isDev) {
+                console.debug('Guestbook Config:', config.value.guestbook);
+            }
             if (data.config && data.config.announcement) {
-                console.log('Announcement loaded:', data.config.announcement);
+                if (isDev) {
+                    console.debug('Announcement loaded:', data.config.announcement);
+                }
             } else {
-                console.log('No announcement found in config');
+                if (isDev) {
+                    console.debug('No announcement found in config');
+                }
             }
         } else {
             error.value = data.message || '获取数据失败';
@@ -62,16 +67,17 @@ const fetchPublicProfiles = async () => {
     }
 };
 
-const copyLink = (profile) => {
+const copyLink = async (profile) => {
     const token = config.value.profileToken || 'profiles';
     const identifier = profile.customId || profile.id;
     const link = `${window.location.origin}/${token}/${identifier}`;
 
-    navigator.clipboard.writeText(link).then(() => {
+    try {
+        await navigator.clipboard.writeText(link);
         showToast('订阅链接已复制到剪贴板', 'success');
-    }).catch(() => {
+    } catch (e) {
         showToast('复制失败，请手动复制', 'error');
-    });
+    }
 };
 
 
@@ -80,12 +86,9 @@ const clients = ref([]);
 
 const fetchClients = async () => {
     try {
-        const response = await fetch('/api/clients');
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.data && data.data.length > 0) {
-                clients.value = data.data;
-            }
+        const data = await api.get('/api/clients');
+        if (data.success && data.data && data.data.length > 0) {
+            clients.value = data.data;
         }
     } catch (e) {
         console.error('Failed to fetch clients', e);
@@ -137,6 +140,11 @@ const handleQuickImport = (profile) => {
 // QR Code in Card
 const expandedQRCards = ref(new Set());
 const qrCanvasRefs = ref({});
+
+const registerQrCanvas = (profileId, canvas) => {
+    if (!canvas) return;
+    qrCanvasRefs.value[profileId] = canvas;
+};
 
 const toggleQRCode = async (profile) => {
     const profileId = profile.id;
@@ -299,138 +307,17 @@ onMounted(async () => {
                 <p class="mt-2 text-gray-500 dark:text-gray-400">目前没有任何公开分享的订阅组，请稍后再来看看。</p>
             </div>
 
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div v-for="profile in publicProfiles" :key="profile.id"
-                    class="group relative bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xs border border-gray-100 dark:border-gray-700 hover:shadow-xl hover:border-indigo-100 dark:hover:border-indigo-900 transition-all duration-300 transform hover:-translate-y-1">
-
-                    <!-- Top Right Buttons: Quick Import & QR Code -->
-                    <div class="absolute top-4 right-4 flex gap-2">
-                        <!-- Quick Import Button -->
-                        <button @click="handleQuickImport(profile)"
-                            class="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all hover:scale-110 group/import"
-                            title="一键导入">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            <!-- Tooltip -->
-                            <span
-                                class="absolute -bottom-8 right-0 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded opacity-0 group-hover/import:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                一键导入
-                            </span>
-                        </button>
-
-                        <!-- QR Code Button -->
-                        <button @click="toggleQRCode(profile)"
-                            class="w-10 h-10 flex items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all hover:scale-110 group/qr"
-                            :class="{ 'bg-green-100 dark:bg-green-900/40': isQRExpanded(profile.id) }" title="查看二维码">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                            </svg>
-                            <!-- Tooltip -->
-                            <span
-                                class="absolute -bottom-8 right-0 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded opacity-0 group-hover/qr:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                {{ isQRExpanded(profile.id) ? '收起二维码' : '扫码导入' }}
-                            </span>
-                        </button>
-                    </div>
-
-
-                    <div class="mb-4">
-                        <div
-                            class="h-12 w-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
-                            <span class="text-2xl">🚀</span>
-                        </div>
-                    </div>
-
-                    <h3
-                        class="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        {{ profile.name }}
-                    </h3>
-
-                    <p class="text-gray-500 dark:text-gray-400 text-sm mb-6 line-clamp-3 min-h-[3.75rem]">
-                        {{ profile.description || '暂无简介' }}
-                    </p>
-
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="flex flex-col text-center bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 flex-1">
-                            <span class="text-xs text-gray-500 dark:text-gray-400">包含订阅</span>
-                            <span class="text-lg font-bold text-gray-900 dark:text-white">{{ profile.subscriptionCount
-                                || 0 }}</span>
-                        </div>
-                        <div class="flex flex-col text-center bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 flex-1">
-                            <span class="text-xs text-gray-500 dark:text-gray-400">包含节点</span>
-                            <span class="text-lg font-bold text-gray-900 dark:text-white">{{ profile.manualNodeCount ||
-                                0 }}</span>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <button @click="handlePreview(profile)"
-                            class="flex items-center justify-center px-4 py-3 border border-indigo-200 dark:border-indigo-800 text-sm font-medium rounded-xl text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
-                            <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            预览节点
-                        </button>
-                        <button @click="copyLink(profile)"
-                            class="flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-lg shadow-indigo-500/30 transition-all active:scale-95">
-                            <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                            </svg>
-                            复制链接
-                        </button>
-                    </div>
-
-
-                    <p class="mt-4 text-center text-xs text-gray-400">
-                        点击右上角一键导入或查看二维码
-                    </p>
-
-                    <!-- QR Code Overlay -->
-                    <Transition name="qr-overlay">
-                        <div v-if="isQRExpanded(profile.id)" @click.self="toggleQRCode(profile)"
-                            class="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
-                            <div class="relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl max-w-sm mx-4 transform transition-all"
-                                @click.stop>
-                                <!-- Close Button -->
-                                <button @click="toggleQRCode(profile)"
-                                    class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-
-                                <div class="flex flex-col items-center pt-2">
-                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">{{ profile.name
-                                        }}</h4>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">扫描二维码导入订阅</p>
-
-                                    <div class="bg-white p-4 rounded-xl shadow-sm">
-                                        <canvas :ref="el => { if (el) qrCanvasRefs[profile.id] = el }"
-                                            class="max-w-full h-auto"></canvas>
-                                    </div>
-
-                                    <button @click="downloadQRCode(profile)"
-                                        class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-lg shadow-green-500/30">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                        下载二维码
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </Transition>
-                </div>
-            </div>
+            <ProfileGrid
+                v-else
+                :profiles="publicProfiles"
+                :is-qr-expanded="isQRExpanded"
+                @quick-import="handleQuickImport"
+                @toggle-qr="toggleQRCode"
+                @preview="handlePreview"
+                @copy-link="copyLink"
+                @download-qr="downloadQRCode"
+                @register-canvas="registerQrCanvas"
+            />
 
             <!-- Clients Section -->
             <div class="mt-20 mb-12">
@@ -510,37 +397,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* QR Code Overlay Animation */
-.qr-overlay-enter-active,
-.qr-overlay-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.qr-overlay-enter-active .bg-white,
-.qr-overlay-leave-active .bg-white,
-.qr-overlay-enter-active .dark\:bg-gray-800,
-.qr-overlay-leave-active .dark\:bg-gray-800 {
-    transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.qr-overlay-enter-from {
-    opacity: 0;
-}
-
-.qr-overlay-enter-from>div {
-    transform: scale(0.9);
-    opacity: 0;
-}
-
-.qr-overlay-leave-to {
-    opacity: 0;
-}
-
-.qr-overlay-leave-to>div {
-    transform: scale(0.9);
-    opacity: 0;
-}
-
 /* Custom Scrollbar for nicer feel */
 ::-webkit-scrollbar {
     width: 8px;

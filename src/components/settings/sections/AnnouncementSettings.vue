@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
+import DOMPurify from 'dompurify';
 
 const props = defineProps({
     settings: {
@@ -8,21 +9,37 @@ const props = defineProps({
     }
 });
 
-// 确保 announcement 对象存在
-const announcement = computed(() => {
+const defaultAnnouncement = {
+    enabled: false,
+    title: '',
+    content: '',
+    type: 'info', // info, warning, success
+    dismissible: true,
+    updatedAt: null
+};
+
+const ensureAnnouncement = () => {
     if (!props.settings.announcement) {
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-        props.settings.announcement = {
-            enabled: false,
-            title: '',
-            content: '',
-            type: 'info', // info, warning, success
-            dismissible: true,
-            updatedAt: null
-        };
+        props.settings.announcement = { ...defaultAnnouncement };
     }
-    return props.settings.announcement;
+};
+
+ensureAnnouncement();
+
+watch(() => props.settings.announcement, (val) => {
+    if (!val) ensureAnnouncement();
 });
+
+// 确保 announcement 对象存在
+const announcement = computed(() => props.settings.announcement || defaultAnnouncement);
+
+const allowedContentTags = ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li'];
+const allowedContentAttrs = ['href', 'target', 'rel'];
+
+const sanitizedContent = computed(() => DOMPurify.sanitize(announcement.value.content || '', {
+    ALLOWED_TAGS: allowedContentTags,
+    ALLOWED_ATTR: allowedContentAttrs
+}));
 
 const handleContentUpdate = () => {
     announcement.value.updatedAt = new Date().toISOString();
@@ -132,7 +149,7 @@ const handleContentUpdate = () => {
                                 {{ announcement.title }}
                             </h3>
                             <div class="text-sm text-gray-600 dark:text-gray-300 mt-1 prose prose-sm dark:prose-invert max-w-none"
-                                v-html="announcement.content"></div>
+                                v-html="sanitizedContent"></div>
                         </div>
                     </div>
                 </div>

@@ -1,0 +1,123 @@
+import { StorageFactory } from '../../storage-adapter.js';
+import { createJsonResponse } from '../utils.js';
+import { parseNodeInfo } from '../utils/geo-utils.js';
+import { calculateProtocolStats, calculateRegionStats } from '../utils/node-parser.js';
+import { applyNodeTransformPipeline } from '../../utils/node-transformer.js';
+import { KV_KEY_SUBS, KV_KEY_PROFILES } from '../config.js';
+import { fetchSubscriptionNodes } from './node-fetcher.js';
+
+/**
+ * 处理订阅组模式的节点获取
+ * @param {Object} request - HTTP请求对象
+ * @param {Object} env - Cloudflare环境对象
+ * @param {string} profileId - 订阅组ID
+ * @param {string} userAgent - 用户代理
+ * @param {boolean} applyTransform - 是否应用节点转换规则（智能重命名、前缀等）
+ * @returns {Promise<Object>} 处理结果
+ */
+export async function handleProfileMode(request, env, profileId, userAgent, applyTransform = false) {
+    const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
+
+    // 获取订阅组和所有数据
+    const allProfiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+    const allSubscriptions = await storageAdapter.get(KV_KEY_SUBS) || [];
+
+    // 查找匹配的订阅组
+    const profile = allProfiles.find(p => (p.customId && p.customId === profileId) || p.id === profileId);
+
+    if (!profile || !profile.enabled) {
+        return createJsonResponse({ error: '订阅组不存在或已禁用' }, 404);
+    }
+
+    const profileSubIds = new Set(profile.subscriptions || []);
+    const profileNodeIds = new Set(profile.manualNodes || []);
+
+    // 过滤属于当前订阅组且已启用的项目
+    const targetMisubs = allSubscriptions.filter(item => {
+        const isSubscription = item.url && item.url.startsWith('http');
+        const isManualNode = !isSubscription;
+
+        const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) ||
+            (isManualNode && profileNodeIds.has(item.id));
+
+        return item.enabled && belongsToProfile;
+    });
+
+    // 分离HTTP订阅和手工节点
+    const targetSubscriptions = targetMisubs.filter(item => item.url.startsWith('http'));
+    const targetManualNodes = targetMisubs.filter(item => !item.url.startsWith('http'));
+
+    // 处理手工节点（直接解析节点URL）
+    const manualNodeResults = targetManualNodes.map(node => {
+        const nodeInfo = parseNodeInfo(node.url);
+        return {
+            subscriptionName: node.name || '手工节点',
+            url: node.url,
+            success: true,
+            nodes: [{
+                ...nodeInfo,
+                subscriptionName: node.name || '手工节点'
+            }],
+            error: null,
+            isManualNode: true
+        };
+    });
+
+    // 并行获取HTTP订阅节点
+    const subscriptionResults = await Promise.all(
+        targetSubscriptions.map(sub => fetchSubscriptionNodes(sub.url, sub.name, userAgent, sub.customUserAgent, false, sub.exclude))
+    );
+
+    // 合并所有结果
+    const allResults = [...subscriptionResults, ...manualNodeResults];
+
+    // 统计所有节点
+    const allNodes = [];
+    allResults.forEach(result => {
+        if (result.success) {
+            allNodes.push(...result.nodes);
+        }
+    });
+
+    // 如果需要应用转换规则，则处理节点名称
+    let processedNodes = allNodes;
+    if (applyTransform && profile.nodeTransform?.enabled) {
+        // 提取节点 URL 列表
+        const nodeUrls = allNodes.map(node => node.url);
+
+        // 应用节点转换管道
+        const transformedUrls = applyNodeTransformPipeline(nodeUrls, {
+            ...profile.nodeTransform,
+            enableEmoji: profile.nodeTransform.rename?.template?.template?.includes('{emoji}') || false
+        });
+
+        // 更新节点名称
+        processedNodes = allNodes.map((node, index) => {
+            if (transformedUrls[index]) {
+                // 从转换后的 URL 中提取新的名称
+                const newNodeInfo = parseNodeInfo(transformedUrls[index]);
+                return {
+                    ...node,
+                    name: newNodeInfo.name,
+                    url: transformedUrls[index]
+                };
+            }
+            return node;
+        });
+    }
+
+    // 生成统计信息（使用处理后的节点）
+    const protocolStats = calculateProtocolStats(processedNodes);
+    const regionStats = calculateRegionStats(processedNodes);
+
+    return {
+        success: true,
+        subscriptions: allResults,
+        nodes: processedNodes,
+        totalCount: processedNodes.length,
+        stats: {
+            protocols: protocolStats,
+            regions: regionStats
+        }
+    };
+}

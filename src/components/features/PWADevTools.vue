@@ -10,7 +10,9 @@ const triggerInstallPrompt = () => {
   event.prompt = () => Promise.resolve();
   event.userChoice = Promise.resolve({ outcome: 'accepted' });
   window.dispatchEvent(event);
-  console.log('手动触发了beforeinstallprompt事件');
+  if (isDev.value) {
+    console.debug('手动触发了beforeinstallprompt事件');
+  }
 };
 
 // 检查PWA状态
@@ -23,7 +25,9 @@ const checkPWAStatus = () => {
     manifest: document.querySelector('link[rel="manifest"]') !== null
   };
   
-  console.table(status);
+  if (isDev.value) {
+    console.table(status);
+  }
   return status;
 };
 
@@ -33,7 +37,9 @@ const forceUpdate = async () => {
     const registration = await navigator.serviceWorker.getRegistration();
     if (registration) {
       registration.update();
-      console.log('强制检查Service Worker更新');
+      if (isDev.value) {
+        console.debug('强制检查Service Worker更新');
+      }
     }
   }
 };

@@ -103,6 +103,60 @@ export const REGION_EMOJI = {
     '其他': '🏁'
 };
 
+function normalizeBase64(input) {
+    let s = String(input || '').trim().replace(/\s+/g, '');
+    if (!s) return '';
+    if (s.includes('%')) {
+        try {
+            s = decodeURIComponent(s);
+        } catch {
+            // keep raw when decode fails
+        }
+    }
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return s;
+}
+
+function isLikelyBase64(input) {
+    const s = String(input || '').trim();
+    if (!s) return false;
+    if (!/^[A-Za-z0-9+/=_-]+$/.test(s)) return false;
+    return s.length >= 6;
+}
+
+function tryDecodeBase64(input) {
+    if (!isLikelyBase64(input)) return null;
+    try {
+        return atob(normalizeBase64(input));
+    } catch {
+        return null;
+    }
+}
+
+function parseHostPort(value) {
+    let segment = String(value || '');
+    if (!segment) return { server: '', port: '' };
+    const cut = segment.search(/[/?#]/);
+    if (cut !== -1) segment = segment.slice(0, cut);
+
+    if (segment.startsWith('[')) {
+        const closeBracket = segment.indexOf(']');
+        if (closeBracket !== -1) {
+            const server = segment.slice(1, closeBracket);
+            const after = segment.slice(closeBracket + 1);
+            const port = after.startsWith(':') ? after.slice(1).split('/')[0] : '';
+            return { server, port };
+        }
+    }
+
+    const parts = segment.split(':');
+    if (parts.length >= 2) {
+        return { server: parts[0], port: parts[1].split('/')[0] };
+    }
+    return { server: segment, port: '' };
+}
+
 /**
  * 从节点名称中识别地区
  * @param {string} nodeName - 节点名称
@@ -259,7 +313,7 @@ export function parseNodeInfo(nodeUrl) {
                         nodeName = config.ps;
                     }
                 } catch (e) {
-                    // console.error('VMess Base64 Decode Error:', e);
+                    console.debug('[GeoUtils] VMess base64 decode failed:', e);
                 }
             }
         } else if (protocol === 'ss') {
@@ -268,39 +322,26 @@ export function parseNodeInfo(nodeUrl) {
             let body = nodeUrl.substring(5); // remove ss://
             const hIndex = body.indexOf('#');
             if (hIndex !== -1) body = body.substring(0, hIndex);
+            const qIndex = body.indexOf('?');
+            if (qIndex !== -1) body = body.substring(0, qIndex);
 
-            // 检查是否有 @ 在明文部分 (非SIP002整体编码)
             const atLast = body.lastIndexOf('@');
-            if (atLast !== -1 && body.substring(0, atLast).includes(':') === false) {
-                // 可能是 ss://base64(method:pass)@host:port
-                // 但通常 base64 串也可能包含 / + =
-                const serverPart = body.substring(atLast + 1);
-                const hostPort = serverPart.split(':');
-                if (hostPort.length >= 2) {
-                    server = hostPort[0];
-                    port = hostPort[1].split('/')[0].split('?')[0];
-                }
+            let serverPart = '';
+            if (atLast !== -1) {
+                // 明文或 SIP002 (base64 userinfo)
+                serverPart = body.substring(atLast + 1);
             } else {
-                // 尝试整体解码 (SIP002)
-                try {
-                    // 处理 URL-safe Base64 字符
-                    let safeBody = body.replace(/-/g, '+').replace(/_/g, '/');
-                    // 补全 Padding
-                    while (safeBody.length % 4) {
-                        safeBody += '=';
-                    }
-                    const decoded = atob(safeBody); // user:pass@host:port
-                    const atIx = decoded.lastIndexOf('@');
-                    if (atIx !== -1) {
-                        const serverPart = decoded.substring(atIx + 1);
-                        const hostPort = serverPart.split(':');
-                        server = hostPort[0];
-                        port = hostPort[1].split('/')[0].split('?')[0];
-                    }
-                } catch (e) {
-                    // console.error('SS Base64 Decode Error:', e);
+                const decoded = tryDecodeBase64(body);
+                if (decoded && decoded.includes('@')) {
+                    serverPart = decoded.substring(decoded.lastIndexOf('@') + 1);
+                } else {
+                    serverPart = body;
                 }
             }
+
+            const parsed = parseHostPort(serverPart);
+            server = parsed.server;
+            port = parsed.port;
         } else {
             // 通用格式: protocol://user@host:port... 或 protocol://host:port...
             // vless, trojan, hysteria2, socks5, http 等

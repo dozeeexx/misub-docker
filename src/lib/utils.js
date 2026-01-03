@@ -1,6 +1,8 @@
 //
 // src/lib/utils.js
 //
+const isDev = import.meta.env.DEV;
+
 export function extractNodeName(url) {
     if (!url) return '';
     url = url.trim();
@@ -57,7 +59,9 @@ export function extractNodeName(url) {
                     const ssDecodedAtIndex = decodedSS.indexOf('@');
                     if (ssDecodedAtIndex !== -1) return decodedSS.substring(ssDecodedAtIndex + 1).split(':')[0] || '';
                 } catch (e) {
-                    // Base64解码失败时的回退处理
+                    if (isDev) {
+                        console.debug('[Utils] Failed to decode SS base64, using raw text:', e);
+                    }
                 }
                 return '';
             default:
@@ -134,7 +138,11 @@ export function extractHostAndPort(url) {
                 }
                 mainPart = atob(base64Part);
                 decoded = true;
-            } catch (e) { /* 解码失败则按原文处理 */ }
+            } catch (e) {
+                if (isDev) {
+                    console.debug('[Utils] Failed to decode base64 host segment, using raw text:', e);
+                }
+            }
         }
 
         // --- SSR 解码后专门处理 ---
@@ -267,17 +275,4 @@ export function getClientInfo(userAgent) {
     return { name: 'Other', className: 'bg-gray-50 text-gray-500 dark:bg-gray-800/50 dark:text-gray-500' };
 }
 
-/**
- * 格式化字节数为人类可读的格式
- * @param {number} bytes - 字节数
- * @param {number} decimals - 小数位数,默认为 2
- * @returns {string} 格式化后的字符串,如 "1.5 GB"
- */
-export function formatBytes(bytes, decimals = 2) {
-    if (!+bytes || bytes < 0) return '0 B';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
+export { formatBytes } from '../shared/utils.js';

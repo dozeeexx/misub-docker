@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { fetchInitialData, login as apiLogin, fetchPublicConfig } from '../lib/api';
+import { api } from '../lib/http.js';
 import { useDataStore } from './useDataStore';
 import router from '../router';
 
@@ -11,58 +12,48 @@ export const useSessionStore = defineStore('session', () => {
   const publicConfig = ref({ enablePublicPage: true }); // Default true until fetched
 
   async function checkSession() {
-    try {
-      // Parallel fetch of initial data (auth check) and public config
-      // Note: fetchInitialData throws if unauthorized, fetchPublicConfig does not.
-      const [data, pConfig] = await Promise.all([
-        fetchInitialData().catch(e => {
-          if (e.message === 'UNAUTHORIZED') return null;
-          throw e;
-        }),
-        fetchInitialData.name ? fetchPublicConfig() : Promise.resolve({}) // Ensure api function is available
-      ]);
+    // Parallel fetch of initial data (auth check) and public config
+    const [dataResult, pConfigResult] = await Promise.all([
+      fetchInitialData(),
+      fetchPublicConfig()
+    ]);
 
-      // Update public config
-      if (pConfig) {
-        publicConfig.value = pConfig;
-      }
+    // Update public config
+    if (pConfigResult.success) {
+      publicConfig.value = pConfigResult.data;
+    } else {
+      // Fallback to default if fetch fails
+      publicConfig.value = { enablePublicPage: false };
+    }
 
-      if (data) {
-        initialData.value = data;
+    if (dataResult.success) {
+      initialData.value = dataResult.data;
 
-        // 直接注入数据到 dataStore，避免 Dashboard 重复请求
-        const dataStore = useDataStore();
-        dataStore.hydrateFromData(data);
+      // 直接注入数据到 dataStore，避免 Dashboard 重复请求
+      const dataStore = useDataStore();
+      dataStore.hydrateFromData(dataResult.data);
 
-        sessionState.value = 'loggedIn';
+      sessionState.value = 'loggedIn';
+    } else {
+      // Auth failed or other error
+      if (dataResult.errorType === 'auth') {
+        sessionState.value = 'loggedOut';
       } else {
+        // Network or other error, still show logged out
+        console.error("Session check failed:", dataResult.error);
         sessionState.value = 'loggedOut';
       }
-    } catch (error) {
-      console.error("Session check failed:", error);
-      // Attempt to fetch public config separately if main data fetch failed critically
-      try {
-        const pConfig = await fetchPublicConfig();
-        if (pConfig) publicConfig.value = pConfig;
-      } catch (ignore) { }
-
-      sessionState.value = 'loggedOut';
     }
   }
 
   async function login(password) {
-    try {
-      const response = await apiLogin(password);
-      if (response.ok) {
-        handleLoginSuccess();
-        // 登录成功后跳转到首页 (HomeView will show Dashboard)
-        router.push({ path: '/' });
-      } else {
-        const errData = await response.json();
-        throw new Error(errData.error || '登录失败');
-      }
-    } catch (e) {
-      throw e;
+    const result = await apiLogin(password);
+    if (result.success) {
+      handleLoginSuccess();
+      // 登录成功后跳转到首页 (HomeView will show Dashboard)
+      router.push({ path: '/' });
+    } else {
+      throw new Error(result.error || '登录失败');
     }
   }
 
@@ -72,7 +63,11 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   async function logout() {
-    await fetch('/api/logout');
+    try {
+      await api.get('/api/logout');
+    } catch (error) {
+      console.warn('Logout request failed:', error);
+    }
     sessionState.value = 'loggedOut';
     initialData.value = null;
 

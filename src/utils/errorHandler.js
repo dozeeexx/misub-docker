@@ -3,6 +3,35 @@
  * @author MiSub Team
  */
 
+let toastHandler = null;
+let monitoringEndpoint = null;
+let monitoringHeaders = null;
+
+function resolveMonitoringEndpoint() {
+  if (typeof window !== 'undefined' && window.__MISUB_ERROR_REPORT_URL__) {
+    return window.__MISUB_ERROR_REPORT_URL__;
+  }
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env.VITE_ERROR_REPORT_URL || null;
+  }
+  return null;
+}
+
+monitoringEndpoint = resolveMonitoringEndpoint();
+
+export function setToastHandler(handler) {
+  toastHandler = typeof handler === 'function' ? handler : null;
+}
+
+export function configureErrorMonitoring({ endpoint, headers } = {}) {
+  if (endpoint !== undefined) {
+    monitoringEndpoint = endpoint || null;
+  }
+  if (headers !== undefined) {
+    monitoringHeaders = headers || null;
+  }
+}
+
 class ErrorHandler {
   constructor() {
     this.errorCounts = new Map();
@@ -126,16 +155,17 @@ class ErrorHandler {
    */
   showUserNotification(errorInfo) {
     // 只有在浏览器环境中且存在toast函数时才显示
-    if (typeof window !== 'undefined' && window.showToast) {
-      let message = this.getUserFriendlyMessage(errorInfo);
+    const handler = toastHandler || (typeof window !== 'undefined' ? window.showToast : null);
+    if (!handler) return;
 
-      // 如果是重复错误，添加重复次数信息
-      if (errorInfo.count > 1) {
-        message += ` (已发生${errorInfo.count}次)`;
-      }
+    let message = this.getUserFriendlyMessage(errorInfo);
 
-      window.showToast(message, 'error', 5000);
+    // 如果是重复错误，添加重复次数信息
+    if (errorInfo.count > 1) {
+      message += ` (已发生${errorInfo.count}次)`;
     }
+
+    handler(message, 'error', 5000);
   }
 
   /**
@@ -170,9 +200,29 @@ class ErrorHandler {
    */
   async sendToMonitoringService(errorInfo) {
     try {
-      // TODO: 实现错误监控服务集成
-      // 例如：Sentry, LogRocket, 或自建监控服务
+      const endpoint = monitoringEndpoint || resolveMonitoringEndpoint();
+      if (!endpoint) return;
 
+      const payload = {
+        ...errorInfo,
+        url: typeof window !== 'undefined' ? window.location.href : '',
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        timestamp: errorInfo.timestamp || new Date().toISOString()
+      };
+      const body = JSON.stringify(payload);
+
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+        const blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon(endpoint, blob);
+        return;
+      }
+
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(monitoringHeaders || {}) },
+        body,
+        keepalive: true
+      });
     } catch (e) {
       // 监控服务本身失败，避免无限递归
       console.warn('[Error Monitoring Failed]', e);

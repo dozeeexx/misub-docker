@@ -6,7 +6,6 @@
  * - utils.js: 工具函数
  * - auth-middleware.js: 认证中间件
  * - notifications.js: 通知功能
- * - subscription.js: 订阅处理
  * - subscription-handler.js: 订阅请求处理
  * - api-handler.js: API处理
  * - api-router.js: API路由
@@ -22,6 +21,19 @@
 import { handleMisubRequest } from './modules/subscription-handler.js';
 import { handleApiRequest } from './modules/api-router.js';
 import { createJsonResponse } from './modules/utils.js';
+import { corsMiddleware, securityHeadersMiddleware } from './middleware/cors.js';
+
+function parseCorsOrigins(env, requestUrl) {
+    const configured = (env?.CORS_ORIGINS || '')
+        .split(',')
+        .map(origin => origin.trim())
+        .filter(Boolean);
+    const origins = configured.length ? configured : [requestUrl.origin];
+    if (['localhost', '127.0.0.1'].includes(requestUrl.hostname)) {
+        origins.push('http://localhost:5173', 'http://127.0.0.1:5173');
+    }
+    return Array.from(new Set(origins));
+}
 
 /**
  * 主要的请求处理函数
@@ -33,112 +45,120 @@ export async function onRequest(context) {
     const url = new URL(request.url);
 
     try {
-        // 路由分发
-        if (url.pathname.startsWith('/api/')) {
-            // API 路由
-            return await handleApiRequest(request, env);
-        } else if (url.pathname.startsWith('/sub/')) {
-            // MiSub 订阅路由
-            return await handleMisubRequest(context);
-        } else if (url.pathname === '/cron') {
-            // 定时任务路由 (需要认证)
-            // 支持两种认证方式：Header 或 URL 参数
-            const cronAuthHeader = request.headers.get('Authorization');
-            const cronSecretParam = url.searchParams.get('secret');
-            const isAuthorized =
-                cronAuthHeader === `Bearer ${env.CRON_SECRET}` ||
-                cronSecretParam === env.CRON_SECRET;
-
-            if (!isAuthorized) {
-                return createJsonResponse({ error: 'Unauthorized' }, 401);
-            }
-
-            const { handleCronTrigger } = await import('./modules/notifications.js');
-            return await handleCronTrigger(env);
-        } else {
-            // 静态文件处理
-            const isStaticAsset = /^\/(assets|@vite|src)\/./.test(url.pathname) || /\.\w+$/.test(url.pathname);
-
-
-            // SPA 路由白名单：这些请求应该交由前端路由处理，而不是作为订阅请求
-            // [修复] 增加更多可能的SPA路由，防止被误判为订阅请求
-            const isSpaRoute = [
-                '/groups',
-                '/nodes',
-                '/subscriptions',
-                '/settings',
-                '/login',
-                '/dashboard',
-                '/profile',
-                '/explore' // [新增] 公开页面
-            ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
-
-
-            if (!isStaticAsset && !isSpaRoute && url.pathname !== '/') {
-                // 如果是浏览器请求且看起来像是一个页面访问，优先尝试返回 SPA
-                // fix: 解决经典模式下可能的路由冲突
-                const acceptHeader = request.headers.get('Accept') || '';
-                if (acceptHeader.includes('text/html')) {
-                    // 既然它不是静态资源，也不是已知的SPA路由，但请求的是HTML
-                    // 我们可以选择:
-                    // 1. 仍然尝试作为订阅处理 (如果用户在浏览器直接访问 shortlink)
-                    // 2. 返回 next() 让前端处理 404
-
-                    // 这里保持现有逻辑，但添加注释备忘。
-                    // 既然目前通过 ui.js 强制跳转回 / 解决了经典模式的问题，
-                    // 这里我们可以保留对短链接的支持。
-                    // return next(); 
-                }
+        const handleRequest = async () => {
+            // 路由分发
+            if (url.pathname.startsWith('/api/')) {
+                // API 路由
+                return await handleApiRequest(request, env);
+            } else if (url.pathname.startsWith('/sub/')) {
+                // MiSub 订阅路由
                 return await handleMisubRequest(context);
-            }
+            } else if (url.pathname === '/cron') {
+                // 定时任务路由 (需要认证)
+                // 支持两种认证方式：Header 或 URL 参数
+                const cronAuthHeader = request.headers.get('Authorization');
+                const cronSecretParam = url.searchParams.get('secret');
+                const isAuthorized =
+                    cronAuthHeader === `Bearer ${env.CRON_SECRET}` ||
+                    cronSecretParam === env.CRON_SECRET;
 
-            // Route protection for SPA pages
-            // If accessing a protected route without auth, redirect to login
-            // [Fix] Exclude /explore from auth check
-            // [Fix] Skip auth check on localhost to avoid port 8787/5173 sync issues during dev
-            const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
-            if (isSpaRoute && url.pathname !== '/login' && !url.pathname.startsWith('/explore') && !isLocalhost) {
-                const { authMiddleware } = await import('./modules/auth-middleware.js');
-                const isAuthenticated = await authMiddleware(request, env);
-                if (!isAuthenticated) {
-                    // Redirect to login page
-                    return new Response(null, {
+                if (!isAuthorized) {
+                    return createJsonResponse({ error: 'Unauthorized' }, 401);
+                }
+
+                const { handleCronTrigger } = await import('./modules/notifications.js');
+                return await handleCronTrigger(env);
+            } else {
+                // 静态文件处理
+                const isStaticAsset = /^\/(assets|@vite|src)\/./.test(url.pathname) || /\.\w+$/.test(url.pathname);
+
+
+                // SPA 路由白名单：这些请求应该交由前端路由处理，而不是作为订阅请求
+                // [修复] 增加更多可能的SPA路由，防止被误判为订阅请求
+                const isSpaRoute = [
+                    '/groups',
+                    '/nodes',
+                    '/subscriptions',
+                    '/settings',
+                    '/login',
+                    '/dashboard',
+                    '/profile',
+                    '/explore' // [新增] 公开页面
+                ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
+
+
+                if (!isStaticAsset && !isSpaRoute && url.pathname !== '/') {
+                    // 如果是浏览器请求且看起来像是一个页面访问，优先尝试返回 SPA
+                    // fix: 解决经典模式下可能的路由冲突
+                    const acceptHeader = request.headers.get('Accept') || '';
+                    if (acceptHeader.includes('text/html')) {
+                        // 既然它不是静态资源，也不是已知的SPA路由，但请求的是HTML
+                        // 我们可以选择:
+                        // 1. 仍然尝试作为订阅处理 (如果用户在浏览器直接访问 shortlink)
+                        // 2. 返回 next() 让前端处理 404
+
+                        // 这里保持现有逻辑，但添加注释备忘。
+                        // 既然目前通过 ui.js 强制跳转回 / 解决了经典模式的问题，
+                        // 这里我们可以保留对短链接的支持。
+                        // return next(); 
+                    }
+                    return await handleMisubRequest(context);
+                }
+
+                // Route protection for SPA pages
+                // If accessing a protected route without auth, redirect to login
+                // [Fix] Exclude /explore from auth check
+                // [Fix] Skip auth check on localhost to avoid port 8787/5173 sync issues during dev
+                const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
+                if (isSpaRoute && url.pathname !== '/login' && !url.pathname.startsWith('/explore') && !isLocalhost) {
+                    const { authMiddleware } = await import('./modules/auth-middleware.js');
+                    const isAuthenticated = await authMiddleware(request, env);
+                    if (!isAuthenticated) {
+                        // Redirect to login page
+                        return new Response(null, {
+                            status: 302,
+                            headers: { Location: '/login' }
+                        });
+                    }
+                }
+
+                // Continue to static assets or root
+                let response = await next();
+
+                // [Fix] SPA Fallback: If asset not found (404) and it's an SPA route OR it's an HTML request, serve index.html
+                const acceptHeader = request.headers.get('Accept') || '';
+                const isHtmlRequest = acceptHeader.includes('text/html');
+
+                if (response.status === 404 && (isSpaRoute || isHtmlRequest)) {
+                    // Clone the request to fetch index.html
+                    const indexUrl = new URL('/', request.url);
+                    const indexResponse = await env.ASSETS.fetch(new Request(indexUrl, request));
+
+                    // If index.html exists (e.g. in production or after build), return it
+                    if (indexResponse.status === 200) {
+                        return indexResponse;
+                    }
+
+                    // If index.html is missing (likely local dev serving 'public' dir), redirect to Vite dev server
+                    // This assumes standard Vite port 5173.
+                    return new Response(`Redirecting to frontend dev server...`, {
                         status: 302,
-                        headers: { Location: '/login' }
+                        headers: {
+                            'Location': `http://localhost:5173${url.pathname}${url.search}`,
+                            'Content-Type': 'text/plain'
+                        }
                     });
                 }
+
+                return response;
             }
+        };
 
-            // Continue to static assets or root
-            let response = await next();
-
-            // [Fix] SPA Fallback: If asset not found (404) and it's an SPA route OR it's an HTML request, serve index.html
-            const acceptHeader = request.headers.get('Accept') || '';
-            const isHtmlRequest = acceptHeader.includes('text/html');
-
-            if (response.status === 404 && (isSpaRoute || isHtmlRequest)) {
-                // Clone the request to fetch index.html
-                const indexUrl = new URL('/', request.url);
-                const indexResponse = await env.ASSETS.fetch(new Request(indexUrl, request));
-
-                // If index.html exists (e.g. in production or after build), return it
-                if (indexResponse.status === 200) {
-                    return indexResponse;
-                }
-
-                // If index.html is missing (likely local dev serving 'public' dir), redirect to Vite dev server
-                // This assumes standard Vite port 5173.
-                return new Response(`Redirecting to frontend dev server...`, {
-                    status: 302,
-                    headers: {
-                        'Location': `http://localhost:5173${url.pathname}${url.search}`,
-                        'Content-Type': 'text/plain'
-                    }
-                });
-            }
-
-            return response;
-        }
+        const corsOptions = {
+            origins: parseCorsOrigins(env, url),
+            allowCredentials: true
+        };
+        return corsMiddleware(request, () => securityHeadersMiddleware(request, handleRequest), corsOptions);
     } catch (error) {
         // 全局错误处理
         console.error('[Main Handler Error]', error);

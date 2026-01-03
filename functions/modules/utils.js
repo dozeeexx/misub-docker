@@ -60,21 +60,7 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
     }
 }
 
-/**
- * 格式化字节数为人类可读的格式
- * @param {number} bytes - 字节数
- * @param {number} decimals - 小数位数
- * @returns {string} 格式化后的字符串
- */
-export function formatBytes(bytes, decimals = 2) {
-    if (!+bytes || bytes < 0) return '0 B';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    if (i < 0) return '0 B';
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
+export { formatBytes } from '../../src/shared/utils.js';
 
 /**
  * 检测字符串是否为有效的Base64格式
@@ -289,7 +275,7 @@ export function log(level, message, data = null) {
             console.error(`[${timestamp}] ${message}`, data);
             break;
         default:
-            console.log(`[${timestamp}] ${message}`, data);
+            console.info(`[${timestamp}] ${message}`, data);
     }
 
     return logEntry;

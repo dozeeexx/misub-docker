@@ -95,7 +95,7 @@ export async function handleNodeCountRequest(request, env) {
                     if (!result.userInfo) {
                         const info = extractUserInfo(responses[1].value);
                         if (info) {
-                            console.log('[NodeHandler] Successfully extracted traffic info from node response (Fallback).');
+                            console.info('[NodeHandler] Successfully extracted traffic info from node response (Fallback).');
                             result.userInfo = info;
                             // 标记为成功，避免因为 specialized request 失败而报错
                             trafficRequestSucceeded = true;
@@ -120,34 +120,28 @@ export async function handleNodeCountRequest(request, env) {
                         }
                         const base64Regex = /^[A-Za-z0-9+\/=]+$/;
                         if (base64Regex.test(normalized) && normalized.length >= 20) {
-                            // console.log(`[DEBUG] Node count API: Base64 content detected, decoding...`);
                             const binaryString = atob(normalized);
                             const bytes = new Uint8Array(binaryString.length);
                             for (let i = 0; i < binaryString.length; i++) {
                                 bytes[i] = binaryString.charCodeAt(i);
                             }
                             const processedText = new TextDecoder('utf-8').decode(bytes);
-                            // console.log(`[DEBUG] Node count API: Decoded text length: ${processedText.length}`);
                             const lineMatches = processedText.match(NODE_PROTOCOL_GLOBAL_REGEX);
-                            // console.log(`[DEBUG] Node count API: Regex matches in decoded text: ${lineMatches ? lineMatches.length : 0}`);
                             if (lineMatches) {
                                 result.count = lineMatches.length;
                                 nodeCountRequestSucceeded = true;
                             }
                         } else {
-                            // console.log(`[DEBUG] Node count API: Using raw text regex match`);
                             const lineMatches = text.match(NODE_PROTOCOL_GLOBAL_REGEX);
-                            // console.log(`[DEBUG] Node count API: Regex matches in raw text: ${lineMatches ? lineMatches.length : 0}`);
                             if (lineMatches) {
                                 result.count = lineMatches.length;
                                 nodeCountRequestSucceeded = true;
                             }
                         }
-                    } catch {
+                    } catch (error) {
                         // 最后降级到原始文本统计
-                        // console.log(`[DEBUG] Node count API: Final fallback to raw text regex`);
+                        console.debug('[NodeHandler] Failed to decode node count response, falling back to raw text:', error);
                         const lineMatches = text.match(NODE_PROTOCOL_GLOBAL_REGEX);
-                        // console.log(`[DEBUG] Node count API: Final regex matches: ${lineMatches ? lineMatches.length : 0}`);
                         if (lineMatches) {
                             result.count = lineMatches.length;
                             nodeCountRequestSucceeded = true;
@@ -357,7 +351,7 @@ export async function handleCleanNodesRequest(request, env) {
 
         if (profileId) {
             // 清理指定订阅组的节点
-            const { handleSubscriptionNodesRequest } = await import('./subscription-handler.js');
+            const { handleSubscriptionNodesRequest } = await import('../subscription-handler.js');
             const previewResult = await handleSubscriptionNodesRequest(request, env);
 
             if (!previewResult.success) {

@@ -16,7 +16,7 @@ import LoadingSpinner from './LoadingSpinner.vue';
 import EmptyState from './EmptyState.vue';
 
 // Composables
-import { useNodePreview } from '../composables/useNodePreview.js';
+import { useNodePreview } from '@/composables/useNodePreview.js';
 
 const props = defineProps({
   show: Boolean,

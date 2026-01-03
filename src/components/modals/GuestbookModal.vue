@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue';
+import { api } from '../../lib/http.js';
 
 const props = defineProps({
     show: {
@@ -82,16 +83,11 @@ const submitMessage = async () => {
 
     submitting.value = true;
     try {
-        const res = await fetch('/api/public/guestbook', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                nickname: form.value.nickname,
-                content: form.value.content,
-                type: form.value.type
-            })
+        const data = await api.post('/api/public/guestbook', {
+            nickname: form.value.nickname,
+            content: form.value.content,
+            type: form.value.type
         });
-        const data = await res.json();
 
         if (data.success) {
             showSuccess.value = true;

@@ -46,21 +46,26 @@ export function useSettingsLogic() {
     const loadSettings = async () => {
         isLoading.value = true;
         try {
-            settings.value = await fetchSettings();
+            const result = await fetchSettings();
+            if (result.success) {
+                settings.value = result.data;
 
-            // 初始化前缀配置
-            // 初始化伪装配置
-            if (settings.value.disguise) {
-                disguiseConfig.value = {
-                    enabled: settings.value.disguise.enabled ?? false,
-                    pageType: settings.value.disguise.pageType ?? 'default',
-                    redirectUrl: settings.value.disguise.redirectUrl ?? ''
-                };
-            }
+                // 初始化前缀配置
+                // 初始化伪装配置
+                if (settings.value.disguise) {
+                    disguiseConfig.value = {
+                        enabled: settings.value.disguise.enabled ?? false,
+                        pageType: settings.value.disguise.pageType ?? 'default',
+                        redirectUrl: settings.value.disguise.redirectUrl ?? ''
+                    };
+                }
 
-            // 确保 storageType 有默认值
-            if (!settings.value.storageType) {
-                settings.value.storageType = 'kv';
+                // 确保 storageType 有默认值
+                if (!settings.value.storageType) {
+                    settings.value.storageType = 'kv';
+                }
+            } else {
+                showToast(`加载设置失败: ${result.error}`, 'error');
             }
         } catch (error) {
             showToast('加载设置失败', 'error');
@@ -100,7 +105,7 @@ export function useSettingsLogic() {
                 showToast('设置已保存，页面将自动刷新...', 'success');
                 setTimeout(() => window.location.reload(), 1500);
             } else {
-                throw new Error(result.message || '保存失败');
+                throw new Error(result.error || '保存失败');
             }
         } catch (error) {
             showToast(error.message, 'error');

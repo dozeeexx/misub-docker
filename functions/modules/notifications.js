@@ -76,7 +76,7 @@ export async function sendEnhancedTgNotification(settings, type, clientIp, addit
             }
         }
     } catch (error) {
-        // 获取IP位置信息失败，忽略错误
+        console.debug('[Notifications] Failed to fetch IP geolocation:', error);
     }
 
     // 构建完整消息
@@ -188,7 +188,7 @@ export async function handleCronTrigger(env) {
     let failedCount = 0;
     const failedSubscriptions = [];
 
-    console.log(`[Cron] Starting update for ${allSubs.length} subscriptions`);
+    console.info(`[Cron] Starting update for ${allSubs.length} subscriptions`);
 
     for (const sub of allSubs) {
         if (sub.url.startsWith('http') && sub.enabled) {
@@ -248,7 +248,7 @@ export async function handleCronTrigger(env) {
                 if (hasTrafficUpdate || hasNodeCountUpdate) {
                     updatedCount++;
                     changesMade = true;
-                    console.log(`[Cron] Updated ${sub.name}: traffic=${hasTrafficUpdate}, nodes=${hasNodeCountUpdate}`);
+                    console.info(`[Cron] Updated ${sub.name}: traffic=${hasTrafficUpdate}, nodes=${hasNodeCountUpdate}`);
                 }
 
             } catch (e) {
@@ -269,7 +269,7 @@ export async function handleCronTrigger(env) {
     if (changesMade) {
         try {
             await storageAdapter.put(KV_KEY_SUBS, allSubs);
-            console.log(`[Cron] Successfully saved updated subscriptions`);
+            console.info(`[Cron] Successfully saved updated subscriptions`);
         } catch (saveError) {
             console.error(`[Cron] Failed to save subscriptions:`, saveError);
             return new Response(JSON.stringify({
@@ -300,7 +300,7 @@ export async function handleCronTrigger(env) {
         }
     };
 
-    console.log(`[Cron] Completed:`, summary.summary);
+    console.info(`[Cron] Completed:`, summary.summary);
 
     return new Response(JSON.stringify(summary), {
         status: 200,
