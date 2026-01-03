@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import { extractNodeName } from '../lib/utils.js';
+import { generateNodeId } from '../utils/id.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -13,7 +14,7 @@ export function useNodeForms({ addNode, updateNode }) {
     const openAdd = () => {
         isNew.value = true;
         editingNode.value = {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: '',
             url: '',
             enabled: true,

@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import { extractNodeName } from '../lib/utils.js';
+import { generateNodeId, generateSubscriptionId } from '../utils/id.js';
 
 export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk }) {
     const { showToast } = useToastStore();
@@ -14,8 +15,7 @@ export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk 
         const validNodes = [];
 
         lines.forEach(line => {
-            const newItem = {
-                id: crypto.randomUUID(),
+            const baseItem = {
                 name: extractNodeName(line) || '未命名',
                 url: line,
                 enabled: true,
@@ -28,9 +28,9 @@ export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk 
             };
 
             if (/^https?:\/\//.test(line)) {
-                validSubs.push(newItem);
+                validSubs.push({ ...baseItem, id: generateSubscriptionId() });
             } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//.test(line)) {
-                validNodes.push(newItem);
+                validNodes.push({ ...baseItem, id: generateNodeId() });
             }
         });
 

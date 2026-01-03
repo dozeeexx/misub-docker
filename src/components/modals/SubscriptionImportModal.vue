@@ -6,6 +6,7 @@ import yaml from 'js-yaml';
 import { extractNodeName } from '../../lib/utils.js';
 import { convertClashProxyToUrl, batchConvertClashProxies, validateGeneratedUrl, parseSurgeConfig, parseQuantumultXConfig } from '../../utils/protocolConverter.js';
 import { handleError } from '../../utils/errorHandler.js';
+import { generateNodeId } from '../../utils/id.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -121,7 +122,7 @@ const parseSingleUrl = (url) => {
   }
 
   return {
-    id: crypto.randomUUID(),
+    id: generateNodeId(),
     name: extractNodeName(fixedUrl) || `${protocol.toUpperCase()}节点`,
     url: fixedUrl,
     enabled: true,
@@ -197,7 +198,7 @@ const parseYamlConfig = (content) => {
       }
 
       const node = {
-        id: crypto.randomUUID(),
+        id: generateNodeId(),
         name: proxy.name || 'Unknown',
         url: proxy.url,
         enabled: true,
@@ -472,7 +473,7 @@ const importSubscription = async () => {
     if (backendNodes.length > 0) {
       // 转换为前端格式
       const nodes = backendNodes.map(node => ({
-        id: crypto.randomUUID(),
+        id: generateNodeId(),
         name: node.name || 'Unknown',
         url: node.url,
         enabled: true,

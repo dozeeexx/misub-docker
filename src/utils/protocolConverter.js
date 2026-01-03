@@ -1,3 +1,5 @@
+import { generateNodeId } from './id.js';
+
 /**
  * 订阅节点转换工具
  * 支持多种配置格式转换为标准节点URL
@@ -592,7 +594,7 @@ function parseSurgeVmess(line) {
         const url = `vmess://${base64Encode(JSON.stringify(vmessConfig))}`;
 
         return {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: name,
             url: url,
             enabled: true,
@@ -620,7 +622,7 @@ function parseSurgeSS(line) {
 
         const userinfo = base64Encode(`${method}:${password}`);
         return {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: name.trim().replace(/"/g, ''),
             url: `ss://${userinfo}@${server}:${port}#${encodeURIComponent(name.trim().replace(/"/g, ''))}`,
             enabled: true,
@@ -646,7 +648,7 @@ function parseSurgeTrojan(line) {
         if (!name || !server || !port || !password) return null;
 
         return {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: name.trim().replace(/"/g, ''),
             url: `trojan://${encodeURIComponent(password)}@${server}:${port}#${encodeURIComponent(name.trim().replace(/"/g, ''))}`,
             enabled: true,
@@ -675,7 +677,7 @@ function parseSurgeHTTP(line) {
         const protocol = isHTTPS ? 'https' : 'http';
 
         return {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: name.trim().replace(/"/g, ''),
             url: `${protocol}://${server}:${port}#${encodeURIComponent(name.trim().replace(/"/g, ''))}`,
             enabled: true,
@@ -765,7 +767,7 @@ function parseQuantumultXVmess(line) {
         });
 
         return {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: vmessConfig.ps,
             url: `vmess://${base64Encode(JSON.stringify(vmessConfig))}`,
             enabled: true,
@@ -797,7 +799,7 @@ function parseQuantumultXSS(line) {
         const userinfo = base64Encode(`${method.trim()}:${password.trim()}`);
 
         return {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: name.trim().replace(/"/g, ''),
             url: `ss://${userinfo}@${server.trim()}:${port.trim()}#${encodeURIComponent(name.trim().replace(/"/g, ''))}`,
             enabled: true,
@@ -827,7 +829,7 @@ function parseQuantumultXTrojan(line) {
         if (!name || !server || !port || !password) return null;
 
         return {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: name.trim().replace(/"/g, ''),
             url: `trojan://${encodeURIComponent(password.trim())}@${server.trim()}:${port.trim()}#${encodeURIComponent(name.trim().replace(/"/g, ''))}`,
             enabled: true,
@@ -862,7 +864,7 @@ function parseQuantumultXHTTP(line) {
         }
 
         return {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: name.trim().replace(/"/g, ''),
             url: `http://${userinfo}${server.trim()}:${port.trim()}#${encodeURIComponent(name.trim().replace(/"/g, ''))}`,
             enabled: true,
@@ -1045,7 +1047,7 @@ function parseSurgeSnell(line) {
         const url = `snell://${encodeURIComponent(proxy.psk)}@${proxy.server}:${proxy.port}${query}#${encodeURIComponent(name)}`;
 
         return {
-            id: crypto.randomUUID(),
+            id: generateNodeId(),
             name: name,
             url: url,
             enabled: true,

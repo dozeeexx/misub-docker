@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useDataStore } from '../stores/useDataStore';
 import { useToastStore } from '../stores/toast';
+import { generateProfileId } from '../utils/id.js';
 
 export function useProfiles(markDirty) {
   const { showToast } = useToastStore();
@@ -69,7 +70,7 @@ export function useProfiles(markDirty) {
       }
     }
     if (isNewProfile.value) {
-      dataStore.addProfile({ ...profileData, id: crypto.randomUUID() });
+      dataStore.addProfile({ ...profileData, id: generateProfileId() });
     } else {
       const index = profiles.value.findIndex(p => p.id === profileData.id);
       if (index !== -1) {

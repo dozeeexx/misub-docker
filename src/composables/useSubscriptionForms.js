@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
+import { generateSubscriptionId } from '../utils/id.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -54,7 +55,7 @@ export function useSubscriptionForms({ addSubscription, updateSubscription }) {
         }
 
         if (isNew.value) {
-            addSubscription({ ...editingSubscription.value, id: crypto.randomUUID() });
+            addSubscription({ ...editingSubscription.value, id: generateSubscriptionId() });
         } else {
             updateSubscription(editingSubscription.value);
         }
