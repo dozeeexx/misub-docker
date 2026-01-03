@@ -184,11 +184,11 @@ const customKeywordModel = computed({
           <!-- 自定义关键字输入 -->
           <div>
             <div class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">✏️ 自定义关键字</div>
-            <div class="flex gap-2">
+            <div class="flex flex-col sm:flex-row gap-2">
               <input type="text" v-model="customKeywordModel" @keyup.enter="addCustomKeyword" placeholder="输入关键字，回车添加"
-                class="flex-1 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 dark:text-white">
+                class="w-full sm:flex-1 min-w-0 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 dark:text-white">
               <button @click="addCustomKeyword"
-                class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors !min-h-0 !min-w-0">
+                class="w-full sm:w-auto flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors !min-h-0 !min-w-0">
                 添加
               </button>
             </div>

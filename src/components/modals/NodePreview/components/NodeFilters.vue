@@ -97,7 +97,7 @@ const isProcessedToggleVisible = computed(() => {
           v-if="isProcessedToggleVisible"
           @click="emit('update:showProcessed', !showProcessed)"
           :class="showProcessed ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600'"
-          class="lg:hidden flex-shrink-0 w-9 border rounded-lg hover:opacity-90 transition-colors flex items-center justify-center"
+          class="lg:hidden flex-shrink-0 w-8 h-8 border rounded-lg hover:opacity-90 transition-colors flex items-center justify-center !min-h-0 !min-w-0"
           title="切换显示原始/处理后节点名称"
         >
           <!-- 原材料 Icon -->
