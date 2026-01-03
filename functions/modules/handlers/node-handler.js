@@ -357,7 +357,7 @@ export async function handleCleanNodesRequest(request, env) {
 
         if (profileId) {
             // 清理指定订阅组的节点
-            const { handleSubscriptionNodesRequest } = await import('./subscription-handler.js');
+            const { handleSubscriptionNodesRequest } = await import('../subscription-handler.js');
             const previewResult = await handleSubscriptionNodesRequest(request, env);
 
             if (!previewResult.success) {

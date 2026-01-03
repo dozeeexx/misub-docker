@@ -5,7 +5,7 @@
 
 import { StorageFactory } from '../../storage-adapter.js';
 import { createJsonResponse, createErrorResponse } from '../utils.js';
-import { handleSubscriptionNodesRequest } from './subscription-handler.js';
+import { handleSubscriptionNodesRequest } from '../subscription-handler.js';
 import { parseNodeList, calculateProtocolStats, calculateRegionStats } from '../utils/node-parser.js';
 
 /**

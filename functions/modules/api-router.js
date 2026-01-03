@@ -11,7 +11,7 @@ import { handleCronTrigger } from './notifications.js';
 import {
     handleSubscriptionNodesRequest,
     handlePublicPreviewRequest
-} from './handlers/subscription-handler.js';
+} from './subscription-handler.js';
 import {
     handleDebugSubscriptionRequest,
     handleSystemInfoRequest,
