@@ -503,9 +503,6 @@ export async function handleMisubRequest(context) {
         combinedNodeList = cachedData.nodes;
         cacheHeaders = createCacheHeaders('HIT', cachedData.nodeCount);
 
-        combinedNodeList = cachedData.nodes;
-        cacheHeaders = createCacheHeaders('HIT', cachedData.nodeCount);
-
         // [Stats Export] Populate generation stats from cache for deferred logging
         if (context) {
             context.generationStats = {
@@ -521,9 +518,6 @@ export async function handleMisubRequest(context) {
 
         combinedNodeList = cachedData.nodes;
         cacheHeaders = createCacheHeaders(`REFRESHING`, cachedData.nodeCount);
-        // 触发后台刷新，确保缓存始终是最新的
-        triggerBackgroundRefresh(context, () => refreshNodes(true));
-
         // 触发后台刷新，确保缓存始终是最新的
         triggerBackgroundRefresh(context, () => refreshNodes(true));
 

@@ -23,6 +23,18 @@ import { handleApiRequest } from './modules/api-router.js';
 import { createJsonResponse } from './modules/utils.js';
 import { corsMiddleware, securityHeadersMiddleware } from './middleware/cors.js';
 
+function parseCorsOrigins(env, requestUrl) {
+    const configured = (env?.CORS_ORIGINS || '')
+        .split(',')
+        .map(origin => origin.trim())
+        .filter(Boolean);
+    const origins = configured.length ? configured : [requestUrl.origin];
+    if (['localhost', '127.0.0.1'].includes(requestUrl.hostname)) {
+        origins.push('http://localhost:5173', 'http://127.0.0.1:5173');
+    }
+    return Array.from(new Set(origins));
+}
+
 /**
  * 主要的请求处理函数
  * @param {Object} context - Cloudflare上下文对象
@@ -142,7 +154,11 @@ export async function onRequest(context) {
             }
         };
 
-        return corsMiddleware(request, () => securityHeadersMiddleware(request, handleRequest));
+        const corsOptions = {
+            origins: parseCorsOrigins(env, url),
+            allowCredentials: true
+        };
+        return corsMiddleware(request, () => securityHeadersMiddleware(request, handleRequest), corsOptions);
     } catch (error) {
         // 全局错误处理
         console.error('[Main Handler Error]', error);

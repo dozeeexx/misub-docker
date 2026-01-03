@@ -179,12 +179,26 @@ wrangler d1 execute misub --file=schema.sql --remote
 
 ### 3. 设置环境变量
 
-在 `设置` → `环境变量` 中添加 **生产环境** 变量:
+在 `设置` → `环境变量` 中添加 **生产环境** 变量：
+
+**必填：**
 
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
 | `ADMIN_PASSWORD` | 管理员登录密码 | `your_secure_password` |
 | `COOKIE_SECRET` | Cookie 加密密钥 | `64位随机字符串` |
+
+**可选（按需设置）：**
+
+| 变量名 | 说明 | 示例 |
+|--------|------|------|
+| `CORS_ORIGINS` | 允许跨域访问的来源(逗号分隔)，同域可不填 | `https://example.com,http://localhost:5173` |
+
+**前端构建变量（可选）：**
+
+| 变量名 | 说明 | 示例 |
+|--------|------|------|
+| `VITE_ERROR_REPORT_URL` | 前端错误上报地址，不需要上报可不填 | `/api/system/error_report` |
 
 ### 4. 重新部署
 

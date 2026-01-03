@@ -26,6 +26,7 @@ import {
     handleHealthCheckRequest
 } from './handlers/node-handler.js';
 import { handleClientRequest } from './handlers/client-handler.js';
+import { handleErrorReportRequest } from './handlers/error-report-handler.js';
 import {
     handleGuestbookGet,
     handleGuestbookPost,
@@ -141,6 +142,11 @@ export async function handleApiRequest(request, env) {
     if (path === '/telegram/webhook') {
         const { handleTelegramWebhook } = await import('./handlers/telegram-webhook-handler.js');
         return await handleTelegramWebhook(request, env);
+    }
+
+    // Error report endpoint (public)
+    if (path === '/system/error_report') {
+        return await handleErrorReportRequest(request, env);
     }
 
     // Public GET access for clients
