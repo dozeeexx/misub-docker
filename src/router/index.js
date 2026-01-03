@@ -7,7 +7,6 @@ const ManualNodesView = () => import('../views/ManualNodesView.vue');
 const MySubscriptionsView = () => import('../views/MySubscriptionsView.vue');
 const SettingsView = () => import('../views/SettingsView.vue');
 
-const PublicProfilesView = () => import('../views/PublicProfilesView.vue');
 const HomeView = () => import('../views/HomeView.vue'); // [NEW] Wrapper View
 
 const routes = [
@@ -15,6 +14,7 @@ const routes = [
         path: '/',  // Root path is HomeView (Smart Wrapper)
         name: 'Home',
         component: HomeView,
+        alias: '/explore',
         meta: { title: '首页', isPublic: true } // Publicly accessible, view handles content
     },
     {
@@ -44,12 +44,6 @@ const routes = [
         name: 'Settings',
         component: SettingsView,
         meta: { title: '设置' }
-    },
-    {
-        path: '/',
-        name: 'PublicProfiles',
-        component: PublicProfilesView,
-        meta: { title: '发现订阅', isPublic: true }
     },
     {
         path: '/login',
