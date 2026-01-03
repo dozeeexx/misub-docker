@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useToastStore } from '../../stores/toast.js';
+import { TIMING } from '../../constants/timing.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -177,7 +178,7 @@ onMounted(() => {
     if (checkIfInstalled()) {
       clearInterval(checkInterval);
     }
-  }, 30000); // 改为30秒检查一次
+  }, TIMING.PWA_CHECK_INTERVAL_MS);
 
   // 清理定时器（组件卸载时）
   const cleanup = () => {

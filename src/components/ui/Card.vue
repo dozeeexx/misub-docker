@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue';
+import { formatBytes } from '../../lib/utils.js';
+import { TIMING } from '../../constants/timing.js';
 
 const props = defineProps({
   misub: {
@@ -35,15 +37,6 @@ const protocolStyle = computed(() => {
   }
 });
 
-const formatBytes = (bytes, decimals = 2) => {
-  if (!+bytes) return '0 B';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-};
-
 const trafficInfo = computed(() => {
   const info = props.misub.userInfo;
   const REASONABLE_TRAFFIC_LIMIT_BYTES = 10 * 1024 * 1024 * 1024 * 1024 * 1024; // 10 PB
@@ -70,7 +63,7 @@ const expiryInfo = computed(() => {
     const expireTimestamp = props.misub.userInfo?.expire;
     if (!expireTimestamp) return null;
     const REASONABLE_EXPIRY_LIMIT_DAYS = 365 * 10;
-    const expiryDate = new Date(expireTimestamp * 1000);
+    const expiryDate = new Date(expireTimestamp * TIMING.SECOND_IN_MS);
     const now = new Date();
     expiryDate.setHours(0, 0, 0, 0);
     now.setHours(0, 0, 0, 0);

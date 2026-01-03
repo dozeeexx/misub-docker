@@ -4,13 +4,14 @@ import { useToastStore } from './toast';
 import { useSettingsStore } from './settings';
 import { useEditorStore } from './editor';
 import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
+import { TIMING } from '../constants/timing.js';
 
 const isDev = import.meta.env.DEV;
 
 // SessionStorage 缓存键
 const CACHE_KEY = 'misub_data_cache';
 const CACHE_TIMESTAMP_KEY = 'misub_data_cache_ts';
-const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存有效期
+const CACHE_TTL = TIMING.CACHE_TTL_MS;
 
 export const useDataStore = defineStore('data', () => {
     const { showToast } = useToastStore();
@@ -192,31 +193,6 @@ export const useDataStore = defineStore('data', () => {
                 misubs: sanitizedSubs,
                 profiles: profiles.value
             };
-            const isDiffSave = false;
-
-            /* Diff logic removed to fix ordering issue
-            // Calculate diffs
-            const subDiff = calculateDiff(lastSavedData.subscriptions, subscriptions.value);
-            const profileDiff = calculateDiff(lastSavedData.profiles, profiles.value);
-
-            let payload = {};
-            let isDiffSave = false;
-
-            if (subDiff || profileDiff) {
-                payload = {
-                    diff: {
-                        subscriptions: subDiff || undefined,
-                        profiles: profileDiff || undefined
-                    }
-                };
-                isDiffSave = true;
-            } else {
-                payload = {
-                    misubs: subscriptions.value,
-                    profiles: profiles.value
-                };
-            }
-            */
 
             // Fallback: If we don't have lastSavedData initialized (e.g. error on load?), do full save.
             if (!lastSavedData.subscriptions && !lastSavedData.profiles) {

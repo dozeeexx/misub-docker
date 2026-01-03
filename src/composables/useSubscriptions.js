@@ -5,6 +5,7 @@ import { useDataStore } from '../stores/useDataStore';
 import { useToastStore } from '../stores/toast.js';
 import { fetchNodeCount, batchUpdateNodes } from '../lib/api.js';
 import { handleError } from '../utils/errorHandler.js';
+import { TIMING } from '../constants/timing.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -74,7 +75,7 @@ export function useSubscriptions(markDirty) {
           showToast(`${subToUpdate.name || '订阅'} 更新超时,已自动重置`, 'warning');
         }
       }
-    }, 30000); // 30秒超时保护
+    }, TIMING.REQUEST_TIMEOUT_MS);
 
     try {
       const result = await fetchNodeCount(subToUpdate.url);
@@ -272,7 +273,7 @@ export function useSubscriptions(markDirty) {
   }
 
   // ========== 定时自动更新功能 ==========
-  const AUTO_UPDATE_INTERVAL_MS = 30 * 60 * 1000; // 30分钟
+  const AUTO_UPDATE_INTERVAL_MS = TIMING.AUTO_UPDATE_INTERVAL_MS;
   let autoUpdateTimerId = null;
 
   async function autoUpdateAllSubscriptions() {

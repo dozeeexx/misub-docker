@@ -8,6 +8,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { saveMisubs } from '../../../lib/api.js';
 import { useToastStore } from '../../../stores/toast.js';
 import { useUIStore } from '../../../stores/ui.js';
+import { TIMING } from '../../../constants/timing.js';
 
 // 子组件
 import SubscriptionManager from './SubscriptionManager.vue';
@@ -122,7 +123,7 @@ const handleSave = async () => {
     showToast('保存失败: ' + error.message, 'error');
     setTimeout(() => {
       saveState.value = 'idle';
-    }, 3000);
+    }, TIMING.TOAST_DURATION_MS);
   }
 };
 
