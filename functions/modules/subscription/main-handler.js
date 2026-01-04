@@ -20,6 +20,11 @@ export async function handleMisubRequest(context) {
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
+    // 端到端预算：务必小于 Clash Party 的 15000ms，给网络抖动留余量
+    const requestStartMs = Date.now();
+    const SERVER_RESPONSE_BUDGET_MS = 13500;
+    const requestDeadlineMs = requestStartMs + SERVER_RESPONSE_BUDGET_MS;
+
     const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
     const [settingsData, misubsData, profilesData] = await Promise.all([
         storageAdapter.get(KV_KEY_SETTINGS),
@@ -65,6 +70,7 @@ export async function handleMisubRequest(context) {
     let isProfileExpired = false; // Moved declaration here
 
     const DEFAULT_EXPIRED_NODE = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent('您的订阅已失效')}`;
+    const DEFAULT_PENDING_NODE = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent('订阅生成中，请稍后刷新')}`;
 
     if (profileIdentifier) {
         // [修正] 使用 config 變量
@@ -285,6 +291,13 @@ export async function handleMisubRequest(context) {
             name: subName
         };
 
+        // 快慢路径分离：
+        // - 快路径（客户端拉取 isBackground=false）：短超时、0 重试、总预算很小，宁可部分成功也要避免 15s 超时
+        // - 后台刷新（isBackground=true）：更长超时+重试，提升可靠性
+        const fetchPolicy = isBackground
+            ? { timeoutMs: 18000, maxRetries: 2, concurrency: 4, overallTimeoutMs: 20000 }
+            : { timeoutMs: 5000, maxRetries: 0, concurrency: 4, overallTimeoutMs: 4500 };
+
         const freshNodes = await generateCombinedNodeList(
             context, // 传入完整 context
             { ...config, enableAccessLog: false }, // [Deferred Logging] Disable service-side logging, we will log manually in handler
@@ -292,14 +305,23 @@ export async function handleMisubRequest(context) {
             targetMisubs,
             prependedContentForSubconverter,
             generationSettings,
-            isDebugToken
+            isDebugToken,
+            fetchPolicy
         );
-        const sourceNames = targetMisubs
-            .filter(s => s.url.startsWith('http'))
-            .map(s => s.name || s.url);
-        await setCache(storageAdapter, cacheKey, freshNodes, sourceNames);
+
+        // 只有后台刷新才写入缓存，避免快路径的"部分结果"污染缓存
+        if (isBackground) {
+            const sourceNames = targetMisubs
+                .filter(s => s.url.startsWith('http'))
+                .map(s => s.name || s.url);
+            await setCache(storageAdapter, cacheKey, freshNodes, sourceNames);
+        }
+
         return freshNodes;
     };
+
+    // 缓存 miss 时的占位节点，避免客户端超时
+    const missFallbackNodeList = `${DEFAULT_PENDING_NODE}\n`;
 
     const { combinedNodeList, cacheHeaders } = await resolveNodeListWithCache({
         storageAdapter,
@@ -307,7 +329,9 @@ export async function handleMisubRequest(context) {
         forceRefresh,
         refreshNodes,
         context,
-        targetMisubsCount: targetMisubs.length
+        targetMisubsCount: targetMisubs.length,
+        syncRefreshTimeoutMs: 6500,
+        missFallbackNodeList
     });
 
     const domain = url.hostname;
@@ -356,9 +380,22 @@ export async function handleMisubRequest(context) {
     let lastError = null;
     const triedEndpoints = [];
 
-    for (const backend of candidates) {
+    // Subconverter 总预算：避免多个后端串行 15s 导致客户端直接超时
+    const remainingBudgetMs = Math.max(1000, requestDeadlineMs - Date.now());
+    const SUBCONVERTER_TOTAL_BUDGET_MS = Math.min(10000, remainingBudgetMs);
+    const PER_ATTEMPT_TIMEOUT_CAP_MS = 6000;
+    const subconverterDeadlineMs = Date.now() + SUBCONVERTER_TOTAL_BUDGET_MS;
+
+    outer: for (const backend of candidates) {
         const variants = buildSubconverterUrlVariants(backend);
         for (const subconverterUrl of variants) {
+            // 检查是否已超过总预算
+            const remainingMs = subconverterDeadlineMs - Date.now();
+            if (remainingMs <= 0) {
+                console.warn('[SubConverter] Total budget exceeded, breaking out of retry loop');
+                break outer;
+            }
+
             triedEndpoints.push(subconverterUrl.origin + subconverterUrl.pathname);
             try {
                 subconverterUrl.searchParams.set('target', targetFormat);
@@ -370,8 +407,8 @@ export async function handleMisubRequest(context) {
                 }
                 subconverterUrl.searchParams.set('new_name', 'true');
 
-                // 添加超时控制，防止 subconverter 后端卡住导致 Clash 拉取超时
-                const SUBCONVERTER_TIMEOUT = 15000; // 15 秒超时
+                // 单次尝试超时：服从总预算，最多 6s，留足端到端余量
+                const SUBCONVERTER_TIMEOUT = Math.min(PER_ATTEMPT_TIMEOUT_CAP_MS, remainingMs);
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), SUBCONVERTER_TIMEOUT);
 
@@ -421,6 +458,11 @@ export async function handleMisubRequest(context) {
                 return new Response(responseText, { status: subconverterResponse.status, statusText: subconverterResponse.statusText, headers: responseHeaders });
             } catch (error) {
                 lastError = error;
+                // 超时错误时立即跳出，避免继续串行尝试把请求拖到客户端超时
+                if (error?.name === 'AbortError') {
+                    console.warn(`[SubConverter] Timeout with backend ${subconverterUrl.origin}, breaking out to avoid client timeout`);
+                    break outer;
+                }
                 console.warn(`[SubConverter] Error with backend ${subconverterUrl.origin}: ${error.message}. Trying next fallback if available.`);
             }
         }

@@ -4,13 +4,27 @@ import {
     createCacheHeaders
 } from '../../services/node-cache-service.js';
 
+/**
+ * 解析节点列表（带缓存支持）
+ * @param {Object} options - 配置选项
+ * @param {Object} options.storageAdapter - 存储适配器
+ * @param {string} options.cacheKey - 缓存键
+ * @param {boolean} options.forceRefresh - 是否强制刷新
+ * @param {Function} options.refreshNodes - 刷新节点函数
+ * @param {Object} options.context - 请求上下文
+ * @param {number} options.targetMisubsCount - 目标订阅数量
+ * @param {number} options.syncRefreshTimeoutMs - 同步刷新超时（毫秒），默认 6500ms
+ * @param {string} options.missFallbackNodeList - 缓存 miss 且刷新失败时的占位节点
+ */
 export async function resolveNodeListWithCache({
     storageAdapter,
     cacheKey,
     forceRefresh,
     refreshNodes,
     context,
-    targetMisubsCount
+    targetMisubsCount,
+    syncRefreshTimeoutMs = 6500,
+    missFallbackNodeList = ''
 }) {
     const { data: cachedData, status: cacheStatus } = forceRefresh
         ? { data: null, status: 'miss' }
@@ -52,8 +66,12 @@ export async function resolveNodeListWithCache({
             };
         }
     } else {
-        // 无缓存（首次访问或缓存已过期）：同步获取并缓存，但设置总体超时
-        const SYNC_REFRESH_TIMEOUT = 25000; // 25 秒总预算，确保在 Clash 超时前返回
+        // 无缓存（首次访问或缓存已过期）：必须走"快路径"，同时触发后台完整刷新
+        // 先触发后台刷新，确保下次请求能命中缓存
+        triggerBackgroundRefresh(context, () => refreshNodes(true));
+
+        // 快路径同步刷新：必须明显小于客户端 15s 超时，给后续 subconverter 留时间
+        const SYNC_REFRESH_TIMEOUT = Math.max(1000, syncRefreshTimeoutMs);
 
         try {
             combinedNodeList = await Promise.race([
@@ -64,10 +82,11 @@ export async function resolveNodeListWithCache({
             ]);
         } catch (error) {
             console.warn('[Cache] Sync refresh failed or timeout:', error.message);
-            // 超时或失败时返回空内容，触发回退逻辑
-            combinedNodeList = '';
+            // 超时或失败：返回占位订阅，避免客户端 15s 超时；真实内容由后台刷新填充缓存
+            combinedNodeList = missFallbackNodeList || '';
         }
-        cacheHeaders = createCacheHeaders('MISS', combinedNodeList.split('\n').filter(l => l.trim()).length);
+        const nodeCount = combinedNodeList.split('\n').filter(l => l.trim()).length;
+        cacheHeaders = createCacheHeaders(nodeCount > 0 ? 'MISS_REFRESHING' : 'MISS', nodeCount);
     }
 
     return { combinedNodeList, cacheHeaders, cacheStatus };
