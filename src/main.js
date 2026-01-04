@@ -26,12 +26,21 @@ if (typeof window !== 'undefined') {
     });
   });
 
-  // 处理资源加载错误
+  // 处理资源加载错误（忽略第三方资源）
   window.addEventListener('error', (event) => {
     if (event.target !== window) {
-      handleError(new Error(`Resource load failed: ${event.target.src || event.target.href}`), 'Resource Load Error', {
+      const resourceUrl = event.target.src || event.target.href || '';
+
+      // 忽略第三方资源加载错误（如 Cloudflare Analytics、广告等）
+      const isThirdParty = resourceUrl && !resourceUrl.startsWith(window.location.origin);
+      if (isThirdParty) {
+        console.debug('[Resource Load] Ignoring third-party resource error:', resourceUrl);
+        return;
+      }
+
+      handleError(new Error(`Resource load failed: ${resourceUrl}`), 'Resource Load Error', {
         tagName: event.target.tagName,
-        src: event.target.src || event.target.href
+        src: resourceUrl
       });
     }
   }, true);
