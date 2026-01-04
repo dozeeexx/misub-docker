@@ -285,14 +285,12 @@ export async function handleMisubRequest(context) {
             name: subName
         };
 
-        // 优化拉取策略：确保完整拉取所有订阅源
-        // - 单次请求超时 15s（给慢的订阅源足够时间）
-        // - 最多重试 2 次（确保可靠性）
-        // - 并发数 8（加快多订阅源拉取）
-        // - 后台刷新使用相同配置确保完整性
+        // 拉取策略：
+        // - 同步拉取（客户端等待）：较短超时，尽量在 15s 内完成
+        // - 后台刷新：更长超时，确保完整拉取所有订阅源
         const fetchPolicy = isBackground
-            ? { timeoutMs: 20000, maxRetries: 2, concurrency: 6, overallTimeoutMs: null }
-            : { timeoutMs: 15000, maxRetries: 2, concurrency: 8, overallTimeoutMs: null };
+            ? { timeoutMs: 30000, maxRetries: 2, concurrency: 4, overallTimeoutMs: null }  // 后台：30s 超时，确保完整
+            : { timeoutMs: 10000, maxRetries: 1, concurrency: 8, overallTimeoutMs: null }; // 同步：10s 超时，快速响应
 
         const freshNodes = await generateCombinedNodeList(
             context, // 传入完整 context
@@ -324,9 +322,9 @@ export async function handleMisubRequest(context) {
         refreshNodes,
         context,
         targetMisubsCount: targetMisubs.length,
-        // 同步刷新超时：25s，给多个订阅源足够时间完整拉取
-        // 如果首次超时，后台会继续完成，第二次请求就能拿到完整节点
-        syncRefreshTimeoutMs: 25000,
+        // 同步刷新超时：12s，确保在客户端 15s 超时前返回
+        // 如果超时，后台会继续完成完整拉取
+        syncRefreshTimeoutMs: 12000,
         missFallbackNodeList
     });
 
