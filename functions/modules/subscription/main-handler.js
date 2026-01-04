@@ -70,7 +70,6 @@ export async function handleMisubRequest(context) {
     let isProfileExpired = false; // Moved declaration here
 
     const DEFAULT_EXPIRED_NODE = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent('您的订阅已失效')}`;
-    const DEFAULT_PENDING_NODE = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent('订阅生成中，请稍后刷新')}`;
 
     if (profileIdentifier) {
         // [修正] 使用 config 變量
@@ -320,8 +319,8 @@ export async function handleMisubRequest(context) {
         return freshNodes;
     };
 
-    // 缓存 miss 时的占位节点（仅在超时失败时使用）
-    const missFallbackNodeList = `${DEFAULT_PENDING_NODE}\n`;
+    // 缓存 miss 时的占位节点（已不再使用，改为返回提示信息）
+    const missFallbackNodeList = '';
 
     const { combinedNodeList, cacheHeaders } = await resolveNodeListWithCache({
         storageAdapter,
@@ -330,10 +329,27 @@ export async function handleMisubRequest(context) {
         refreshNodes,
         context,
         targetMisubsCount: targetMisubs.length,
-        // 同步刷新超时：给订阅拉取留 10s，后续 Subconverter 还需要时间
-        syncRefreshTimeoutMs: 10000,
+        // 同步刷新超时：给订阅拉取留足时间，但要在客户端超时前返回
+        syncRefreshTimeoutMs: 12000,
         missFallbackNodeList
     });
+
+    // 如果缓存 miss 且超时（没有拉取到节点），返回友好提示
+    if (cacheHeaders['X-Cache-Status'] === 'MISS_TIMEOUT' || (!combinedNodeList && !forceRefresh)) {
+        const retryHeaders = new Headers({
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Cache-Control': 'no-store, no-cache',
+            'Retry-After': '5'
+        });
+        Object.entries(cacheHeaders).forEach(([key, value]) => {
+            retryHeaders.set(key, value);
+        });
+        return new Response(
+            '订阅正在后台生成中，请等待 5-10 秒后重试。\n' +
+            'Subscription is being generated in background, please retry in 5-10 seconds.',
+            { status: 202, headers: retryHeaders }
+        );
+    }
 
     const domain = url.hostname;
 
