@@ -20,11 +20,6 @@ export async function handleMisubRequest(context) {
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
-    // 端到端预算：务必小于 Clash Party 的 15000ms，给网络抖动留余量
-    const requestStartMs = Date.now();
-    const SERVER_RESPONSE_BUDGET_MS = 13500;
-    const requestDeadlineMs = requestStartMs + SERVER_RESPONSE_BUDGET_MS;
-
     const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
     const [settingsData, misubsData, profilesData] = await Promise.all([
         storageAdapter.get(KV_KEY_SETTINGS),
@@ -290,14 +285,14 @@ export async function handleMisubRequest(context) {
             name: subName
         };
 
-        // 优化拉取策略：
-        // - 单次请求超时 8s（原 18s 太长）
-        // - 最多重试 1 次（原 2 次，减少总耗时）
-        // - 并发数 6（原 4，加快多订阅源拉取）
-        // - 后台刷新使用更宽松的配置
+        // 优化拉取策略：确保完整拉取所有订阅源
+        // - 单次请求超时 15s（给慢的订阅源足够时间）
+        // - 最多重试 2 次（确保可靠性）
+        // - 并发数 8（加快多订阅源拉取）
+        // - 后台刷新使用相同配置确保完整性
         const fetchPolicy = isBackground
-            ? { timeoutMs: 15000, maxRetries: 2, concurrency: 4, overallTimeoutMs: null }
-            : { timeoutMs: 8000, maxRetries: 1, concurrency: 6, overallTimeoutMs: null };
+            ? { timeoutMs: 20000, maxRetries: 2, concurrency: 6, overallTimeoutMs: null }
+            : { timeoutMs: 15000, maxRetries: 2, concurrency: 8, overallTimeoutMs: null };
 
         const freshNodes = await generateCombinedNodeList(
             context, // 传入完整 context
@@ -319,7 +314,7 @@ export async function handleMisubRequest(context) {
         return freshNodes;
     };
 
-    // 缓存 miss 时的占位节点（已不再使用，改为返回提示信息）
+    // 缓存 miss 时不使用占位节点，而是返回提示信息
     const missFallbackNodeList = '';
 
     const { combinedNodeList, cacheHeaders } = await resolveNodeListWithCache({
@@ -329,8 +324,9 @@ export async function handleMisubRequest(context) {
         refreshNodes,
         context,
         targetMisubsCount: targetMisubs.length,
-        // 同步刷新超时：给订阅拉取留足时间，但要在客户端超时前返回
-        syncRefreshTimeoutMs: 12000,
+        // 同步刷新超时：25s，给多个订阅源足够时间完整拉取
+        // 如果首次超时，后台会继续完成，第二次请求就能拿到完整节点
+        syncRefreshTimeoutMs: 25000,
         missFallbackNodeList
     });
 
@@ -397,22 +393,12 @@ export async function handleMisubRequest(context) {
     let lastError = null;
     const triedEndpoints = [];
 
-    // Subconverter 总预算：避免多个后端串行 15s 导致客户端直接超时
-    const remainingBudgetMs = Math.max(1000, requestDeadlineMs - Date.now());
-    const SUBCONVERTER_TOTAL_BUDGET_MS = Math.min(10000, remainingBudgetMs);
-    const PER_ATTEMPT_TIMEOUT_CAP_MS = 6000;
-    const subconverterDeadlineMs = Date.now() + SUBCONVERTER_TOTAL_BUDGET_MS;
+    // Subconverter 超时配置：给转换足够时间
+    const PER_ATTEMPT_TIMEOUT_MS = 15000; // 单次尝试 15s
 
-    outer: for (const backend of candidates) {
+    for (const backend of candidates) {
         const variants = buildSubconverterUrlVariants(backend);
         for (const subconverterUrl of variants) {
-            // 检查是否已超过总预算
-            const remainingMs = subconverterDeadlineMs - Date.now();
-            if (remainingMs <= 0) {
-                console.warn('[SubConverter] Total budget exceeded, breaking out of retry loop');
-                break outer;
-            }
-
             triedEndpoints.push(subconverterUrl.origin + subconverterUrl.pathname);
             try {
                 subconverterUrl.searchParams.set('target', targetFormat);
@@ -424,10 +410,9 @@ export async function handleMisubRequest(context) {
                 }
                 subconverterUrl.searchParams.set('new_name', 'true');
 
-                // 单次尝试超时：服从总预算，最多 6s，留足端到端余量
-                const SUBCONVERTER_TIMEOUT = Math.min(PER_ATTEMPT_TIMEOUT_CAP_MS, remainingMs);
+                // 超时控制
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), SUBCONVERTER_TIMEOUT);
+                const timeoutId = setTimeout(() => controller.abort(), PER_ATTEMPT_TIMEOUT_MS);
 
                 let subconverterResponse;
                 try {
@@ -475,11 +460,6 @@ export async function handleMisubRequest(context) {
                 return new Response(responseText, { status: subconverterResponse.status, statusText: subconverterResponse.statusText, headers: responseHeaders });
             } catch (error) {
                 lastError = error;
-                // 超时错误时立即跳出，避免继续串行尝试把请求拖到客户端超时
-                if (error?.name === 'AbortError') {
-                    console.warn(`[SubConverter] Timeout with backend ${subconverterUrl.origin}, breaking out to avoid client timeout`);
-                    break outer;
-                }
                 console.warn(`[SubConverter] Error with backend ${subconverterUrl.origin}: ${error.message}. Trying next fallback if available.`);
             }
         }
