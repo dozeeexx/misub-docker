@@ -52,8 +52,21 @@ export async function resolveNodeListWithCache({
             };
         }
     } else {
-        // 无缓存（首次访问或缓存已过期）：同步获取并缓存
-        combinedNodeList = await refreshNodes(false);
+        // 无缓存（首次访问或缓存已过期）：同步获取并缓存，但设置总体超时
+        const SYNC_REFRESH_TIMEOUT = 25000; // 25 秒总预算，确保在 Clash 超时前返回
+
+        try {
+            combinedNodeList = await Promise.race([
+                refreshNodes(false),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Sync refresh timeout')), SYNC_REFRESH_TIMEOUT)
+                )
+            ]);
+        } catch (error) {
+            console.warn('[Cache] Sync refresh failed or timeout:', error.message);
+            // 超时或失败时返回空内容，触发回退逻辑
+            combinedNodeList = '';
+        }
         cacheHeaders = createCacheHeaders('MISS', combinedNodeList.split('\n').filter(l => l.trim()).length);
     }
 

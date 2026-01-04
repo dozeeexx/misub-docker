@@ -370,10 +370,21 @@ export async function handleMisubRequest(context) {
                 }
                 subconverterUrl.searchParams.set('new_name', 'true');
 
-                const subconverterResponse = await fetch(subconverterUrl.toString(), {
-                    method: 'GET',
-                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MiSub-Backend)' },
-                });
+                // 添加超时控制，防止 subconverter 后端卡住导致 Clash 拉取超时
+                const SUBCONVERTER_TIMEOUT = 15000; // 15 秒超时
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), SUBCONVERTER_TIMEOUT);
+
+                let subconverterResponse;
+                try {
+                    subconverterResponse = await fetch(subconverterUrl.toString(), {
+                        method: 'GET',
+                        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MiSub-Backend)' },
+                        signal: controller.signal
+                    });
+                } finally {
+                    clearTimeout(timeoutId);
+                }
                 if (!subconverterResponse.ok) {
                     const errorBody = await subconverterResponse.text();
                     lastError = new Error(`Subconverter(${subconverterUrl.origin}) returned status ${subconverterResponse.status}. Body: ${errorBody}`);
