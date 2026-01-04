@@ -291,12 +291,14 @@ export async function handleMisubRequest(context) {
             name: subName
         };
 
-        // 快慢路径分离：
-        // - 快路径（客户端拉取 isBackground=false）：短超时、0 重试、总预算很小，宁可部分成功也要避免 15s 超时
-        // - 后台刷新（isBackground=true）：更长超时+重试，提升可靠性
+        // 优化拉取策略：
+        // - 单次请求超时 8s（原 18s 太长）
+        // - 最多重试 1 次（原 2 次，减少总耗时）
+        // - 并发数 6（原 4，加快多订阅源拉取）
+        // - 后台刷新使用更宽松的配置
         const fetchPolicy = isBackground
-            ? { timeoutMs: 18000, maxRetries: 2, concurrency: 4, overallTimeoutMs: 20000 }
-            : { timeoutMs: 5000, maxRetries: 0, concurrency: 4, overallTimeoutMs: 4500 };
+            ? { timeoutMs: 15000, maxRetries: 2, concurrency: 4, overallTimeoutMs: null }
+            : { timeoutMs: 8000, maxRetries: 1, concurrency: 6, overallTimeoutMs: null };
 
         const freshNodes = await generateCombinedNodeList(
             context, // 传入完整 context
@@ -309,18 +311,16 @@ export async function handleMisubRequest(context) {
             fetchPolicy
         );
 
-        // 只有后台刷新才写入缓存，避免快路径的"部分结果"污染缓存
-        if (isBackground) {
-            const sourceNames = targetMisubs
-                .filter(s => s.url.startsWith('http'))
-                .map(s => s.name || s.url);
-            await setCache(storageAdapter, cacheKey, freshNodes, sourceNames);
-        }
+        // 写入缓存（无论是同步还是后台刷新都写入）
+        const sourceNames = targetMisubs
+            .filter(s => s.url.startsWith('http'))
+            .map(s => s.name || s.url);
+        await setCache(storageAdapter, cacheKey, freshNodes, sourceNames);
 
         return freshNodes;
     };
 
-    // 缓存 miss 时的占位节点，避免客户端超时
+    // 缓存 miss 时的占位节点（仅在超时失败时使用）
     const missFallbackNodeList = `${DEFAULT_PENDING_NODE}\n`;
 
     const { combinedNodeList, cacheHeaders } = await resolveNodeListWithCache({
@@ -330,7 +330,8 @@ export async function handleMisubRequest(context) {
         refreshNodes,
         context,
         targetMisubsCount: targetMisubs.length,
-        syncRefreshTimeoutMs: 6500,
+        // 同步刷新超时：给订阅拉取留 10s，后续 Subconverter 还需要时间
+        syncRefreshTimeoutMs: 10000,
         missFallbackNodeList
     });
 

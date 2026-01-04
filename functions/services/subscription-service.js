@@ -287,15 +287,11 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
     // 使用并发控制器限制同时请求数量，避免网络拥塞
     const subPromises = httpSubs.map(sub => limiter(() => fetchSingleSubscription(sub)));
 
-    // 支持总预算超时：到点返回已完成的部分，避免客户端超时
-    let processedSubContents;
-    if (overallTimeoutMs && overallTimeoutMs > 0) {
-        processedSubContents = await collectWithinTimeout(subPromises, overallTimeoutMs);
-        if (debug) {
-            console.debug(`[DEBUG] Fetch policy: timeout=${requestTimeoutMs}ms, retries=${requestMaxRetries}, overall=${overallTimeoutMs}ms, processed=${processedSubContents.length}/${httpSubs.length}`);
-        }
-    } else {
-        processedSubContents = await Promise.all(subPromises);
+    // 等待所有订阅源拉取完成（完整拉取，不使用总预算截断）
+    const processedSubContents = await Promise.all(subPromises);
+
+    if (debug) {
+        console.debug(`[DEBUG] Fetch completed: timeout=${requestTimeoutMs}ms, retries=${requestMaxRetries}, concurrency=${concurrency}, total=${httpSubs.length}`);
     }
 
     const combinedLines = (processedManualNodes + '\n' + processedSubContents.join('\n'))

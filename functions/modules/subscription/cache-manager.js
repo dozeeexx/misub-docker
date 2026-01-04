@@ -66,11 +66,8 @@ export async function resolveNodeListWithCache({
             };
         }
     } else {
-        // 无缓存（首次访问或缓存已过期）：必须走"快路径"，同时触发后台完整刷新
-        // 先触发后台刷新，确保下次请求能命中缓存
-        triggerBackgroundRefresh(context, () => refreshNodes(true));
-
-        // 快路径同步刷新：必须明显小于客户端 15s 超时，给后续 subconverter 留时间
+        // 无缓存（首次访问或缓存已过期）：同步获取完整节点列表
+        // 优化超时配置，确保在客户端 15s 超时前完成
         const SYNC_REFRESH_TIMEOUT = Math.max(1000, syncRefreshTimeoutMs);
 
         try {
@@ -82,11 +79,12 @@ export async function resolveNodeListWithCache({
             ]);
         } catch (error) {
             console.warn('[Cache] Sync refresh failed or timeout:', error.message);
-            // 超时或失败：返回占位订阅，避免客户端 15s 超时；真实内容由后台刷新填充缓存
+            // 超时或失败时返回占位节点，同时触发后台刷新确保下次成功
             combinedNodeList = missFallbackNodeList || '';
+            triggerBackgroundRefresh(context, () => refreshNodes(true));
         }
         const nodeCount = combinedNodeList.split('\n').filter(l => l.trim()).length;
-        cacheHeaders = createCacheHeaders(nodeCount > 0 ? 'MISS_REFRESHING' : 'MISS', nodeCount);
+        cacheHeaders = createCacheHeaders(nodeCount > 0 ? 'MISS' : 'MISS_EMPTY', nodeCount);
     }
 
     return { combinedNodeList, cacheHeaders, cacheStatus };
