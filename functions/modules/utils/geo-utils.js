@@ -100,7 +100,7 @@ export const REGION_EMOJI = {
     '丹麦': '🇩🇰',
     '芬兰': '🇫🇮',
     '奥地利': '🇦🇹',
-    '其他': '🏁'
+    '其他': '🌍'
 };
 
 function normalizeBase64(input) {
