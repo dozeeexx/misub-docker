@@ -67,11 +67,14 @@ export function addFlagEmoji(link) {
     if (!link) return link;
 
     const appendEmoji = (name) => {
-        const region = extractNodeRegion(name);
+        // [修复] 先将台湾旗帜替换为中国国旗
+        let processedName = name.replace(/🇹🇼/g, '🇨🇳');
+
+        const region = extractNodeRegion(processedName);
         const emoji = getRegionEmoji(region);
-        if (!emoji) return name;
-        if (name.includes(emoji)) return name;
-        return `${emoji} ${name}`;
+        if (!emoji) return processedName;
+        if (processedName.includes(emoji)) return processedName;
+        return `${emoji} ${processedName}`;
     };
 
     if (link.startsWith('vmess://')) {
