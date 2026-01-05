@@ -13,7 +13,7 @@ import { validateSS2022Node, fixSS2022Node } from './ss2022-validator.js';
 /**
  * 支持的节点协议正则表达式
  */
-export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2|hy2|tuic|snell|naive\+https?|naive\+quic|socks5|http|anytls):\/\//i;
+export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2|hy2|tuic|snell|naive\+https?|naive\+quic|socks5|socks|http|anytls):\/\//i;
 
 /**
  * Base64编码辅助函数

@@ -8,6 +8,29 @@ import { useToastStore } from './stores/toast.js'
 
 // 全局错误处理
 if (typeof window !== 'undefined') {
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+  const clearLocalServiceWorker = async () => {
+    if (!isLocalHost) return;
+    if (sessionStorage.getItem('misub:sw-cleared') === '1') return;
+    sessionStorage.setItem('misub:sw-cleared', '1');
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((reg) => reg.unregister()));
+      }
+      if ('caches' in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+      }
+      console.debug('[PWA] Local caches cleared');
+    } catch (error) {
+      console.warn('[PWA] Failed to clear local caches:', error);
+    }
+  };
+
+  clearLocalServiceWorker();
+
   // 处理未捕获的Promise拒绝
   window.addEventListener('unhandledrejection', (event) => {
     handleError(event.reason, 'Unhandled Promise Rejection', {
@@ -27,6 +50,29 @@ if (typeof window !== 'undefined') {
   });
 
   // 处理资源加载错误（忽略第三方资源）
+  const tryRecoverAssetLoad = async (resourceUrl) => {
+    if (!resourceUrl || !resourceUrl.startsWith(window.location.origin)) return false;
+    if (!/\/assets\/.+\.(js|css)$/i.test(resourceUrl)) return false;
+    if (sessionStorage.getItem('misub:asset-reload') === '1') return false;
+
+    sessionStorage.setItem('misub:asset-reload', '1');
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((reg) => reg.unregister()));
+      }
+      if ('caches' in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+      }
+    } catch (error) {
+      console.warn('[Resource Load] Failed to clear cache:', error);
+    }
+
+    window.location.reload();
+    return true;
+  };
+
   window.addEventListener('error', (event) => {
     if (event.target !== window) {
       const resourceUrl = event.target.src || event.target.href || '';
@@ -38,9 +84,16 @@ if (typeof window !== 'undefined') {
         return;
       }
 
-      handleError(new Error(`Resource load failed: ${resourceUrl}`), 'Resource Load Error', {
-        tagName: event.target.tagName,
-        src: resourceUrl
+      tryRecoverAssetLoad(resourceUrl).then((recovered) => {
+        if (recovered) return;
+        if (isLocalHost && /\/assets\/.+\.(js|css)$/i.test(resourceUrl)) {
+          console.debug('[Resource Load] Local asset error suppressed:', resourceUrl);
+          return;
+        }
+        handleError(new Error(`Resource load failed: ${resourceUrl}`), 'Resource Load Error', {
+          tagName: event.target.tagName,
+          src: resourceUrl
+        });
       });
     }
   }, true);

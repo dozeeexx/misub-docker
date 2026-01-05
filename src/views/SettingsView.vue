@@ -8,6 +8,7 @@ import BasicSettings from '../components/settings/sections/BasicSettings.vue';
 import ServiceSettings from '../components/settings/sections/ServiceSettings.vue';
 import AnnouncementSettings from '../components/settings/sections/AnnouncementSettings.vue';
 import GuestbookManagement from '../components/settings/sections/GuestbookManagement.vue';
+import GlobalSettings from '../components/settings/sections/GlobalSettings.vue';
 
 import SystemSettings from '../components/settings/sections/SystemSettings.vue';
 import ClientSettings from '../components/settings/sections/ClientSettings.vue';
@@ -34,6 +35,7 @@ const activeTab = ref('basic');
 const currentTabLabel = computed(() => {
   switch (activeTab.value) {
     case 'basic': return '基础设置';
+    case 'global': return '全局设置';
     case 'service': return '服务集成';
     case 'announcement': return '公告管理';
     case 'guestbook': return '留言管理';
@@ -93,6 +95,7 @@ onMounted(() => {
           <!-- Scrollable Content -->
           <div class="flex-1 p-6">
             <BasicSettings v-show="activeTab === 'basic'" :settings="settings" :disguiseConfig="disguiseConfig" />
+            <GlobalSettings v-show="activeTab === 'global'" :settings="settings" />
             <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
             <AnnouncementSettings v-show="activeTab === 'announcement'" :settings="settings" />
             <GuestbookManagement v-show="activeTab === 'guestbook'" :settings="settings" />

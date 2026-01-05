@@ -182,7 +182,7 @@ export async function handleCronTrigger(env) {
     const allSubs = JSON.parse(JSON.stringify(originalSubs)); // 深拷贝以便比较
     const settings = await storageAdapter.get(KV_KEY_SETTINGS) || DEFAULT_SETTINGS;
 
-    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//gm;
+    const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|socks):\/\//gm;
     let changesMade = false;
     let updatedCount = 0;
     let failedCount = 0;

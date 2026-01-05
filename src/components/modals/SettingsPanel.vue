@@ -9,6 +9,7 @@ import BasicSettings from '../settings/sections/BasicSettings.vue';
 import ServiceSettings from '../settings/sections/ServiceSettings.vue';
 import AnnouncementSettings from '../settings/sections/AnnouncementSettings.vue';
 import GuestbookManagement from '../settings/sections/GuestbookManagement.vue';
+import GlobalSettings from '../settings/sections/GlobalSettings.vue';
 
 
 import ClientSettings from '../settings/sections/ClientSettings.vue';
@@ -59,6 +60,9 @@ defineExpose({ handleSave });
         <div class="space-y-6">
           <!-- 基础设置 -->
           <BasicSettings v-show="activeTab === 'basic'" :settings="settings" :disguiseConfig="disguiseConfig" />
+
+          <!-- 全局设置 -->
+          <GlobalSettings v-show="activeTab === 'global'" :settings="settings" />
           
           <!-- 服务集成 -->
           <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />

@@ -279,11 +279,22 @@ export async function handleMisubRequest(context) {
         };
 
         const currentProfile = profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier) : null;
-        const generationSettings = {
-            ...(currentProfile?.prefixSettings || {}),
-            nodeTransform: currentProfile?.nodeTransform,
-            name: subName
+        const defaultPrefixSettings = config.defaultPrefixSettings || {
+            enableManualNodes: true,
+            enableSubscriptions: true,
+            manualNodePrefix: '手动节点'
         };
+        const generationSettings = currentProfile
+            ? {
+                ...(currentProfile?.prefixSettings || {}),
+                nodeTransform: currentProfile?.nodeTransform,
+                name: subName
+            }
+            : {
+                ...defaultPrefixSettings,
+                nodeTransform: config.defaultNodeTransform,
+                name: subName
+            };
 
         // 拉取策略：
         // - 同步拉取（客户端等待）：较短超时，尽量在 15s 内完成

@@ -8,7 +8,7 @@ import { createJsonResponse, createErrorResponse } from '../utils.js';
 import { parseNodeList } from '../utils/node-parser.js';
 
 // 创建用于全局匹配的协议正则表达式
-const NODE_PROTOCOL_GLOBAL_REGEX = new RegExp('^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\\/\\/', 'gm');
+const NODE_PROTOCOL_GLOBAL_REGEX = new RegExp('^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|socks):\\/\\/', 'gm');
 
 /**
  * 获取订阅节点数量和用户信息

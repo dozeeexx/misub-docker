@@ -27,7 +27,7 @@ const getProtocol = (url) => {
     if (lowerUrl.startsWith('vmess://')) return 'vmess';
     if (lowerUrl.startsWith('vless://')) return 'vless';
     if (lowerUrl.startsWith('trojan://')) return 'trojan';
-    if (lowerUrl.startsWith('socks5://')) return 'socks5';
+    if (lowerUrl.startsWith('socks5://') || lowerUrl.startsWith('socks://')) return 'socks5';
     if (lowerUrl.startsWith('snell://')) return 'snell';
     if (lowerUrl.startsWith('naive+https://') || lowerUrl.startsWith('naive+http://') || lowerUrl.startsWith('naive+quic://')) return 'naive';
     if (lowerUrl.startsWith('http')) return 'http';

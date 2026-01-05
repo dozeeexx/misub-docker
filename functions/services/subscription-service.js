@@ -515,13 +515,26 @@ function fixSSEncoding(nodeUrl) {
  * @returns {string} - 修复后的URL
  */
 function fixNodeUrlEncoding(nodeUrl) {
-    if (nodeUrl.startsWith('hysteria2://')) {
-        return nodeUrl.replace(/([?&]obfs-password=)([^&]+)/g, (match, prefix, value) => {
+    if (nodeUrl.startsWith('hysteria2://') || nodeUrl.startsWith('hy2://')) {
+        const safeDecode = (value) => {
             try {
-                return prefix + decodeURIComponent(value);
+                return decodeURIComponent(value);
             } catch (e) {
-                return match;
+                return value;
             }
+        };
+        const shouldKeepRaw = (decoded) => /[&=]/.test(decoded);
+
+        nodeUrl = nodeUrl.replace(/^(hysteria2|hy2):\/\/([^@]+)@/i, (match, scheme, auth) => {
+            const decodedAuth = safeDecode(auth);
+            if (decodedAuth === auth) return match;
+            if (/[@/?#]/.test(decodedAuth)) return match;
+            return `${scheme}://${decodedAuth}@`;
+        });
+
+        return nodeUrl.replace(/([?&](?:obfs-password|auth|password)=)([^&]+)/gi, (match, prefix, value) => {
+            const decoded = safeDecode(value);
+            return shouldKeepRaw(decoded) ? match : `${prefix}${decoded}`;
         });
     }
     if (!nodeUrl.startsWith('ss://') && !nodeUrl.startsWith('vless://') && !nodeUrl.startsWith('trojan://')) {

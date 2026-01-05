@@ -9,7 +9,7 @@ import { extractNodeRegion, getRegionEmoji } from '../modules/utils/geo-utils.js
 /**
  * 节点协议正则表达式
  */
-export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5):\/\//g;
+export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|socks):\/\//g;
 
 /**
  * 为节点名称添加前缀
@@ -174,17 +174,32 @@ export function removeFlagEmoji(link) {
  * [核心修复] 修复节点URL中的编码问题（包含 Hysteria2 密码解码）
  */
 export function fixNodeUrlEncoding(nodeUrl) {
-    // 1. 针对 Hysteria2 的 obfs-password 进行解码
-    if (nodeUrl.startsWith('hysteria2://')) {
-        // 查找 obfs-password= 及其后的值，并进行 URL 解码
-        // 例如：obfs-password=Aq112211%21 -> obfs-password=Aq112211!
-        nodeUrl = nodeUrl.replace(/([?&]obfs-password=)([^&]+)/g, (match, prefix, value) => {
+    // 1. 针对 Hysteria2/Hy2 的用户名与参数进行解码
+    if (nodeUrl.startsWith('hysteria2://') || nodeUrl.startsWith('hy2://')) {
+        const safeDecode = (value) => {
             try {
-                return prefix + decodeURIComponent(value);
+                return decodeURIComponent(value);
             } catch (e) {
-                return match;
+                return value;
             }
+        };
+        const shouldKeepRaw = (decoded) => /[&=]/.test(decoded);
+
+        // 解码 userinfo（密码）
+        nodeUrl = nodeUrl.replace(/^(hysteria2|hy2):\/\/([^@]+)@/i, (match, scheme, auth) => {
+            const decodedAuth = safeDecode(auth);
+            if (decodedAuth === auth) return match;
+            // 若解码后包含 URL 分隔符，保留原始值避免破坏结构
+            if (/[@/?#]/.test(decodedAuth)) return match;
+            return `${scheme}://${decodedAuth}@`;
         });
+
+        // 解码 query 中的常用字段
+        nodeUrl = nodeUrl.replace(/([?&](?:obfs-password|auth|password)=)([^&]+)/gi, (match, prefix, value) => {
+            const decoded = safeDecode(value);
+            return shouldKeepRaw(decoded) ? match : `${prefix}${decoded}`;
+        });
+
         return nodeUrl;
     }
 

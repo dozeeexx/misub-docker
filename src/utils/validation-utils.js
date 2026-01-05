@@ -31,7 +31,7 @@ export function isValidNodeUrl(nodeUrl) {
     const supportedProtocols = [
         'ss://', 'ssr://', 'vmess://', 'vless://',
         'trojan://', 'hysteria2://', 'hysteria://',
-        'hy2://', 'hy://', 'tuic://', 'anytls://', 'socks5://',
+        'hy2://', 'hy://', 'tuic://', 'anytls://', 'socks5://', 'socks://',
         'snell://', 'naive+https://', 'naive+quic://', 'naive+http://'
     ];
 
