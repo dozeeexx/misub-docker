@@ -49,7 +49,7 @@ const DEFAULT_MOCK_NODES = [
   { name: 'Hong Kong 01 | IPLC [VIP]', region: 'HK', protocol: 'trojan', server: 'hk1.gw', port: '8443' },
   { name: '🇯🇵 日本 BGP [专线]', region: 'JP', protocol: 'vless', server: 'jp1.gw', port: '443' },
   { name: '新加坡 SG-02 [流媒体]', region: 'SG', protocol: 'shadowsocks', server: 'sg2.gw', port: '8388' },
-  { name: '🇹🇼 台湾 Hysteria2 [0.5倍率]', region: 'TW', protocol: 'hysteria2', server: 'tw1.gw', port: '443' },
+  { name: '🇨🇳 台湾 Hysteria2 [0.5倍率]', region: 'TW', protocol: 'hysteria2', server: 'tw1.gw', port: '443' },
   { name: '🇰🇷 South Korea SK [原生]', region: 'KR', protocol: 'ss', server: 'kr1.gw', port: '443' },
   { name: '🇩🇪 德国法兰克福 CN2', region: 'DE', protocol: 'vmess', server: 'de1.gw', port: '443' },
   { name: '⛔️ 到期时间: 2099-12-31', region: 'US', protocol: 'trojan', server: 'info.gw', port: '443' }
@@ -149,7 +149,7 @@ const REGION_NAMES = {
 // 获取地区 Emoji
 function getEmoji(regionCode) {
   const map = {
-    US: '🇺🇸', HK: '🇭🇰', JP: '🇯🇵', SG: '🇸🇬', TW: '🇹🇼', KR: '🇰🇷',
+    US: '🇺🇸', HK: '🇭🇰', JP: '🇯🇵', SG: '🇸🇬', TW: '🇨🇳', KR: '🇰🇷',
     GB: '🇬🇧', UK: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷', CA: '🇨🇦', AU: '🇦🇺',
     NL: '🇳🇱', RU: '🇷🇺', IN: '🇮🇳', TR: '🇹🇷', MY: '🇲🇾', TH: '🇹🇭',
     VN: '🇻🇳', PH: '🇵🇭', ID: '🇮🇩', CH: '🇨🇭', IT: '🇮🇹', ES: '🇪🇸',
@@ -157,7 +157,7 @@ function getEmoji(regionCode) {
     AE: '🇦🇪', SA: '🇸🇦', PL: '🇵🇱', CZ: '🇨🇿', HU: '🇭🇺', RO: '🇷🇴',
     BG: '🇧🇬', GR: '🇬🇷', PT: '🇵🇹', SE: '🇸🇪', NO: '🇳🇴', DK: '🇩🇰', FI: '🇫🇮', AT: '🇦🇹'
   };
-  return map[regionCode] || '🏁';
+  return map[regionCode] || '🌍';
 }
 
 // --- 规则构建器 ---

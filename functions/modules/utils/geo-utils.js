@@ -59,7 +59,7 @@ export const REGION_KEYWORDS = {
  */
 export const REGION_EMOJI = {
     '香港': '🇭🇰',
-    '台湾': '🇹🇼',
+    '台湾': '🇨🇳',
     '新加坡': '🇸🇬',
     '日本': '🇯🇵',
     '美国': '🇺🇸',
@@ -100,7 +100,7 @@ export const REGION_EMOJI = {
     '丹麦': '🇩🇰',
     '芬兰': '🇫🇮',
     '奥地利': '🇦🇹',
-    '其他': '🏁'
+    '其他': '🌍'
 };
 
 function normalizeBase64(input) {
@@ -172,8 +172,32 @@ export function extractNodeRegion(nodeName) {
     // 遍历所有地区关键词
     for (const [regionName, keywords] of Object.entries(REGION_KEYWORDS)) {
         for (const keyword of keywords) {
-            if (normalizedNodeName.includes(keyword.toLowerCase())) {
-                return regionName;
+            const lowerKeyword = keyword.toLowerCase();
+
+            // 对于短关键词（2-3个字符的纯英文），要求匹配独立单词边界
+            // 避免 "kristi" 匹配 "kr"，"user" 匹配 "us" 等误匹配
+            if (lowerKeyword.length <= 3 && /^[a-z]+$/i.test(lowerKeyword)) {
+                // 使用更兼容的方式检查单词边界（不使用 lookbehind）
+                const idx = normalizedNodeName.indexOf(lowerKeyword);
+                if (idx !== -1) {
+                    // 检查前一个字符
+                    const charBefore = idx > 0 ? normalizedNodeName[idx - 1] : '';
+                    const isLetterBefore = charBefore && /[a-z]/i.test(charBefore);
+
+                    // 检查后一个字符
+                    const charAfter = normalizedNodeName[idx + lowerKeyword.length] || '';
+                    const isLetterAfter = charAfter && /[a-z]/i.test(charAfter);
+
+                    // 只有当前后都不是字母时才匹配
+                    if (!isLetterBefore && !isLetterAfter) {
+                        return regionName;
+                    }
+                }
+            } else {
+                // 对于长关键词或中文，直接使用 includes
+                if (normalizedNodeName.includes(lowerKeyword)) {
+                    return regionName;
+                }
             }
         }
     }
@@ -280,6 +304,9 @@ export function parseNodeInfo(nodeUrl) {
         nodeName = urlParts[0] || '未命名节点';
     }
 
+    // [修复] 将台湾旗帜替换为中国国旗
+    nodeName = nodeName.replace(/🇹🇼/g, '🇨🇳');
+
     // [新增] 提取服务器地址和端口
     let server = '';
     let port = '';
@@ -355,6 +382,30 @@ export function parseNodeInfo(nodeUrl) {
 
             const atIndex = body.lastIndexOf('@');
             let serverPart = (atIndex !== -1) ? body.substring(atIndex + 1) : body;
+
+            // [新增] 检测 Base64 编码的用户信息（某些非标准 VLESS URL）
+            // 格式：vless://Base64(auto:uuid@host:port)?params
+            if (atIndex === -1 && protocol === 'vless' && body.length > 20) {
+                try {
+                    // 尝试 Base64 解码
+                    let b64 = body.replace(/-/g, '+').replace(/_/g, '/');
+                    while (b64.length % 4) b64 += '=';
+                    const binaryString = atob(b64);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const decoded = new TextDecoder('utf-8').decode(bytes);
+                    // 检查解码结果是否包含 @ 符号（形如 auto:uuid@host:port）
+                    if (decoded.includes('@')) {
+                        const decodedAtIndex = decoded.lastIndexOf('@');
+                        serverPart = decoded.substring(decodedAtIndex + 1);
+                    }
+                } catch (e) {
+                    // Base64 解码失败，继续使用原逻辑
+                    console.debug('[GeoUtils] VLESS base64 decode attempt failed (expected for standard format)');
+                }
+            }
 
             // 处理 IPv6 [::1]:port
             if (serverPart.startsWith('[')) {

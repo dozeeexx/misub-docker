@@ -79,6 +79,8 @@ export function useManualNodes(markDirty) {
     nodeIds.forEach(id => {
       dataStore.removeSubscription(id);
     });
+    // 清理组合订阅中对这些节点的引用
+    dataStore.removeManualNodeFromProfiles(nodeIds);
 
     // Adjust pagination if needed
     if (paginatedManualNodes.value.length === 0 && manualNodesCurrentPage.value > 1) {
@@ -107,6 +109,8 @@ export function useManualNodes(markDirty) {
 
   function deleteNode(nodeId) {
     dataStore.removeSubscription(nodeId);
+    // 清理组合订阅中对该节点的引用
+    dataStore.removeManualNodeFromProfiles(nodeId);
     if (paginatedManualNodes.value.length === 0 && manualNodesCurrentPage.value > 1) {
       manualNodesCurrentPage.value--;
     }
@@ -116,10 +120,20 @@ export function useManualNodes(markDirty) {
   function deleteAllNodes() {
     // Only remove proper manual nodes (not subscriptions)
     const idsToRemove = manualNodes.value.map(n => n.id);
+
+    // 如果没有节点，提示并返回
+    if (idsToRemove.length === 0) {
+      showToast('没有可删除的节点', 'info');
+      return;
+    }
+
     idsToRemove.forEach(id => dataStore.removeSubscription(id));
+    // 清理组合订阅中对这些节点的引用
+    dataStore.removeManualNodeFromProfiles(idsToRemove);
 
     manualNodesCurrentPage.value = 1;
     markDirty();
+    showToast(`已清空 ${idsToRemove.length} 个节点`, 'success');
   }
 
   function addNodesFromBulk(nodes) {

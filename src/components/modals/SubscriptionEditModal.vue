@@ -24,7 +24,7 @@ const customKeyword = ref('');
 // 预设标签
 const presetRegions = [
   { label: '香港', pattern: '(香港|HK|Hong Kong)', icon: '🇭🇰' },
-  { label: '台湾', pattern: '(台湾|TW|Taiwan)', icon: '🇹🇼' },
+  { label: '台湾', pattern: '(台湾|TW|Taiwan)', icon: '🇨🇳' },
   { label: '日本', pattern: '(日本|JP|Japan)', icon: '🇯🇵' },
   { label: '新加坡', pattern: '(新加坡|SG|Singapore)', icon: '🇸🇬' },
   { label: '美国', pattern: '(美国|US|USA)', icon: '🇺🇸' },

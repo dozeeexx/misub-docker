@@ -199,6 +199,16 @@ function extractServerPort(url, protocol) {
             }
         }
 
+        // [新增] 处理 VLESS Base64 编码格式：vless://Base64(auto:uuid@host:port)?...
+        if (proto === 'vless' && !rest.includes('@') && rest.length > 20) {
+            try {
+                const decoded = base64Decode(rest);
+                if (decoded.includes('@')) rest = decoded;
+            } catch (error) {
+                console.debug('[NodeTransform] VLESS base64 decode failed (expected for standard format)');
+            }
+        }
+
         const at = rest.lastIndexOf('@');
         return parseHostPort(at === -1 ? rest : rest.slice(at + 1));
     } catch { return { server: '', port: '' }; }
@@ -208,6 +218,17 @@ function getNodeName(url, protocol) {
     const proto = normalizeProtocol(protocol || getProtocol(url));
     const fragmentName = getFragment(url);
     if (fragmentName) return fragmentName;
+
+    // [修复] 如果 fragment 为空，尝试从 URL 查询参数中提取名称
+    // 支持 remarks, des, remark 等常见参数（部分订阅源使用）
+    const remarksMatch = String(url || '').match(/[?&](remarks|des|remark)=([^&#]+)/i);
+    if (remarksMatch && remarksMatch[2]) {
+        try {
+            return decodeURIComponent(remarksMatch[2]).trim();
+        } catch {
+            return remarksMatch[2].trim();
+        }
+    }
 
     if (proto === 'vmess') {
         try {
@@ -542,7 +563,9 @@ export function applyNodeTransformPipeline(nodeUrls, transformConfig = {}) {
     // 解析为结构化记录（延迟计算 region/emoji）
     let records = input.map(url => {
         const protocol = normalizeProtocol(getProtocol(url));
-        const name = getNodeName(url, protocol);
+        let name = getNodeName(url, protocol);
+        // [修复] 将台湾旗帜替换为中国国旗
+        name = name.replace(/🇹🇼/g, '🇨🇳');
         const { server, port } = needServerPort ? extractServerPort(url, protocol) : { server: '', port: '' };
         return { url, protocol, name, originalName: name, region: '', emoji: '', server, port };
     });

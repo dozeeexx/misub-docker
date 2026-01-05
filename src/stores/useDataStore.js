@@ -301,6 +301,54 @@ export const useDataStore = defineStore('data', () => {
         }
     }
 
+    /**
+     * 从所有组合订阅中移除对指定手工节点的引用
+     * @param {string|string[]} nodeIds - 要移除的节点 ID 或 ID 数组
+     */
+    function removeManualNodeFromProfiles(nodeIds) {
+        const idsToRemove = Array.isArray(nodeIds) ? new Set(nodeIds) : new Set([nodeIds]);
+        if (idsToRemove.size === 0) return;
+
+        let modified = false;
+        profiles.value.forEach(profile => {
+            if (Array.isArray(profile.manualNodes) && profile.manualNodes.length > 0) {
+                const originalLength = profile.manualNodes.length;
+                profile.manualNodes = profile.manualNodes.filter(id => !idsToRemove.has(id));
+                if (profile.manualNodes.length !== originalLength) {
+                    modified = true;
+                }
+            }
+        });
+
+        if (modified && isDev) {
+            console.debug('[DataStore] Cleaned up manual node references from profiles');
+        }
+    }
+
+    /**
+     * 从所有组合订阅中移除对指定订阅源的引用
+     * @param {string|string[]} subIds - 要移除的订阅 ID 或 ID 数组
+     */
+    function removeSubscriptionFromProfiles(subIds) {
+        const idsToRemove = Array.isArray(subIds) ? new Set(subIds) : new Set([subIds]);
+        if (idsToRemove.size === 0) return;
+
+        let modified = false;
+        profiles.value.forEach(profile => {
+            if (Array.isArray(profile.subscriptions) && profile.subscriptions.length > 0) {
+                const originalLength = profile.subscriptions.length;
+                profile.subscriptions = profile.subscriptions.filter(id => !idsToRemove.has(id));
+                if (profile.subscriptions.length !== originalLength) {
+                    modified = true;
+                }
+            }
+        });
+
+        if (modified && isDev) {
+            console.debug('[DataStore] Cleaned up subscription references from profiles');
+        }
+    }
+
     // --- Dirty State Proxies ---
     function markDirty() {
         if (saveState.value === 'success') {
@@ -343,6 +391,8 @@ export const useDataStore = defineStore('data', () => {
         addProfile,
         overwriteProfiles,
         removeProfile,
+        removeManualNodeFromProfiles,
+        removeSubscriptionFromProfiles,
         markDirty,
         clearDirty
     };

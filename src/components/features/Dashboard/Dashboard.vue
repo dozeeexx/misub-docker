@@ -50,8 +50,8 @@ const saveState = ref('idle');
 
 // Wrapper for markDirty to also reset saveState
 const markDirty = () => {
-    dataStore.markDirty();
-    saveState.value = 'idle';
+  dataStore.markDirty();
+  saveState.value = 'idle';
 };
 
 // --- 將狀態和邏輯委託給 Composables ---
@@ -65,7 +65,7 @@ const {
   subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions, totalRemainingTraffic,
   changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
   addSubscriptionsFromBulk, handleUpdateNodeCount, batchUpdateAllSubscriptions, startAutoUpdate, stopAutoUpdate,
-  reorderSubscriptions, 
+  reorderSubscriptions,
 } = useSubscriptions(markDirty);
 
 const {
@@ -133,22 +133,22 @@ const previewProfileName = ref('');
 
 // --- 初始化與生命週期 ---
 const initializeState = async () => {
+  if (isDev) {
+    console.debug('Dashboard: initializeState started');
+  }
+  try {
+    // fetchData 内部会检查数据是否已加载，避免重复请求
+    await dataStore.fetchData();
     if (isDev) {
-      console.debug('Dashboard: initializeState started');
+      console.debug('Dashboard: fetchData completed', {
+        subs: subscriptions.value?.length,
+        nodes: manualNodes.value?.length
+      });
     }
-    try {
-        // fetchData 内部会检查数据是否已加载，避免重复请求
-        await dataStore.fetchData();
-        if (isDev) {
-          console.debug('Dashboard: fetchData completed', {
-            subs: subscriptions.value?.length,
-            nodes: manualNodes.value?.length
-          });
-        }
-        clearDirty();
-    } catch (e) {
-        console.error('Dashboard: initializeState error', e);
-    }
+    clearDirty();
+  } catch (e) {
+    console.error('Dashboard: initializeState error', e);
+  }
 };
 
 const handleBeforeUnload = (event) => {
@@ -189,38 +189,38 @@ const handleDiscard = async () => {
 
 const handleSave = async () => {
   saveState.value = 'saving';
-  
+
   try {
-     await dataStore.saveData();
-     
-     saveState.value = 'success';
-     
-     if (isSortingNodes.value) isSortingNodes.value = false;
-     
-     setTimeout(() => { saveState.value = 'idle'; }, 1500);
+    await dataStore.saveData();
+
+    saveState.value = 'success';
+
+    if (isSortingNodes.value) isSortingNodes.value = false;
+
+    setTimeout(() => { saveState.value = 'idle'; }, 1500);
 
   } catch (error) {
-     saveState.value = 'idle';
+    saveState.value = 'idle';
   }
 };
 
 
 const handleDeleteSubscriptionWithCleanup = (subId) => {
   deleteSubscription(subId);
-  cleanupSubscriptions(subId);
+  // cleanup 已在 deleteSubscription 内部通过 removeSubscriptionFromProfiles 实现
 };
 const handleDeleteNodeWithCleanup = (nodeId) => {
   deleteNode(nodeId);
-  cleanupNodes(nodeId);
+  // cleanup 已在 deleteNode 内部通过 removeManualNodeFromProfiles 实现
 };
 const handleDeleteAllSubscriptionsWithCleanup = () => {
   deleteAllSubscriptions();
-  cleanupAllSubscriptions();
+  // cleanup 已在 deleteAllSubscriptions 内部通过 removeSubscriptionFromProfiles 实现
   showDeleteSubsModal.value = false;
 };
 const handleDeleteAllNodesWithCleanup = () => {
   deleteAllNodes();
-  cleanupAllNodes();
+  // cleanup 已在 deleteAllNodes 内部通过 removeManualNodeFromProfiles 实现
   showDeleteNodesModal.value = false;
 };
 const handleAutoSortNodes = () => {
@@ -229,26 +229,26 @@ const handleAutoSortNodes = () => {
 };
 
 const handleDeduplicateNodes = () => {
-    const plan = buildDedupPlan();
-    if (!plan || plan.removeCount === 0) {
-        showToast('没有发现重复的节点。', 'info');
-        return;
-    }
-    dedupPlan.value = plan;
-    showDedupModal.value = true;
+  const plan = buildDedupPlan();
+  if (!plan || plan.removeCount === 0) {
+    showToast('没有发现重复的节点。', 'info');
+    return;
+  }
+  dedupPlan.value = plan;
+  showDedupModal.value = true;
 };
 
 const handleBatchDeleteRequest = (ids) => {
-    if (ids && ids.length > 0) {
-        batchDeleteIds.value = ids;
-        showBatchDeleteModal.value = true;
-    }
+  if (ids && ids.length > 0) {
+    batchDeleteIds.value = ids;
+    showBatchDeleteModal.value = true;
+  }
 };
 
 const confirmBatchDelete = () => {
-    batchDeleteNodes(batchDeleteIds.value);
-    batchDeleteIds.value = [];
-    showBatchDeleteModal.value = false;
+  batchDeleteNodes(batchDeleteIds.value);
+  batchDeleteIds.value = [];
+  showBatchDeleteModal.value = false;
 };
 
 // 节点预览处理函数
@@ -300,31 +300,34 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4 md:gap-0">
       <div class="flex flex-wrap items-center gap-3 md:gap-4">
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white">仪表盘</h1>
-        <span 
-          v-if="formattedTotalRemainingTraffic !== '0 B'"
-          class="px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-500/20 rounded-full"
-        >
+        <span v-if="formattedTotalRemainingTraffic !== '0 B'"
+          class="px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-500/20 rounded-full">
           剩余总流量: {{ formattedTotalRemainingTraffic }}
         </span>
       </div>
       <div class="flex items-center gap-2 w-full md:w-auto">
-        <button @click="showLogModal = true" class="flex-1 md:flex-none text-center text-sm font-semibold px-4 py-2 rounded-lg text-gray-600 dark:text-gray-400 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">订阅日志</button>
-        <button @click="showBulkImportModal = true" class="flex-1 md:flex-none text-center text-sm font-semibold px-4 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 border-2 border-indigo-500/50 hover:bg-indigo-500/10 transition-colors">批量导入</button>
+        <button @click="showLogModal = true"
+          class="flex-1 md:flex-none text-center text-sm font-semibold px-4 py-2 rounded-lg text-gray-600 dark:text-gray-400 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">订阅日志</button>
+        <button @click="showBulkImportModal = true"
+          class="flex-1 md:flex-none text-center text-sm font-semibold px-4 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 border-2 border-indigo-500/50 hover:bg-indigo-500/10 transition-colors">批量导入</button>
       </div>
     </div>
 
     <!-- Dirty State Banner -->
     <Transition name="slide-fade">
-      <div v-if="isDirty || saveState === 'success'" 
-           class="p-3 mb-6 rounded-lg ring-1 ring-inset flex items-center justify-between transition-colors duration-300"
-           :class="saveState === 'success' ? 'bg-teal-500/10 ring-teal-500/20' : 'bg-indigo-600/10 dark:bg-indigo-500/20 ring-indigo-600/20'">
-        <p class="text-sm font-medium transition-colors duration-300" 
-           :class="saveState === 'success' ? 'text-teal-800 dark:text-teal-200' : 'text-indigo-800 dark:text-indigo-200'">
+      <div v-if="isDirty || saveState === 'success'"
+        class="p-3 mb-6 rounded-lg ring-1 ring-inset flex items-center justify-between transition-colors duration-300"
+        :class="saveState === 'success' ? 'bg-teal-500/10 ring-teal-500/20' : 'bg-indigo-600/10 dark:bg-indigo-500/20 ring-indigo-600/20'">
+        <p class="text-sm font-medium transition-colors duration-300"
+          :class="saveState === 'success' ? 'text-teal-800 dark:text-teal-200' : 'text-indigo-800 dark:text-indigo-200'">
           {{ saveState === 'success' ? '保存成功' : '您有未保存的更改' }}
         </p>
         <div class="flex items-center gap-3">
-          <button v-if="saveState !== 'success'" @click="handleDiscard" class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">放弃更改</button>
-          <button @click.prevent="handleSave" :disabled="saveState !== 'idle'" class="px-5 py-2 text-sm text-white font-semibold rounded-lg shadow-xs flex items-center justify-center transition-all duration-300 w-28" :class="{'bg-indigo-600 hover:bg-indigo-700': saveState === 'idle', 'bg-gray-500 cursor-not-allowed': saveState === 'saving', 'bg-teal-500 cursor-not-allowed': saveState === 'success' }">
+          <button v-if="saveState !== 'success'" @click="handleDiscard"
+            class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">放弃更改</button>
+          <button @click.prevent="handleSave" :disabled="saveState !== 'idle'"
+            class="px-5 py-2 text-sm text-white font-semibold rounded-lg shadow-xs flex items-center justify-center transition-all duration-300 w-28"
+            :class="{ 'bg-indigo-600 hover:bg-indigo-700': saveState === 'idle', 'bg-gray-500 cursor-not-allowed': saveState === 'saving', 'bg-teal-500 cursor-not-allowed': saveState === 'success' }">
             <div v-if="saveState === 'saving'" class="flex items-center">
               <StatusIndicator status="loading" size="sm" class="mr-2" />
               <span>保存中...</span>
@@ -343,130 +346,98 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-start">
       <div class="lg:col-span-2 md:col-span-2 space-y-12">
         <!-- Subscription Panel -->
-        <SubscriptionPanel
-          :subscriptions="subscriptions"
-          :paginated-subscriptions="paginatedSubscriptions"
-          :current-page="subsCurrentPage"
-          :total-pages="subsTotalPages"
-          :is-sorting="isSortingSubs"
-          @add="handleAddSubscription"
-          @delete="handleDeleteSubscriptionWithCleanup"
-          @change-page="changeSubsPage"
-          @update-node-count="handleUpdateNodeCount"
-          @refresh-all="batchUpdateAllSubscriptions"
+        <SubscriptionPanel :subscriptions="subscriptions" :paginated-subscriptions="paginatedSubscriptions"
+          :current-page="subsCurrentPage" :total-pages="subsTotalPages" :is-sorting="isSortingSubs"
+          @add="handleAddSubscription" @delete="handleDeleteSubscriptionWithCleanup" @change-page="changeSubsPage"
+          @update-node-count="handleUpdateNodeCount" @refresh-all="batchUpdateAllSubscriptions"
           @edit="(id) => handleEditSubscription(subscriptions.find(s => s.id === id))"
-          @toggle-sort="isSortingSubs = !isSortingSubs"
-          @mark-dirty="markDirty"
-          @delete-all="showDeleteSubsModal = true"
-          @preview="handlePreviewSubscription"
-          @reorder="reorderSubscriptions"
-        />
+          @toggle-sort="isSortingSubs = !isSortingSubs" @mark-dirty="markDirty" @delete-all="showDeleteSubsModal = true"
+          @preview="handlePreviewSubscription" @reorder="reorderSubscriptions" />
 
         <!-- Manual Node Panel -->
-        <ManualNodePanel
-          :manual-nodes="manualNodes"
-          :paginated-manual-nodes="paginatedManualNodes"
-          :current-page="manualNodesCurrentPage"
-          :total-pages="manualNodesTotalPages"
-          :is-sorting="isSortingNodes"
-          :search-term="searchTerm"
-          :view-mode="manualNodeViewMode"
-          :active-color-filter="activeColorFilter"
-          @add="handleAddNode"
-          @delete="handleDeleteNodeWithCleanup"
-          @edit="(id) => handleEditNode(manualNodes.find(n => n.id === id))"
-          @change-page="changeManualNodesPage"
-          @update:search-term="newVal => searchTerm.value = newVal"
-          @update:view-mode="setViewMode"
-          @toggle-sort="isSortingNodes = !isSortingNodes"
-          @mark-dirty="markDirty"
-          @auto-sort="handleAutoSortNodes"
-          @deduplicate="handleDeduplicateNodes"
-          @import="showSubscriptionImportModal = true"
-          @delete-all="showDeleteNodesModal = true"
-          @reorder="reorderManualNodes"
-          @set-color-filter="setColorFilter"
-          @batch-update-color="batchUpdateColor"
-          @batch-delete-nodes="handleBatchDeleteRequest"
-        />
+        <ManualNodePanel :manual-nodes="manualNodes" :paginated-manual-nodes="paginatedManualNodes"
+          :current-page="manualNodesCurrentPage" :total-pages="manualNodesTotalPages" :is-sorting="isSortingNodes"
+          :search-term="searchTerm" :view-mode="manualNodeViewMode" :active-color-filter="activeColorFilter"
+          @add="handleAddNode" @delete="handleDeleteNodeWithCleanup"
+          @edit="(id) => handleEditNode(manualNodes.find(n => n.id === id))" @change-page="changeManualNodesPage"
+          @update:search-term="newVal => searchTerm.value = newVal" @update:view-mode="setViewMode"
+          @toggle-sort="isSortingNodes = !isSortingNodes" @mark-dirty="markDirty" @auto-sort="handleAutoSortNodes"
+          @deduplicate="handleDeduplicateNodes" @import="showSubscriptionImportModal = true"
+          @delete-all="showDeleteNodesModal = true" @reorder="reorderManualNodes" @set-color-filter="setColorFilter"
+          @batch-update-color="batchUpdateColor" @batch-delete-nodes="handleBatchDeleteRequest" />
       </div>
-      
+
       <!-- Right Column -->
       <div class="lg:col-span-1 space-y-8">
         <RightPanel :config="config" :profiles="profiles" />
-        <ProfilePanel 
-          :profiles="profiles"
-          @add="handleAddProfile"
-          @edit="handleEditProfile"
-          @delete="handleDeleteProfile"
-          @deleteAll="showDeleteProfilesModal = true"
-          @toggle="handleProfileToggle"
-          @copyLink="copyProfileLink"
-          @preview="handlePreviewProfile"
-          @reorder="handleProfileReorder"
-        />
+        <ProfilePanel :profiles="profiles" @add="handleAddProfile" @edit="handleEditProfile"
+          @delete="handleDeleteProfile" @deleteAll="showDeleteProfilesModal = true" @toggle="handleProfileToggle"
+          @copyLink="copyProfileLink" @preview="handlePreviewProfile" @reorder="handleProfileReorder" />
       </div>
     </div>
   </div>
 
   <BulkImportModal v-model:show="showBulkImportModal" @import="(txt, tag) => handleBulkImport(txt, tag)" />
   <LogModal v-model:show="showLogModal" />
-  <Modal v-model:show="showDeleteSubsModal" @confirm="handleDeleteAllSubscriptionsWithCleanup"><template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**订阅**吗？此操作将标记为待保存，不会影响手动节点。</p></template></Modal>
-  <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodesWithCleanup"><template #title><h3 class="text-lg font-bold text-red-500">确认清空节点</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**手动节点**吗？此操作将标记为待保存，不会影响订阅。</p></template></Modal>
+  <Modal v-model:show="showDeleteSubsModal" @confirm="handleDeleteAllSubscriptionsWithCleanup"><template #title>
+      <h3 class="text-lg font-bold text-red-500">确认清空订阅</h3>
+    </template><template #body>
+      <p class="text-sm text-gray-400">您确定要删除所有**订阅**吗？此操作将标记为待保存，不会影响手动节点。</p>
+    </template></Modal>
+  <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodesWithCleanup"><template #title>
+      <h3 class="text-lg font-bold text-red-500">确认清空节点</h3>
+    </template><template #body>
+      <p class="text-sm text-gray-400">您确定要删除所有**手动节点**吗？此操作将标记为待保存，不会影响订阅。</p>
+    </template></Modal>
   <Modal v-model:show="showBatchDeleteModal" @confirm="confirmBatchDelete">
-      <template #title><h3 class="text-lg font-bold text-red-500">确认批量删除</h3></template>
-      <template #body><p class="text-sm text-gray-600 dark:text-gray-300">您确定要删除选中的 <span class="font-bold border-b border-red-500">{{ batchDeleteIds.length }}</span> 个节点吗？此操作不可恢复。</p></template>
+    <template #title>
+      <h3 class="text-lg font-bold text-red-500">确认批量删除</h3>
+    </template>
+    <template #body>
+      <p class="text-sm text-gray-600 dark:text-gray-300">您确定要删除选中的 <span class="font-bold border-b border-red-500">{{
+        batchDeleteIds.length }}</span> 个节点吗？此操作不可恢复。</p>
+    </template>
   </Modal>
-  <Modal v-model:show="showDeleteProfilesModal" @confirm="handleDeleteAllProfiles"><template #title><h3 class="text-lg font-bold text-red-500">确认清空订阅组</h3></template><template #body><p class="text-sm text-gray-400">您确定要删除所有**订阅组**吗？此操作不可逆。</p></template></Modal>
-  
-  <ProfileModal v-if="showProfileModal" v-model:show="showProfileModal" :profile="editingProfile" :is-new="isNewProfile" :all-subscriptions="subscriptions" :all-manual-nodes="manualNodes" @save="handleSaveProfile" size="2xl" />
-  
-  <ManualNodeEditModal
-    v-model:show="showNodeModal"
-    :is-new="isNewNode"
-    :editing-node="editingNode"
-    @confirm="handleSaveNode"
-    @input-url="handleNodeUrlInput"
-  />
-  <ManualNodeDedupModal
-    v-model:show="showDedupModal"
-    :plan="dedupPlan"
-    @confirm="applyDedupPlan(dedupPlan); showDedupModal = false; dedupPlan = null"
-  />
+  <Modal v-model:show="showDeleteProfilesModal" @confirm="handleDeleteAllProfiles"><template #title>
+      <h3 class="text-lg font-bold text-red-500">确认清空订阅组</h3>
+    </template><template #body>
+      <p class="text-sm text-gray-400">您确定要删除所有**订阅组**吗？此操作不可逆。</p>
+    </template></Modal>
 
-  <SubscriptionEditModal
-    v-model:show="showSubModal"
-    :is-new="isNewSubscription"
-    :editing-subscription="editingSubscription"
-    @confirm="handleSaveSubscription"
-  />
-  
-  <SettingsModal 
-    v-model:show="uiStore.isSettingsModalVisible" 
-    :export-backup="exportBackup"
-    :import-backup="importBackup"
-  />
-  <SubscriptionImportModal :show="showSubscriptionImportModal" @update:show="showSubscriptionImportModal = $event" :add-nodes-from-bulk="addNodesFromBulk" />
+  <ProfileModal v-if="showProfileModal" v-model:show="showProfileModal" :profile="editingProfile" :is-new="isNewProfile"
+    :all-subscriptions="subscriptions" :all-manual-nodes="manualNodes" @save="handleSaveProfile" size="2xl" />
+
+  <ManualNodeEditModal v-model:show="showNodeModal" :is-new="isNewNode" :editing-node="editingNode"
+    @confirm="handleSaveNode" @input-url="handleNodeUrlInput" />
+  <ManualNodeDedupModal v-model:show="showDedupModal" :plan="dedupPlan"
+    @confirm="applyDedupPlan(dedupPlan); showDedupModal = false; dedupPlan = null" />
+
+  <SubscriptionEditModal v-model:show="showSubModal" :is-new="isNewSubscription"
+    :editing-subscription="editingSubscription" @confirm="handleSaveSubscription" />
+
+  <SettingsModal v-model:show="uiStore.isSettingsModalVisible" :export-backup="exportBackup"
+    :import-backup="importBackup" />
+  <SubscriptionImportModal :show="showSubscriptionImportModal" @update:show="showSubscriptionImportModal = $event"
+    :add-nodes-from-bulk="addNodesFromBulk" />
 
   <!-- 节点预览模态窗口 -->
-  <NodePreviewModal
-    :show="showNodePreviewModal"
-    :subscription-id="previewSubscriptionId"
-    :subscription-name="previewSubscriptionName"
-    :subscription-url="previewSubscriptionUrl"
-    :profile-id="previewProfileId"
-    :profile-name="previewProfileName"
-    @update:show="showNodePreviewModal = $event"
-  />
+  <NodePreviewModal :show="showNodePreviewModal" :subscription-id="previewSubscriptionId"
+    :subscription-name="previewSubscriptionName" :subscription-url="previewSubscriptionUrl"
+    :profile-id="previewProfileId" :profile-name="previewProfileName" @update:show="showNodePreviewModal = $event" />
 </template>
 
 <style scoped>
-.slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.3s ease-out; }
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s ease-out;
+}
+
 .slide-fade-enter-from,
 .slide-fade-leave-to {
   transform: translateY(-20px);
   opacity: 0;
 }
+
 .cursor-move {
   cursor: move;
 }
@@ -475,6 +446,7 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
 .slide-fade-sm-leave-active {
   transition: all 0.2s ease-out;
 }
+
 .slide-fade-sm-enter-from,
 .slide-fade-sm-leave-to {
   transform: translateY(-10px);

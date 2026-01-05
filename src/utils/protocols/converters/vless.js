@@ -1,5 +1,6 @@
 /**
  * VLESS配置转换为URL
+ * 支持完整参数：TLS、Reality、WebSocket、gRPC、HTTP/2、HTTPUpgrade
  */
 export function convertVlessToUrl(proxy) {
     try {
@@ -7,53 +8,159 @@ export function convertVlessToUrl(proxy) {
             return null;
         }
 
-        const params = new URLSearchParams({
-            encryption: proxy.encryption || 'none',
-            type: proxy.network || 'tcp'
-        });
+        const params = new URLSearchParams();
 
-        // 添加传输参数
-        if (proxy.network === 'ws' && proxy['ws-opts']) {
-            params.set('type', 'ws');
-            if (proxy['ws-opts'].path) {
-                params.set('path', proxy['ws-opts'].path);
-            }
-            if (proxy['ws-opts']['headers']?.Host) {
-                params.set('host', proxy['ws-opts']['headers'].Host);
-            }
-        } else if (proxy.network === 'grpc' && proxy['grpc-opts']) {
-            params.set('type', 'grpc');
-            if (proxy['grpc-opts']['grpc-service-name']) {
-                params.set('serviceName', proxy['grpc-opts']['grpc-service-name']);
-            }
+        // 基础参数
+        params.set('encryption', proxy.encryption || 'none');
+
+        // 传输类型
+        const network = proxy.network || 'tcp';
+        params.set('type', network);
+
+        // 传输层配置
+        switch (network) {
+            case 'ws':
+                if (proxy['ws-opts']) {
+                    if (proxy['ws-opts'].path) {
+                        params.set('path', proxy['ws-opts'].path);
+                    }
+                    if (proxy['ws-opts']['headers']?.Host) {
+                        params.set('host', proxy['ws-opts']['headers'].Host);
+                    }
+                    if (proxy['ws-opts']['max-early-data']) {
+                        params.set('ed', proxy['ws-opts']['max-early-data']);
+                    }
+                    if (proxy['ws-opts']['early-data-header-name']) {
+                        params.set('eh', proxy['ws-opts']['early-data-header-name']);
+                    }
+                }
+                break;
+
+            case 'grpc':
+                if (proxy['grpc-opts']) {
+                    if (proxy['grpc-opts']['grpc-service-name']) {
+                        params.set('serviceName', proxy['grpc-opts']['grpc-service-name']);
+                    }
+                    if (proxy['grpc-opts']['grpc-mode']) {
+                        params.set('mode', proxy['grpc-opts']['grpc-mode']);
+                    }
+                }
+                break;
+
+            case 'h2':
+                if (proxy['h2-opts']) {
+                    if (proxy['h2-opts'].path) {
+                        params.set('path', proxy['h2-opts'].path);
+                    }
+                    if (proxy['h2-opts'].host) {
+                        const hosts = Array.isArray(proxy['h2-opts'].host)
+                            ? proxy['h2-opts'].host.join(',')
+                            : proxy['h2-opts'].host;
+                        params.set('host', hosts);
+                    }
+                }
+                break;
+
+            case 'httpupgrade':
+                if (proxy['httpupgrade-opts']) {
+                    if (proxy['httpupgrade-opts'].path) {
+                        params.set('path', proxy['httpupgrade-opts'].path);
+                    }
+                    if (proxy['httpupgrade-opts'].host) {
+                        params.set('host', proxy['httpupgrade-opts'].host);
+                    }
+                }
+                break;
+
+            case 'splithttp':
+                if (proxy['splithttp-opts']) {
+                    if (proxy['splithttp-opts'].path) {
+                        params.set('path', proxy['splithttp-opts'].path);
+                    }
+                    if (proxy['splithttp-opts'].host) {
+                        params.set('host', proxy['splithttp-opts'].host);
+                    }
+                }
+                break;
+
+            case 'tcp':
+                // TCP with HTTP header
+                if (proxy['http-opts']) {
+                    params.set('headerType', 'http');
+                    if (proxy['http-opts'].path) {
+                        const paths = Array.isArray(proxy['http-opts'].path)
+                            ? proxy['http-opts'].path[0]
+                            : proxy['http-opts'].path;
+                        params.set('path', paths);
+                    }
+                    if (proxy['http-opts'].headers?.Host) {
+                        const hosts = Array.isArray(proxy['http-opts'].headers.Host)
+                            ? proxy['http-opts'].headers.Host[0]
+                            : proxy['http-opts'].headers.Host;
+                        params.set('host', hosts);
+                    }
+                }
+                break;
         }
 
+        // Flow 流控
         if (proxy.flow) {
             params.set('flow', proxy.flow);
         }
 
-        if (proxy.tls) {
-            params.set('security', 'tls');
-            if (proxy.skipCertVerify !== undefined) {
-                params.set('allowInsecure', proxy.skipCertVerify ? 1 : 0);
-            }
-        } else if (proxy.reality) {
+        // TLS/Reality 安全配置
+        if (proxy.reality) {
             params.set('security', 'reality');
             if (proxy['reality-opts']) {
                 if (proxy['reality-opts']['public-key']) {
-                    params.set('publicKey', proxy['reality-opts']['public-key']);
+                    params.set('pbk', proxy['reality-opts']['public-key']);
                 }
                 if (proxy['reality-opts']['short-id']) {
-                    params.set('shortId', proxy['reality-opts']['short-id']);
+                    params.set('sid', proxy['reality-opts']['short-id']);
                 }
                 if (proxy['reality-opts']['spider-x']) {
-                    params.set('spiderX', proxy['reality-opts']['spider-x']);
+                    params.set('spx', proxy['reality-opts']['spider-x']);
                 }
             }
+            // Reality SNI
+            if (proxy.servername || proxy.sni) {
+                params.set('sni', proxy.servername || proxy.sni);
+            }
+            // Reality fingerprint
+            if (proxy['client-fingerprint'] || proxy.fingerprint) {
+                params.set('fp', proxy['client-fingerprint'] || proxy.fingerprint);
+            }
+        } else if (proxy.tls) {
+            params.set('security', 'tls');
+
+            // TLS SNI
+            if (proxy.servername || proxy.sni) {
+                params.set('sni', proxy.servername || proxy.sni);
+            }
+
+            // TLS Fingerprint
+            if (proxy['client-fingerprint'] || proxy.fingerprint) {
+                params.set('fp', proxy['client-fingerprint'] || proxy.fingerprint);
+            }
+
+            // ALPN
+            if (proxy.alpn) {
+                const alpn = Array.isArray(proxy.alpn) ? proxy.alpn.join(',') : proxy.alpn;
+                params.set('alpn', alpn);
+            }
+
+            // 跳过证书验证
+            if (proxy['skip-cert-verify'] !== undefined) {
+                params.set('allowInsecure', proxy['skip-cert-verify'] ? '1' : '0');
+            }
+        } else {
+            params.set('security', 'none');
         }
 
+        // 构建 URL
         const url = `vless://${proxy.uuid}@${proxy.server}:${proxy.port}?${params.toString()}`;
 
+        // Fragment (节点名称)
         if (proxy.name) {
             return `${url}#${encodeURIComponent(proxy.name)}`;
         }

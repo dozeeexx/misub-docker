@@ -165,6 +165,8 @@ export function useSubscriptions(markDirty) {
 
   function deleteSubscription(subId) {
     dataStore.removeSubscription(subId);
+    // 清理组合订阅中对该订阅源的引用
+    dataStore.removeSubscriptionFromProfiles(subId);
     if (paginatedSubscriptions.value.length === 0 && subsCurrentPage.value > 1) {
       subsCurrentPage.value--;
     }
@@ -175,10 +177,20 @@ export function useSubscriptions(markDirty) {
     // Only remove the subscriptions visible in this composable (i.e. HTTP subs)
     // Avoid removing manual nodes which are also in dataStore but filtered out here
     const idsToRemove = subscriptions.value.map(s => s.id);
+
+    // 如果没有订阅，提示并返回
+    if (idsToRemove.length === 0) {
+      showToast('没有可删除的订阅', 'info');
+      return;
+    }
+
     idsToRemove.forEach(id => dataStore.removeSubscription(id));
+    // 清理组合订阅中对这些订阅源的引用
+    dataStore.removeSubscriptionFromProfiles(idsToRemove);
 
     subsCurrentPage.value = 1;
     markDirty();
+    showToast(`已清空 ${idsToRemove.length} 个订阅`, 'success');
   }
 
   async function addSubscriptionsFromBulk(subs) {
