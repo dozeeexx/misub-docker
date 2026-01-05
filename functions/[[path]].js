@@ -146,7 +146,10 @@ export async function onRequest(context) {
 
                 // [Fix] SPA Fallback: If asset not found (404) and it's an SPA route OR it's an HTML request, serve index.html
                 const acceptHeader = request.headers.get('Accept') || '';
-                const isHtmlRequest = acceptHeader.includes('text/html');
+                const fetchMode = request.headers.get('Sec-Fetch-Mode') || '';
+                const fetchDest = request.headers.get('Sec-Fetch-Dest') || '';
+                const isNavigationRequest = fetchMode === 'navigate' || fetchDest === 'document';
+                const isHtmlRequest = isNavigationRequest && acceptHeader.includes('text/html');
 
                 if (response.status === 404 && (isSpaRoute || isHtmlRequest)) {
                     // Clone the request to fetch index.html

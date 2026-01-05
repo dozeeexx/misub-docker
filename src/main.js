@@ -50,12 +50,30 @@ if (typeof window !== 'undefined') {
   });
 
   // 处理资源加载错误（忽略第三方资源）
+  const assetReloadKey = 'misub:asset-reload';
+  const hasAssetReloaded = () => {
+    try {
+      return sessionStorage.getItem(assetReloadKey) === '1';
+    } catch (error) {
+      console.warn('[Resource Load] Failed to read sessionStorage:', error);
+      return false;
+    }
+  };
+  const markAssetReloaded = () => {
+    try {
+      sessionStorage.setItem(assetReloadKey, '1');
+    } catch (error) {
+      console.warn('[Resource Load] Failed to write sessionStorage:', error);
+    }
+  };
+
   const tryRecoverAssetLoad = async (resourceUrl) => {
     if (!resourceUrl || !resourceUrl.startsWith(window.location.origin)) return false;
-    if (!/\/assets\/.+\.(js|css)$/i.test(resourceUrl)) return false;
-    if (sessionStorage.getItem('misub:asset-reload') === '1') return false;
+    const resourcePath = resourceUrl.split('?')[0];
+    if (!/\/assets\/.+\.(js|css)$/i.test(resourcePath)) return false;
+    if (hasAssetReloaded()) return false;
 
-    sessionStorage.setItem('misub:asset-reload', '1');
+    markAssetReloaded();
     try {
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
