@@ -29,7 +29,7 @@ const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes, deduplicateNodes, buildDedupPlan, applyDedupPlan,
-  reorderManualNodes, cleanupNodes, cleanupAllNodes,
+  reorderManualNodes,
   manualNodeGroups, renameGroup, deleteGroup,
   activeColorFilter, setColorFilter, batchUpdateColor, batchDeleteNodes
 } = useManualNodes(markDirty);
@@ -52,12 +52,12 @@ const setViewMode = (mode) => {
 
 const handleDeleteNodeWithCleanup = (nodeId) => {
   deleteNode(nodeId);
-  cleanupNodes(nodeId);
+  // cleanupNodes 已在 deleteNode 内部通过 removeManualNodeFromProfiles 实现
 };
 
 const handleDeleteAllNodesWithCleanup = () => {
   deleteAllNodes();
-  cleanupAllNodes();
+  // cleanupAllNodes 已在 deleteAllNodes 内部通过 removeManualNodeFromProfiles 实现
   showDeleteNodesModal.value = false;
 };
 
@@ -79,16 +79,16 @@ const handleDeduplicateNodes = () => {
 // Old Handlers Removed
 
 const handleBatchDeleteRequest = (ids) => {
-    if (ids && ids.length > 0) {
-        batchDeleteIds.value = ids;
-        showBatchDeleteModal.value = true;
-    }
+  if (ids && ids.length > 0) {
+    batchDeleteIds.value = ids;
+    showBatchDeleteModal.value = true;
+  }
 };
 
 const confirmBatchDelete = () => {
-    batchDeleteNodes(batchDeleteIds.value);
-    batchDeleteIds.value = [];
-    showBatchDeleteModal.value = false;
+  batchDeleteNodes(batchDeleteIds.value);
+  batchDeleteIds.value = [];
+  showBatchDeleteModal.value = false;
 };
 
 </script>
@@ -97,59 +97,43 @@ const confirmBatchDelete = () => {
   <div class="max-w-(--breakpoint-xl) mx-auto">
 
 
-    <ManualNodePanel
-      :manual-nodes="manualNodes"
-      :paginated-manual-nodes="paginatedManualNodes"
-      :current-page="manualNodesCurrentPage"
-      :total-pages="manualNodesTotalPages"
-      :is-sorting="isSortingNodes"
-      :search-term="searchTerm"
-      :view-mode="manualNodeViewMode"
-      :groups="manualNodeGroups"
-      :active-color-filter="activeColorFilter"
-      @add="handleAddNode"
-      @delete="handleDeleteNodeWithCleanup"
-      @edit="(id) => handleEditNode(manualNodes.find(n => n.id === id))"
-      @change-page="changeManualNodesPage"
-      @update:search-term="newVal => searchTerm.value = newVal"
-      @update:view-mode="setViewMode"
-      @toggle-sort="isSortingNodes = !isSortingNodes"
-      @mark-dirty="markDirty"
-      @auto-sort="handleAutoSortNodes"
-      @deduplicate="handleDeduplicateNodes"
-      @import="showSubscriptionImportModal = true"
-      @delete-all="showDeleteNodesModal = true"
-      @reorder="reorderManualNodes"
-      @rename-group="renameGroup"
-      @delete-group="deleteGroup"
-      @set-color-filter="setColorFilter"
-      @batch-update-color="batchUpdateColor"
-      @batch-delete-nodes="handleBatchDeleteRequest"
-    />
+    <ManualNodePanel :manual-nodes="manualNodes" :paginated-manual-nodes="paginatedManualNodes"
+      :current-page="manualNodesCurrentPage" :total-pages="manualNodesTotalPages" :is-sorting="isSortingNodes"
+      :search-term="searchTerm" :view-mode="manualNodeViewMode" :groups="manualNodeGroups"
+      :active-color-filter="activeColorFilter" @add="handleAddNode" @delete="handleDeleteNodeWithCleanup"
+      @edit="(id) => handleEditNode(manualNodes.find(n => n.id === id))" @change-page="changeManualNodesPage"
+      @update:search-term="newVal => searchTerm.value = newVal" @update:view-mode="setViewMode"
+      @toggle-sort="isSortingNodes = !isSortingNodes" @mark-dirty="markDirty" @auto-sort="handleAutoSortNodes"
+      @deduplicate="handleDeduplicateNodes" @import="showSubscriptionImportModal = true"
+      @delete-all="showDeleteNodesModal = true" @reorder="reorderManualNodes" @rename-group="renameGroup"
+      @delete-group="deleteGroup" @set-color-filter="setColorFilter" @batch-update-color="batchUpdateColor"
+      @batch-delete-nodes="handleBatchDeleteRequest" />
 
-    <ManualNodeEditModal
-      v-model:show="showNodeModal"
-      :is-new="isNewNode"
-      :editing-node="editingNode"
-      @confirm="handleSaveNode"
-      @input-url="handleNodeUrlInput"
-    />
-    <ManualNodeDedupModal
-      v-model:show="showDedupModal"
-      :plan="dedupPlan"
-      @confirm="applyDedupPlan(dedupPlan); showDedupModal = false; dedupPlan = null"
-    />
+    <ManualNodeEditModal v-model:show="showNodeModal" :is-new="isNewNode" :editing-node="editingNode"
+      @confirm="handleSaveNode" @input-url="handleNodeUrlInput" />
+    <ManualNodeDedupModal v-model:show="showDedupModal" :plan="dedupPlan"
+      @confirm="applyDedupPlan(dedupPlan); showDedupModal = false; dedupPlan = null" />
 
     <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodesWithCleanup">
-        <template #title><h3 class="text-lg font-bold text-red-500">确认清空节点</h3></template>
-        <template #body><p class="text-sm text-gray-400">您确定要删除所有**手动节点**吗？</p></template>
+      <template #title>
+        <h3 class="text-lg font-bold text-red-500">确认清空节点</h3>
+      </template>
+      <template #body>
+        <p class="text-sm text-gray-400">您确定要删除所有**手动节点**吗？</p>
+      </template>
     </Modal>
 
     <Modal v-model:show="showBatchDeleteModal" @confirm="confirmBatchDelete">
-        <template #title><h3 class="text-lg font-bold text-red-500">确认批量删除</h3></template>
-        <template #body><p class="text-sm text-gray-600 dark:text-gray-300">您确定要删除选中的 <span class="font-bold border-b border-red-500">{{ batchDeleteIds.length }}</span> 个节点吗？此操作不可恢复。</p></template>
+      <template #title>
+        <h3 class="text-lg font-bold text-red-500">确认批量删除</h3>
+      </template>
+      <template #body>
+        <p class="text-sm text-gray-600 dark:text-gray-300">您确定要删除选中的 <span class="font-bold border-b border-red-500">{{
+          batchDeleteIds.length }}</span> 个节点吗？此操作不可恢复。</p>
+      </template>
     </Modal>
 
-    <SubscriptionImportModal :show="showSubscriptionImportModal" @update:show="showSubscriptionImportModal = $event" :add-nodes-from-bulk="addNodesFromBulk" />
+    <SubscriptionImportModal :show="showSubscriptionImportModal" @update:show="showSubscriptionImportModal = $event"
+      :add-nodes-from-bulk="addNodesFromBulk" />
   </div>
 </template>
