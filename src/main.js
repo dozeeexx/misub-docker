@@ -69,7 +69,9 @@ if (typeof window !== 'undefined') {
       console.warn('[Resource Load] Failed to clear cache:', error);
     }
 
-    window.location.reload();
+    const reloadUrl = new URL(window.location.href);
+    reloadUrl.searchParams.set('__misub_reload', Date.now().toString());
+    window.location.replace(reloadUrl.toString());
     return true;
   };
 

@@ -49,7 +49,22 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /.*\.(js|css|html)$/,
+            urlPattern: ({ request }) => request.destination === 'document',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              networkTimeoutSeconds: 3,
+              cacheableResponse: {
+                statuses: [0, 200]
+              },
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 // 1分钟
+              }
+            }
+          },
+          {
+            urlPattern: /.*\.(js|css)$/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'static-cache',

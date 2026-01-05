@@ -82,6 +82,7 @@ temp/
 .claude/
 
 DOCKER_GUIDE.md
+docker/
 
 # Local development and testing
 local-server.js
