@@ -161,7 +161,14 @@ export default defineConfig({
           /^\/[^/]+\/[^/]+(\?.*)?$/
         ],
       }
-    })
+    }),
+    {
+      name: 'html-transform-rocket-loader',
+      transformIndexHtml(html) {
+        // 自动为所有 module script 添加 data-cfasync="false" 以防止 Cloudflare Rocket Loader 破坏加载
+        return html.replace(/<script type="module"/g, '<script type="module" data-cfasync="false"');
+      }
+    }
   ],
   // 性能优化构建配置
   build: {
