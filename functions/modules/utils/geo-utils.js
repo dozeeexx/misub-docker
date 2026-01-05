@@ -59,7 +59,7 @@ export const REGION_KEYWORDS = {
  */
 export const REGION_EMOJI = {
     '香港': '🇭🇰',
-    '台湾': '🇹🇼',
+    '台湾': '🇨🇳',
     '新加坡': '🇸🇬',
     '日本': '🇯🇵',
     '美国': '🇺🇸',
