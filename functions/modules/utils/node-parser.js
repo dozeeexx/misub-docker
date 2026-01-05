@@ -176,6 +176,23 @@ function convertClashProxyToUrl(proxy) {
             return `${scheme}://${auth}${server}:${port}${query}#${encodeURIComponent(name)}`;
         }
 
+        // [新增] 支持 anytls 类型代理
+        if (type === 'anytls') {
+            const password = proxy.password || '';
+            const params = [];
+
+            if (proxy.sni) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
+            if (proxy.alpn) {
+                const alpn = Array.isArray(proxy.alpn) ? proxy.alpn.join(',') : proxy.alpn;
+                params.push(`alpn=${encodeURIComponent(alpn)}`);
+            }
+            if (proxy['skip-cert-verify']) params.push('insecure=1');
+            if (proxy.padding !== undefined) params.push(`padding=${proxy.padding}`);
+
+            const query = params.length > 0 ? `?${params.join('&')}` : '';
+            return `anytls://${encodeURIComponent(password)}@${server}:${port}${query}#${encodeURIComponent(name)}`;
+        }
+
         return null;
     } catch (e) {
         console.error('Error converting proxy:', e);
