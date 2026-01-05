@@ -357,6 +357,35 @@ export async function handleMisubRequest(context) {
     }
 
     const domain = url.hostname;
+    const isNekoBoxClient = /nekobox/i.test(userAgentHeader);
+    const hasRealityNode = /security=reality/i.test(combinedNodeList || '');
+
+    if (isNekoBoxClient && hasRealityNode && targetFormat !== 'base64') {
+        const fallbackHeaders = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
+        Object.entries(cacheHeaders).forEach(([key, value]) => {
+            fallbackHeaders[key] = value;
+        });
+        fallbackHeaders['X-MiSub-Fallback'] = 'base64';
+        fallbackHeaders['X-MiSub-Reason'] = 'nekobox-reality';
+
+        // [Deferred Logging] Log Success for Base64 fallback
+        if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
+            logAccessSuccess({
+                context,
+                env,
+                request,
+                userAgentHeader,
+                targetFormat: 'base64',
+                token,
+                profileIdentifier,
+                subName,
+                domain
+            });
+        }
+
+        const fallbackContent = btoa(unescape(encodeURIComponent(combinedNodeList)));
+        return new Response(fallbackContent, { headers: fallbackHeaders });
+    }
 
     if (targetFormat === 'base64') {
         let contentToEncode;

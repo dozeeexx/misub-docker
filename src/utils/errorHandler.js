@@ -179,6 +179,11 @@ class ErrorHandler {
     // 根据错误类型返回不同的用户提示
     if (message.includes('timeout')) {
       return '请求超时，请稍后重试';
+    } else if (message.includes('Resource load failed')) {
+      if (typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent)) {
+        return '资源加载失败。如使用 Cloudflare，请关闭 Rocket Loader 或检查隐私设置。';
+      }
+      return '资源加载失败，请尝试刷新页面';
     } else if (message.includes('network') || message.includes('fetch')) {
       return '网络连接失败，请检查网络';
     } else if (message.includes('Unauthorized') || message.includes('401')) {

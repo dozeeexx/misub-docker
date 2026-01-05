@@ -49,7 +49,22 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /.*\.(js|css|html)$/,
+            urlPattern: ({ request }) => request.destination === 'document',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              networkTimeoutSeconds: 3,
+              cacheableResponse: {
+                statuses: [0, 200]
+              },
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 // 1分钟
+              }
+            }
+          },
+          {
+            urlPattern: /.*\.(js|css)$/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'static-cache',
@@ -146,7 +161,14 @@ export default defineConfig({
           /^\/[^/]+\/[^/]+(\?.*)?$/
         ],
       }
-    })
+    }),
+    {
+      name: 'html-transform-rocket-loader',
+      transformIndexHtml(html) {
+        // 自动为所有 module script 添加 data-cfasync="false" 以防止 Cloudflare Rocket Loader 破坏加载
+        return html.replace(/<script type="module"/g, '<script type="module" data-cfasync="false"');
+      }
+    }
   ],
   // 性能优化构建配置
   build: {

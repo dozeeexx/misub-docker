@@ -35,6 +35,25 @@ function parseCorsOrigins(env, requestUrl) {
     return Array.from(new Set(origins));
 }
 
+function applyNoStoreToHtmlResponse(response) {
+    if (!response || !response.headers) {
+        return response;
+    }
+    const contentType = response.headers.get('Content-Type') || '';
+    if (!contentType.includes('text/html')) {
+        return response;
+    }
+    const headers = new Headers(response.headers);
+    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
+    return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+    });
+}
+
 /**
  * 主要的请求处理函数
  * @param {Object} context - Cloudflare上下文对象
@@ -127,7 +146,10 @@ export async function onRequest(context) {
 
                 // [Fix] SPA Fallback: If asset not found (404) and it's an SPA route OR it's an HTML request, serve index.html
                 const acceptHeader = request.headers.get('Accept') || '';
-                const isHtmlRequest = acceptHeader.includes('text/html');
+                const fetchMode = request.headers.get('Sec-Fetch-Mode') || '';
+                const fetchDest = request.headers.get('Sec-Fetch-Dest') || '';
+                const isNavigationRequest = fetchMode === 'navigate' || fetchDest === 'document';
+                const isHtmlRequest = isNavigationRequest && acceptHeader.includes('text/html');
 
                 if (response.status === 404 && (isSpaRoute || isHtmlRequest)) {
                     // Clone the request to fetch index.html
@@ -136,21 +158,22 @@ export async function onRequest(context) {
 
                     // If index.html exists (e.g. in production or after build), return it
                     if (indexResponse.status === 200) {
-                        return indexResponse;
+                        response = indexResponse;
+                    } else {
+                        // If index.html is missing (likely local dev serving 'public' dir), redirect to Vite dev server
+                        // This assumes standard Vite port 5173.
+                        return new Response(`Redirecting to frontend dev server...`, {
+                            status: 302,
+                            headers: {
+                                'Location': `http://localhost:5173${url.pathname}${url.search}`,
+                                'Content-Type': 'text/plain'
+                            }
+                        });
                     }
 
-                    // If index.html is missing (likely local dev serving 'public' dir), redirect to Vite dev server
-                    // This assumes standard Vite port 5173.
-                    return new Response(`Redirecting to frontend dev server...`, {
-                        status: 302,
-                        headers: {
-                            'Location': `http://localhost:5173${url.pathname}${url.search}`,
-                            'Content-Type': 'text/plain'
-                        }
-                    });
                 }
 
-                return response;
+                return applyNoStoreToHtmlResponse(response);
             }
         };
 
