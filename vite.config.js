@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import tailwindcss from '@tailwindcss/vite'
+import manifest from './public/manifest.json' assert { type: 'json' }
 
 export default defineConfig({
   plugins: [
@@ -11,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        globIgnores: ['offline.html'],
-        // Explicitly deny Service Worker for subscription paths so they go to network
+        // 使用离线回退页面，并显式忽略订阅路径
+        navigateFallback: '/offline.html',
         navigateFallbackDenylist: [
           /^\/sub\/.*/,      // /sub/...
           /^\/[^/]+\/[^/]+(\?.*)?$/ // Two-segment paths like /test1/work, optionally with query params
@@ -98,60 +99,8 @@ export default defineConfig({
           }
         ]
       },
-      includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
-      manifest: {
-        name: 'MiSub - 订阅转换器',
-        short_name: 'MiSub',
-        description: '基于 Cloudflare 的订阅转换和管理工具',
-        theme_color: '#4f46e5',
-        background_color: '#0f172a',
-        display: 'standalone',
-        orientation: 'portrait-primary',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          {
-            src: '/icons/icon-72x72.png',
-            sizes: '72x72',
-            type: 'image/png'
-          },
-          {
-            src: '/icons/icon-96x96.png',
-            sizes: '96x96',
-            type: 'image/png'
-          },
-          {
-            src: '/icons/icon-128x128.png',
-            sizes: '128x128',
-            type: 'image/png'
-          },
-          {
-            src: '/icons/icon-144x144.png',
-            sizes: '144x144',
-            type: 'image/png'
-          },
-          {
-            src: '/icons/icon-152x152.png',
-            sizes: '152x152',
-            type: 'image/png'
-          },
-          {
-            src: '/icons/icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: '/icons/icon-384x384.png',
-            sizes: '384x384',
-            type: 'image/png'
-          },
-          {
-            src: '/icons/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      },
+      includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png', 'offline.html'],
+      manifest,
       devOptions: {
         enabled: true,
         type: 'module',
