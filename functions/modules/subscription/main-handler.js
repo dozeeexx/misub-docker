@@ -48,7 +48,10 @@ export async function handleMisubRequest(context) {
                 if (!/^https?:\/\//i.test(redirectUrl)) {
                     redirectUrl = 'https://' + redirectUrl;
                 }
-                return Response.redirect(redirectUrl, 302);
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: redirectUrl }
+                });
             } else {
                 return renderDisguisePage();
             }
