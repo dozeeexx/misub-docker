@@ -3,7 +3,7 @@ import { migrateConfigSettings, formatBytes, getCallbackToken } from '../utils.j
 import { generateCombinedNodeList } from '../../services/subscription-service.js';
 import { sendEnhancedTgNotification } from '../notifications.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from '../config.js';
-import { renderDisguisePage } from '../disguise-page.js';
+import { renderDisguisePage, createDisguiseResponse } from '../disguise-page.js';
 import { generateCacheKey, setCache } from '../../services/node-cache-service.js';
 import { resolveRequestContext } from './request-context.js';
 import { buildSubconverterUrlVariants, getSubconverterCandidates } from './subconverter-client.js';
@@ -36,25 +36,13 @@ export async function handleMisubRequest(context) {
         !/clash|v2ray|surge|loon|shadowrocket|quantumult|stash|shadowsocks|mihomo|meta|nekobox|nekoray|sfi|sfa|sfra/i.test(userAgentHeader);
 
     if (config.disguise?.enabled && isBrowser && !url.searchParams.has('callback_token')) {
-        // [Smart Camouflage] Allow Admin Access
+        // [Smart Camouflage]
         // Check if the user has a valid admin session cookie
         const { authMiddleware } = await import('../auth-middleware.js');
         const isAuthenticated = await authMiddleware(request, env); // Returns boolean
 
         if (!isAuthenticated) {
-            if (config.disguise.pageType === 'redirect' && config.disguise.redirectUrl) {
-                let redirectUrl = config.disguise.redirectUrl.trim();
-                // Ensure URL has a protocol
-                if (!/^https?:\/\//i.test(redirectUrl)) {
-                    redirectUrl = 'https://' + redirectUrl;
-                }
-                return new Response(null, {
-                    status: 302,
-                    headers: { Location: redirectUrl }
-                });
-            } else {
-                return renderDisguisePage();
-            }
+            return createDisguiseResponse(config.disguise);
         }
     }
 

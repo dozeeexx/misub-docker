@@ -120,3 +120,23 @@ export function renderDisguisePage() {
         }
     });
 }
+
+/**
+ * 根据配置生成伪装响应 (Redirect 或 404 Page)
+ * @param {Object} disguiseConfig 
+ * @returns {Response}
+ */
+export function createDisguiseResponse(disguiseConfig) {
+    if (disguiseConfig && disguiseConfig.pageType === 'redirect' && disguiseConfig.redirectUrl) {
+        let redirectUrl = disguiseConfig.redirectUrl.trim();
+        // Ensure URL has a protocol
+        if (!/^https?:\/\//i.test(redirectUrl)) {
+            redirectUrl = 'https://' + redirectUrl;
+        }
+        return new Response(null, {
+            status: 302,
+            headers: { Location: redirectUrl }
+        });
+    }
+    return renderDisguisePage();
+}

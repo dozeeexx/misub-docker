@@ -1,7 +1,7 @@
 
 import { StorageFactory } from '../../storage-adapter.js';
 import { KV_KEY_SETTINGS } from '../config.js';
-import { renderDisguisePage } from '../disguise-page.js';
+import { renderDisguisePage, createDisguiseResponse } from '../disguise-page.js';
 import { authMiddleware } from '../auth-middleware.js';
 
 /**
@@ -58,19 +58,7 @@ export async function handleDisguiseRequest(context) {
     ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
 
     if (isProtectedPath) {
-        // Render Disguise
-        if (disguise.pageType === 'redirect' && disguise.redirectUrl) {
-            let redirectUrl = disguise.redirectUrl.trim();
-            if (!/^https?:\/\//i.test(redirectUrl)) {
-                redirectUrl = 'https://' + redirectUrl;
-            }
-            return new Response(null, {
-                status: 302,
-                headers: { 'Location': redirectUrl }
-            });
-        } else {
-            return renderDisguisePage();
-        }
+        return createDisguiseResponse(disguise);
     }
 
     return null;
