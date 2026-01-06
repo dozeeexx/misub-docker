@@ -129,6 +129,7 @@ functions/modules/handlers/
 ```
 functions/modules/subscription/
 ├─ main-handler.js          # 主订阅请求入口
+├─ user-agent-utils.js      # [新增] User-Agent 解析与格式判断
 ├─ preview-handler.js       # 预览节点列表接口
 ├─ cache-manager.js         # 订阅缓存策略管理
 ├─ request-context.js       # 请求上下文解析
@@ -136,10 +137,19 @@ functions/modules/subscription/
 └─ access-logger.js         # 访问日志记录
 ```
 
+#### 3. 后端工具 (`functions/modules/utils/`)
+```
+functions/modules/utils/
+├─ node-cleaner.js          # [新增] 节点清洗与URL修复
+├─ node-parser.js           # 节点解析 (Parse Logic)
+└─ node-transformer.js      # 节点变换 (Rename/Sort/Emoji)
+```
+
 ### 服务层 (`functions/services/`)
 ```
 functions/services/
-├─ subscription-service.js  # 订阅源聚合、去重、解析核心逻辑
+├─ subscription-service.js  # 订阅核心业务 (生成、组合)
+├─ fetch-utils.js           # [新增] 网络请求工具 (Fetch/Retry/Concurrency)
 ├─ node-cache-service.js    # 节点数据缓存服务
 ├─ log-service.js           # 访问日志读写服务
 └─ notification-service.js  # 通知服务封装

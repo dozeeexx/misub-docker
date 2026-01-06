@@ -25,7 +25,6 @@ import SubscriptionEditModal from '../../modals/SubscriptionEditModal.vue';
 import ManualNodeEditModal from '../../modals/ManualNodeEditModal.vue';
 import ManualNodeDedupModal from '../../modals/ManualNodeDedupModal.vue';
 import SkeletonLoader from '../../ui/SkeletonLoader.vue';
-import StatusIndicator from '../../ui/StatusIndicator.vue';
 
 const SettingsModal = defineAsyncComponent(() => import('../../modals/SettingsModal.vue'));
 const BulkImportModal = defineAsyncComponent(() => import('../../modals/BulkImportModal.vue'));
@@ -287,6 +286,8 @@ const handleProfileReorder = (fromIndex, toIndex) => {
 // 格式化函数由 utils.js 提供
 const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemainingTraffic.value));
 
+import DashboardHeader from './DashboardHeader.vue';
+import DashboardBanner from './DashboardBanner.vue';
 </script>
 
 <template>
@@ -296,51 +297,18 @@ const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemaining
   </div>
   <div v-else class="w-full max-w-(--breakpoint-xl) mx-auto p-4 sm:p-6 lg:p-8">
     <!-- Header -->
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4 md:gap-0">
-      <div class="flex flex-wrap items-center gap-3 md:gap-4">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">仪表盘</h1>
-        <span v-if="formattedTotalRemainingTraffic !== '0 B'"
-          class="px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-500/20 rounded-full">
-          剩余总流量: {{ formattedTotalRemainingTraffic }}
-        </span>
-      </div>
-      <div class="flex items-center gap-2 w-full md:w-auto">
-        <button @click="showLogModal = true"
-          class="flex-1 md:flex-none text-center text-sm font-semibold px-4 py-2 rounded-lg text-gray-600 dark:text-gray-400 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">订阅日志</button>
-        <button @click="showBulkImportModal = true"
-          class="flex-1 md:flex-none text-center text-sm font-semibold px-4 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 border-2 border-indigo-500/50 hover:bg-indigo-500/10 transition-colors">批量导入</button>
-      </div>
-    </div>
+    <DashboardHeader
+      :formatted-total-remaining-traffic="formattedTotalRemainingTraffic"
+      @open-log="showLogModal = true"
+      @open-bulk-import="showBulkImportModal = true"
+    />
 
-    <!-- Dirty State Banner -->
-    <Transition name="slide-fade">
-      <div v-if="isDirty || saveState === 'success'"
-        class="p-3 mb-6 rounded-lg ring-1 ring-inset flex items-center justify-between transition-colors duration-300"
-        :class="saveState === 'success' ? 'bg-teal-500/10 ring-teal-500/20' : 'bg-indigo-600/10 dark:bg-indigo-500/20 ring-indigo-600/20'">
-        <p class="text-sm font-medium transition-colors duration-300"
-          :class="saveState === 'success' ? 'text-teal-800 dark:text-teal-200' : 'text-indigo-800 dark:text-indigo-200'">
-          {{ saveState === 'success' ? '保存成功' : '您有未保存的更改' }}
-        </p>
-        <div class="flex items-center gap-3">
-          <button v-if="saveState !== 'success'" @click="handleDiscard"
-            class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">放弃更改</button>
-          <button @click.prevent="handleSave" :disabled="saveState !== 'idle'"
-            class="px-5 py-2 text-sm text-white font-semibold rounded-lg shadow-xs flex items-center justify-center transition-all duration-300 w-28"
-            :class="{ 'bg-indigo-600 hover:bg-indigo-700': saveState === 'idle', 'bg-gray-500 cursor-not-allowed': saveState === 'saving', 'bg-teal-500 cursor-not-allowed': saveState === 'success' }">
-            <div v-if="saveState === 'saving'" class="flex items-center">
-              <StatusIndicator status="loading" size="sm" class="mr-2" />
-              <span>保存中...</span>
-            </div>
-            <div v-else-if="saveState === 'success'" class="flex items-center">
-              <StatusIndicator status="success" size="sm" class="mr-2" />
-              <span>已保存</span>
-            </div>
-            <span v-else>保存更改</span>
-          </button>
-        </div>
-      </div>
-    </Transition>
+    <DashboardBanner
+      :is-dirty="isDirty"
+      :save-state="saveState"
+      @save="handleSave"
+      @discard="handleDiscard"
+    />
 
     <!-- Main Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-start">
