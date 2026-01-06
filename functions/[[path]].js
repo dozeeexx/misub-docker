@@ -22,6 +22,7 @@ import { handleMisubRequest } from './modules/subscription-handler.js';
 import { handleApiRequest } from './modules/api-router.js';
 import { createJsonResponse } from './modules/utils.js';
 import { corsMiddleware, securityHeadersMiddleware } from './middleware/cors.js';
+import { handleDisguiseRequest } from './modules/handlers/disguise-handler.js';
 
 function parseCorsOrigins(env, requestUrl) {
     const configured = (env?.CORS_ORIGINS || '')
@@ -104,6 +105,15 @@ export async function onRequest(context) {
                     '/profile',
                     '/explore' // [新增] 公开页面
                 ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
+
+                // [Smart Disguise] Check if we need to disguise the SPA/Root
+                // Only applies to non-static assets
+                if ((url.pathname === '/' || isSpaRoute) && !isStaticAsset) {
+                    const disguiseResponse = await handleDisguiseRequest(context);
+                    if (disguiseResponse) {
+                        return disguiseResponse;
+                    }
+                }
 
 
                 if (!isStaticAsset && !isSpaRoute && url.pathname !== '/') {

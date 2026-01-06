@@ -153,8 +153,7 @@ defineProps({
             </label>
           </div>
 
-          <!-- 伪装详细配置 -->
-          <div v-show="disguiseConfig.enabled"
+            <div v-show="disguiseConfig.enabled"
             class="bg-white dark:bg-gray-800 rounded-md p-4 space-y-4 border border-gray-200 dark:border-gray-600 transition-all duration-300">
             <div>
               <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">伪装策略</label>
