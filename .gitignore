@@ -82,7 +82,7 @@ temp/
 .claude/
 
 DOCKER_GUIDE.md
-docker/
+
 
 # Local development and testing
 local-server.js
@@ -92,3 +92,6 @@ test-new-protocols.js
 test-screenshots/
 .wrangler/
 .ace-tool/
+
+# Docker (Closed Source)
+docker/

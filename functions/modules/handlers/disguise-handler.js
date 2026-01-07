@@ -1,7 +1,7 @@
 
 import { StorageFactory } from '../../storage-adapter.js';
 import { KV_KEY_SETTINGS } from '../config.js';
-import { renderDisguisePage, createDisguiseResponse } from '../disguise-page.js';
+import { createDisguiseResponse } from '../disguise-page.js';
 import { authMiddleware } from '../auth-middleware.js';
 
 /**
@@ -58,7 +58,7 @@ export async function handleDisguiseRequest(context) {
     ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
 
     if (isProtectedPath) {
-        return createDisguiseResponse(disguise);
+        return createDisguiseResponse(disguise, request.url);
     }
 
     return null;
