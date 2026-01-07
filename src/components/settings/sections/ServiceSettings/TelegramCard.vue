@@ -77,6 +77,56 @@ function copySetWebhookUrl() {
 // 折叠状态
 const showSetupGuide = ref(false);
 const showUsageGuide = ref(false);
+const showCronGuide = ref(false);
+
+const isTesting = ref(false);
+const testResult = ref(null);
+
+// Cron URL
+const cronUrl = computed(() => {
+  const secret = props.settings.cronSecret;
+  if (!secret) {
+    return '';
+  }
+  return `${window.location.origin}/cron?secret=${secret}`;
+});
+
+// 复制 Cron URL
+function copyCronUrl() {
+  if (cronUrl.value) {
+    navigator.clipboard.writeText(cronUrl.value);
+  }
+}
+
+async function testNotification() {
+    isTesting.value = true;
+    testResult.value = null;
+    try {
+        const response = await fetch('/api/test_notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                botToken: props.settings.BotToken,
+                chatId: props.settings.ChatID
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            testResult.value = { success: true, message: '测试成功！消息已发送。' };
+        } else {
+            testResult.value = { 
+                success: false, 
+                message: '测试失败',
+                error: data.error || '未知错误',
+                detail: data.detail 
+            };
+        }
+    } catch (e) {
+        testResult.value = { success: false, message: '请求失败', error: e.message };
+    } finally {
+        isTesting.value = false;
+    }
+}
 </script>
 
 <template>
@@ -103,6 +153,95 @@ const showUsageGuide = ref(false);
           class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors">
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">接收通知的聊天 ID</p>
       </div>
+    </div>
+
+    
+    <!-- Test Button & Result -->
+    <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
+        <div class="flex items-center gap-4">
+            <button @click="testNotification" :disabled="isTesting || !settings.BotToken || !settings.ChatID"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+                <svg v-if="isTesting" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span v-else>🔔</span>
+                {{ isTesting ? '发送中...' : '测试通知' }}
+            </button>
+            <div v-if="testResult" :class="testResult.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" class="text-sm">
+                <span v-if="testResult.success">✅ {{ testResult.message }}</span>
+                <span v-else>
+                    ❌ {{ testResult.message }}: {{ testResult.error }}
+                    <details v-if="testResult.detail" class="mt-1 text-xs font-mono bg-gray-100 dark:bg-gray-900 p-2 rounded max-h-32 overflow-auto">
+                        <summary class="cursor-pointer text-gray-500">查看详细信息</summary>
+                        <pre>{{ JSON.stringify(testResult.detail, null, 2) }}</pre>
+                    </details>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cron Info -->
+     <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-100 dark:border-gray-700 mt-4">
+        <div class="flex justify-between items-start">
+             <div>
+                <h4 class="text-sm font-medium text-gray-900 dark:text-gray-200 flex items-center gap-2">
+                    ⏱️ 自动任务配置 (Cron)
+                </h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    要接收订阅过期提醒和流量预警，您需要配置定时任务。
+                </p>
+             </div>
+             <button @click="showCronGuide = !showCronGuide" class="text-blue-600 hover:text-blue-500 text-xs font-medium">
+                 {{ showCronGuide ? '收起' : '如何配置?' }}
+             </button>
+        </div>
+        
+        <!-- CRON_SECRET 输入框 -->
+        <div class="mt-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cron Secret</label>
+          <input type="text" v-model="settings.cronSecret" placeholder="请输入您的 CRON_SECRET 环境变量值"
+            class="block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors">
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            填写您在 Cloudflare 环境变量中设置的 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">CRON_SECRET</code> 值
+          </p>
+        </div>
+
+        <!-- Cron 访问链接（自动生成） -->
+        <div v-if="cronUrl" class="mt-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Cron 访问链接（自动生成）
+          </label>
+          <div class="flex rounded-md shadow-xs">
+            <input type="text" :value="cronUrl" readonly
+              class="flex-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md sm:text-sm dark:text-white font-mono text-xs">
+            <button @click="copyCronUrl" type="button"
+              class="inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-hidden">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            复制此链接配置到外部定时任务服务
+          </p>
+        </div>
+        <div v-else class="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
+          <p class="text-xs text-yellow-700 dark:text-yellow-300">
+            💡 填写 Cron Secret 后，将自动生成访问链接
+          </p>
+        </div>
+        
+        <div v-if="showCronGuide" class="mt-3 text-xs text-gray-600 dark:text-gray-300 space-y-2">
+            <p>由于 Cloudflare Pages 免费版不支持 Cron Trigger，请使用外部监控服务（如 UptimeRobot, Cron-Job.org）定时访问上方生成的链接。</p>
+            <p class="text-gray-500">建议频率：每天一次 (Every 24 hours)</p>
+             <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-2 mt-2">
+                <p class="text-blue-700 dark:text-blue-300">
+                    💡 提示：<code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">CRON_SECRET</code> 需要在 Cloudflare Pages 的环境变量中设置相同的值。
+                </p>
+            </div>
+        </div>
     </div>
   </div>
 

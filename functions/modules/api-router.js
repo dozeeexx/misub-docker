@@ -17,7 +17,8 @@ import {
     handleSystemInfoRequest,
     handleStorageTestRequest,
     handleExportDataRequest,
-    handlePreviewContentRequest
+    handlePreviewContentRequest,
+    handleTestNotificationRequest
 } from './handlers/debug-handler.js';
 import {
     handleNodeCountRequest as handleLegacyNodeCountRequest,
@@ -33,6 +34,7 @@ import {
     handleGuestbookManageGet,
     handleGuestbookManageAction
 } from './handlers/guestbook-handler.js';
+import { handleGithubReleaseRequest } from './handlers/github-proxy-handler.js'; // [NEW] Import handler
 import { handleParseSubscription } from './parse-subscription-handler.js';
 
 // 常量定义
@@ -162,7 +164,14 @@ export async function handleApiRequest(request, env) {
                 message: 'Not logged in'
             });
         }
+
+
         return await handleDataRequest(env);
+    }
+
+    // [New] GitHub Proxy Route (Public)
+    if (path === '/github/release') {
+        return await handleGithubReleaseRequest(request, env);
     }
 
     if (!await authMiddleware(request, env)) {
@@ -173,6 +182,15 @@ export async function handleApiRequest(request, env) {
     if (path.startsWith('/clients')) {
         return await handleClientRequest(request, env);
     }
+
+    if (path === '/test_notification') {
+        if (!await authMiddleware(request, env)) {
+            return createJsonResponse({ error: 'Unauthorized' }, 401);
+        }
+        return await handleTestNotificationRequest(request, env);
+    }
+
+
 
     switch (path) {
         case '/logout':

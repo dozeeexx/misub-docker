@@ -6,6 +6,7 @@
 import { StorageFactory } from '../../storage-adapter.js';
 import { createJsonResponse, createErrorResponse } from '../utils.js';
 import { handleSubscriptionNodesRequest } from '../subscription-handler.js';
+import { debugTgNotification } from '../../services/notification-service.js';
 import { parseNodeList, calculateProtocolStats, calculateRegionStats } from '../utils/node-parser.js';
 
 /**
@@ -376,5 +377,33 @@ export async function handlePreviewContentRequest(request, env) {
         });
     } catch (e) {
         return createErrorResponse(`内容预览失败: ${e.message}`, 'DebugHandler', 500);
+    }
+}
+
+/**
+ * 测试Telegram通知
+ * @param {Object} request - HTTP请求对象
+ * @param {Object} env - Cloudflare环境对象
+ * @returns {Promise<Response>} HTTP响应
+ */
+export async function handleTestNotificationRequest(request, env) {
+    if (request.method !== 'POST') {
+        return createErrorResponse('Method Not Allowed', 405);
+    }
+
+    try {
+        const { botToken, chatId } = await request.json();
+        const settings = { BotToken: botToken, ChatID: chatId };
+
+        const result = await debugTgNotification(settings, '🔔 *通知测试* 🔔\n\n这是来自 MiSub 的测试消息，用于验证您的配置是否正确。');
+
+        if (result.success) {
+            return createJsonResponse({ success: true, detail: result.response });
+        } else {
+            return createJsonResponse({ success: false, error: result.error, detail: result.response }, 400);
+        }
+
+    } catch (e) {
+        return createErrorResponse(e.message, 500);
     }
 }
