@@ -4,6 +4,10 @@ import {
     createCacheHeaders
 } from '../../services/node-cache-service.js';
 
+// 简单的内存防抖 Map（用于同一 Worker 实例下的并发控制）
+const refreshDebounce = new Map();
+const DEBOUNCE_TIME = 10000; // 10秒防抖
+
 /**
  * 解析节点列表（带缓存支持）
  * @param {Object} options - 配置选项
@@ -52,8 +56,16 @@ export async function resolveNodeListWithCache({
         // 有缓存：立即返回缓存数据，同时后台刷新确保下次获取最新
         combinedNodeList = cachedData.nodes;
         cacheHeaders = createCacheHeaders(`REFRESHING`, cachedData.nodeCount);
-        // 触发后台刷新，确保缓存始终是最新的
-        triggerBackgroundRefresh(context, () => refreshNodes(true));
+
+        // 内存防抖：如果最近 10 秒内已触发过刷新，则跳过
+        const lastRun = refreshDebounce.get(cacheKey);
+        if (!lastRun || Date.now() - lastRun > DEBOUNCE_TIME) {
+            refreshDebounce.set(cacheKey, Date.now());
+            // 触发后台刷新，确保缓存始终是最新的
+            triggerBackgroundRefresh(context, () => refreshNodes(true));
+        } else {
+            // console.debug('[Cache] Skipping background refresh due to debounce');
+        }
 
         // [Stats Export] Populate generation stats from cache for deferred logging
         if (context) {
@@ -67,9 +79,6 @@ export async function resolveNodeListWithCache({
         }
     } else {
         // 无缓存（首次访问或缓存已过期）：尝试同步获取完整节点列表
-        // 同时触发后台刷新，确保即使本次超时，下次也能命中缓存
-        triggerBackgroundRefresh(context, () => refreshNodes(true));
-
         const SYNC_REFRESH_TIMEOUT = Math.max(1000, syncRefreshTimeoutMs);
 
         try {
@@ -83,9 +92,9 @@ export async function resolveNodeListWithCache({
             const nodeCount = combinedNodeList.split('\n').filter(l => l.trim()).length;
             cacheHeaders = createCacheHeaders('MISS', nodeCount);
         } catch (error) {
-            console.warn('[Cache] Sync refresh timeout, background refresh in progress:', error.message);
-            // 超时时返回空，让上层返回友好的提示信息
-            // 后台刷新会继续完成，下次请求就能命中缓存
+            console.warn('[Cache] Sync refresh timeout, triggering background refresh:', error.message);
+            // 只在同步拉取超时时才触发后台刷新，避免双重拉取
+            triggerBackgroundRefresh(context, () => refreshNodes(true));
             combinedNodeList = '';
             cacheHeaders = createCacheHeaders('MISS_TIMEOUT', 0);
         }

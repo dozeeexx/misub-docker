@@ -10,7 +10,7 @@
  */
 const CACHE_CONFIG = {
     KEY_PREFIX: 'node_cache_',           // 缓存键前缀
-    FRESH_TTL: 0,                        // 新鲜期：0（始终触发后台刷新，确保数据最新）
+    FRESH_TTL: 5 * 60 * 1000,            // 新鲜期：5 分钟（5分钟内直接返回缓存，不触发刷新）
     STALE_TTL: 24 * 60 * 60 * 1000,      // 可用期：24 小时（有缓存就用，后台刷新）
     MAX_AGE: 7 * 24 * 60 * 60 * 1000,    // 最大缓存时间：7 天
     BACKGROUND_REFRESH_TIMEOUT: 60000    // 后台刷新超时：60 秒（给足够时间完整拉取）
