@@ -142,7 +142,10 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
     // 判断是否需要添加 Emoji：当模板重命名启用且模板包含 {emoji} 时启用
     const nodeTransformConfig = profilePrefixSettings?.nodeTransform;
     const templateEnabled = nodeTransformConfig?.enabled && nodeTransformConfig?.rename?.template?.enabled;
-    const templateContainsEmoji = templateEnabled && (nodeTransformConfig?.rename?.template?.template || '').includes('{emoji}');
+    // 使用默认模板 '{emoji}{region}-{protocol}-{index}'，如果用户未自定义模板
+    const defaultTemplate = '{emoji}{region}-{protocol}-{index}';
+    const effectiveTemplate = nodeTransformConfig?.rename?.template?.template || defaultTemplate;
+    const templateContainsEmoji = templateEnabled && effectiveTemplate.includes('{emoji}');
     const shouldAddEmoji = templateContainsEmoji;
 
     // 手动节点前缀文本

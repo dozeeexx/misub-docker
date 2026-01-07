@@ -63,6 +63,7 @@ export async function handleMisubRequest(context) {
     let effectiveSubConverter;
     let effectiveSubConfig;
     let isProfileExpired = false; // Moved declaration here
+    let shouldUseEmoji = false;   // 是否在 subconverter 请求中启用 emoji
 
     const DEFAULT_EXPIRED_NODE = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent('您的订阅已失效')}`;
 
@@ -103,6 +104,12 @@ export async function handleMisubRequest(context) {
             }
             effectiveSubConverter = profile.subConverter && profile.subConverter.trim() !== '' ? profile.subConverter : config.subConverter;
             effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;
+
+            // 判断是否需要在 subconverter 中启用 emoji：当模板包含 {emoji} 时
+            const defaultTemplate = '{emoji}{region}-{protocol}-{index}';
+            const userTemplate = profile.nodeTransform?.rename?.template?.template || defaultTemplate;
+            const templateEnabled = profile.nodeTransform?.enabled && profile.nodeTransform?.rename?.template?.enabled;
+            shouldUseEmoji = templateEnabled && userTemplate.includes('{emoji}');
 
             // [新增] 增加订阅组下载计数
             // 仅在非回调请求时及非内部请求时增加计数(避免重复计数)
@@ -358,6 +365,7 @@ export async function handleMisubRequest(context) {
                 subconverterUrl.searchParams.set('url', callbackUrl);
                 subconverterUrl.searchParams.set('scv', 'true');
                 subconverterUrl.searchParams.set('udp', 'true');
+                subconverterUrl.searchParams.set('emoji', shouldUseEmoji ? 'true' : 'false');  // 根据模板动态设置 emoji 参数
                 if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') && effectiveSubConfig && effectiveSubConfig.trim() !== '') {
                     subconverterUrl.searchParams.set('config', effectiveSubConfig);
                 }
