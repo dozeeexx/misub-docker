@@ -1,0 +1,14 @@
+services:
+  misub:
+    build: .
+    ports:
+      - "8790:8787"
+    environment:
+      PORT: 8787
+      MISUB_DB_PATH: /app/data/misub.db
+      ADMIN_PASSWORD: "admin123"
+      COOKIE_SECRET: "change_me_too-change_me_too"
+      # CORS_ORIGINS: "https://example.com,http://localhost:5173"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

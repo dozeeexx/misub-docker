@@ -9,6 +9,8 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
     "preview": "vite preview",
+    "start": "node server/index.mjs",
+    "start:vps": "node server/index.mjs",
     "check-pwa": "node check-pwa.js",
     "build-pwa": "vite build && echo PWA build completed!",
     "test": "vitest",
@@ -17,6 +19,7 @@
     "test:chrome": "node test-chrome-mcp.js"
   },
   "dependencies": {
+    "better-sqlite3": "^11.5.0",
     "clsx": "^2.1.1",
     "dompurify": "^3.2.6",
     "js-yaml": "^4.1.0",

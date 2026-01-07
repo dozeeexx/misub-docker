@@ -206,6 +206,34 @@ wrangler d1 execute misub --file=schema.sql --remote
 
 ---
 
+## 🐳 VPS / Docker 部署
+
+适用于自建服务器部署（与 Cloudflare Pages 保持功能兼容）。
+
+### 1. 构建并启动
+
+```bash
+docker compose up -d --build
+```
+
+默认端口为 `8787`，访问 `http://<vps-ip>:8787`。
+
+### 2. 环境变量
+
+在 `docker-compose.yml` 中配置：
+
+- `ADMIN_PASSWORD` 管理员密码（必填）
+- `COOKIE_SECRET` Cookie 加密密钥（必填）
+- `CORS_ORIGINS` 允许跨域访问的来源（可选）
+- `PORT` 服务端口（默认 8787）
+- `MISUB_DB_PATH` SQLite 数据库路径（默认 `/app/data/misub.db`）
+
+### 3. 数据持久化
+
+默认通过 `./data` 目录持久化数据库文件。
+
+---
+
 ## 💡 使用说明
 
 ### 登录管理界面
