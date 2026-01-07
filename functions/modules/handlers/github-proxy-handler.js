@@ -56,6 +56,20 @@ export async function handleGithubReleaseRequest(request, env) {
                         'Cache-Control': 'public, max-age=60'
                     });
                 }
+                // No cache available, return empty data instead of error
+                // to prevent frontend errors
+                console.warn(`[GitHub Proxy] Rate limited for ${repo}, no cache available`);
+                return createJsonResponse({ tag_name: null, rate_limited: true }, 200, {
+                    'X-Cache-Status': 'RATE_LIMITED',
+                    'Cache-Control': 'public, max-age=300' // Retry after 5 min
+                });
+            }
+            // For other errors (404, etc.), also return gracefully
+            if (response.status === 404) {
+                return createJsonResponse({ tag_name: null, not_found: true }, 200, {
+                    'X-Cache-Status': 'NOT_FOUND',
+                    'Cache-Control': 'public, max-age=3600'
+                });
             }
             return createErrorResponse(`GitHub API Error: ${response.statusText}`, response.status);
         }

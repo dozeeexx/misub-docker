@@ -304,18 +304,32 @@ export async function handleMisubRequest(context) {
         });
 
         // [Deferred Logging] Log Success for Base64 (Direct Return)
-        if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
-            logAccessSuccess({
-                context,
-                env,
-                request,
-                userAgentHeader,
-                targetFormat,
-                token,
-                profileIdentifier,
-                subName,
-                domain
-            });
+        if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
+            // 发送 Telegram 通知（独立于访问日志开关，只需配置 BotToken 和 ChatID）
+            const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+            context.waitUntil(
+                sendEnhancedTgNotification(
+                    config,
+                    '🛰️ *订阅被访问*',
+                    clientIp,
+                    `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`${targetFormat}\`\n*订阅组:* \`${subName}\``
+                )
+            );
+
+            // 访问日志（需要 enableAccessLog 开关）
+            if (config.enableAccessLog) {
+                logAccessSuccess({
+                    context,
+                    env,
+                    request,
+                    userAgentHeader,
+                    targetFormat,
+                    token,
+                    profileIdentifier,
+                    subName,
+                    domain
+                });
+            }
         }
 
         return new Response(btoa(unescape(encodeURIComponent(contentToEncode))), { headers });
@@ -372,18 +386,32 @@ export async function handleMisubRequest(context) {
                 });
 
                 // [Deferred Logging] Log Success for Subconverter
-                if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
-                    logAccessSuccess({
-                        context,
-                        env,
-                        request,
-                        userAgentHeader,
-                        targetFormat,
-                        token,
-                        profileIdentifier,
-                        subName,
-                        domain
-                    });
+                if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
+                    // 发送 Telegram 通知（独立于访问日志开关）
+                    const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+                    context.waitUntil(
+                        sendEnhancedTgNotification(
+                            config,
+                            '🛰️ *订阅被访问*',
+                            clientIp,
+                            `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`${targetFormat}\`\n*订阅组:* \`${subName}\``
+                        )
+                    );
+
+                    // 访问日志（需要 enableAccessLog 开关）
+                    if (config.enableAccessLog) {
+                        logAccessSuccess({
+                            context,
+                            env,
+                            request,
+                            userAgentHeader,
+                            targetFormat,
+                            token,
+                            profileIdentifier,
+                            subName,
+                            domain
+                        });
+                    }
                 }
 
                 return new Response(responseText, { status: subconverterResponse.status, statusText: subconverterResponse.statusText, headers: responseHeaders });
@@ -428,6 +456,19 @@ export async function handleMisubRequest(context) {
 
         // 附带简短错误信息，防止 header 过长
         fallbackHeaders.set('X-MiSub-Error', errorMessage.slice(0, 200));
+
+        // [Fallback Success] 也发送 Telegram 通知，因为用户仍获取了订阅内容
+        if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
+            const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+            context.waitUntil(
+                sendEnhancedTgNotification(
+                    config,
+                    '🛰️ *订阅被访问* (Fallback)',
+                    clientIp,
+                    `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`base64\`\n*订阅组:* \`${subName}\``
+                )
+            );
+        }
 
         const fallbackContent = btoa(unescape(encodeURIComponent(combinedNodeList)));
         return new Response(fallbackContent, { headers: fallbackHeaders, status: 200 });
