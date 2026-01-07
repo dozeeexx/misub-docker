@@ -145,27 +145,6 @@ export async function handleMisubRequest(context) {
 
     let targetFormat = determineTargetFormat(userAgentHeader, url.searchParams);
 
-    // [Telegram Notification] Send notification if Bot credentials are configured (independent of access log setting)
-    if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
-        const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
-        const country = request.headers.get('CF-IPCountry') || 'N/A';
-        const domain = url.hostname;
-
-        let additionalData = `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`${targetFormat}\``;
-
-        if (profileIdentifier) {
-            additionalData += `\n*订阅组:* \`${subName}\``;
-            const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
-            if (profile && profile.expiresAt) {
-                const expiryDateStr = new Date(profile.expiresAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-                additionalData += `\n*到期时间:* \`${expiryDateStr}\``;
-            }
-        }
-
-        // 使用增强版TG通知,包含IP地理位置信息
-        context.waitUntil(sendEnhancedTgNotification(config, '🛰️ *订阅被访问*', clientIp, additionalData));
-    }
-
     // [Access Log] Record access log and stats if enabled
     if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
         // [Log Deduplication]
@@ -248,7 +227,7 @@ export async function handleMisubRequest(context) {
         // - 后台刷新：更长超时，确保完整拉取所有订阅源
         const fetchPolicy = isBackground
             ? { timeoutMs: 30000, maxRetries: 2, concurrency: 4, overallTimeoutMs: null }  // 后台：30s 超时，确保完整
-            : { timeoutMs: 10000, maxRetries: 1, concurrency: 8, overallTimeoutMs: null }; // 同步：10s 超时，快速响应
+            : { timeoutMs: 15000, maxRetries: 2, concurrency: 4, overallTimeoutMs: null }; // 同步：15s 超时，兼顾稳定与响应
 
         const freshNodes = await generateCombinedNodeList(
             context, // 传入完整 context
@@ -282,7 +261,7 @@ export async function handleMisubRequest(context) {
         targetMisubsCount: targetMisubs.length,
         // 同步刷新超时：12s，确保在客户端 15s 超时前返回
         // 如果超时，后台会继续完成完整拉取
-        syncRefreshTimeoutMs: 12000,
+        syncRefreshTimeoutMs: 20000,
         missFallbackNodeList
     });
 
@@ -314,6 +293,27 @@ export async function handleMisubRequest(context) {
             retryHeaders.set(key, value);
         });
         return new Response(responseBody, { status: 202, headers: retryHeaders });
+    }
+
+    // [Telegram Notification] 仅在确实拿到节点时发送，避免超时重试造成刷屏
+    if (!url.searchParams.has('callback_token') && !shouldSkipLogging && combinedNodeList) {
+        const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+        const country = request.headers.get('CF-IPCountry') || 'N/A';
+        const domain = url.hostname;
+
+        let additionalData = `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`${targetFormat}\``;
+
+        if (profileIdentifier) {
+            additionalData += `\n*订阅组:* \`${subName}\``;
+            const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
+            if (profile && profile.expiresAt) {
+                const expiryDateStr = new Date(profile.expiresAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+                additionalData += `\n*到期时间:* \`${expiryDateStr}\``;
+            }
+        }
+
+        // 使用增强版TG通知,包含IP地理位置信息
+        context.waitUntil(sendEnhancedTgNotification(config, '🛰️ *订阅被访问*', clientIp, additionalData));
     }
 
     const domain = url.hostname;
