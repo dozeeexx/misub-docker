@@ -86,9 +86,12 @@ export async function handleProfileMode(request, env, profileId, userAgent, appl
         const nodeUrls = allNodes.map(node => node.url);
 
         // 应用节点转换管道
+        // 使用默认模板 '{emoji}{region}-{protocol}-{index}'，如果用户未自定义模板
+        const defaultTemplate = '{emoji}{region}-{protocol}-{index}';
+        const effectiveTemplate = profile.nodeTransform.rename?.template?.template || defaultTemplate;
         const transformedUrls = applyNodeTransformPipeline(nodeUrls, {
             ...profile.nodeTransform,
-            enableEmoji: profile.nodeTransform.rename?.template?.template?.includes('{emoji}') || false
+            enableEmoji: effectiveTemplate.includes('{emoji}')
         });
 
         // 重要修复：由于节点转换管道可能会重新排序节点，

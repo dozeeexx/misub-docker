@@ -63,6 +63,7 @@ export async function handleMisubRequest(context) {
     let effectiveSubConverter;
     let effectiveSubConfig;
     let isProfileExpired = false; // Moved declaration here
+    let shouldUseEmoji = false;   // 是否在 subconverter 请求中启用 emoji
 
     const DEFAULT_EXPIRED_NODE = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent('您的订阅已失效')}`;
 
@@ -103,6 +104,20 @@ export async function handleMisubRequest(context) {
             }
             effectiveSubConverter = profile.subConverter && profile.subConverter.trim() !== '' ? profile.subConverter : config.subConverter;
             effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;
+
+            // 判断是否需要在 subconverter 中启用 emoji：使用回退逻辑（订阅组 > 全局 > 默认）
+            const defaultTemplate = '{emoji}{region}-{protocol}-{index}';
+            const globalNodeTransform = config.defaultNodeTransform || {};
+            const profileNodeTransform = profile.nodeTransform || {};
+
+            // 确定有效的 nodeTransform 配置
+            const effectiveTransform = profileNodeTransform.enabled !== undefined
+                ? profileNodeTransform
+                : (globalNodeTransform.enabled ? globalNodeTransform : profileNodeTransform);
+
+            const userTemplate = effectiveTransform?.rename?.template?.template || defaultTemplate;
+            const templateEnabled = effectiveTransform?.enabled && effectiveTransform?.rename?.template?.enabled;
+            shouldUseEmoji = templateEnabled && userTemplate.includes('{emoji}');
 
             // [新增] 增加订阅组下载计数
             // 仅在非回调请求时及非内部请求时增加计数(避免重复计数)
@@ -258,9 +273,26 @@ export async function handleMisubRequest(context) {
         };
 
         const currentProfile = profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier) : null;
+
+        // 设置优先级：订阅组设置 > 全局设置 > 内置默认值
+        // prefixSettings 回退逻辑
+        const effectivePrefixSettings = {
+            ...(config.defaultPrefixSettings || {}),    // 全局设置（已包含内置默认值）
+            ...(currentProfile?.prefixSettings || {})   // 订阅组设置覆盖
+        };
+
+        // nodeTransform 回退逻辑
+        const globalNodeTransform = config.defaultNodeTransform || {};
+        const profileNodeTransform = currentProfile?.nodeTransform || {};
+
+        // 深度合并 nodeTransform（订阅组优先）
+        const effectiveNodeTransform = profileNodeTransform.enabled !== undefined
+            ? profileNodeTransform  // 如果订阅组明确启用/禁用了转换，使用订阅组设置
+            : (globalNodeTransform.enabled ? globalNodeTransform : profileNodeTransform);  // 否则尝试全局设置
+
         const generationSettings = {
-            ...(currentProfile?.prefixSettings || {}),
-            nodeTransform: currentProfile?.nodeTransform,
+            ...effectivePrefixSettings,
+            nodeTransform: effectiveNodeTransform,
             name: subName
         };
 
@@ -358,6 +390,7 @@ export async function handleMisubRequest(context) {
                 subconverterUrl.searchParams.set('url', callbackUrl);
                 subconverterUrl.searchParams.set('scv', 'true');
                 subconverterUrl.searchParams.set('udp', 'true');
+                subconverterUrl.searchParams.set('emoji', shouldUseEmoji ? 'true' : 'false');  // 根据模板动态设置 emoji 参数
                 if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') && effectiveSubConfig && effectiveSubConfig.trim() !== '') {
                     subconverterUrl.searchParams.set('config', effectiveSubConfig);
                 }

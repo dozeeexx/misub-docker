@@ -169,7 +169,7 @@ export async function checkAndNotify(sub, settings, env) {
 }
 
 /**
- * 处理定时任务的通知更新
+ * 处理定时任务的通知更新（并行处理版本）
  * @param {Object} env - Cloudflare环境
  * @returns {Promise<Response>}
  */
@@ -182,90 +182,146 @@ export async function handleCronTrigger(env) {
     const allSubs = JSON.parse(JSON.stringify(originalSubs)); // 深拷贝以便比较
     const settings = await storageAdapter.get(KV_KEY_SETTINGS) || DEFAULT_SETTINGS;
 
+    // 只处理 HTTP 订阅源（排除手动节点）
+    const httpSubscriptions = allSubs.filter(sub => sub.url.startsWith('http') && sub.enabled);
+
+    console.info(`[Cron] Starting parallel update for ${httpSubscriptions.length} subscriptions`);
+    const startTime = Date.now();
+
+    // 并行处理配置
+    const CONCURRENCY = 6;  // 最大并发数
+    const TIMEOUT = 15000;   // 单个请求超时时间（15秒）
+
     const nodeRegex = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|socks):\/\//gm;
     let changesMade = false;
     let updatedCount = 0;
     let failedCount = 0;
     const failedSubscriptions = [];
 
-    console.info(`[Cron] Starting update for ${allSubs.length} subscriptions`);
+    /**
+     * 处理单个订阅
+     */
+    async function processSubscription(sub) {
+        try {
+            // 并行请求流量和节点内容（使用更短的超时）
+            const fetchWithTimeout = (url, options) => {
+                return Promise.race([
+                    fetch(new Request(url, options)),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), TIMEOUT))
+                ]);
+            };
 
-    for (const sub of allSubs) {
-        if (sub.url.startsWith('http') && sub.enabled) {
-            try {
-                // 並行請求流量和節點內容
-                const trafficRequest = fetch(new Request(sub.url, {
+            const [trafficResult, nodeCountResult] = await Promise.allSettled([
+                fetchWithTimeout(sub.url, {
                     headers: { 'User-Agent': 'clash-verge/v2.4.3' },
                     redirect: "follow",
                     cf: { insecureSkipVerify: true }
-                }));
-                const nodeCountRequest = fetch(new Request(sub.url, {
+                }),
+                fetchWithTimeout(sub.url, {
                     headers: { 'User-Agent': SYSTEM_CONSTANTS.FETCHER_USER_AGENT },
                     redirect: "follow",
                     cf: { insecureSkipVerify: true }
-                }));
-                const [trafficResult, nodeCountResult] = await Promise.allSettled([
-                    Promise.race([trafficRequest, new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))]),
-                    Promise.race([nodeCountRequest, new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))])
-                ]);
+                })
+            ]);
 
-                let hasTrafficUpdate = false;
-                let hasNodeCountUpdate = false;
+            let hasTrafficUpdate = false;
+            let hasNodeCountUpdate = false;
 
-                if (trafficResult.status === 'fulfilled' && trafficResult.value.ok) {
-                    const userInfoHeader = trafficResult.value.headers.get('subscription-userinfo');
-                    if (userInfoHeader) {
-                        const info = {};
-                        userInfoHeader.split(';').forEach(part => {
-                            const [key, value] = part.trim().split('=');
-                            if (key && value) info[key] = /^\d+$/.test(value) ? Number(value) : value;
-                        });
-                        sub.userInfo = info; // 更新流量資訊
-                        await checkAndNotify(sub, settings, env); // 檢查並發送通知
-                        hasTrafficUpdate = true;
+            // 处理流量信息
+            if (trafficResult.status === 'fulfilled' && trafficResult.value.ok) {
+                const userInfoHeader = trafficResult.value.headers.get('subscription-userinfo');
+                if (userInfoHeader) {
+                    const info = {};
+                    userInfoHeader.split(';').forEach(part => {
+                        const [key, value] = part.trim().split('=');
+                        if (key && value) info[key] = /^\d+$/.test(value) ? Number(value) : value;
+                    });
+                    const originalSub = allSubs.find(s => s.id === sub.id);
+                    if (originalSub) {
+                        originalSub.userInfo = info;
+                        await checkAndNotify(originalSub, settings, env);
                     }
-                } else if (trafficResult.status === 'rejected') {
-                    console.error(`[Cron] Traffic request failed for ${sub.name}:`, trafficResult.reason.message);
+                    hasTrafficUpdate = true;
                 }
-
-                if (nodeCountResult.status === 'fulfilled' && nodeCountResult.value.ok) {
-                    const text = await nodeCountResult.value.text();
-                    let decoded = '';
-                    try {
-                        decoded = atob(text.replace(/\s/g, ''));
-                    } catch {
-                        decoded = text;
-                    }
-                    const matches = decoded.match(nodeRegex);
-                    if (matches) {
-                        sub.nodeCount = matches.length; // 更新節點數量
-                        hasNodeCountUpdate = true;
-                    }
-                } else if (nodeCountResult.status === 'rejected') {
-                    console.error(`[Cron] Node count request failed for ${sub.name}:`, nodeCountResult.reason.message);
-                }
-
-                if (hasTrafficUpdate || hasNodeCountUpdate) {
-                    updatedCount++;
-                    changesMade = true;
-                    console.info(`[Cron] Updated ${sub.name}: traffic=${hasTrafficUpdate}, nodes=${hasNodeCountUpdate}`);
-                }
-
-            } catch (e) {
-                failedCount++;
-                const errorInfo = {
-                    name: sub.name || '未命名',
-                    url: sub.url,
-                    error: e.message,
-                    timestamp: new Date().toISOString()
-                };
-
-                console.error(`[Cron] Failed to update subscription:`, errorInfo);
-                failedSubscriptions.push(errorInfo);
             }
+
+            // 处理节点数量
+            if (nodeCountResult.status === 'fulfilled' && nodeCountResult.value.ok) {
+                const text = await nodeCountResult.value.text();
+                let decoded = '';
+                try {
+                    decoded = atob(text.replace(/\s/g, ''));
+                } catch {
+                    decoded = text;
+                }
+                const matches = decoded.match(nodeRegex);
+                if (matches) {
+                    const originalSub = allSubs.find(s => s.id === sub.id);
+                    if (originalSub) {
+                        originalSub.nodeCount = matches.length;
+                    }
+                    hasNodeCountUpdate = true;
+                }
+            }
+
+            return {
+                name: sub.name,
+                success: hasTrafficUpdate || hasNodeCountUpdate,
+                traffic: hasTrafficUpdate,
+                nodes: hasNodeCountUpdate
+            };
+        } catch (e) {
+            return {
+                name: sub.name,
+                success: false,
+                error: e.message
+            };
         }
     }
 
+    /**
+     * 并发池：限制并发数执行所有任务
+     */
+    async function runWithConcurrency(items, concurrency, fn) {
+        const results = [];
+        const executing = new Set();
+
+        for (const item of items) {
+            const promise = fn(item).then(result => {
+                executing.delete(promise);
+                return result;
+            });
+            executing.add(promise);
+            results.push(promise);
+
+            if (executing.size >= concurrency) {
+                await Promise.race(executing);
+            }
+        }
+
+        return Promise.all(results);
+    }
+
+    // 并行处理所有订阅（控制并发数）
+    const results = await runWithConcurrency(httpSubscriptions, CONCURRENCY, processSubscription);
+
+    // 统计结果
+    for (const result of results) {
+        if (result.success) {
+            updatedCount++;
+            changesMade = true;
+            console.info(`[Cron] Updated ${result.name}: traffic=${result.traffic}, nodes=${result.nodes}`);
+        } else if (result.error) {
+            failedCount++;
+            failedSubscriptions.push({
+                name: result.name,
+                error: result.error
+            });
+            console.error(`[Cron] Failed ${result.name}: ${result.error}`);
+        }
+    }
+
+    // 保存更新
     if (changesMade) {
         try {
             await storageAdapter.put(KV_KEY_SUBS, allSubs);
@@ -275,13 +331,7 @@ export async function handleCronTrigger(env) {
             return new Response(JSON.stringify({
                 success: false,
                 error: "Failed to save subscriptions",
-                details: saveError.message,
-                summary: {
-                    total: allSubs.length,
-                    updated: updatedCount,
-                    failed: failedCount,
-                    saveError: true
-                }
+                details: saveError.message
             }), {
                 status: 500,
                 headers: { 'Content-Type': 'application/json' }
@@ -289,18 +339,20 @@ export async function handleCronTrigger(env) {
         }
     }
 
+    const duration = Date.now() - startTime;
     const summary = {
         success: true,
         summary: {
-            total: allSubs.length,
+            total: httpSubscriptions.length,
             updated: updatedCount,
             failed: failedCount,
             changes: changesMade,
+            duration: `${duration}ms`,
             failed_subscriptions: failedSubscriptions
         }
     };
 
-    console.info(`[Cron] Completed:`, summary.summary);
+    console.info(`[Cron] Completed in ${duration}ms:`, summary.summary);
 
     return new Response(JSON.stringify(summary), {
         status: 200,
