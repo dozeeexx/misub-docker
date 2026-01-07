@@ -84,8 +84,19 @@ const testResult = ref(null);
 
 // Cron URL
 const cronUrl = computed(() => {
-  return `${window.location.origin}/cron?secret=${props.settings.COOKIE_SECRET || 'YOUR_CRON_SECRET'}`;
+  const secret = props.settings.cronSecret;
+  if (!secret) {
+    return '';
+  }
+  return `${window.location.origin}/cron?secret=${secret}`;
 });
+
+// 复制 Cron URL
+function copyCronUrl() {
+  if (cronUrl.value) {
+    navigator.clipboard.writeText(cronUrl.value);
+  }
+}
 
 async function testNotification() {
     isTesting.value = true;
@@ -186,15 +197,48 @@ async function testNotification() {
              </button>
         </div>
         
+        <!-- CRON_SECRET 输入框 -->
+        <div class="mt-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cron Secret</label>
+          <input type="text" v-model="settings.cronSecret" placeholder="请输入您的 CRON_SECRET 环境变量值"
+            class="block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors">
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            填写您在 Cloudflare 环境变量中设置的 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">CRON_SECRET</code> 值
+          </p>
+        </div>
+
+        <!-- Cron 访问链接（自动生成） -->
+        <div v-if="cronUrl" class="mt-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Cron 访问链接（自动生成）
+          </label>
+          <div class="flex rounded-md shadow-xs">
+            <input type="text" :value="cronUrl" readonly
+              class="flex-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md sm:text-sm dark:text-white font-mono text-xs">
+            <button @click="copyCronUrl" type="button"
+              class="inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-hidden">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            复制此链接配置到外部定时任务服务
+          </p>
+        </div>
+        <div v-else class="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
+          <p class="text-xs text-yellow-700 dark:text-yellow-300">
+            💡 填写 Cron Secret 后，将自动生成访问链接
+          </p>
+        </div>
+        
         <div v-if="showCronGuide" class="mt-3 text-xs text-gray-600 dark:text-gray-300 space-y-2">
-            <p>由于 Cloudflare Pages 免费版不支持 Cron Trigger，请使用外部监控服务（如 UptimeRobot, Cron-Job.org）定时访问以下地址：</p>
-            <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 font-mono break-all select-all">
-                {{ cronUrl }}
-            </div>
+            <p>由于 Cloudflare Pages 免费版不支持 Cron Trigger，请使用外部监控服务（如 UptimeRobot, Cron-Job.org）定时访问上方生成的链接。</p>
             <p class="text-gray-500">建议频率：每天一次 (Every 24 hours)</p>
-             <div class="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-2 mt-2">
-                <p class="text-yellow-700 dark:text-yellow-300">
-                    注意：请确保上面的 `secret` 参数与您的环境变量 `CRON_SECRET` 一致。
+             <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-2 mt-2">
+                <p class="text-blue-700 dark:text-blue-300">
+                    💡 提示：<code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">CRON_SECRET</code> 需要在 Cloudflare Pages 的环境变量中设置相同的值。
                 </p>
             </div>
         </div>
