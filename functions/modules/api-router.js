@@ -18,7 +18,8 @@ import {
     handleStorageTestRequest,
     handleExportDataRequest,
     handlePreviewContentRequest,
-    handleTestNotificationRequest
+    handleTestNotificationRequest,
+    handleTestSubconverterRequest
 } from './handlers/debug-handler.js';
 import {
     handleNodeCountRequest as handleLegacyNodeCountRequest,
@@ -188,6 +189,13 @@ export async function handleApiRequest(request, env) {
             return createJsonResponse({ error: 'Unauthorized' }, 401);
         }
         return await handleTestNotificationRequest(request, env);
+    }
+
+    if (path === '/test_subconverter') {
+        if (!await authMiddleware(request, env)) {
+            return createJsonResponse({ error: 'Unauthorized' }, 401);
+        }
+        return await handleTestSubconverterRequest(request, env);
     }
 
 

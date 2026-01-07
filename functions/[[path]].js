@@ -75,20 +75,18 @@ export async function onRequest(context) {
                 return await handleMisubRequest(context);
             } else if (url.pathname === '/cron') {
                 // 定时任务路由 (需要认证)
-                // 支持两种认证方式：Header 或 URL 参数
-                // 优先使用设置中的 cronSecret，其次使用环境变量 CRON_SECRET
+                // 使用设置中的 cronSecret 进行验证
                 const { StorageFactory } = await import('./storage-adapter.js');
                 const { KV_KEY_SETTINGS } = await import('./modules/config.js');
                 const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
                 const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
 
-                // 优先使用设置中的 cronSecret，其次使用环境变量
-                const expectedSecret = settings.cronSecret || env.CRON_SECRET;
+                const expectedSecret = settings.cronSecret;
 
                 if (!expectedSecret) {
                     return createJsonResponse({
-                        error: 'CRON_SECRET not configured',
-                        hint: '请在设置页面配置 Cron Secret，或在 Cloudflare 环境变量中设置 CRON_SECRET'
+                        error: 'Cron Secret 未配置',
+                        hint: '请在设置页面的「自动任务配置」中设置 Cron Secret'
                     }, 500);
                 }
 
