@@ -236,46 +236,7 @@ docker compose up -d --build
 
 ## 📦 GHCR 镜像部署（免源码）
 
-适用于直接拉取镜像部署，不需要下载源码或本地构建。
-
-### 1. 自动构建镜像
-
-项目内置 GitHub Actions（`.github/workflows/docker-publish.yml`），在 `main` 分支推送后会自动构建并推送镜像到 GHCR。
-
-镜像地址：
-
-```
-ghcr.io/imzyb/misub:latest
-```
-
-> 若镜像是私有的，需要在目标机器执行 `docker login ghcr.io`。  
-> 若需要公开镜像，请在 GitHub Packages 中将其设置为 Public。
-
-### 2. docker-compose.yml 使用镜像
-
-```yaml
-services:
-  misub:
-    image: ghcr.io/imzyb/misub:latest
-    ports:
-      - "8787:8787"
-    environment:
-      PORT: 8787
-      MISUB_DB_PATH: /app/data/misub.db
-      ADMIN_PASSWORD: "change_me"
-      COOKIE_SECRET: "change_me_too"
-    volumes:
-      - ./data:/app/data
-    restart: unless-stopped
-```
-
-部署命令：
-
-```bash
-docker compose up -d
-```
-
-### 3. 最小化 VPS 部署步骤
+最小化 VPS 部署步骤：
 
 1. 新建目录并进入：
 ```bash
