@@ -103,7 +103,8 @@ export async function onRequest(context) {
                     '/login',
                     '/dashboard',
                     '/profile',
-                    '/explore' // [新增] 公开页面
+                    '/explore', // [新增] 公开页面
+                    '/offline'  // [修复] PWA 离线页面
                 ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
 
                 // [Smart Disguise] Check if we need to disguise the SPA/Root
@@ -139,7 +140,8 @@ export async function onRequest(context) {
                 // [Fix] Exclude /explore from auth check
                 // [Fix] Skip auth check on localhost to avoid port 8787/5173 sync issues during dev
                 const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
-                if (isSpaRoute && url.pathname !== '/login' && !url.pathname.startsWith('/explore') && !isLocalhost) {
+                // [修复] 排除 /offline 路由的认证检查
+                if (isSpaRoute && url.pathname !== '/login' && !url.pathname.startsWith('/explore') && url.pathname !== '/offline' && !isLocalhost) {
                     const { authMiddleware } = await import('./modules/auth-middleware.js');
                     const isAuthenticated = await authMiddleware(request, env);
                     if (!isAuthenticated) {
