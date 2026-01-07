@@ -188,7 +188,9 @@ export async function handleCronTrigger(env) {
     let failedCount = 0;
     const failedSubscriptions = [];
 
-    console.info(`[Cron] Starting update for ${allSubs.length} subscriptions`);
+    // 只统计 HTTP 订阅源（排除手动节点）
+    const httpSubscriptions = allSubs.filter(sub => sub.url.startsWith('http') && sub.enabled);
+    console.info(`[Cron] Starting update for ${httpSubscriptions.length} subscriptions`);
 
     for (const sub of allSubs) {
         if (sub.url.startsWith('http') && sub.enabled) {
@@ -292,7 +294,7 @@ export async function handleCronTrigger(env) {
     const summary = {
         success: true,
         summary: {
-            total: allSubs.length,
+            total: httpSubscriptions.length,
             updated: updatedCount,
             failed: failedCount,
             changes: changesMade,
