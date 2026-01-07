@@ -4,6 +4,10 @@ import {
     createCacheHeaders
 } from '../../services/node-cache-service.js';
 
+// 简单的内存防抖 Map（用于同一 Worker 实例下的并发控制）
+const refreshDebounce = new Map();
+const DEBOUNCE_TIME = 10000; // 10秒防抖
+
 export async function resolveNodeListWithCache({
     storageAdapter,
     cacheKey,
@@ -38,8 +42,17 @@ export async function resolveNodeListWithCache({
         // 有缓存：立即返回缓存数据，同时后台刷新确保下次获取最新
         combinedNodeList = cachedData.nodes;
         cacheHeaders = createCacheHeaders(`REFRESHING`, cachedData.nodeCount);
-        // 触发后台刷新，确保缓存始终是最新的
-        triggerBackgroundRefresh(context, () => refreshNodes(true));
+        cacheHeaders = createCacheHeaders(`REFRESHING`, cachedData.nodeCount);
+
+        // 内存防抖：如果最近 10 秒内已触发过刷新，则跳过
+        const lastRun = refreshDebounce.get(cacheKey);
+        if (!lastRun || Date.now() - lastRun > DEBOUNCE_TIME) {
+            refreshDebounce.set(cacheKey, Date.now());
+            // 触发后台刷新，确保缓存始终是最新的
+            triggerBackgroundRefresh(context, () => refreshNodes(true));
+        } else {
+            // console.debug('[Cache] Skipping background refresh due to debounce');
+        }
 
         // [Stats Export] Populate generation stats from cache for deferred logging
         if (context) {
