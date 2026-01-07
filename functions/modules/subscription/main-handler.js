@@ -3,13 +3,12 @@ import { migrateConfigSettings, formatBytes, getCallbackToken } from '../utils.j
 import { generateCombinedNodeList } from '../../services/subscription-service.js';
 import { sendEnhancedTgNotification } from '../notifications.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from '../config.js';
-import { renderDisguisePage, createDisguiseResponse } from '../disguise-page.js';
+import { renderDisguisePage } from '../disguise-page.js';
 import { generateCacheKey, setCache } from '../../services/node-cache-service.js';
 import { resolveRequestContext } from './request-context.js';
-import { buildSubconverterUrlVariants, getSubconverterCandidates, fetchFromSubconverter } from './subconverter-client.js';
+import { buildSubconverterUrlVariants, getSubconverterCandidates } from './subconverter-client.js';
 import { resolveNodeListWithCache } from './cache-manager.js';
 import { logAccessError, logAccessSuccess, shouldSkipLogging as shouldSkipAccessLog } from './access-logger.js';
-import { isBrowserAgent, determineTargetFormat } from './user-agent-utils.js';
 
 /**
  * 处理MiSub订阅请求
@@ -33,16 +32,26 @@ export async function handleMisubRequest(context) {
     // 关键：我们在这里定义了 `config`，后续都应该使用它
     const config = migrateConfigSettings({ ...defaultSettings, ...settings });
 
-    const isBrowser = isBrowserAgent(userAgentHeader);
+    const isBrowser = /Mozilla|Chrome|Safari|Edge|Opera/i.test(userAgentHeader) &&
+        !/clash|v2ray|surge|loon|shadowrocket|quantumult|stash|shadowsocks|mihomo|meta|nekobox|nekoray|sfi|sfa|sfra/i.test(userAgentHeader);
 
     if (config.disguise?.enabled && isBrowser && !url.searchParams.has('callback_token')) {
-        // [Smart Camouflage]
+        // [Smart Camouflage] Allow Admin Access
         // Check if the user has a valid admin session cookie
         const { authMiddleware } = await import('../auth-middleware.js');
         const isAuthenticated = await authMiddleware(request, env); // Returns boolean
 
         if (!isAuthenticated) {
-            return createDisguiseResponse(config.disguise);
+            if (config.disguise.pageType === 'redirect' && config.disguise.redirectUrl) {
+                let redirectUrl = config.disguise.redirectUrl.trim();
+                // Ensure URL has a protocol
+                if (!/^https?:\/\//i.test(redirectUrl)) {
+                    redirectUrl = 'https://' + redirectUrl;
+                }
+                return Response.redirect(redirectUrl, 302);
+            } else {
+                return renderDisguisePage();
+            }
         }
     }
 
@@ -143,7 +152,51 @@ export async function handleMisubRequest(context) {
         return new Response('Subconverter backend is not configured.', { status: 500 });
     }
 
-    let targetFormat = determineTargetFormat(userAgentHeader, url.searchParams);
+    let targetFormat = url.searchParams.get('target');
+    if (!targetFormat) {
+        const supportedFormats = ['clash', 'singbox', 'surge', 'loon', 'base64', 'v2ray', 'trojan'];
+        for (const format of supportedFormats) {
+            if (url.searchParams.has(format)) {
+                if (format === 'v2ray' || format === 'trojan') { targetFormat = 'base64'; } else { targetFormat = format; }
+                break;
+            }
+        }
+    }
+    if (!targetFormat) {
+        const ua = userAgentHeader.toLowerCase();
+        // 使用陣列來保證比對的優先順序
+        const uaMapping = [
+            // Mihomo/Meta 核心的客戶端 - 需要clash格式
+            ['flyclash', 'clash'],
+            ['mihomo', 'clash'],
+            ['clash.meta', 'clash'],
+            ['clash-verge', 'clash'],
+            ['meta', 'clash'],
+
+            // 其他客戶端
+            ['stash', 'clash'],
+            ['nekoray', 'clash'],
+            ['sing-box', 'singbox'],
+            ['shadowrocket', 'base64'],
+            ['v2rayn', 'base64'],
+            ['v2rayng', 'base64'],
+            ['surge', 'surge'],
+            ['loon', 'loon'],
+            ['quantumult%20x', 'quanx'],
+            ['quantumult', 'quanx'],
+
+            // 最後才匹配通用的 clash，作為向下相容
+            ['clash', 'clash']
+        ];
+
+        for (const [keyword, format] of uaMapping) {
+            if (ua.includes(keyword)) {
+                targetFormat = format;
+                break; // 找到第一個符合的就停止
+            }
+        }
+    }
+    if (!targetFormat) { targetFormat = 'base64'; }
 
     // [Telegram Notification] Send notification if Bot credentials are configured (independent of access log setting)
     if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
@@ -226,29 +279,11 @@ export async function handleMisubRequest(context) {
         };
 
         const currentProfile = profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier) : null;
-        const defaultPrefixSettings = config.defaultPrefixSettings || {
-            enableManualNodes: true,
-            enableSubscriptions: true,
-            manualNodePrefix: '手动节点'
+        const generationSettings = {
+            ...(currentProfile?.prefixSettings || {}),
+            nodeTransform: currentProfile?.nodeTransform,
+            name: subName
         };
-        const generationSettings = currentProfile
-            ? {
-                ...(currentProfile?.prefixSettings || {}),
-                nodeTransform: currentProfile?.nodeTransform,
-                name: subName
-            }
-            : {
-                ...defaultPrefixSettings,
-                nodeTransform: config.defaultNodeTransform,
-                name: subName
-            };
-
-        // 拉取策略：
-        // - 同步拉取（客户端等待）：较短超时，尽量在 15s 内完成
-        // - 后台刷新：更长超时，确保完整拉取所有订阅源
-        const fetchPolicy = isBackground
-            ? { timeoutMs: 30000, maxRetries: 2, concurrency: 4, overallTimeoutMs: null }  // 后台：30s 超时，确保完整
-            : { timeoutMs: 10000, maxRetries: 1, concurrency: 8, overallTimeoutMs: null }; // 同步：10s 超时，快速响应
 
         const freshNodes = await generateCombinedNodeList(
             context, // 传入完整 context
@@ -257,21 +292,14 @@ export async function handleMisubRequest(context) {
             targetMisubs,
             prependedContentForSubconverter,
             generationSettings,
-            isDebugToken,
-            fetchPolicy
+            isDebugToken
         );
-
-        // 写入缓存（无论是同步还是后台刷新都写入）
         const sourceNames = targetMisubs
             .filter(s => s.url.startsWith('http'))
             .map(s => s.name || s.url);
         await setCache(storageAdapter, cacheKey, freshNodes, sourceNames);
-
         return freshNodes;
     };
-
-    // 缓存 miss 时不使用占位节点，而是返回提示信息
-    const missFallbackNodeList = '';
 
     const { combinedNodeList, cacheHeaders } = await resolveNodeListWithCache({
         storageAdapter,
@@ -279,60 +307,10 @@ export async function handleMisubRequest(context) {
         forceRefresh,
         refreshNodes,
         context,
-        targetMisubsCount: targetMisubs.length,
-        // 同步刷新超时：12s，确保在客户端 15s 超时前返回
-        // 如果超时，后台会继续完成完整拉取
-        syncRefreshTimeoutMs: 12000,
-        missFallbackNodeList
+        targetMisubsCount: targetMisubs.length
     });
 
-    // 如果缓存 miss 且超时（没有拉取到节点），返回友好提示
-    if (cacheHeaders['X-Cache-Status'] === 'MISS_TIMEOUT' || (!combinedNodeList && !forceRefresh)) {
-        const retryHeaders = new Headers({
-            'Content-Type': 'text/plain; charset=utf-8',
-            'Cache-Control': 'no-store, no-cache',
-            'Retry-After': '5'
-        });
-        Object.entries(cacheHeaders).forEach(([key, value]) => {
-            retryHeaders.set(key, value);
-        });
-        return new Response(
-            '订阅正在后台生成中，请等待 5-10 秒后重试。\n' +
-            'Subscription is being generated in background, please retry in 5-10 seconds.',
-            { status: 202, headers: retryHeaders }
-        );
-    }
-
     const domain = url.hostname;
-    const isNekoBoxClient = /nekobox/i.test(userAgentHeader);
-    const hasRealityNode = /security=reality/i.test(combinedNodeList || '');
-
-    if (isNekoBoxClient && hasRealityNode && targetFormat !== 'base64') {
-        const fallbackHeaders = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
-        Object.entries(cacheHeaders).forEach(([key, value]) => {
-            fallbackHeaders[key] = value;
-        });
-        fallbackHeaders['X-MiSub-Fallback'] = 'base64';
-        fallbackHeaders['X-MiSub-Reason'] = 'nekobox-reality';
-
-        // [Deferred Logging] Log Success for Base64 fallback
-        if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
-            logAccessSuccess({
-                context,
-                env,
-                request,
-                userAgentHeader,
-                targetFormat: 'base64',
-                token,
-                profileIdentifier,
-                subName,
-                domain
-            });
-        }
-
-        const fallbackContent = btoa(unescape(encodeURIComponent(combinedNodeList)));
-        return new Response(fallbackContent, { headers: fallbackHeaders });
-    }
 
     if (targetFormat === 'base64') {
         let contentToEncode;
@@ -375,42 +353,66 @@ export async function handleMisubRequest(context) {
     }
 
     const candidates = getSubconverterCandidates(effectiveSubConverter);
-    const triedEndpoints = [];
     let lastError = null;
-    let finalResponse = null;
+    const triedEndpoints = [];
 
-    try {
-        const { response, usedEndpoint } = await fetchFromSubconverter(candidates, {
-            targetFormat,
-            callbackUrl,
-            subConfig: effectiveSubConfig,
-            subName,
-            cacheHeaders,
-            timeout: 15000 // 15s timeout
-        });
+    for (const backend of candidates) {
+        const variants = buildSubconverterUrlVariants(backend);
+        for (const subconverterUrl of variants) {
+            triedEndpoints.push(subconverterUrl.origin + subconverterUrl.pathname);
+            try {
+                subconverterUrl.searchParams.set('target', targetFormat);
+                subconverterUrl.searchParams.set('url', callbackUrl);
+                subconverterUrl.searchParams.set('scv', 'true');
+                subconverterUrl.searchParams.set('udp', 'true');
+                if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') && effectiveSubConfig && effectiveSubConfig.trim() !== '') {
+                    subconverterUrl.searchParams.set('config', effectiveSubConfig);
+                }
+                subconverterUrl.searchParams.set('new_name', 'true');
 
-        // [Deferred Logging] Log Success for Subconverter
-        if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
-            logAccessSuccess({
-                context,
-                env,
-                request,
-                userAgentHeader,
-                targetFormat,
-                token,
-                profileIdentifier,
-                subName,
-                domain
-            });
+                const subconverterResponse = await fetch(subconverterUrl.toString(), {
+                    method: 'GET',
+                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MiSub-Backend)' },
+                });
+                if (!subconverterResponse.ok) {
+                    const errorBody = await subconverterResponse.text();
+                    lastError = new Error(`Subconverter(${subconverterUrl.origin}) returned status ${subconverterResponse.status}. Body: ${errorBody}`);
+                    console.warn('[SubConverter] Non-OK response, trying next backend if available:', lastError.message);
+                    continue;
+                }
+                const responseText = await subconverterResponse.text();
+
+                const responseHeaders = new Headers(subconverterResponse.headers);
+                responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
+                responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
+                responseHeaders.set('Cache-Control', 'no-store, no-cache');
+
+                // 添加缓存状态头
+                Object.entries(cacheHeaders).forEach(([key, value]) => {
+                    responseHeaders.set(key, value);
+                });
+
+                // [Deferred Logging] Log Success for Subconverter
+                if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
+                    logAccessSuccess({
+                        context,
+                        env,
+                        request,
+                        userAgentHeader,
+                        targetFormat,
+                        token,
+                        profileIdentifier,
+                        subName,
+                        domain
+                    });
+                }
+
+                return new Response(responseText, { status: subconverterResponse.status, statusText: subconverterResponse.statusText, headers: responseHeaders });
+            } catch (error) {
+                lastError = error;
+                console.warn(`[SubConverter] Error with backend ${subconverterUrl.origin}: ${error.message}. Trying next fallback if available.`);
+            }
         }
-
-        return response;
-
-    } catch (err) {
-        lastError = err;
-        // Collect tried endpoints from error message if possible or just use candidates
-        // For simplicity here, we assume user knows based on candidates. 
-        // Or we could have fetchFromSubconverter return more info on error.
     }
 
     const errorMessage = lastError ? `${lastError.message}. Tried: ${triedEndpoints.join(', ')}` : 'Unknown subconverter error';
