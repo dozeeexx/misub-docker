@@ -246,14 +246,24 @@ export async function handleBatchUpdateNodesRequest(request, env) {
             }, 400);
         }
 
-        // 并行获取所有订阅的节点
+        // 单个订阅超时时间（毫秒）
+        const SINGLE_SUB_TIMEOUT = 15000;
+
+        // 并行获取所有订阅的节点（带超时）
         const updatePromises = targetSubscriptions.map(async (subscription) => {
             try {
-                const response = await fetch(new Request(subscription.url, {
+                // 使用 Promise.race 实现超时
+                const fetchPromise = fetch(new Request(subscription.url, {
                     headers: { 'User-Agent': userAgent },
                     redirect: "follow",
                     cf: { insecureSkipVerify: true }
                 }));
+
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('请求超时')), SINGLE_SUB_TIMEOUT)
+                );
+
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);

@@ -55,6 +55,51 @@ defineProps({
         功能控制
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 订阅自动更新间隔 -->
+        <div
+          class="flex flex-col p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-lg">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">订阅自动更新间隔</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">页面打开时自动刷新订阅节点数和流量</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <div class="flex items-center gap-1">
+              <input
+                type="number"
+                :value="![0, 30, 60, 120].includes(settings.autoUpdateInterval) ? settings.autoUpdateInterval : ''"
+                @input="e => { const v = parseInt(e.target.value); if (v >= 5) settings.autoUpdateInterval = v; }"
+                placeholder="自定义"
+                min="5"
+                class="w-20 px-2 py-1.5 text-xs bg-gray-200 dark:bg-gray-700 border-0 rounded-md text-gray-700 dark:text-gray-300 placeholder-gray-500 focus:ring-1 focus:ring-indigo-500"
+              >
+              <span class="text-xs text-gray-500 dark:text-gray-400">分钟</span>
+            </div>
+            <button
+              v-for="option in [
+                { value: 0, label: '禁用' },
+                { value: 30, label: '30分钟' },
+                { value: 60, label: '1小时' },
+                { value: 120, label: '2小时' }
+              ]"
+              :key="option.value"
+              @click="settings.autoUpdateInterval = option.value"
+              :class="[
+                'px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
+                settings.autoUpdateInterval === option.value
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              ]"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+          <p v-if="settings.autoUpdateInterval === 0" class="text-xs text-amber-600 dark:text-amber-400 mt-2">
+            ⚠️ 自动更新已禁用，订阅信息需手动刷新
+          </p>
+        </div>
+
         <!-- 访问日志 -->
         <div
           class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-lg">
