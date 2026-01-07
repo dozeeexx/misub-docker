@@ -77,6 +77,45 @@ function copySetWebhookUrl() {
 // 折叠状态
 const showSetupGuide = ref(false);
 const showUsageGuide = ref(false);
+const showCronGuide = ref(false);
+
+const isTesting = ref(false);
+const testResult = ref(null);
+
+// Cron URL
+const cronUrl = computed(() => {
+  return `${window.location.origin}/cron?secret=${props.settings.COOKIE_SECRET || 'YOUR_CRON_SECRET'}`;
+});
+
+async function testNotification() {
+    isTesting.value = true;
+    testResult.value = null;
+    try {
+        const response = await fetch('/api/test_notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                botToken: props.settings.BotToken,
+                chatId: props.settings.ChatID
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            testResult.value = { success: true, message: '测试成功！消息已发送。' };
+        } else {
+            testResult.value = { 
+                success: false, 
+                message: '测试失败',
+                error: data.error || '未知错误',
+                detail: data.detail 
+            };
+        }
+    } catch (e) {
+        testResult.value = { success: false, message: '请求失败', error: e.message };
+    } finally {
+        isTesting.value = false;
+    }
+}
 </script>
 
 <template>
@@ -103,6 +142,62 @@ const showUsageGuide = ref(false);
           class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors">
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">接收通知的聊天 ID</p>
       </div>
+    </div>
+
+    
+    <!-- Test Button & Result -->
+    <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
+        <div class="flex items-center gap-4">
+            <button @click="testNotification" :disabled="isTesting || !settings.BotToken || !settings.ChatID"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+                <svg v-if="isTesting" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span v-else>🔔</span>
+                {{ isTesting ? '发送中...' : '测试通知' }}
+            </button>
+            <div v-if="testResult" :class="testResult.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" class="text-sm">
+                <span v-if="testResult.success">✅ {{ testResult.message }}</span>
+                <span v-else>
+                    ❌ {{ testResult.message }}: {{ testResult.error }}
+                    <details v-if="testResult.detail" class="mt-1 text-xs font-mono bg-gray-100 dark:bg-gray-900 p-2 rounded max-h-32 overflow-auto">
+                        <summary class="cursor-pointer text-gray-500">查看详细信息</summary>
+                        <pre>{{ JSON.stringify(testResult.detail, null, 2) }}</pre>
+                    </details>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cron Info -->
+     <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-100 dark:border-gray-700 mt-4">
+        <div class="flex justify-between items-start">
+             <div>
+                <h4 class="text-sm font-medium text-gray-900 dark:text-gray-200 flex items-center gap-2">
+                    ⏱️ 自动任务配置 (Cron)
+                </h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    要接收订阅过期提醒和流量预警，您需要配置定时任务。
+                </p>
+             </div>
+             <button @click="showCronGuide = !showCronGuide" class="text-blue-600 hover:text-blue-500 text-xs font-medium">
+                 {{ showCronGuide ? '收起' : '如何配置?' }}
+             </button>
+        </div>
+        
+        <div v-if="showCronGuide" class="mt-3 text-xs text-gray-600 dark:text-gray-300 space-y-2">
+            <p>由于 Cloudflare Pages 免费版不支持 Cron Trigger，请使用外部监控服务（如 UptimeRobot, Cron-Job.org）定时访问以下地址：</p>
+            <div class="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 font-mono break-all select-all">
+                {{ cronUrl }}
+            </div>
+            <p class="text-gray-500">建议频率：每天一次 (Every 24 hours)</p>
+             <div class="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-2 mt-2">
+                <p class="text-yellow-700 dark:text-yellow-300">
+                    注意：请确保上面的 `secret` 参数与您的环境变量 `CRON_SECRET` 一致。
+                </p>
+            </div>
+        </div>
     </div>
   </div>
 

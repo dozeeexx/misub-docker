@@ -17,7 +17,8 @@ import {
     handleSystemInfoRequest,
     handleStorageTestRequest,
     handleExportDataRequest,
-    handlePreviewContentRequest
+    handlePreviewContentRequest,
+    handleTestNotificationRequest
 } from './handlers/debug-handler.js';
 import {
     handleNodeCountRequest as handleLegacyNodeCountRequest,
@@ -172,6 +173,13 @@ export async function handleApiRequest(request, env) {
     // Auth-only route for client management (POST, DELETE, etc.)
     if (path.startsWith('/clients')) {
         return await handleClientRequest(request, env);
+    }
+
+    if (path === '/test_notification') {
+        if (!await authMiddleware(request, env)) {
+            return createJsonResponse({ error: 'Unauthorized' }, 401);
+        }
+        return await handleTestNotificationRequest(request, env);
     }
 
     switch (path) {
