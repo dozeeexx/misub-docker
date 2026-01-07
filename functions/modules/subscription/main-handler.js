@@ -105,10 +105,18 @@ export async function handleMisubRequest(context) {
             effectiveSubConverter = profile.subConverter && profile.subConverter.trim() !== '' ? profile.subConverter : config.subConverter;
             effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;
 
-            // 判断是否需要在 subconverter 中启用 emoji：当模板包含 {emoji} 时
+            // 判断是否需要在 subconverter 中启用 emoji：使用回退逻辑（订阅组 > 全局 > 默认）
             const defaultTemplate = '{emoji}{region}-{protocol}-{index}';
-            const userTemplate = profile.nodeTransform?.rename?.template?.template || defaultTemplate;
-            const templateEnabled = profile.nodeTransform?.enabled && profile.nodeTransform?.rename?.template?.enabled;
+            const globalNodeTransform = config.defaultNodeTransform || {};
+            const profileNodeTransform = profile.nodeTransform || {};
+
+            // 确定有效的 nodeTransform 配置
+            const effectiveTransform = profileNodeTransform.enabled !== undefined
+                ? profileNodeTransform
+                : (globalNodeTransform.enabled ? globalNodeTransform : profileNodeTransform);
+
+            const userTemplate = effectiveTransform?.rename?.template?.template || defaultTemplate;
+            const templateEnabled = effectiveTransform?.enabled && effectiveTransform?.rename?.template?.enabled;
             shouldUseEmoji = templateEnabled && userTemplate.includes('{emoji}');
 
             // [新增] 增加订阅组下载计数
@@ -265,9 +273,26 @@ export async function handleMisubRequest(context) {
         };
 
         const currentProfile = profileIdentifier ? allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier) : null;
+
+        // 设置优先级：订阅组设置 > 全局设置 > 内置默认值
+        // prefixSettings 回退逻辑
+        const effectivePrefixSettings = {
+            ...(config.defaultPrefixSettings || {}),    // 全局设置（已包含内置默认值）
+            ...(currentProfile?.prefixSettings || {})   // 订阅组设置覆盖
+        };
+
+        // nodeTransform 回退逻辑
+        const globalNodeTransform = config.defaultNodeTransform || {};
+        const profileNodeTransform = currentProfile?.nodeTransform || {};
+
+        // 深度合并 nodeTransform（订阅组优先）
+        const effectiveNodeTransform = profileNodeTransform.enabled !== undefined
+            ? profileNodeTransform  // 如果订阅组明确启用/禁用了转换，使用订阅组设置
+            : (globalNodeTransform.enabled ? globalNodeTransform : profileNodeTransform);  // 否则尝试全局设置
+
         const generationSettings = {
-            ...(currentProfile?.prefixSettings || {}),
-            nodeTransform: currentProfile?.nodeTransform,
+            ...effectivePrefixSettings,
+            nodeTransform: effectiveNodeTransform,
             name: subName
         };
 
