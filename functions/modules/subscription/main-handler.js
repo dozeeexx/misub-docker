@@ -288,19 +288,32 @@ export async function handleMisubRequest(context) {
 
     // 如果缓存 miss 且超时（没有拉取到节点），返回友好提示
     if (cacheHeaders['X-Cache-Status'] === 'MISS_TIMEOUT' || (!combinedNodeList && !forceRefresh)) {
+        const retryMessage = '订阅正在后台生成中，请等待 5-10 秒后重试。';
+        const retryMessageEn = 'Subscription is being generated in background, please retry in 5-10 seconds.';
+        let responseBody = `${retryMessage}\n${retryMessageEn}`;
+        let contentType = 'text/plain; charset=utf-8';
+
+        if (targetFormat === 'clash') {
+            responseBody = [
+                `# ${retryMessage}`,
+                `# ${retryMessageEn}`,
+                'proxies: []',
+                'proxy-groups: []',
+                'rules: []',
+                ''
+            ].join('\n');
+            contentType = 'text/yaml; charset=utf-8';
+        }
+
         const retryHeaders = new Headers({
-            'Content-Type': 'text/plain; charset=utf-8',
+            'Content-Type': contentType,
             'Cache-Control': 'no-store, no-cache',
             'Retry-After': '5'
         });
         Object.entries(cacheHeaders).forEach(([key, value]) => {
             retryHeaders.set(key, value);
         });
-        return new Response(
-            '订阅正在后台生成中，请等待 5-10 秒后重试。\n' +
-            'Subscription is being generated in background, please retry in 5-10 seconds.',
-            { status: 202, headers: retryHeaders }
-        );
+        return new Response(responseBody, { status: 202, headers: retryHeaders });
     }
 
     const domain = url.hostname;
