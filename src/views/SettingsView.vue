@@ -59,7 +59,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-8">
+  <div class="pt-0 pb-8">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1 mt-2">设置</h1>
     <div class="md:grid md:grid-cols-12 md:gap-6">
 
