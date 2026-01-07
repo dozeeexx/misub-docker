@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent, watch } from 'vue';
 import { formatBytes } from '../../../lib/utils.js';
 import { useToastStore } from '../../../stores/toast.js';
 import { useUIStore } from '../../../stores/ui.js';
@@ -64,7 +64,7 @@ const {
   subscriptions, subsCurrentPage, subsTotalPages, paginatedSubscriptions, totalRemainingTraffic,
   changeSubsPage, addSubscription, updateSubscription, deleteSubscription, deleteAllSubscriptions,
   addSubscriptionsFromBulk, handleUpdateNodeCount, batchUpdateAllSubscriptions, startAutoUpdate, stopAutoUpdate,
-  reorderSubscriptions,
+  restartAutoUpdate, reorderSubscriptions,
 } = useSubscriptions(markDirty);
 
 const {
@@ -173,6 +173,16 @@ onUnmounted(() => {
   // 停止订阅自动更新定时器
   stopAutoUpdate();
 });
+
+// 监听设置变更，重启自动更新定时器
+watch(
+  () => settings.value?.autoUpdateInterval,
+  (newInterval) => {
+    if (newInterval !== undefined) {
+      restartAutoUpdate(newInterval);
+    }
+  }
+);
 
 const setViewMode = (mode) => {
   manualNodeViewMode.value = mode;

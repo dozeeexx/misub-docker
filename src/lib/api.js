@@ -145,7 +145,13 @@ export async function saveSettings(settings) {
  */
 export async function batchUpdateNodes(subscriptionIds) {
     try {
-        return await api.post('/api/batch_update_nodes', { subscriptionIds });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 120秒超时
+
+        const result = await api.post('/api/batch_update_nodes', { subscriptionIds }, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        return result;
     } catch (error) {
         return handleApiError(error, 'batchUpdateNodes');
     }

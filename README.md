@@ -206,6 +206,73 @@ wrangler d1 execute misub --file=schema.sql --remote
 
 ---
 
+## 🐳 VPS / Docker 部署
+
+适用于自建服务器部署（与 Cloudflare Pages 保持功能兼容）。
+
+### 1. 构建并启动
+
+```bash
+docker compose up -d --build
+```
+
+默认端口为 `8787`，访问 `http://<vps-ip>:8787`。
+
+### 2. 环境变量
+
+在 `docker-compose.yml` 中配置：
+
+- `ADMIN_PASSWORD` 管理员密码（必填）
+- `COOKIE_SECRET` Cookie 加密密钥（必填）
+- `CORS_ORIGINS` 允许跨域访问的来源（可选）
+- `PORT` 服务端口（默认 8787）
+- `MISUB_DB_PATH` SQLite 数据库路径（默认 `/app/data/misub.db`）
+
+### 3. 数据持久化
+
+默认通过 `./data` 目录持久化数据库文件。
+
+---
+
+## 📦 GHCR 镜像部署（免源码）
+
+最小化 VPS 部署步骤：
+
+1. 新建目录并进入：
+```bash
+mkdir -p /opt/misub && cd /opt/misub
+```
+
+2. 创建 `docker-compose.yml`（使用 GHCR 镜像）：
+```yaml
+services:
+  misub:
+    image: ghcr.io/imzyb/misub:latest
+    ports:
+      - "8790:8787"
+    environment:
+      PORT: 8787
+      MISUB_DB_PATH: /app/data/misub.db
+      ADMIN_PASSWORD: "change_me"
+      COOKIE_SECRET: "change_me_too"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+```
+
+3. 启动并拉取镜像：
+```bash
+docker compose pull
+docker compose up -d
+```
+
+4. 访问：
+```
+http://<vps-ip>:8790
+```
+
+---
+
 ## 💡 使用说明
 
 ### 登录管理界面
