@@ -16,9 +16,14 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [
           /^\/sub\/.*/,      // /sub/...
+          /^\/cdn-cgi\/.*/,  // Cloudflare Web Analytics
           /^\/[^/]+\/[^/]+(\?.*)?$/ // Two-segment paths like /test1/work, optionally with query params
         ],
         runtimeCaching: [
+          {
+            urlPattern: /^\/cdn-cgi\/.*/,
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: /^https:\/\/api\..*/i,
             handler: 'NetworkFirst',
@@ -93,6 +98,7 @@ export default defineConfig({
 
         navigateFallbackDenylist: [
           /^\/sub\/.*/,
+          /^\/cdn-cgi\/.*/,
           /^\/[^/]+\/[^/]+(\?.*)?$/
         ],
       }
