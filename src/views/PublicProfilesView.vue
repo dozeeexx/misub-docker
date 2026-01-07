@@ -100,9 +100,9 @@ const fetchClientVersions = async () => {
     clients.value.forEach(async (client) => {
         if (!client.repo) return;
         try {
-            const res = await fetch(`https://api.github.com/repos/${client.repo}/releases/latest`);
-            if (res.ok) {
-                const data = await res.json();
+            // [Modified] Use internal proxy to avoid GitHub API rate limits (403)
+            const data = await api.get(`/api/github/release?repo=${client.repo}`);
+            if (data && data.tag_name) {
                 client.version = data.tag_name;
             }
         } catch (e) {
