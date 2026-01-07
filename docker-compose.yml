@@ -1,6 +1,6 @@
 services:
   misub:
-    build: .
+    image: ghcr.io/imzyb/misub:latest
     ports:
       - "8790:8787"
     environment:
