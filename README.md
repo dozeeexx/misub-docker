@@ -275,6 +275,41 @@ services:
 docker compose up -d
 ```
 
+### 3. 最小化 VPS 部署步骤
+
+1. 新建目录并进入：
+```bash
+mkdir -p /opt/misub && cd /opt/misub
+```
+
+2. 创建 `docker-compose.yml`（使用 GHCR 镜像）：
+```yaml
+services:
+  misub:
+    image: ghcr.io/imzyb/misub:latest
+    ports:
+      - "8790:8787"
+    environment:
+      PORT: 8787
+      MISUB_DB_PATH: /app/data/misub.db
+      ADMIN_PASSWORD: "change_me"
+      COOKIE_SECRET: "change_me_too"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+```
+
+3. 启动并拉取镜像：
+```bash
+docker compose pull
+docker compose up -d
+```
+
+4. 访问：
+```
+http://<vps-ip>:8790
+```
+
 ---
 
 ## 💡 使用说明
