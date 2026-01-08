@@ -21,10 +21,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 80vh; /* Adjust for layout */
-  position: relative;
+  min-height: 100vh; /* Full viewport height */
+  width: 100vw;      /* Full viewport width */
+  position: fixed;   /* Fix to cover everything including header/footer if needed */
+  top: 0;
+  left: 0;
+  z-index: 9999;     /* Ensure it's on top */
   overflow: hidden;
-  color: white; /* Force white text as we might be in dark/light mode */
+  color: white; 
+  /* Gradient Background from server-side template */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 /* 
