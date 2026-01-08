@@ -11,6 +11,7 @@ import NavBar from './components/layout/NavBar.vue';
 
 // Lazy components
 const Login = defineAsyncComponent(() => import('./components/modals/Login.vue'));
+const NotFound = defineAsyncComponent(() => import('./views/NotFound.vue')); // [NEW] Use for secure fallback
 const Toast = defineAsyncComponent(() => import('./components/ui/Toast.vue'));
 const Footer = defineAsyncComponent(() => import('./components/layout/Footer.vue'));
 const PWAUpdatePrompt = defineAsyncComponent(() => import('./components/features/PWAUpdatePrompt.vue'));
@@ -135,7 +136,18 @@ const handleDiscard = async () => {
       </template>
       
       <!-- LOGIN VIEW (Not logged in, not public) -->
-      <Login v-else :login="login" />
+      <template v-else>
+         <!-- 
+           If a Custom Login Path is configured, accessing protected routes directly (like /settings, /nodes)
+           should NOT trigger the Login component (which reveals the login box).
+           Instead, it should show 404/Disguise.
+           Only if NO custom path is set, do we fallback to the default Login component.
+         -->
+         <component 
+            :is="sessionStore.publicConfig?.customLoginPath ? NotFound : Login" 
+            :login="login" 
+         />
+      </template>
 
     </main>
     
