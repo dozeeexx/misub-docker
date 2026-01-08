@@ -319,7 +319,8 @@ export async function handlePublicConfig(env) {
         const mergedSettings = { ...defaultSettings, ...settings };
 
         return createJsonResponse({
-            enablePublicPage: mergedSettings.enablePublicPage
+            enablePublicPage: mergedSettings.enablePublicPage,
+            customLoginPath: mergedSettings.customLoginPath
         });
     } catch (e) {
         console.error('[API Error /public/config]', e);

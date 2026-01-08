@@ -106,25 +106,40 @@ export async function onRequest(context) {
                 // 静态文件处理
                 const isStaticAsset = /^\/(assets|@vite|src)\/./.test(url.pathname) || /\.\w+$/.test(url.pathname);
 
+                // [Smart Disguise & Custom Login Logic]
+                // 需要提前读取 Settings 来获取 customLoginPath
+                // 为了性能，只有在非静态资源且可能是 SPA 路由时才读取
+                let settings = {};
+                if (!isStaticAsset) {
+                    const { StorageFactory } = await import('./storage-adapter.js');
+                    const { KV_KEY_SETTINGS } = await import('./modules/config.js');
+                    const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
+                    settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+                }
+
+                const customLoginPath = settings.customLoginPath ? '/' + settings.customLoginPath.replace(/^\//, '') : '/login';
 
                 // SPA 路由白名单：这些请求应该交由前端路由处理，而不是作为订阅请求
                 // [修复] 增加更多可能的SPA路由，防止被误判为订阅请求
+                // [新增] 动态包含自定义登录路径
                 const isSpaRoute = [
                     '/groups',
                     '/nodes',
                     '/subscriptions',
                     '/settings',
-                    '/login',
+                    '/login', // 默认 login 仍然需要保留，以便前端处理 "入口" 逻辑
                     '/dashboard',
                     '/profile',
                     '/explore', // [新增] 公开页面
-                    '/offline'  // [修复] PWA 离线页面
+                    '/offline',  // [修复] PWA 离线页面
+                    customLoginPath // [新增] 自定义登录路径
                 ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
 
                 // [Smart Disguise] Check if we need to disguise the SPA/Root
                 // Only applies to non-static assets
                 if ((url.pathname === '/' || isSpaRoute) && !isStaticAsset) {
-                    const disguiseResponse = await handleDisguiseRequest(context);
+                    // Pass settings to avoid double fetch
+                    const disguiseResponse = await handleDisguiseRequest(context, settings);
                     if (disguiseResponse) {
                         return disguiseResponse;
                     }

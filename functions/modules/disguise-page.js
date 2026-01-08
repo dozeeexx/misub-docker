@@ -1,6 +1,9 @@
 /**
  * 伪装页面渲染模块
  * 当浏览器访问订阅链接时显示的伪装页面
+/**
+ * 伪装页面渲染模块
+ * 当浏览器访问订阅链接时显示的伪装页面
  */
 
 /**
@@ -16,97 +19,167 @@ export function renderDisguisePage() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 Not Found</title>
     <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-color: #ffffff;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-gradient);
             min-height: 100vh;
             display: flex;
             align-items: center;
-            justify-center;
-            padding: 20px;
+            justify-content: center;
+            overflow: hidden;
+            color: var(--text-color);
         }
-        
+
         .container {
             text-align: center;
-            color: white;
+            position: relative;
+            z-index: 10;
+            padding: 2rem;
             max-width: 600px;
+            width: 90%;
         }
-        
+
+        /* Glassmorphism Card Effect */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 4rem 2rem;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            animation: fadeInUp 0.8s ease-out;
+        }
+
         .error-code {
             font-size: 120px;
-            font-weight: bold;
+            font-weight: 800;
             line-height: 1;
-            margin-bottom: 20px;
-            text-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            animation: float 3s ease-in-out infinite;
+            margin-bottom: 1rem;
+            background: linear-gradient(to bottom, #ffffff, rgba(255,255,255,0.5));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
+            animation: float 6s ease-in-out infinite;
         }
-        
-        @keyframes float {
-            0%, 100% {
-                transform: translateY(0px);
-            }
-            50% {
-                transform: translateY(-20px);
-            }
-        }
-        
+
         h1 {
-            font-size: 32px;
-            margin-bottom: 16px;
+            font-size: 2rem;
+            margin-bottom: 1rem;
             font-weight: 600;
+            letter-spacing: 0.5px;
         }
-        
+
         p {
-            font-size: 18px;
-            opacity: 0.9;
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin-bottom: 2.5rem;
             line-height: 1.6;
-            margin-bottom: 30px;
         }
-        
+
         .home-link {
-            display: inline-block;
-            padding: 12px 32px;
-            background: white;
-            color: #667eea;
+            display: inline-flex;
+            align-items: center;
+            padding: 14px 36px;
+            background: #ffffff;
+            color: #764ba2;
             text-decoration: none;
             border-radius: 50px;
             font-weight: 600;
-            transition: transform 0.2s, box-shadow 0.2s;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        
+
         .home-link:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            background: #f8f9fa;
         }
-        
+
+        .home-link:active {
+            transform: translateY(-1px);
+        }
+
+        /* Ambient Background Shapes */
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+            opacity: 0.6;
+            animation: pulse 10s infinite alternate;
+        }
+
+        .shape-1 {
+            top: -10%;
+            left: -10%;
+            width: 300px;
+            height: 300px;
+            background: #43e97b;
+        }
+
+        .shape-2 {
+            bottom: -10%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: #fa709a;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.4; }
+            100% { transform: scale(1.2); opacity: 0.7; }
+        }
+
         @media (max-width: 768px) {
-            .error-code {
-                font-size: 80px;
-            }
-            
-            h1 {
-                font-size: 24px;
-            }
-            
-            p {
-                font-size: 16px;
-            }
+            .error-code { font-size: 80px; }
+            h1 { font-size: 1.5rem; }
+            .glass-card { padding: 3rem 1.5rem; }
         }
     </style>
 </head>
 <body>
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    
     <div class="container">
-        <div class="error-code">404</div>
-        <h1>页面未找到</h1>
-        <p>抱歉,您访问的页面不存在或已被删除。</p>
-        <a href="/" class="home-link">返回首页</a>
+        <div class="glass-card">
+            <div class="error-code">404</div>
+            <h1>页面未找到</h1>
+            <p>抱歉，您访问的页面不存在或已被移除。<br>仿佛进入了数字荒原。</p>
+            <a href="/" class="home-link">返回首页</a>
+        </div>
     </div>
 </body>
 </html>

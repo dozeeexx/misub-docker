@@ -50,6 +50,13 @@ const routes = [
         name: 'Login',
         component: () => import('../components/modals/Login.vue'),
         meta: { title: '登录', isPublic: false } // Actually handled by App.vue logic, but good to have a route
+    },
+    {
+        // Catch-all route for Custom Login Path or 404
+        path: '/:pathMatch(.*)*',
+        name: 'Entrance',
+        component: () => import('../views/Entrance.vue'),
+        meta: { title: 'MiSub', isPublic: true } // Public, so Entrance.vue can decide what to render
     }
 ];
 
