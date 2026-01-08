@@ -45,12 +45,16 @@ const routes = [
         component: SettingsView,
         meta: { title: '设置' }
     },
+    /* 
+    // [REMOVED] Static /login route. 
+    // Handled dynamically by Catch-All route (Entrance.vue) to support Custom Login Path.
     {
         path: '/login',
         name: 'Login',
         component: () => import('../components/modals/Login.vue'),
-        meta: { title: '登录', isPublic: false } // Actually handled by App.vue logic, but good to have a route
-    },
+        meta: { title: '登录', isPublic: false } 
+    }, 
+    */
     {
         // Catch-all route for Custom Login Path or 404
         path: '/:pathMatch(.*)*',

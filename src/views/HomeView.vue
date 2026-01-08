@@ -6,6 +6,7 @@ import { storeToRefs } from 'pinia';
 // Lazy load components
 const DashboardView = defineAsyncComponent(() => import('./DashboardView.vue'));
 const PublicProfilesView = defineAsyncComponent(() => import('./PublicProfilesView.vue'));
+const NotFoundView = defineAsyncComponent(() => import('./NotFound.vue')); // [NEW] Use NotFound if public access disabled
 
 const sessionStore = useSessionStore();
 const { sessionState, publicConfig } = storeToRefs(sessionStore);
@@ -19,29 +20,22 @@ const currentView = computed(() => {
         return DashboardView;
     }
     
-    // If public page is disabled, redirect to login
-    // Note: We should wait for sessionState to be determined (not loading)
+    // If public page is disabled, do NOT redirect to /login (which exposes entry).
+    // Instead, show 404/Disguise logic.
     if (sessionState.value === 'loggedOut' && publicConfig.value && !publicConfig.value.enablePublicPage) {
-        // Use a side effect or just render Login component?
-        // Rendering Login component directly here is cleaner than router.push inside computed
-        // But we have a route for /login. Let's redirect.
-        // Actually, redirecting inside computed is bad practice.
-        // However, we are in a top-level view wrapper.
-        // Let's return a "redirect" placeholder or handle it in watchEffect.
-        return null;
+        return NotFoundView;
     }
     
     // Otherwise show Public Profiles
     return PublicProfilesView;
 });
 
-import { watchEffect } from 'vue';
-
-watchEffect(() => {
-    if (sessionState.value === 'loggedOut' && publicConfig.value && !publicConfig.value.enablePublicPage) {
-        router.replace('/login');
-    }
-});
+// [REMOVED] Watcher that forced redirect to /login
+// watchEffect(() => {
+//     if (sessionState.value === 'loggedOut' && publicConfig.value && !publicConfig.value.enablePublicPage) {
+//         router.replace('/login');
+//     }
+// });
 </script>
 
 <template>
