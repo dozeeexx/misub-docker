@@ -223,7 +223,7 @@ watch(() => props.profile, (newProfile) => {
       manualNodes: [], 
       customId: '', 
       expiresAt: '',
-      isPublic: false, // [新增]
+      isPublic: true, // [新增] 默认为 true
       description: '', // [新增]
       prefixSettings: {
         enableManualNodes: true,
