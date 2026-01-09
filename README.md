@@ -277,7 +277,7 @@ http://<vps-ip>:8790
 
 支持通过 [Zeabur](https://zeabur.com) 平台一键部署：
 
-[![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/MISUB)
+[![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/O066B9)
 
 ### 手动部署步骤
 
