@@ -82,7 +82,7 @@ temp/
 .claude/
 
 DOCKER_GUIDE.md
-
+AGENTS.md
 
 # Local development and testing
 local-server.js

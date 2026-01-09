@@ -5,7 +5,7 @@
 
 import { parseNodeList } from '../modules/utils/node-parser.js';
 import { getProcessedUserAgent } from '../utils/format-utils.js';
-import { prependNodeName, removeFlagEmoji } from '../utils/node-utils.js';
+import { prependNodeName, removeFlagEmoji, fixNodeUrlEncoding } from '../utils/node-utils.js';
 import { applyNodeTransformPipeline } from '../utils/node-transformer.js';
 import { createTimeoutFetch } from '../modules/utils.js';
 
@@ -159,8 +159,8 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         if (node.isExpiredNode) {
             return node.url; // Directly use the URL for expired node
         } else {
-            // 修复手动SS节点中的URL编码问题
-            let processedUrl = fixSSEncoding(node.url);
+            // 修复手动SS节点中的URL编码问题（以及 Hysteria2 等其他协议）
+            let processedUrl = fixNodeUrlEncoding(node.url);
 
             // 如果用户设置了手动节点名称，则替换链接中的原始名称
             const customNodeName = typeof node.name === 'string' ? node.name.trim() : '';
@@ -427,78 +427,7 @@ function applyManualNodeName(nodeUrl, customName) {
     }
 }
 
-/**
- * 修复SS节点编码
- * @param {string} nodeUrl - 节点URL
- * @returns {string} - 修复后的URL
- */
-function fixSSEncoding(nodeUrl) {
-    if (!nodeUrl.startsWith('ss://')) {
-        return nodeUrl;
-    }
 
-    try {
-        const hashIndex = nodeUrl.indexOf('#');
-        let baseLink = hashIndex !== -1 ? nodeUrl.substring(0, hashIndex) : nodeUrl;
-        let fragment = hashIndex !== -1 ? nodeUrl.substring(hashIndex) : '';
-
-        // 检查base64部分是否包含URL编码字符
-        const protocolEnd = baseLink.indexOf('://');
-        const atIndex = baseLink.indexOf('@');
-        if (protocolEnd !== -1 && atIndex !== -1) {
-            const base64Part = baseLink.substring(protocolEnd + 3, atIndex);
-            if (base64Part.includes('%')) {
-                // 解码URL编码的base64部分
-                const decodedBase64 = decodeURIComponent(base64Part);
-                baseLink = 'ss://' + decodedBase64 + baseLink.substring(atIndex);
-            }
-        }
-        return baseLink + fragment;
-    } catch (e) {
-        // 如果处理失败，使用原始链接
-        return nodeUrl;
-    }
-}
-
-/**
- * 修复节点URL编码问题（支持多种协议）
- * @param {string} nodeUrl - 节点URL
- * @returns {string} - 修复后的URL
- */
-function fixNodeUrlEncoding(nodeUrl) {
-    if (nodeUrl.startsWith('hysteria2://')) {
-        return nodeUrl.replace(/([?&]obfs-password=)([^&]+)/g, (match, prefix, value) => {
-            try {
-                return prefix + decodeURIComponent(value);
-            } catch (e) {
-                return match;
-            }
-        });
-    }
-    if (!nodeUrl.startsWith('ss://') && !nodeUrl.startsWith('vless://') && !nodeUrl.startsWith('trojan://')) {
-        return nodeUrl;
-    }
-
-    try {
-        const hashIndex = nodeUrl.indexOf('#');
-        let baseLink = hashIndex !== -1 ? nodeUrl.substring(0, hashIndex) : nodeUrl;
-        let fragment = hashIndex !== -1 ? nodeUrl.substring(hashIndex) : '';
-
-        const protocolEnd = baseLink.indexOf('://');
-        const atIndex = baseLink.indexOf('@');
-        if (protocolEnd !== -1 && atIndex !== -1) {
-            const base64Part = baseLink.substring(protocolEnd + 3, atIndex);
-            if (base64Part.includes('%')) {
-                const decodedBase64 = decodeURIComponent(base64Part);
-                const protocol = baseLink.substring(0, protocolEnd);
-                baseLink = protocol + '://' + decodedBase64 + baseLink.substring(atIndex);
-            }
-        }
-        return baseLink + fragment;
-    } catch (e) {
-        return nodeUrl;
-    }
-}
 
 /**
  * 应用过滤规则
