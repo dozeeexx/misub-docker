@@ -13,7 +13,11 @@ RUN npm prune --omit=dev
 
 FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
+
+# 端口配置：默认8080兼容Zeabur，VPS可通过docker-compose覆盖
+ARG PORT=8080
 ENV NODE_ENV=production
+ENV PORT=${PORT}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libsqlite3-0 \
@@ -27,5 +31,6 @@ COPY --from=build /app/schema.sql ./schema.sql
 COPY --from=build /app/src/shared ./src/shared
 COPY --from=build /app/package.json ./package.json
 
-EXPOSE 8787
+# 同时暴露常用端口
+EXPOSE 8080 8787
 CMD ["node", "server/index.mjs"]

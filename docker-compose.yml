@@ -4,6 +4,7 @@ services:
     ports:
       - "8790:8787"
     environment:
+      # VPS部署：使用8787端口（Zeabur自动使用8080）
       PORT: 8787
       MISUB_DB_PATH: /app/data/misub.db
       ADMIN_PASSWORD: "admin123"
