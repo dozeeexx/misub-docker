@@ -2,10 +2,9 @@
 import { computed, ref, watch } from 'vue';
 import { useToastStore } from '../../stores/toast.js';
 import Modal from '../forms/Modal.vue';
-import AdvancedOptions from './SubscriptionEditModal/AdvancedOptions.vue';
 import EditForm from './SubscriptionEditModal/EditForm.vue';
 import RuleSection from './SubscriptionEditModal/RuleSection.vue';
-
+import AdvancedOptions from './SubscriptionEditModal/AdvancedOptions.vue';
 const props = defineProps({
   show: Boolean,
   isNew: Boolean,
@@ -14,6 +13,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:show', 'confirm']);
 const { showToast } = useToastStore();
+
 
 // === 可视化规则编辑器 ===
 const isAdvancedMode = ref(false);
@@ -256,6 +256,8 @@ const syncExcludeRuleScroll = () => {
   excludeRuleHighlight.value.scrollTop = excludeRuleTextarea.value.scrollTop;
   excludeRuleHighlight.value.scrollLeft = excludeRuleTextarea.value.scrollLeft;
 };
+
+
 
 const handleConfirm = () => {
   if (isAdvancedMode.value && excludeRuleState.value.errors.length > 0) {

@@ -1,5 +1,10 @@
 <script setup>
+import { computed } from 'vue';
 import Modal from '../forms/Modal.vue';
+import { useDataStore } from '../../stores/useDataStore.js';
+import { useSubscriptions } from '../../composables/useSubscriptions.js';
+import { useBulkImportLogic } from '../../composables/useBulkImportLogic.js';
+import { useManualNodes } from '../../composables/useManualNodes.js';
 
 const props = defineProps({
   show: Boolean,
@@ -8,8 +13,30 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:show', 'confirm', 'input-url']);
+const dataStore = useDataStore();
+const { markDirty } = dataStore;
+
+const { addSubscriptionsFromBulk } = useSubscriptions(markDirty);
+const { addNodesFromBulk } = useManualNodes(markDirty);
+const { handleBulkImport } = useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk });
+
+const isMultiLine = computed(() => {
+  if (!props.isNew || !props.editingNode?.url) return false;
+  const lines = props.editingNode.url.split('\n').map(l => l.trim()).filter(Boolean);
+  return lines.length > 1;
+});
+const validLineCount = computed(() => {
+  if (!props.editingNode?.url) return 0;
+  return props.editingNode.url.split('\n').map(l => l.trim()).filter(Boolean).length;
+});
 
 const handleConfirm = () => {
+  if (props.isNew && isMultiLine.value) {
+    handleBulkImport(props.editingNode.url, props.editingNode.colorTag);
+    emit('update:show', false);
+    // Do not emit 'confirm'
+    return;
+  }
   emit('confirm');
 };
 </script>
@@ -26,6 +53,9 @@ const handleConfirm = () => {
       <h3 class="text-lg font-bold text-gray-800 dark:text-white">
         {{ isNew ? '新增手动节点' : '编辑手动节点' }}
       </h3>
+      <p v-if="isNew && isMultiLine" class="text-sm text-indigo-600 dark:text-indigo-400 mt-1 font-medium">
+         检测到 {{ validLineCount }} 条有效链接，将执行批量导入
+      </p>
     </template>
     <template #body>
       <div class="space-y-4">
@@ -70,6 +100,7 @@ const handleConfirm = () => {
             v-model="editingNode.url"
             rows="4"
             class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md dark:text-white"
+            placeholder="支持输入单个链接，或粘贴多行链接批量导入"
             @input="$emit('input-url', $event)"
           ></textarea>
         </div>
