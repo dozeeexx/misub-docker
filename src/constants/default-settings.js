@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS = {
     enableTrafficNode: false,
     enablePublicPage: true,
     storageType: 'kv',
-    autoUpdateInterval: 30, // 分钟，0表示禁用自动更新
+    autoUpdateInterval: 0, // 分钟，0表示禁用自动更新
     defaultPrefixSettings: {
         enableManualNodes: true,
         enableSubscriptions: true,

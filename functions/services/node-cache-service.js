@@ -10,8 +10,8 @@
  */
 const CACHE_CONFIG = {
     KEY_PREFIX: 'node_cache_',           // 缓存键前缀
-    FRESH_TTL: 5 * 60 * 1000,            // 新鲜期：5 分钟（5分钟内直接返回缓存，不触发刷新）
-    STALE_TTL: 60 * 60 * 1000,           // 可用期：1 小时（超过后同步获取）
+    FRESH_TTL: 24 * 60 * 60 * 1000,      // 新鲜期：24 小时（24小时内直接返回缓存，不触发刷新）
+    STALE_TTL: 24 * 60 * 60 * 1000,      // 可用期：24 小时（与新鲜期一致，实际上禁用了 Stale-While-Revalidate，除非缓存完全过期）
     MAX_AGE: 24 * 60 * 60 * 1000,        // 最大缓存时间：24 小时
     BACKGROUND_REFRESH_TIMEOUT: 25000    // 后台刷新超时：25 秒
 };
