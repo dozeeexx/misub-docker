@@ -9,6 +9,7 @@ import { resolveRequestContext } from './request-context.js';
 import { buildSubconverterUrlVariants, getSubconverterCandidates } from './subconverter-client.js';
 import { resolveNodeListWithCache } from './cache-manager.js';
 import { logAccessError, logAccessSuccess, shouldSkipLogging as shouldSkipAccessLog } from './access-logger.js';
+import { isBrowserAgent } from './user-agent-utils.js'; // [Added] Import centralized util
 
 /**
  * 处理MiSub订阅请求
@@ -32,8 +33,9 @@ export async function handleMisubRequest(context) {
     // 关键：我们在这里定义了 `config`，后续都应该使用它
     const config = migrateConfigSettings({ ...defaultSettings, ...settings });
 
-    const isBrowser = /Mozilla|Chrome|Safari|Edge|Opera/i.test(userAgentHeader) &&
-        !/clash|v2ray|surge|loon|shadowrocket|quantumult|stash|shadowsocks|mihomo|meta|nekobox|nekoray|sfi|sfa|sfra/i.test(userAgentHeader);
+
+
+    const isBrowser = isBrowserAgent(userAgentHeader);
 
     if (config.disguise?.enabled && isBrowser && !url.searchParams.has('callback_token')) {
         // [Smart Camouflage] Allow Admin Access

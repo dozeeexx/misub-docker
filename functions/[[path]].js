@@ -170,7 +170,7 @@ export async function onRequest(context) {
                 // [Fix] Skip auth check on localhost to avoid port 8787/5173 sync issues during dev
                 const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
                 // [修复] 排除 /offline 路由的认证检查
-                if (isSpaRoute && url.pathname !== '/login' && !url.pathname.startsWith('/explore') && url.pathname !== '/offline' && !isLocalhost) {
+                if (isSpaRoute && url.pathname !== '/login' && url.pathname !== customLoginPath && !url.pathname.startsWith('/explore') && url.pathname !== '/offline' && !isLocalhost) {
                     const { authMiddleware } = await import('./modules/auth-middleware.js');
                     const isAuthenticated = await authMiddleware(request, env);
                     if (!isAuthenticated) {

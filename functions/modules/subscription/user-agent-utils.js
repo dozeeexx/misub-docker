@@ -12,7 +12,8 @@
 export function isBrowserAgent(userAgent) {
     if (!userAgent) return false;
     // Common browser keywords
-    const isBrowser = /Mozilla|Chrome|Safari|Edge|Opera/i.test(userAgent);
+    // [Updated] Explicitly added: Firefox, Via, UCBrowser, Quark, MQQBrowser (QQ), Konqueror
+    const isBrowser = /Mozilla|Chrome|Safari|Edge|Opera|Firefox|Via|UCBrowser|Quark|MQQBrowser|Konqueror/i.test(userAgent);
     // Common proxy client keywords to exclude
     const isProxyClient = /clash|v2ray|surge|loon|shadowrocket|quantumult|stash|shadowsocks|mihomo|meta|nekobox|nekoray|sfi|sfa|sfra/i.test(userAgent);
 
