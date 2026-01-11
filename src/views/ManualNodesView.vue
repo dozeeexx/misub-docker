@@ -31,7 +31,8 @@ const {
   addNodesFromBulk, autoSortNodes, deduplicateNodes, buildDedupPlan, applyDedupPlan,
   reorderManualNodes,
   manualNodeGroups, renameGroup, deleteGroup,
-  activeColorFilter, setColorFilter, batchUpdateColor, batchDeleteNodes
+  activeColorFilter, setColorFilter, batchUpdateColor, batchDeleteNodes,
+  manualNodesPerPage
 } = useManualNodes(markDirty);
 
 const {
@@ -100,7 +101,9 @@ const confirmBatchDelete = () => {
     <ManualNodePanel :manual-nodes="manualNodes" :paginated-manual-nodes="paginatedManualNodes"
       :current-page="manualNodesCurrentPage" :total-pages="manualNodesTotalPages" :is-sorting="isSortingNodes"
       :search-term="searchTerm" :view-mode="manualNodeViewMode" :groups="manualNodeGroups"
-      :active-color-filter="activeColorFilter" @add="handleAddNode" @delete="handleDeleteNodeWithCleanup"
+      :active-color-filter="activeColorFilter" :items-per-page="manualNodesPerPage"
+      @update:items-per-page="val => manualNodesPerPage = val"
+      @add="handleAddNode" @delete="handleDeleteNodeWithCleanup"
       @edit="(id) => handleEditNode(manualNodes.find(n => n.id === id))" @change-page="changeManualNodesPage"
       @update:search-term="newVal => searchTerm.value = newVal" @update:view-mode="setViewMode"
       @toggle-sort="isSortingNodes = !isSortingNodes" @mark-dirty="markDirty" @auto-sort="handleAutoSortNodes"

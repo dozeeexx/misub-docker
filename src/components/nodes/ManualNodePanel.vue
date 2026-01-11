@@ -14,13 +14,15 @@ const props = defineProps({
   viewMode: String,
   groups: { type: Array, default: () => [] },
   activeColorFilter: { type: String, default: null }, // New
+  itemsPerPage: { type: Number, default: 24 }, // Added
 });
 
 const emit = defineEmits([
   'add', 'delete', 'edit', 'changePage', 'update:searchTerm', 'update:viewMode',
   'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import', 'deleteAll', 'reorder',
   'rename-group', 'delete-group',
-  'set-color-filter', 'batch-update-color', 'batch-delete-nodes'
+  'set-color-filter', 'batch-update-color', 'batch-delete-nodes',
+  'update:itemsPerPage' // Added
 ]);
 
 const isSelectionMode = ref(false);
@@ -334,6 +336,8 @@ const handleDeleteAll = () => {
       :search-total-pages="totalPages"
       :base-page="props.currentPage"
       :base-total-pages="props.totalPages"
+      :items-per-page="itemsPerPage"
+      @update:items-per-page="emit('update:itemsPerPage', $event)"
       @toggle-select="toggleNodeSelection"
       @edit="handleEdit"
       @delete="handleDelete"

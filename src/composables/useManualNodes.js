@@ -22,8 +22,13 @@ export function useManualNodes(markDirty) {
   });
 
   const manualNodesCurrentPage = ref(1);
-  const manualNodesPerPage = 24;
+  const manualNodesPerPage = ref(parseInt(localStorage.getItem('manualNodesPPS')) || 24);
   const searchTerm = ref('');
+
+  watch(manualNodesPerPage, (newVal) => {
+    localStorage.setItem('manualNodesPPS', newVal);
+    manualNodesCurrentPage.value = 1;
+  });
 
   const activeColorFilter = ref(null); // null = all, or color string
 
@@ -31,19 +36,26 @@ export function useManualNodes(markDirty) {
     return filterManualNodes(manualNodes.value, searchTerm.value, activeColorFilter.value);
   });
 
-  const manualNodesTotalPages = computed(() => Math.ceil(filteredManualNodes.value.length / manualNodesPerPage));
+  const manualNodesTotalPages = computed(() => {
+    if (manualNodesPerPage.value === -1) return 1; // All
+    return Math.ceil(filteredManualNodes.value.length / manualNodesPerPage.value);
+  });
 
   const paginatedManualNodes = computed(() => {
-    const start = (manualNodesCurrentPage.value - 1) * manualNodesPerPage;
-    const end = start + manualNodesPerPage;
+    if (manualNodesPerPage.value === -1) return filteredManualNodes.value;
+    const start = (manualNodesCurrentPage.value - 1) * manualNodesPerPage.value;
+    const end = start + manualNodesPerPage.value;
     return filteredManualNodes.value.slice(start, end);
   });
 
   const enabledManualNodes = computed(() => manualNodes.value.filter(n => n.enabled));
 
   function changeManualNodesPage(page) {
-    if (page < 1 || page > manualNodesTotalPages.value) return;
-    manualNodesCurrentPage.value = page;
+    let p = parseInt(page);
+    if (isNaN(p)) p = 1;
+    if (p < 1) p = 1;
+    if (p > manualNodesTotalPages.value) p = manualNodesTotalPages.value;
+    manualNodesCurrentPage.value = p;
   }
 
   function setColorFilter(color) {
@@ -257,6 +269,7 @@ export function useManualNodes(markDirty) {
     deleteGroup,
     setColorFilter, // New
     batchUpdateColor, // New
-    batchDeleteNodes // New
+    batchDeleteNodes, // New
+    manualNodesPerPage // Added
   };
 }
