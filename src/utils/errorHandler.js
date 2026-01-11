@@ -181,7 +181,7 @@ class ErrorHandler {
       return '请求超时，请稍后重试';
     } else if (message.includes('Resource load failed')) {
       if (typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent)) {
-        return '资源加载失败。如使用 Cloudflare，请关闭 Rocket Loader 或检查隐私设置。';
+        return '资源加载失败。可能是浏览器隐私设置或扩展拦截了部分资源。';
       }
       return '资源加载失败，请尝试刷新页面';
     } else if (message.includes('network') || message.includes('fetch')) {

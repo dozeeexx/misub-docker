@@ -104,6 +104,13 @@ if (typeof window !== 'undefined') {
         return;
       }
 
+      // 忽略 Cloudflare 基础设施脚本 (Rocket Loader, Analytics 等)
+      // 这些脚本在同源下 (/cdn-cgi/...)，但由 CF 注入，常被隐私设置拦截
+      if (resourceUrl && resourceUrl.includes('/cdn-cgi/')) {
+        console.debug('[Resource Load] Ignoring Cloudflare infrastructure error:', resourceUrl);
+        return;
+      }
+
       tryRecoverAssetLoad(resourceUrl).then((recovered) => {
         if (recovered) return;
         if (isLocalHost && /\/assets\/.+\.(js|css)$/i.test(resourceUrl)) {
