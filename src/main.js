@@ -8,6 +8,7 @@ import { useToastStore } from './stores/toast.js'
 
 // 全局错误处理
 if (typeof window !== 'undefined') {
+  console.debug('[MiSub] Error Handler Loaded (v2026-01-11-fix-link-error)');
   const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
   const clearLocalServiceWorker = async () => {
