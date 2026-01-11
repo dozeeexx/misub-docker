@@ -104,6 +104,12 @@ if (typeof window !== 'undefined') {
         return;
       }
 
+      // 忽略 LINK 标签的加载错误 (通常是 modulepreload 失败，不影响主应用运行)
+      if (event.target.tagName === 'LINK') {
+        console.warn('[Resource Load] Ignoring LINK tag error (likely modulepreload):', resourceUrl);
+        return;
+      }
+
       // 忽略 Cloudflare 基础设施脚本 (Rocket Loader, Analytics 等)
       // 这些脚本在同源下 (/cdn-cgi/...)，但由 CF 注入，常被隐私设置拦截
       if (resourceUrl && resourceUrl.includes('/cdn-cgi/')) {

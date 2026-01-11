@@ -180,10 +180,12 @@ class ErrorHandler {
     if (message.includes('timeout')) {
       return '请求超时，请稍后重试';
     } else if (message.includes('Resource load failed')) {
+      const failedSrc = errorInfo.additionalData?.src || '';
+      const fileName = failedSrc.split('/').pop() || 'unknown';
       if (typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent)) {
-        return '资源加载失败。可能是浏览器隐私设置或扩展拦截了部分资源。';
+        return `资源加载失败 (${fileName})。可能是浏览器隐私设置或扩展拦截了部分资源。`;
       }
-      return '资源加载失败，请尝试刷新页面';
+      return `资源加载失败 (${fileName})，请尝试刷新页面`;
     } else if (message.includes('network') || message.includes('fetch')) {
       return '网络连接失败，请检查网络';
     } else if (message.includes('Unauthorized') || message.includes('401')) {
