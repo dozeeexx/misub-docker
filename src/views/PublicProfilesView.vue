@@ -307,17 +307,10 @@ onMounted(async () => {
                 <p class="mt-2 text-gray-500 dark:text-gray-400">目前没有任何公开分享的订阅组，请稍后再来看看。</p>
             </div>
 
-            <ProfileGrid
-                v-else
-                :profiles="publicProfiles"
-                :is-qr-expanded="isQRExpanded"
-                @quick-import="handleQuickImport"
-                @toggle-qr="toggleQRCode"
-                @preview="handlePreview"
-                @copy-link="copyLink"
-                @download-qr="downloadQRCode"
-                @register-canvas="registerQrCanvas"
-            />
+            <ProfileGrid v-else :profiles="publicProfiles" :is-qr-expanded="isQRExpanded"
+                :profile-token="config.profileToken || 'profiles'" @quick-import="handleQuickImport"
+                @toggle-qr="toggleQRCode" @preview="handlePreview" @copy-link="copyLink" @download-qr="downloadQRCode"
+                @register-canvas="registerQrCanvas" />
 
             <!-- Clients Section -->
             <div class="mt-20 mb-12">
