@@ -1,5 +1,7 @@
 <script setup>
+import { computed } from 'vue';
 import ProfileCard from './ProfileCard.vue';
+import HeroProfileCard from './HeroProfileCard.vue';
 
 const props = defineProps({
   profiles: {
@@ -9,6 +11,10 @@ const props = defineProps({
   isQrExpanded: {
     type: Function,
     required: true
+  },
+  profileToken: {
+    type: String,
+    default: 'profiles'
   }
 });
 
@@ -20,21 +26,44 @@ const emit = defineEmits([
   'download-qr',
   'register-canvas'
 ]);
+
+// 计算布局类型
+const isSingleProfile = computed(() => props.profiles.length === 1);
+const isTwoProfiles = computed(() => props.profiles.length === 2);
+
+// 动态网格类
+const gridClass = computed(() => {
+  if (isSingleProfile.value) return '';
+  if (isTwoProfiles.value) return 'grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto';
+  return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8';
+});
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    <ProfileCard
-      v-for="profile in profiles"
-      :key="profile.id"
-      :profile="profile"
-      :is-qr-expanded="isQrExpanded(profile.id)"
-      @quick-import="emit('quick-import', profile)"
-      @toggle-qr="emit('toggle-qr', profile)"
-      @preview="emit('preview', profile)"
-      @copy-link="emit('copy-link', profile)"
-      @download-qr="emit('download-qr', profile)"
-      @register-canvas="(id, el) => emit('register-canvas', id, el)"
-    />
+  <!-- 单卡片：响应式布局 -->
+  <div v-if="isSingleProfile">
+    <!-- 移动端：使用原卡片布局 -->
+    <div class="block md:hidden max-w-md mx-auto">
+      <ProfileCard :profile="profiles[0]" :is-qr-expanded="isQrExpanded(profiles[0].id)"
+        @quick-import="emit('quick-import', profiles[0])" @toggle-qr="emit('toggle-qr', profiles[0])"
+        @preview="emit('preview', profiles[0])" @copy-link="emit('copy-link', profiles[0])"
+        @download-qr="emit('download-qr', profiles[0])"
+        @register-canvas="(id, el) => emit('register-canvas', id, el)" />
+    </div>
+    <!-- 桌面端：使用 Hero 样式 -->
+    <div class="hidden md:block max-w-4xl mx-auto">
+      <HeroProfileCard :profile="profiles[0]" :profile-token="profileToken"
+        @quick-import="emit('quick-import', profiles[0])" @preview="emit('preview', profiles[0])"
+        @copy-link="emit('copy-link', profiles[0])" />
+    </div>
+  </div>
+
+  <!-- 多卡片：网格布局 -->
+  <div v-else :class="gridClass">
+    <ProfileCard v-for="profile in profiles" :key="profile.id" :profile="profile"
+      :is-qr-expanded="isQrExpanded(profile.id)" @quick-import="emit('quick-import', profile)"
+      @toggle-qr="emit('toggle-qr', profile)" @preview="emit('preview', profile)"
+      @copy-link="emit('copy-link', profile)" @download-qr="emit('download-qr', profile)"
+      @register-canvas="(id, el) => emit('register-canvas', id, el)" />
   </div>
 </template>
