@@ -8,7 +8,7 @@ export function generateNodeId() {
 }
 
 export function generateProfileId() {
-  return generateId('profile');
+  return generateId();
 }
 
 export function generateSubscriptionId() {

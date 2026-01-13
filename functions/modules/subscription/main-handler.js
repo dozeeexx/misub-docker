@@ -496,6 +496,39 @@ export async function handleMisubRequest(context) {
             );
         }
 
+        // [Improved Fallback] 为不同客户端提供更友好的错误展示
+        if (targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') {
+            const fallbackYaml = `
+proxies:
+  - name: "❌ 订阅生成失败 (Fallback)"
+    type: trojan
+    server: 127.0.0.1
+    port: 443
+    password: error
+    sni: error.com
+    skip-cert-verify: true
+    udp: false
+
+proxy-groups:
+  - name: "⚠️ 错误节点"
+    type: select
+    proxies:
+      - "❌ 订阅生成失败 (Fallback)"
+
+rules:
+  - MATCH,DIRECT
+`;
+            return new Response(fallbackYaml, {
+                headers: {
+                    "Content-Type": "text/yaml; charset=utf-8",
+                    'Cache-Control': 'no-store, no-cache',
+                    'X-MiSub-Fallback': 'yaml',
+                    'X-MiSub-Error': errorMessage.slice(0, 200)
+                },
+                status: 200
+            });
+        }
+
         const fallbackContent = btoa(unescape(encodeURIComponent(combinedNodeList)));
         return new Response(fallbackContent, { headers: fallbackHeaders, status: 200 });
     }

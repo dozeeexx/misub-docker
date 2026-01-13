@@ -68,7 +68,9 @@ export async function handleLogin(request, env) {
         if (password === env.ADMIN_PASSWORD) {
             const token = await createSignedToken(env.COOKIE_SECRET, String(Date.now()));
             const headers = new Headers({ 'Content-Type': 'application/json' });
-            headers.append('Set-Cookie', `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_DURATION / 1000}`);
+            const isSecure = request.url.startsWith('https');
+            const cookieString = `${COOKIE_NAME}=${token}; Path=/; HttpOnly; ${isSecure ? 'Secure;' : ''} SameSite=Lax; Max-Age=${SESSION_DURATION / 1000}`;
+            headers.append('Set-Cookie', cookieString);
             return new Response(JSON.stringify({ success: true }), { headers });
         }
         return new Response(JSON.stringify({ error: '密码错误' }), { status: 401 });
