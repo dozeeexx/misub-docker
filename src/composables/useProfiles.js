@@ -102,8 +102,39 @@ export function useProfiles(markDirty) {
     if (!profile) return;
     const identifier = profile.customId || profile.id;
     const link = `${window.location.origin}/${token}/${identifier}`;
-    navigator.clipboard.writeText(link);
-    showToast('订阅组分享链接已复制！', 'success');
+
+    // Clipboard API Fallback for non-secure contexts (http)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link)
+        .then(() => showToast('订阅组分享链接已复制！', 'success'))
+        .catch(() => showToast('复制失败，请手动复制', 'error'));
+    } else {
+      // Fallback method
+      const textArea = document.createElement("textarea");
+      textArea.value = link;
+
+      // Ensure it's not visible but part of the DOM
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      document.body.appendChild(textArea);
+
+      textArea.focus();
+      textArea.select();
+
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast('订阅组分享链接已复制！', 'success');
+        } else {
+          showToast('复制失败，请手动复制', 'error');
+        }
+      } catch (err) {
+        showToast('复制失败，请手动复制', 'error');
+      }
+
+      document.body.removeChild(textArea);
+    }
   };
 
   const cleanupSubscriptions = (subId) => {

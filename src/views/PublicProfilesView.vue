@@ -72,11 +72,40 @@ const copyLink = async (profile) => {
     const identifier = profile.customId || profile.id;
     const link = `${window.location.origin}/${token}/${identifier}`;
 
-    try {
-        await navigator.clipboard.writeText(link);
-        showToast('订阅链接已复制到剪贴板', 'success');
-    } catch (e) {
-        showToast('复制失败，请手动复制', 'error');
+    // Clipboard API Fallback for non-secure contexts (http)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+            await navigator.clipboard.writeText(link);
+            showToast('订阅链接已复制到剪贴板', 'success');
+        } catch (e) {
+            showToast('复制失败，请手动复制', 'error');
+        }
+    } else {
+        // Fallback method
+        const textArea = document.createElement("textarea");
+        textArea.value = link;
+        
+        // Ensure it's not visible but part of the DOM
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showToast('订阅链接已复制到剪贴板', 'success');
+            } else {
+                showToast('复制失败，请手动复制', 'error');
+            }
+        } catch (err) {
+            showToast('复制失败，请手动复制', 'error');
+        }
+        
+        document.body.removeChild(textArea);
     }
 };
 
