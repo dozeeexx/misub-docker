@@ -31,7 +31,7 @@ function copyCronUrl() {
 <template>
     <!-- 自动任务配置 (Cron) 卡片 -->
     <div
-        class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+        class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
         <div class="flex justify-between items-start">
             <div>
                 <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">

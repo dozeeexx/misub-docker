@@ -126,23 +126,25 @@ onUnmounted(() => {
       <div 
         class="grid gap-5" 
         :class="[paginatedProfiles && paginatedProfiles.length > 0 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1']"
-        style="z-index: 1; position: relative;"
       >
-        <ProfileCard
+        <div 
           v-for="(profile, index) in displayProfiles"
           :key="profile.id"
-          :profile="profile"
           class="list-item-animation"
           :style="{ '--delay-index': index + 1 }"
-          @edit="handleEdit(profile.id)"
-          @delete="handleDelete(profile.id)"
-          @change="handleToggle($event)"
-          @copy-link="handleCopyLink(profile.id)"
-          @preview="handlePreview(profile.id)"
-          @move-up="handleMoveUp(index)"
-          @move-down="handleMoveDown(index)"
-          @view-logs="emit('viewLogs', profile.id)"
-        />
+        >
+          <ProfileCard
+            :profile="profile"
+            @edit="handleEdit(profile.id)"
+            @delete="handleDelete(profile.id)"
+            @change="handleToggle($event)"
+            @copy-link="handleCopyLink(profile.id)"
+            @preview="handlePreview(profile.id)"
+            @move-up="handleMoveUp(index)"
+            @move-down="handleMoveDown(index)"
+            @view-logs="emit('viewLogs', profile.id)"
+          />
+        </div>
       </div>
       <div v-if="totalPages > 1 && paginatedProfiles && paginatedProfiles.length > 0" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">
           <button @click="handleChangePage(currentPage - 1)" :disabled="currentPage === 1" class="px-3 py-1 rounded-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">&laquo; 上一页</button>

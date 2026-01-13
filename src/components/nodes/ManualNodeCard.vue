@@ -73,7 +73,7 @@ const colorTagClass = computed(() => {
 
 <template>
   <div 
-    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-xl card-shadow hover:card-shadow-hover p-3 smooth-all hover:-translate-y-0.5 relative flex items-center justify-between gap-3"
+    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-xl elevation-2 hover:elevation-4 p-3 spring-hover relative flex items-center justify-between gap-3"
     :class="{ 
         'opacity-50': !node.enabled && !isSelectionMode,
         'ring-2 ring-indigo-500': isSelectionMode && isSelected,

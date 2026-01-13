@@ -15,7 +15,7 @@ defineProps({
   <div class="space-y-6">
     <!-- 订阅基本信息配置 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -45,7 +45,7 @@ defineProps({
 
     <!-- 功能开关区域 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -130,7 +130,7 @@ defineProps({
 
     <!-- 公开页 Hero 设置 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -160,7 +160,7 @@ defineProps({
 
     <!-- Web 访问控制 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -253,7 +253,7 @@ defineProps({
                   <span class="text-gray-500 sm:text-sm">https://</span>
                 </div>
                 <input type="url" v-model="disguiseConfig.redirectUrl" placeholder="www.example.com"
-                  class="block w-full pl-16 sm:pl-14 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">
+                  class="block w-full pl-[4.5rem] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">
               </div>
             </div>
 

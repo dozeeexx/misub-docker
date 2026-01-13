@@ -11,6 +11,7 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+
   *,
   ::after,
   ::before,
@@ -21,6 +22,7 @@
 }
 
 @layer base {
+
   /* 确保根元素充满整个视口高度 */
   html,
   body,
@@ -31,8 +33,8 @@
     /* 升级：现代渐变背景 */
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
     /* 添加细微噪点纹理 */
-    background-image: 
-      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1px, transparent 0);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.4) 1px, transparent 0);
     background-size: 20px 20px;
   }
 
@@ -43,8 +45,8 @@
     /* 升级：深色模式渐变背景 */
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
     /* 暗色模式噪点纹理 */
-    background-image: 
-      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 1px, transparent 0);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.1) 1px, transparent 0);
     background-size: 20px 20px;
   }
 }
@@ -62,7 +64,8 @@ body {
   opacity: 0;
   /* 动画定义：使用 calc() 和 CSS 变量来创建交错延迟 */
   animation: slide-up 0.4s ease-out forwards;
-  animation-delay: calc(var(--delay-index) * 50ms); /* 核心：每个卡片的延迟时间 = 索引 * 50毫秒 */
+  animation-delay: calc(var(--delay-index) * 50ms);
+  /* 核心：每个卡片的延迟时间 = 索引 * 50毫秒 */
 }
 
 @keyframes slide-up {
@@ -77,54 +80,62 @@ body {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background-color: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background-color: #4f46e5; /* 靛蓝色 */
+  background-color: #4f46e5;
+  /* 靛蓝色 */
   border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #4338ca; /* 深一点的靛蓝色 */
+  background-color: #4338ca;
+  /* 深一点的靛蓝色 */
 }
 
 /* 为所有按钮增加一个更柔和的点击动效 */
 button {
-    /* 确保所有变换都有平滑过渡 */
-    transition: all 0.2s ease-in-out;
+  /* 确保所有变换都有平滑过渡 */
+  transition: all 0.2s ease-in-out;
 }
+
 button:active {
-    /* 点击时轻微缩放，提供物理反馈 */
-    transform: scale(0.95);
-    /* 新增：点击时稍微变暗，增强物理反馈感 */
-    filter: brightness(0.95);
+  /* 点击时轻微缩放，提供物理反馈 */
+  transform: scale(0.95);
+  /* 新增：点击时稍微变暗，增强物理反馈感 */
+  filter: brightness(0.95);
 }
 
 /* 🆕 升级：现代卡片阴影系统 */
 .card-shadow {
-  box-shadow: 
+  box-shadow:
     0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .card-shadow-hover {
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06),
-    0 0 20px rgba(79, 70, 229, 0.1); /* 微妙的品牌色光晕 */
+    0 0 20px rgba(79, 70, 229, 0.1);
+  /* 微妙的品牌色光晕 */
 }
 
 .dark .card-shadow {
-  box-shadow: 
+  box-shadow:
     0 1px 3px 0 rgba(0, 0, 0, 0.3),
     0 1px 2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .dark .card-shadow-hover {
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.3),
     0 2px 4px -1px rgba(0, 0, 0, 0.2),
-    0 0 20px rgba(99, 102, 241, 0.2); /* 暗色模式下的光晕 */
+    0 0 20px rgba(99, 102, 241, 0.2);
+  /* 暗色模式下的光晕 */
 }
 
 /* 🆕 流体动画系统 */
@@ -140,12 +151,13 @@ button:active {
 
 /* 移动端优化 */
 @media (max-width: 768px) {
+
   /* 确保移动端的按钮有足够的点击区域 */
   button {
     min-height: 44px;
     min-width: 44px;
   }
-  
+
   /* 🆕 移动端视图切换按钮优化 - 确保图标居中 */
   .view-mode-toggle {
     width: 40px !important;
@@ -155,39 +167,40 @@ button:active {
     justify-content: center !important;
     padding: 0.5rem !important;
   }
-  
+
   .view-mode-toggle svg {
     width: 1.25rem !important;
     height: 1.25rem !important;
     flex-shrink: 0;
   }
-  
+
   /* 移动端的卡片按钮组更容易操作 */
   .shrink-0.flex.items-center.gap-1 {
     gap: 0.5rem;
   }
-  
+
   /* 移动端的按钮图标稍微大一点 */
   .shrink-0.flex.items-center.gap-1 svg {
     width: 1.25rem;
     height: 1.25rem;
   }
-  
+
   /* 移动端下拉菜单优化 */
   .absolute.mt-2 {
     z-index: 50;
     min-width: 120px;
   }
-  
+
   /* 修复：提高下拉菜单的z-index以防止被覆盖 */
   .absolute.right-0.mt-2 {
     z-index: 10000;
   }
-  
-  
+
+
   /* 移动端搜索框优化 */
   input[type="text"] {
-    font-size: 16px; /* 防止iOS缩放 */
+    font-size: 16px;
+    /* 防止iOS缩放 */
   }
 }
 
@@ -207,12 +220,10 @@ button:active {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent);
   transition: left 0.5s;
 }
 
@@ -249,7 +260,7 @@ html {
 
 .input-enhanced:focus {
   transform: scale(1.01);
-  box-shadow: 
+  box-shadow:
     0 0 0 3px rgba(99, 102, 241, 0.1),
     0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
@@ -284,14 +295,31 @@ html {
 
 /* 弹性动画 - Spring Animation */
 @keyframes spring-in {
-  0% { transform: scale(0.9) translateY(10px); opacity: 0; }
-  50% { transform: scale(1.02) translateY(-2px); }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
+  0% {
+    transform: scale(0.9) translateY(10px);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.02) translateY(-2px);
+  }
+
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes spring-out {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0.95) translateY(10px); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
 }
 
 .spring-in {
@@ -304,7 +332,7 @@ html {
 
 /* 弹性悬停效果 */
 .spring-hover {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
 }
 
 .spring-hover:hover {
@@ -313,8 +341,15 @@ html {
 
 /* 脉冲呼吸动画 - 用于加载状态 */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  50% { box-shadow: 0 0 20px 4px rgba(99, 102, 241, 0.2); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 20px 4px rgba(99, 102, 241, 0.2);
+  }
 }
 
 .pulse-glow {
@@ -379,40 +414,54 @@ html {
 }
 
 .elevation-1 {
-  box-shadow: 
+  box-shadow:
     0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .elevation-2 {
-  box-shadow: 
+  box-shadow:
     0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 1px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
 .elevation-3 {
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
 .elevation-4 {
-  box-shadow: 
+  box-shadow:
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -4px rgba(0, 0, 0, 0.1);
 }
 
 .elevation-5 {
-  box-shadow: 
+  box-shadow:
     0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 /* 暗色模式的阴影调整 */
-.dark .elevation-1 { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3); }
-.dark .elevation-2 { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.3); }
-.dark .elevation-3 { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3); }
-.dark .elevation-4 { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3); }
-.dark .elevation-5 { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3); }
+.dark .elevation-1 {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .elevation-2 {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+}
+
+.dark .elevation-3 {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+}
+
+.dark .elevation-4 {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+}
+
+.dark .elevation-5 {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+}
 
 /* 焦点高亮效果 */
 .focus-highlight {
@@ -463,23 +512,21 @@ html {
   opacity: 1;
 }
 
-/* 启用/禁用状态指示 */
+/* 启用/禁用状态指示 - 已简化，移除左侧边框 */
 .status-enabled {
-  border-left: 3px solid #10b981;
+  /* 不再显示左侧边框 */
 }
 
 .status-disabled {
-  border-left: 3px solid #6b7280;
   opacity: 0.7;
 }
 
 .status-updating {
-  border-left: 3px solid #f59e0b;
   animation: pulse-glow 1.5s ease-in-out infinite;
 }
 
 .status-error {
-  border-left: 3px solid #ef4444;
+  /* 保留用于错误状态的样式钩子 */
 }
 
 /* 玻璃态效果增强 */
@@ -501,13 +548,13 @@ html {
 }
 
 .hover-glow:hover {
-  box-shadow: 
+  box-shadow:
     0 0 20px rgba(99, 102, 241, 0.15),
     0 0 40px rgba(99, 102, 241, 0.1);
 }
 
 .dark .hover-glow:hover {
-  box-shadow: 
+  box-shadow:
     0 0 20px rgba(129, 140, 248, 0.2),
     0 0 40px rgba(129, 140, 248, 0.15);
 }
@@ -578,12 +625,12 @@ html {
   .mobile-bottom-nav {
     display: block;
   }
-  
+
   /* 为底部导航留出空间 */
   .main-content {
     padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   }
-  
+
   /* 移动端卡片优化 */
   .card-mobile-optimized {
     margin-left: -1rem;
@@ -592,13 +639,13 @@ html {
     border-left: none;
     border-right: none;
   }
-  
+
   /* 移动端触控友好 */
   .touch-friendly {
     min-height: 48px;
     padding: 12px 16px;
   }
-  
+
   /* 移动端全宽按钮 */
   .mobile-full-width {
     width: 100%;
@@ -613,7 +660,7 @@ html {
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
   }
-  
+
   .tablet-landscape-sidebar {
     position: sticky;
     top: 80px;
@@ -629,16 +676,16 @@ html {
     max-height: calc(100vh - 120px);
     overflow-y: auto;
   }
-  
+
   .desktop-fixed-sidebar::-webkit-scrollbar {
     width: 4px;
   }
-  
+
   .desktop-fixed-sidebar::-webkit-scrollbar-thumb {
     background: rgba(99, 102, 241, 0.3);
     border-radius: 2px;
   }
-  
+
   /* 大屏幕宽松布局 */
   .desktop-spacious {
     padding: 2rem 3rem;
@@ -688,29 +735,30 @@ html {
 
 /* 加载骨架屏动画优化 */
 @keyframes skeleton-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.06) 25%,
-    rgba(0, 0, 0, 0.1) 50%,
-    rgba(0, 0, 0, 0.06) 75%
-  );
+  background: linear-gradient(90deg,
+      rgba(0, 0, 0, 0.06) 25%,
+      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0.06) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
   border-radius: 8px;
 }
 
 .dark .skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.06) 25%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.06) 75%
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.06) 25%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0.06) 75%);
   background-size: 200% 100%;
 }
 
@@ -727,31 +775,56 @@ html {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent);
   animation: progress-shine 2s ease-in-out infinite;
 }
 
 @keyframes progress-shine {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* 成功/错误状态动画 */
 @keyframes success-pop {
-  0% { transform: scale(0); opacity: 0; }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes error-shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-8px); }
-  40%, 80% { transform: translateX(8px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20%,
+  60% {
+    transform: translateX(-8px);
+  }
+
+  40%,
+  80% {
+    transform: translateX(8px);
+  }
 }
 
 .success-pop {
@@ -784,11 +857,13 @@ html {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
 .animate-fade-in-down {
   animation: fade-in-down 0.3s ease-out;
 }
@@ -797,7 +872,10 @@ html {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }

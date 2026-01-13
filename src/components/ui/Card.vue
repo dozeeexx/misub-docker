@@ -84,7 +84,7 @@ const expiryInfo = computed(() => {
 
 <template>
   <div 
-    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl elevation-2 hover:elevation-4 p-4 spring-hover hover-glow flex flex-col h-full min-h-[175px] transition-all duration-300"
+    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl elevation-2 hover:elevation-4 p-4 spring-hover flex flex-col h-full min-h-[175px] transition-all duration-300"
     :class="{ 
       'status-disabled': !misub.enabled,
       'status-enabled': misub.enabled && !misub.isUpdating,
@@ -135,7 +135,7 @@ const expiryInfo = computed(() => {
         <div class="flex items-center gap-2">
           <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" v-model="misub.enabled" @change="emit('change')" class="sr-only peer">
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-indigo-600 dark:peer-checked:bg-green-600"></div>
+            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 dark:peer-checked:bg-green-600"></div>
           </label>
           <span v-if="expiryInfo" class="text-xs font-medium" :class="expiryInfo.style">{{ expiryInfo.daysRemaining }}</span>
         </div>
