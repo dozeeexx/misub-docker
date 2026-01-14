@@ -25,42 +25,16 @@ export function resolveRequestContext(url, config, allProfiles) {
                 token = firstSeg;
                 profileIdentifier = secondSeg;
             } else {
-                // Custom/Public case: /folder/profileID OR /profileID/filename
-
-                // 1. Check if the SECOND segment is a valid profile ID (e.g. /test1/work where work is ID)
-                const foundProfileSecond = allProfiles.find(p => (p.customId && p.customId === secondSeg) || p.id === secondSeg);
-
-                // 2. Check if the FIRST segment is a valid profile ID (e.g. /myprofile/clash where myprofile is ID)
-                const foundProfileFirst = allProfiles.find(p => (p.customId && p.customId === firstSeg) || p.id === firstSeg);
-
-                if (foundProfileSecond) {
-                    // /anything/ID pattern
-                    profileIdentifier = secondSeg;
-                    token = config.profileToken;
-                } else if (foundProfileFirst) {
-                    // /ID/anything pattern
-                    profileIdentifier = firstSegment;
-                    token = config.profileToken;
-                } else {
-                    // Fallback to original behavior (likely invalid)
-                    token = firstSegment;
-                    profileIdentifier = secondSeg;
-                }
+                // 未匹配到已知 Token 时，保持原样，避免错误绕过 Token 校验
+                token = firstSegment;
+                profileIdentifier = secondSeg;
             }
         } else {
             // Check if it's the admin token
             if (firstSegment === config.mytoken) {
                 token = firstSegment;
             } else {
-                // Check if it matches a valid profile (Public Access)
-                const foundProfile = allProfiles.find(p => (p.customId && p.customId === firstSegment) || p.id === firstSegment);
-                if (foundProfile) {
-                    // It is a profile! Shim the values to satisfy downstream logic
-                    profileIdentifier = firstSegment;
-                    token = config.profileToken;
-                } else {
-                    token = firstSegment;
-                }
+                token = firstSegment;
             }
         }
     } else {
