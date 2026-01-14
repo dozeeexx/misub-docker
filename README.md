@@ -247,7 +247,7 @@ mkdir -p /opt/misub && cd /opt/misub
 ```yaml
 services:
   misub:
-    image: ghcr.io/imzyb/misub:latest
+    image: ghcr.io/imzyb/misub:2.4
     ports:
       - "8790:8787"
     environment:
@@ -364,6 +364,13 @@ http://<vps-ip>:8790
 ---
 
 ## 📝 更新日志
+
+### v2.4.0 (2026-01-14)
+
+**✨ 更新内容:**
+- **版本更新** - 项目版本升级至 v2.4.0，为了方便拉取与版本管理
+- **Docker 优化** - Docker 镜像标签默认使用具体版本号
+
 
 ### v2.3.0 (2026-01-03)
 
