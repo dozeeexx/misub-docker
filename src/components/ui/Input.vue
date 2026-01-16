@@ -22,6 +22,14 @@ const props = defineProps({
     type: String,
     default: ''
   },
+  id: {
+    type: String,
+    default: () => `input-${Math.random().toString(36).substr(2, 9)}`
+  },
+  prefix: {
+    type: String,
+    default: ''
+  },
   icon: {
     type: String,
     default: null
@@ -45,14 +53,22 @@ const updateValue = (event) => {
       {{ label }}
     </label>
     <div class="relative group">
-      <!-- Icon Wrapper -->
-      <div v-if="icon" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary-500 transition-colors">
-        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-           <!-- Dynamic Icon Rendering could be here, or use slot -->
-           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="icon" />
-        </svg>
+      <!-- Icon Slot/Prop -->
+      <div v-if="hasIcon" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary-500 transition-colors">
+        <slot name="icon">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="icon" />
+          </svg>
+        </slot>
       </div>
 
+      <!-- Prefix Slot/Prop -->
+      <div v-else-if="hasPrefix" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors duration-200 text-gray-500 dark:text-gray-400">
+        <slot name="prefix">
+          <span class="text-sm font-medium">{{ prefix }}</span>
+        </slot>
+      </div>
+      
       <input
         :value="modelValue"
         @input="updateValue"
@@ -61,7 +77,7 @@ const updateValue = (event) => {
         :disabled="disabled"
         class="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 dark:focus:border-primary-500 focus:outline-none transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         :class="[
-            icon ? 'pl-10 pr-4' : 'px-4',
+            hasIcon ? 'pl-10 pr-4' : (hasPrefix ? 'pl-10 pr-4' : 'px-4'),
             error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : ''
         ]"
       />

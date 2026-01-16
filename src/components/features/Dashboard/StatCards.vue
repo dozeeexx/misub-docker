@@ -30,7 +30,7 @@ const props = defineProps({
 <template>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <!-- Card 1: Traffic -->
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xs border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-xs border border-gray-100 dark:border-gray-700">
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-xs font-medium text-gray-500 uppercase">剩余流量</h3>
         <span class="p-1.5 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400">
@@ -45,7 +45,7 @@ const props = defineProps({
     </div>
 
     <!-- Card 2: Active Subs -->
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xs border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-xs border border-gray-100 dark:border-gray-700">
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-xs font-medium text-gray-500 uppercase">活跃订阅</h3>
         <span class="p-1.5 rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
@@ -59,7 +59,7 @@ const props = defineProps({
     </div>
 
     <!-- Card 3: Total Nodes -->
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xs border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-xs border border-gray-100 dark:border-gray-700">
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-xs font-medium text-gray-500 uppercase">节点总数</h3>
         <span class="p-1.5 rounded-md bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
@@ -71,7 +71,7 @@ const props = defineProps({
     </div>
     
     <!-- Card 4: Profiles -->
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xs border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-xs border border-gray-100 dark:border-gray-700">
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-xs font-medium text-gray-500 uppercase">组合订阅</h3>
         <span class="p-1.5 rounded-md bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">

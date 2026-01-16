@@ -65,7 +65,7 @@ onMounted(() => {
       <aside class="md:col-span-3 mb-4 md:mb-0">
         <div class="sticky top-0 z-20">
           <div
-            class="bg-transparent md:bg-white md:dark:bg-gray-800 md:shadow-xs md:rounded-xl md:overflow-hidden md:border md:border-gray-100 md:dark:border-gray-700">
+            class="bg-transparent md:bg-white md:dark:bg-gray-800 md:shadow-xs md:rounded-3xl md:overflow-hidden md:border md:border-gray-100 md:dark:border-gray-700">
             <div class="md:p-2 md:space-y-1">
               <SettingsSidebar v-model:activeTab="activeTab" />
             </div>
@@ -75,7 +75,7 @@ onMounted(() => {
 
       <!-- Content -->
       <main class="md:col-span-9">
-        <div v-if="isLoading" class="text-center p-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+        <div v-if="isLoading" class="text-center p-12 bg-white dark:bg-gray-800 rounded-3xl shadow-sm">
           <svg class="animate-spin h-8 w-8 text-indigo-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none"
             viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -87,7 +87,7 @@ onMounted(() => {
         </div>
 
         <div v-else
-          class="bg-white dark:bg-gray-800 shadow-xs rounded-xl border border-gray-100 dark:border-gray-700 min-h-[500px] flex flex-col">
+          class="bg-white dark:bg-gray-800 shadow-xs rounded-3xl border border-gray-100 dark:border-gray-700 min-h-[500px] flex flex-col">
           <!-- Header for Mobile (Removed as tabs are now visible) -->
 
           <!-- Scrollable Content -->

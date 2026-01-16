@@ -73,7 +73,7 @@ const colorTagClass = computed(() => {
 
 <template>
   <div 
-    class="group glass-panel p-3 rounded-xl card-hover relative flex items-center justify-between gap-3 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/10 min-h-[60px]"
+    class="group glass-panel p-3 card-hover relative flex items-center justify-between gap-3 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/10 min-h-[60px]"
     :class="{ 
         'opacity-50 grayscale': !node.enabled && !isSelectionMode,
         'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/10': isSelectionMode && isSelected,

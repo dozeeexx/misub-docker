@@ -15,7 +15,7 @@ defineProps({
   <div v-if="settings" class="space-y-6">
     <!-- 公开页 Hero 设置 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">

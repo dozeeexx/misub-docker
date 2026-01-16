@@ -75,7 +75,7 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
 <template>
   <div class="space-y-6">
     <div
-      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-2 border border-gray-100 dark:border-gray-700 shadow-sm">
+      class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-2 border border-gray-100 dark:border-gray-700 shadow-sm">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">

@@ -115,7 +115,7 @@ async function testNotification() {
 
 <template>
   <!-- Telegram 通知 Bot 卡片 -->
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+  <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24"
         stroke="currentColor">
@@ -128,13 +128,13 @@ async function testNotification() {
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bot Token</label>
         <input type="text" v-model="settings.BotToken"
-          class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors">
+          class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors">
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">用于推送订阅更新通知</p>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chat ID</label>
         <input type="text" v-model="settings.ChatID"
-          class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors">
+          class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors">
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">接收通知的聊天 ID</p>
       </div>
     </div>
@@ -144,7 +144,7 @@ async function testNotification() {
     <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
       <div class="flex items-center gap-4">
         <button @click="testNotification" :disabled="isTesting || !settings.BotToken || !settings.ChatID"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
           <svg v-if="isTesting" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
             viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -173,7 +173,7 @@ async function testNotification() {
   </div>
 
   <!-- Telegram 推送 Bot 卡片 -->
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+  <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24"
         stroke="currentColor">

@@ -148,11 +148,11 @@ onMounted(fetchClients);
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div v-for="client in clients" :key="client.id"
-                class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 pb-10 md:pb-4 hover:shadow-md transition-shadow group">
+                class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-4 pb-10 md:pb-4 hover:shadow-md transition-shadow group">
 
                 <div class="flex items-start gap-3 min-w-0">
                     <div
-                        class="h-12 w-12 rounded-lg flex items-center justify-center text-2xl shrink-0 bg-gray-50 dark:bg-gray-700/50 text-gray-600 overflow-hidden">
+                        class="h-12 w-12 rounded-xl flex items-center justify-center text-2xl shrink-0 bg-gray-50 dark:bg-gray-700/50 text-gray-600 overflow-hidden">
                         <img v-if="client.icon && client.icon.includes('/')" :src="client.icon" :alt="client.name"
                             class="w-full h-full object-contain p-2" />
                         <span v-else>{{ client.icon }}</span>
@@ -198,7 +198,7 @@ onMounted(fetchClients);
                         <!-- Left Column: Visual Identity (30-40%) -->
                         <div class="md:col-span-5 lg:col-span-4">
                             <div
-                                class="bg-gray-50 dark:bg-gray-700/30 rounded-2xl p-6 flex flex-col items-center gap-6 h-full border border-gray-100 dark:border-gray-700/50">
+                                class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-6 flex flex-col items-center gap-6 h-full border border-gray-100 dark:border-gray-700/50">
                                 <div class="text-center space-y-2 w-full">
                                     <label
                                         class="block text-sm font-medium text-gray-700 dark:text-gray-300">图标预览</label>
@@ -220,7 +220,7 @@ onMounted(fetchClients);
                                             <span class="text-gray-500 sm:text-sm">🖼️</span>
                                         </div>
                                         <input v-model="editingClient.icon" type="text" placeholder="输入图片 URL 或 Emoji"
-                                            class="block w-full pl-10 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2.5">
+                                            class="block w-full pl-10 rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2.5">
                                     </div>
                                     <p class="text-xs text-center text-gray-400 dark:text-gray-500">支持 SVG, PNG 或 Emoji
                                     </p>
@@ -236,7 +236,7 @@ onMounted(fetchClients);
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">客户端名称
                                         <span class="text-red-500">*</span></label>
                                     <input v-model="editingClient.name" type="text"
-                                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2.5 text-lg font-medium"
+                                        class="mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2.5 text-lg font-medium"
                                         placeholder="例如: Clash Verge">
                                 </div>
 

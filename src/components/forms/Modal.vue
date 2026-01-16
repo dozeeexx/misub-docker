@@ -57,7 +57,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
       <Transition name="modal-inner">
         <div
           v-if="show"
-          class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-2xl w-full text-left ring-1 ring-black/5 dark:ring-white/10 flex flex-col max-h-[85vh] border border-white/20 dark:border-white/5"
+          class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full text-left ring-1 ring-black/5 dark:ring-white/10 flex flex-col max-h-[85vh] border border-white/20 dark:border-white/5"
           :class="{
             'max-w-sm': size === 'sm',
             'max-w-2xl': size === '2xl',
@@ -81,12 +81,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
 
           <div class="p-6 pt-4 flex justify-end space-x-3 shrink-0 border-t border-gray-200 dark:border-gray-700">
             <slot name="footer">
-              <button @click="emit('update:show', false)" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm rounded-lg transition-colors">{{ cancelText }}</button>
+              <button @click="emit('update:show', false)" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm rounded-xl transition-colors">{{ cancelText }}</button>
               <button 
                   @click="handleConfirm" 
                   :disabled="confirmDisabled || (confirmKeyword && confirmInput !== confirmKeyword)"
                   :title="confirmDisabled ? confirmButtonTitle : '确认'"
-                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-70 disabled:cursor-not-allowed"
+                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-colors disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-70 disabled:cursor-not-allowed"
               >{{ confirmText }}</button>
             </slot>
           </div>

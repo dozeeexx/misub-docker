@@ -54,7 +54,7 @@ import Switch from '../../ui/Switch.vue';
 
     <!-- 功能开关区域 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -139,7 +139,7 @@ import Switch from '../../ui/Switch.vue';
 
     <!-- Web 访问控制 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -175,23 +175,15 @@ import Switch from '../../ui/Switch.vue';
             />
           </div>
 
-          <!-- 自定义登录路径设置 (Always visible/editable even if Disguise is off, or maybe only if useful? 
-               Requirements say "Customize login path, display login box... regardless of open/close public page") 
-               So this should probably be outside the v-show="disguiseConfig.enabled" OR separate. 
-               But it's closely related to access control. Let's put it above the disguise details or inside.
-               Actually, putting it as a separate block in "Web Access Control" is better. 
-          -->
+          <!-- 自定义登录路径设置 -->
           <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-             <div class="relative max-w-md">
+             <div class="max-w-md">
                 <Input 
                   label="自定义管理后台路径"
                   v-model="settings.customLoginPath"
                   placeholder="默认: login"
-                  class="pl-6"
+                  prefix="/"
                 />
-                <div class="absolute top-[34px] left-0 pl-3 flex items-center pointer-events-none z-10">
-                  <span class="text-gray-500 sm:text-sm">/</span>
-                </div>
              </div>
              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                设置后，只有访问此路径才能进入登录页面。默认路径 <code>/login</code> 将失效（除非未设置）。
@@ -227,17 +219,14 @@ import Switch from '../../ui/Switch.vue';
             </div>
 
             <div v-if="disguiseConfig.pageType === 'redirect'" class="animate-fade-in-down">
-              <div class="relative">
+              <div>
                 <Input 
                   label="目标网址"
                   v-model="disguiseConfig.redirectUrl"
                   placeholder="www.example.com"
                   type="url"
-                  class="pl-[4.5rem]"
+                  prefix="https://"
                 />
-                <div class="absolute top-[34px] left-0 pl-3 flex items-center pointer-events-none z-10">
-                  <span class="text-gray-500 sm:text-sm">https://</span>
-                </div>
               </div>
             </div>
 
