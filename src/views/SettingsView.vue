@@ -5,9 +5,8 @@ import { useSettingsLogic } from '../composables/useSettingsLogic.js';
 
 import SettingsSidebar from '../components/settings/SettingsSidebar.vue';
 import BasicSettings from '../components/settings/sections/BasicSettings.vue';
+import HomeSettings from '../components/settings/sections/HomeSettings.vue';
 import ServiceSettings from '../components/settings/sections/ServiceSettings.vue';
-import AnnouncementSettings from '../components/settings/sections/AnnouncementSettings.vue';
-import GuestbookManagement from '../components/settings/sections/GuestbookManagement.vue';
 import GlobalSettings from '../components/settings/sections/GlobalSettings.vue';
 
 import SystemSettings from '../components/settings/sections/SystemSettings.vue';
@@ -35,10 +34,9 @@ const activeTab = ref('basic');
 const currentTabLabel = computed(() => {
   switch (activeTab.value) {
     case 'basic': return '基础设置';
+    case 'home': return '首页设置';
     case 'global': return '全局设置';
     case 'service': return '服务集成';
-    case 'announcement': return '公告管理';
-    case 'guestbook': return '留言管理';
 
     case 'client': return '客户端管理';
     case 'system': return '系统设置';
@@ -67,7 +65,7 @@ onMounted(() => {
       <aside class="md:col-span-3 mb-4 md:mb-0">
         <div class="sticky top-0 z-20">
           <div
-            class="bg-transparent md:bg-white md:dark:bg-gray-800 md:shadow-xs md:rounded-lg md:overflow-hidden md:border md:border-gray-100 md:dark:border-gray-700">
+            class="bg-transparent md:bg-white md:dark:bg-gray-800 md:shadow-xs md:rounded-xl md:overflow-hidden md:border md:border-gray-100 md:dark:border-gray-700">
             <div class="md:p-2 md:space-y-1">
               <SettingsSidebar v-model:activeTab="activeTab" />
             </div>
@@ -77,7 +75,7 @@ onMounted(() => {
 
       <!-- Content -->
       <main class="md:col-span-9">
-        <div v-if="isLoading" class="text-center p-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+        <div v-if="isLoading" class="text-center p-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
           <svg class="animate-spin h-8 w-8 text-indigo-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none"
             viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -89,16 +87,15 @@ onMounted(() => {
         </div>
 
         <div v-else
-          class="bg-white dark:bg-gray-800 shadow-xs rounded-lg border border-gray-100 dark:border-gray-700 min-h-[500px] flex flex-col">
+          class="bg-white dark:bg-gray-800 shadow-xs rounded-xl border border-gray-100 dark:border-gray-700 min-h-[500px] flex flex-col">
           <!-- Header for Mobile (Removed as tabs are now visible) -->
 
           <!-- Scrollable Content -->
           <div class="flex-1 p-6">
             <BasicSettings v-show="activeTab === 'basic'" :settings="settings" :disguiseConfig="disguiseConfig" />
+            <HomeSettings v-show="activeTab === 'home'" :settings="settings" />
             <GlobalSettings v-show="activeTab === 'global'" :settings="settings" />
             <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
-            <AnnouncementSettings v-show="activeTab === 'announcement'" :settings="settings" />
-            <GuestbookManagement v-show="activeTab === 'guestbook'" :settings="settings" />
 
 
             <ClientSettings v-show="activeTab === 'client'" />
@@ -108,7 +105,7 @@ onMounted(() => {
 
           <!-- Footer Actions -->
           <div
-            class="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end sticky bottom-0 z-10 backdrop-blur-sm rounded-b-lg">
+            class="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end sticky bottom-0 z-10 backdrop-blur-sm rounded-b-xl">
             <button @click="handleSave" :disabled="isSaving || hasWhitespace || !isStorageTypeValid"
               class="px-6 py-2 rounded-lg text-white font-medium shadow-sm transition-all flex items-center gap-2"
               :class="isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-md active:scale-95'">

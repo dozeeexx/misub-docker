@@ -30,19 +30,19 @@ const emit = defineEmits(['click']);
 
 const variantClasses = computed(() => {
   const variants = {
-    primary: 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg hover:shadow-indigo-500/25',
-    secondary: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100',
-    danger: 'bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white shadow-lg hover:shadow-red-500/25',
-    ghost: 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+    primary: 'bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-500/20 border border-white/20',
+    secondary: 'glass text-gray-800 dark:text-white hover:bg-white/50 dark:hover:bg-white/10 border border-white/30 dark:border-white/10',
+    danger: 'bg-red-500/90 hover:bg-red-500 text-white shadow-lg shadow-red-500/20 border border-white/20',
+    ghost: 'hover:bg-white/20 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300'
   };
   return variants[props.variant];
 });
 
 const sizeClasses = computed(() => {
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base'
+    sm: 'px-3 py-1.5 text-xs',
+    md: 'px-5 py-2.5 text-sm',
+    lg: 'px-8 py-3.5 text-base'
   };
   return sizes[props.size];
 });
@@ -58,42 +58,47 @@ const handleClick = (event) => {
   <button
     @click="handleClick"
     :disabled="disabled || loading"
-    class="relative inline-flex items-center justify-center gap-2 font-medium rounded-lg smooth-all hover:-translate-y-0.5 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none overflow-hidden"
+    class="relative inline-flex items-center justify-center gap-2 font-semibold smooth-all rounded-xl tap-effect disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group tracking-wide transition-all duration-300"
     :class="[
       variantClasses,
       sizeClasses
     ]"
   >
-    <!-- 微光效果 -->
+    <!-- 🌌 Cosmic Liquid Effect for Primary -->
     <div 
-      v-if="!disabled && !loading"
-      class="absolute inset-0 -top-1 -bottom-1 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-      style="animation: shimmer-button 3s infinite;"
-    ></div>
-    
-    <!-- 加载状态 -->
+      v-if="variant === 'primary' && !disabled"
+      class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+    >
+      <div class="absolute inset-0 bg-gradient-to-r from-cyan-400/20 via-purple-500/20 to-indigo-500/20 mix-blend-overlay"></div>
+      <div class="absolute -top-[100%] left-[-50%] w-[200%] h-[200%] bg-gradient-to-b from-transparent via-white/20 to-transparent rotate-45 animate-shimmer"></div>
+    </div>
+
+    <!-- Inner Highlight -->
+    <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/20 pointer-events-none"></div>
+
+    <!-- Loading State -->
     <svg 
       v-if="loading" 
-      class="w-4 h-4 animate-spin" 
+      class="w-4 h-4 animate-spin relative z-10" 
       fill="none" 
       viewBox="0 0 24 24"
     >
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
     
-    <!-- 图标 -->
+    <!-- Icon -->
     <svg 
       v-else-if="icon" 
-      class="w-4 h-4" 
+      class="w-4 h-4 relative z-10 transition-transform group-hover:scale-110" 
       fill="none" 
       stroke="currentColor" 
       viewBox="0 0 24 24"
     >
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="icon" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" :d="icon" />
     </svg>
     
-    <!-- 内容 -->
+    <!-- Content -->
     <span class="relative z-10">
       <slot />
     </span>
@@ -101,8 +106,12 @@ const handleClick = (event) => {
 </template>
 
 <style scoped>
-@keyframes shimmer-button {
-  0% { transform: translateX(-100%) skewX(-12deg); }
-  100% { transform: translateX(200%) skewX(-12deg); }
+@keyframes shimmer {
+  0% { transform: translateY(-100%) translateX(0%); }
+  100% { transform: translateY(100%) translateX(0%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite ease-in-out;
 }
 </style>

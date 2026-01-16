@@ -6,9 +6,8 @@ import { useSettingsLogic } from '../../composables/useSettingsLogic.js';
 // 导入侧边栏和设置组件
 import SettingsSidebar from '../settings/SettingsSidebar.vue';
 import BasicSettings from '../settings/sections/BasicSettings.vue';
+import HomeSettings from '../settings/sections/HomeSettings.vue';
 import ServiceSettings from '../settings/sections/ServiceSettings.vue';
-import AnnouncementSettings from '../settings/sections/AnnouncementSettings.vue';
-import GuestbookManagement from '../settings/sections/GuestbookManagement.vue';
 import GlobalSettings from '../settings/sections/GlobalSettings.vue';
 
 
@@ -50,7 +49,7 @@ defineExpose({ handleSave });
     <div v-else class="flex flex-col md:flex-row gap-6">
       <!-- 侧边栏导航 -->
       <aside class="md:w-48 flex-shrink-0">
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-2 h-full border border-gray-100 dark:border-gray-700 elevation-2">
           <SettingsSidebar v-model:activeTab="activeTab" />
         </div>
       </aside>
@@ -61,17 +60,14 @@ defineExpose({ handleSave });
           <!-- 基础设置 -->
           <BasicSettings v-show="activeTab === 'basic'" :settings="settings" :disguiseConfig="disguiseConfig" />
 
+          <!-- 首页设置 -->
+          <HomeSettings v-show="activeTab === 'home'" :settings="settings" />
+          
           <!-- 全局设置 -->
           <GlobalSettings v-show="activeTab === 'global'" :settings="settings" />
           
           <!-- 服务集成 -->
           <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
-
-          <!-- 公告管理 -->
-          <AnnouncementSettings v-show="activeTab === 'announcement'" :settings="settings" />
-
-          <!-- 留言管理 -->
-          <GuestbookManagement v-show="activeTab === 'guestbook'" :settings="settings" />
 
           <!-- 客户端管理 -->
           <ClientSettings v-show="activeTab === 'client'" />
@@ -89,17 +85,6 @@ defineExpose({ handleSave });
           </div>
         </div>
 
-        <!-- 保存按钮 (固定在底部) -->
-        <div class="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end sticky bottom-0 bg-gray-50/80 dark:bg-gray-800/80 pb-4 z-30 backdrop-blur-sm">
-          <button 
-            @click="handleSave" 
-            :disabled="isSaving || hasWhitespace || !isStorageTypeValid"
-            class="px-6 py-2 rounded-lg text-white font-medium shadow-md transition-all"
-            :class="isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg'"
-          >
-            {{ isSaving ? '保存中...' : '保存设置' }}
-          </button>
-        </div>
       </main>
     </div>
 

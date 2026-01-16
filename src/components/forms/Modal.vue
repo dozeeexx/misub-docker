@@ -57,7 +57,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
       <Transition name="modal-inner">
         <div
           v-if="show"
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full text-left ring-1 ring-black/5 dark:ring-white/10 flex flex-col max-h-[85vh]"
+          class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-2xl w-full text-left ring-1 ring-black/5 dark:ring-white/10 flex flex-col max-h-[85vh] border border-white/20 dark:border-white/5"
           :class="{
             'max-w-sm': size === 'sm',
             'max-w-2xl': size === '2xl',

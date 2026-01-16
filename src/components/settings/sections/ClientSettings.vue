@@ -148,7 +148,7 @@ onMounted(fetchClients);
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div v-for="client in clients" :key="client.id"
-                class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 pb-10 md:pb-4 hover:shadow-md transition-shadow group">
+                class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 pb-10 md:pb-4 hover:shadow-md transition-shadow group">
 
                 <div class="flex items-start gap-3 min-w-0">
                     <div

@@ -70,14 +70,15 @@ const handleDiscard = async () => {
     class="min-h-screen flex flex-col text-gray-800 dark:text-gray-200 transition-colors duration-300 bg-gray-100 dark:bg-gray-950"
   >
     <!-- Show NavBar if logged in and modern mode OR if public route and modern mode -->
+    <!-- Show NavBar ONLY if logged in and modern mode -->
     <NavBar 
-      v-if="(sessionState === 'loggedIn' || route.meta.isPublic) && layoutMode === 'modern'" 
-      :is-logged-in="sessionState === 'loggedIn'" 
+      v-if="sessionState === 'loggedIn' && layoutMode === 'modern'" 
+      :is-logged-in="true" 
       @logout="logout" 
     />
-    <!-- Show Header if logged in and legacy mode OR if public route and legacy mode -->
+    <!-- Show Header otherwise (Logged in & legacy mode OR Not logged in & public route) -->
     <Header 
-      v-else-if="(sessionState === 'loggedIn' || route.meta.isPublic)" 
+      v-else-if="sessionState === 'loggedIn' || route.meta.isPublic" 
       :is-logged-in="sessionState === 'loggedIn'" 
       @logout="logout" 
     />
@@ -102,16 +103,23 @@ const handleDiscard = async () => {
       <template v-else-if="sessionState === 'loggedIn'">
           <Transition name="slide-fade">
             <div v-if="layoutMode === 'modern' && (isDirty || saveState === 'success')" 
-                class="sticky top-20 z-40 mb-6 p-4 rounded-lg shadow-lg flex items-center justify-between transition-all duration-300 backdrop-blur-md"
-                :class="saveState === 'success' ? 'bg-teal-500/10 ring-1 ring-teal-500/20' : 'bg-white/80 dark:bg-gray-800/80 ring-1 ring-indigo-500/30'">
-                <p class="text-sm font-medium" 
-                :class="saveState === 'success' ? 'text-teal-700 dark:text-teal-300' : 'text-indigo-700 dark:text-indigo-300'">
-                {{ saveState === 'success' ? '保存成功' : '您有未保存的更改' }}
-                </p>
-                <div class="flex items-center gap-3">
-                    <button v-if="saveState !== 'success'" @click="handleDiscard" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">放弃</button>
-                    <button @click="handleSave" :disabled="saveState !== 'idle'" class="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md shadow-sm transition-colors disabled:opacity-50">
-                        {{ saveState === 'saving' ? '保存中...' : (saveState === 'success' ? '已保存' : '保存更改') }}
+                class="fixed bottom-24 md:bottom-auto md:top-24 left-1/2 -translate-x-1/2 z-40 p-1.5 pr-2 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 backdrop-blur-xl border border-white/20 dark:border-white/10"
+                :class="saveState === 'success' ? 'bg-teal-500/20 text-teal-600 dark:text-teal-300 shadow-teal-500/10' : 'bg-white/80 dark:bg-gray-900/80 shadow-black/10'">
+                
+                <div class="pl-2 pr-1 flex items-center gap-2">
+                    <span v-if="saveState === 'success'" class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
+                    <span v-else class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                    <p class="text-xs font-semibold whitespace-nowrap">
+                        {{ saveState === 'success' ? '已保存更改' : '未保存更改' }}
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <button v-if="saveState !== 'success'" @click="handleDiscard" class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10">
+                        放弃
+                    </button>
+                    <button @click="handleSave" :disabled="saveState !== 'idle'" class="px-4 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white rounded-full shadow-lg shadow-primary-500/30 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none">
+                        {{ saveState === 'saving' ? '保存中...' : (saveState === 'success' ? '完成' : '立即保存') }}
                     </button>
                 </div>
             </div>

@@ -10,12 +10,14 @@ const props = defineProps({
 
 const emit = defineEmits(['delete', 'change', 'edit', 'copy-link', 'preview', 'move-up', 'move-down', 'view-logs']);
 
+import Switch from '../ui/Switch.vue';
+
 </script>
 
 <template>
   <div
-    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl elevation-2 hover:elevation-4 p-4 spring-hover flex flex-col justify-between"
-    :class="{ 'opacity-50': !profile.enabled }"
+    class="group glass-panel p-5 rounded-2xl card-hover flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-primary-500/10 min-h-[160px]"
+    :class="{ 'opacity-60 grayscale-[0.5]': !profile.enabled }"
   >
     <div class="flex items-center justify-between gap-2">
       <p class="font-bold text-lg text-gray-800 dark:text-gray-100 truncate" :title="profile.name">
@@ -51,18 +53,18 @@ const emit = defineEmits(['delete', 'change', 'edit', 'copy-link', 'preview', 'm
     <div class="flex justify-between items-center mt-3">
       <div class="flex items-center gap-4">
         <!-- 启用开关 -->
-        <label class="relative inline-flex items-center cursor-pointer" title="启用/禁用订阅组">
-          <input type="checkbox" :checked="profile.enabled" @change="$emit('change', { ...profile, enabled: $event.target.checked })" class="sr-only peer">
-          <div class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-indigo-600 dark:peer-checked:bg-green-600"></div>
-          <span class="ml-2 text-xs font-medium text-gray-600 dark:text-gray-400">启用</span>
-        </label>
+        <Switch 
+          :model-value="profile.enabled"
+          @update:model-value="(val) => $emit('change', { ...profile, enabled: val })"
+          label="启用"
+        />
 
         <!-- 公开开关 -->
-        <label class="relative inline-flex items-center cursor-pointer" title="在公开页展示">
-          <input type="checkbox" :checked="profile.isPublic" @change="$emit('change', { ...profile, isPublic: $event.target.checked })" class="sr-only peer">
-          <div class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-500 dark:peer-checked:bg-blue-500"></div>
-          <span class="ml-2 text-xs font-medium text-gray-600 dark:text-gray-400">公开</span>
-        </label>
+        <Switch 
+          :model-value="profile.isPublic"
+          @update:model-value="(val) => $emit('change', { ...profile, isPublic: val })"
+          label="公开"
+        />
       </div>
 
       <button @click="emit('copy-link')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-300 transition-colors shadow-xs flex items-center gap-1">

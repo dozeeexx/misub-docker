@@ -1,19 +1,36 @@
 <template>
-  <div class="not-found-container">
-    <div class="shape shape-1"></div>
-    <div class="shape shape-2"></div>
-    
-    <div class="glass-card">
-      <div class="error-code">404</div>
-      <h1>页面未找到</h1>
-      <p>抱歉，您访问的页面不存在或已被移除。<br>仿佛进入了数字荒原。</p>
-      <router-link to="/" class="home-link">返回首页</router-link>
+  <div class="not-found-container font-sans text-gray-100 dark:text-gray-100">
+    <!-- Cosmic Background Elements -->
+    <div class="absolute inset-0 bg-gray-900 overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
+        <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-600/30 blur-[120px] animate-pulse-slow"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-600/20 blur-[100px] animate-pulse-slow" style="animation-delay: -2s;"></div>
+    </div>
+
+    <!-- Content Card -->
+    <div class="relative z-10 glass-panel border border-white/10 rounded-3xl p-12 max-w-lg w-[90%] text-center shadow-2xl backdrop-blur-xl animate-fade-in-up">
+      <div class="font-display font-bold text-9xl bg-gradient-to-b from-white to-white/10 bg-clip-text text-transparent drop-shadow-lg mb-4 animate-float">
+        404
+      </div>
+      
+      <h1 class="text-3xl font-bold mb-4 tracking-tight">页面迷失在星际中</h1>
+      <p class="text-lg text-gray-400 mb-10 leading-relaxed">
+        抱歉，您访问的页面似乎已漂流至已知宇宙之外。<br>
+        请尝试返回导航。
+      </p>
+      
+      <router-link to="/" class="inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-white bg-primary-600 hover:bg-primary-500 rounded-full transition-all duration-300 shadow-lg shadow-primary-500/30 hover:-translate-y-1 hover:shadow-primary-500/50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        返回首页
+      </router-link>
     </div>
   </div>
 </template>
 
 <script setup>
-// No script needed for this simple view
+// No script needed
 </script>
 
 <style scoped>
@@ -21,132 +38,45 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh; /* Full viewport height */
-  width: 100vw;      /* Full viewport width */
-  position: fixed;   /* Fix to cover everything including header/footer if needed */
+  min-height: 100vh;
+  width: 100vw;
+  position: fixed;
   top: 0;
   left: 0;
-  z-index: 9999;     /* Ensure it's on top */
+  z-index: 9999;
   overflow: hidden;
-  color: white; 
-  /* Gradient Background from server-side template */
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-/* 
- * We use fixed styles here to ensure it looks good regardless of the theme, 
- * matching the server-side generated 404 page. 
- */
-
-.shape {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  z-index: 0;
-  opacity: 0.6;
-  animation: pulse 10s infinite alternate;
-}
-
-.shape-1 {
-  top: 10%;
-  left: 10%;
-  width: 300px;
-  height: 300px;
-  background: #43e97b;
-}
-
-.shape-2 {
-  bottom: 10%;
-  right: 10%;
-  width: 400px;
-  height: 400px;
-  background: #fa709a;
-  animation-delay: -5s;
-}
-
-.glass-card {
-  position: relative;
-  z-index: 10;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 24px;
-  padding: 4rem 2rem;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  text-align: center;
-  max-width: 600px;
-  width: 90%;
-  animation: fadeInUp 0.8s ease-out;
-}
-
-.error-code {
-  font-size: 100px;
-  font-weight: 800;
-  line-height: 1;
-  margin-bottom: 1rem;
-  background: linear-gradient(to bottom, #ffffff, rgba(255,255,255,0.5));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
-  animation: float 6s ease-in-out infinite;
-}
-
-h1 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: white;
-}
-
-p {
-  font-size: 1.1rem;
-  opacity: 0.9;
-  margin-bottom: 2.5rem;
-  line-height: 1.6;
-  color: white;
-}
-
-.home-link {
-  display: inline-flex;
-  align-items: center;
-  padding: 14px 36px;
-  background: #ffffff;
-  color: #764ba2;
-  text-decoration: none;
-  border-radius: 50px;
-  font-weight: 600;
-  font-size: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
-.home-link:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-  background: #f8f9fa;
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+  50% { transform: translateY(-15px); }
 }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(30px); }
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.1); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 0.4; }
-  100% { transform: scale(1.2); opacity: 0.7; }
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
 
-/* Media Queries */
-@media (max-width: 768px) {
-  .error-code { font-size: 70px; }
-  h1 { font-size: 1.5rem; }
-  .glass-card { padding: 3rem 1.5rem; }
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
 }
 </style>

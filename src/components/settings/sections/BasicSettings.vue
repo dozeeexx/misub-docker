@@ -9,13 +9,15 @@ defineProps({
     required: true
   }
 });
+import Input from '../../ui/Input.vue';
+import Switch from '../../ui/Switch.vue';
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- 订阅基本信息配置 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -26,26 +28,33 @@ defineProps({
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">自定义订阅文件名</label>
-          <input type="text" v-model="settings.FileName"
-            class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors">
+          <Input 
+            label="自定义订阅文件名"
+            v-model="settings.FileName"
+            class="rounded-xl"
+          />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">自定义订阅Token</label>
-          <input type="text" v-model="settings.mytoken"
-            class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors">
+          <Input 
+            label="自定义订阅Token"
+            v-model="settings.mytoken"
+            class="rounded-xl"
+          />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">订阅组分享Token</label>
-          <input type="text" v-model="settings.profileToken" placeholder="用于生成订阅组链接专用Token"
-            class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors">
+          <Input 
+            label="订阅组分享Token"
+            v-model="settings.profileToken"
+            placeholder="用于生成订阅组链接专用Token"
+            class="rounded-xl"
+          />
         </div>
       </div>
     </div>
 
     <!-- 功能开关区域 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -57,7 +66,7 @@ defineProps({
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- 订阅自动更新间隔 -->
         <div
-          class="flex flex-col p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-lg">
+          class="flex flex-col p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl">
           <div class="flex items-center justify-between mb-3">
             <div>
               <p class="text-sm font-medium text-gray-900 dark:text-gray-200">订阅自动更新间隔</p>
@@ -72,7 +81,7 @@ defineProps({
                 @input="e => { const v = parseInt(e.target.value); if (v >= 5) settings.autoUpdateInterval = v; }"
                 placeholder="自定义"
                 min="5"
-                class="w-20 px-2 py-1.5 text-xs bg-gray-200 dark:bg-gray-700 border-0 rounded-md text-gray-700 dark:text-gray-300 placeholder-gray-500 focus:ring-1 focus:ring-indigo-500"
+                class="w-20 px-2 py-1.5 text-xs bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all"
               >
               <span class="text-xs text-gray-500 dark:text-gray-400">分钟</span>
             </div>
@@ -102,65 +111,35 @@ defineProps({
 
         <!-- 访问日志 -->
         <div
-          class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-lg">
+          class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl">
           <div>
             <p class="text-sm font-medium text-gray-900 dark:text-gray-200">开启访问日志 & 计数</p>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">记录订阅访问并统计流量与IP</p>
           </div>
-          <label class="toggle-switch flex-shrink-0">
-            <input type="checkbox" v-model="settings.enableAccessLog">
-            <span class="slider"></span>
-          </label>
+          <Switch 
+            v-model="settings.enableAccessLog"
+          />
         </div>
 
         <!-- 流量统计节点 -->
         <div
-          class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-lg">
+          class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl">
           <div>
             <p class="text-sm font-medium text-gray-900 dark:text-gray-200">显示流量统计节点</p>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">在订阅中生成虚拟节点显示剩余流量</p>
           </div>
-          <label class="toggle-switch flex-shrink-0">
-            <input type="checkbox" v-model="settings.enableTrafficNode">
-            <span class="slider"></span>
-          </label>
+          <Switch 
+            v-model="settings.enableTrafficNode"
+          />
         </div>
       </div>
     </div>
 
-    <!-- 公开页 Hero 设置 -->
-    <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
-      <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24"
-          stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-        公开页 Hero 设置
-      </h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">主标题 (第一行)</label>
-          <input type="text" v-model="settings.heroTitle1" placeholder="默认：发现优质"
-            class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">主标题 (第二行)</label>
-          <input type="text" v-model="settings.heroTitle2" placeholder="默认：订阅资源"
-            class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors">
-        </div>
-        <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">副标题 / 描述</label>
-          <input type="text" v-model="settings.heroDescription" placeholder="默认：浏览并获取由管理员分享的精选订阅组合，一键导入到您的客户端。"
-            class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors">
-        </div>
-      </div>
-    </div>
+
 
     <!-- Web 访问控制 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -171,7 +150,7 @@ defineProps({
       </h3>
 
       <div
-        class="bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
+        class="bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
         <!-- 公开页访问 -->
         <div
           class="p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors">
@@ -179,10 +158,9 @@ defineProps({
             <p class="text-sm font-medium text-gray-900 dark:text-gray-200">允许未登录访问公开页</p>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">关闭后访问首页将跳转登录页面</p>
           </div>
-          <label class="toggle-switch flex-shrink-0">
-            <input type="checkbox" v-model="settings.enablePublicPage">
-            <span class="slider"></span>
-          </label>
+          <Switch 
+            v-model="settings.enablePublicPage"
+          />
         </div>
 
         <!-- 伪装页面 -->
@@ -192,10 +170,9 @@ defineProps({
               <p class="text-sm font-medium text-gray-900 dark:text-gray-200">启用伪装页面</p>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">浏览器访问订阅链接时显示伪装内容，防止被探测</p>
             </div>
-            <label class="toggle-switch flex-shrink-0">
-              <input type="checkbox" v-model="disguiseConfig.enabled">
-              <span class="slider"></span>
-            </label>
+            <Switch 
+              v-model="disguiseConfig.enabled"
+            />
           </div>
 
           <!-- 自定义登录路径设置 (Always visible/editable even if Disguise is off, or maybe only if useful? 
@@ -205,13 +182,16 @@ defineProps({
                Actually, putting it as a separate block in "Web Access Control" is better. 
           -->
           <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">自定义管理后台路径</label>
-             <div class="relative rounded-md shadow-xs max-w-md">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+             <div class="relative max-w-md">
+                <Input 
+                  label="自定义管理后台路径"
+                  v-model="settings.customLoginPath"
+                  placeholder="默认: login"
+                  class="pl-6"
+                />
+                <div class="absolute top-[34px] left-0 pl-3 flex items-center pointer-events-none z-10">
                   <span class="text-gray-500 sm:text-sm">/</span>
                 </div>
-                <input type="text" v-model="settings.customLoginPath" placeholder="默认: login"
-                  class="block w-full pl-6 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">
              </div>
              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                设置后，只有访问此路径才能进入登录页面。默认路径 <code>/login</code> 将失效（除非未设置）。
@@ -247,13 +227,17 @@ defineProps({
             </div>
 
             <div v-if="disguiseConfig.pageType === 'redirect'" class="animate-fade-in-down">
-              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">目标网址</label>
-              <div class="relative rounded-md shadow-xs">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div class="relative">
+                <Input 
+                  label="目标网址"
+                  v-model="disguiseConfig.redirectUrl"
+                  placeholder="www.example.com"
+                  type="url"
+                  class="pl-[4.5rem]"
+                />
+                <div class="absolute top-[34px] left-0 pl-3 flex items-center pointer-events-none z-10">
                   <span class="text-gray-500 sm:text-sm">https://</span>
                 </div>
-                <input type="url" v-model="disguiseConfig.redirectUrl" placeholder="www.example.com"
-                  class="block w-full pl-[4.5rem] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">
               </div>
             </div>
 
@@ -276,59 +260,7 @@ defineProps({
 
 <style scoped>
 /* Toggle Switch CSS */
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-}
 
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
-  border-radius: 34px;
-}
-
-.dark .slider {
-  background-color: #4b5563;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-input:checked+.slider {
-  background-color: #4f46e5;
-}
-
-.dark input:checked+.slider {
-  background-color: #16a34a;
-}
-
-input:checked+.slider:before {
-  transform: translateX(20px);
-}
 
 .animate-fade-in-down {
   animation: fadeInDown 0.3s ease-out;

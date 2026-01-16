@@ -1,6 +1,7 @@
 <script setup>
 import { watch } from 'vue';
 import NodeTransformSettings from '../NodeTransformSettings.vue';
+import Input from '../../ui/Input.vue';
 
 const props = defineProps({
   settings: {
@@ -74,7 +75,7 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
 <template>
   <div class="space-y-6">
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-2 border border-gray-100 dark:border-gray-700 shadow-sm">
+      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-2 border border-gray-100 dark:border-gray-700 shadow-sm">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -89,7 +90,7 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
     </div>
 
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -100,40 +101,48 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
       </h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="sm:col-span-2">
-          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">手动节点前缀</label>
-          <input
-            type="text"
+          <Input
             v-model="settings.defaultPrefixSettings.manualNodePrefix"
-            class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+            label="手动节点前缀"
           />
         </div>
         <div>
           <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">手动节点前缀</label>
-          <select
-            v-model="settings.defaultPrefixSettings.enableManualNodes"
-            class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-          >
-            <option v-for="option in prefixToggleOptions" :key="String(option.value)" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
+          <div class="relative">
+            <select
+              v-model="settings.defaultPrefixSettings.enableManualNodes"
+              class="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/50 focus:outline-none transition-all appearance-none"
+            >
+              <option v-for="option in prefixToggleOptions" :key="String(option.value)" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+            <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            </div>
+          </div>
         </div>
         <div>
           <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">机场订阅前缀</label>
-          <select
-            v-model="settings.defaultPrefixSettings.enableSubscriptions"
-            class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
-          >
-            <option v-for="option in prefixToggleOptions" :key="String(option.value)" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
+          <div class="relative">
+            <select
+              v-model="settings.defaultPrefixSettings.enableSubscriptions"
+              class="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/50 focus:outline-none transition-all appearance-none"
+            >
+              <option v-for="option in prefixToggleOptions" :key="String(option.value)" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+            <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">

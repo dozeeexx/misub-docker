@@ -73,10 +73,10 @@ const colorTagClass = computed(() => {
 
 <template>
   <div 
-    class="group bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-xl elevation-2 hover:elevation-4 p-3 spring-hover relative flex items-center justify-between gap-3"
+    class="group glass-panel p-3 rounded-xl card-hover relative flex items-center justify-between gap-3 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/10 min-h-[60px]"
     :class="{ 
-        'opacity-50': !node.enabled && !isSelectionMode,
-        'ring-2 ring-indigo-500': isSelectionMode && isSelected,
+        'opacity-50 grayscale': !node.enabled && !isSelectionMode,
+        'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/10': isSelectionMode && isSelected,
         'cursor-pointer': isSelectionMode
     }"
     @click="isSelectionMode ? emit('toggle-select') : null"
@@ -84,7 +84,7 @@ const colorTagClass = computed(() => {
     <!-- Selection Checkbox -->
     <div v-if="isSelectionMode" class="shrink-0 mr-1">
         <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
-             :class="isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 dark:border-gray-600'">
+             :class="isSelected ? 'bg-primary-500 border-primary-500' : 'border-gray-300 dark:border-gray-600'">
             <svg v-if="isSelected" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
         </div>
     </div>

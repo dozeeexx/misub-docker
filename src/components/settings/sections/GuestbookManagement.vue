@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useToastStore } from '../../../stores/toast.js';
 import { api } from '../../../lib/http.js';
+import Switch from '../../ui/Switch.vue';
 
 const props = defineProps({
     settings: {
@@ -147,29 +148,28 @@ onMounted(() => {
 
 <template>
     <div class="space-y-6">
-        <!-- 配置区域 -->
+        <!-- 头部说明 -->
         <div
-            class="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+            class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
             <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
-                留言板配置
+                留言管理
             </h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div
-                    class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-lg">
+                    class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl">
                     <div>
                         <p class="text-sm font-medium text-gray-900 dark:text-gray-200">启用留言板</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">允许用户在公开页提交反馈和建议</p>
                     </div>
-                    <label class="toggle-switch flex-shrink-0">
-                        <input type="checkbox" v-model="guestbookConfig.enabled">
-                        <span class="slider"></span>
-                    </label>
+                    <Switch 
+                        v-model="guestbookConfig.enabled"
+                    />
                 </div>
 
 
@@ -303,58 +303,5 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* Toggle Switch CSS - Reused */
-.toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 44px;
-    height: 24px;
-}
 
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 34px;
-}
-
-.dark .slider {
-    background-color: #4b5563;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 20px;
-    width: 20px;
-    left: 2px;
-    bottom: 2px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-input:checked+.slider {
-    background-color: #4f46e5;
-}
-
-.dark input:checked+.slider {
-    background-color: #16a34a;
-}
-
-input:checked+.slider:before {
-    transform: translateX(20px);
-}
 </style>
