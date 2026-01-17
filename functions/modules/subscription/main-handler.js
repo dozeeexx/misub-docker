@@ -38,14 +38,10 @@ export async function handleMisubRequest(context) {
     const isBrowser = isBrowserAgent(userAgentHeader);
 
     if (config.disguise?.enabled && isBrowser && !url.searchParams.has('callback_token')) {
-        // [Smart Camouflage] Allow Admin Access
-        // Check if the user has a valid admin session cookie
-        const { authMiddleware } = await import('../auth-middleware.js');
-        const isAuthenticated = await authMiddleware(request, env); // Returns boolean
-
-        if (!isAuthenticated) {
-            return createDisguiseResponse(config.disguise, request.url);
-        }
+        // [Smart Camouflage]
+        // If disguise is enabled and it's a browser request (not a known client), 
+        // show the disguise page regardless of login status to ensure protection.
+        return createDisguiseResponse(config.disguise, request.url);
     }
 
     const { token, profileIdentifier } = resolveRequestContext(url, config, allProfiles);
