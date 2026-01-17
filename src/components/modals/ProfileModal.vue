@@ -278,9 +278,17 @@ const handleDeselectAll = (listName, sourceArray) => {
 <template>
   <Modal :show="show" @update:show="emit('update:show', $event)" @confirm="handleConfirm" size="2xl">
     <template #title>
-      <h3 class="text-lg font-bold text-gray-800 dark:text-white">
-        {{ isNew ? '新增订阅组' : '编辑订阅组' }}
-      </h3>
+      <div class="flex items-center gap-3">
+        <div class="p-2 rounded-xl bg-indigo-500/10">
+          <!-- Folder Icon for Profile -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-gray-800 dark:text-white">
+          {{ isNew ? '新增订阅组' : '编辑订阅组' }}
+        </h3>
+      </div>
     </template>
     <template #body>
       <div v-if="localProfile" class="space-y-6">

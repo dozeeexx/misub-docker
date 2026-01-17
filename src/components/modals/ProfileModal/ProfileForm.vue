@@ -1,6 +1,7 @@
 <script setup>
 import SubConverterSelector from '../../forms/SubConverterSelector.vue';
 import NodeTransformSettings from '../../settings/NodeTransformSettings.vue';
+import Input from '../../ui/Input.vue';
 
 const props = defineProps({
   localProfile: {
@@ -27,29 +28,21 @@ const emit = defineEmits(['toggle-advanced']);
 <template>
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
-      <label for="profile-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        订阅组名称
-      </label>
-      <input
-        type="text"
+      <Input 
         id="profile-name"
         v-model="localProfile.name"
+        label="订阅组名称"
         placeholder="例如：家庭共享"
-        class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
-      >
+      />
     </div>
     <div>
-      <label for="profile-custom-id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        自定义 ID (可选)
-      </label>
-      <input
-        type="text"
+      <Input
         id="profile-custom-id"
         v-model="localProfile.customId"
+        label="自定义 ID (可选)"
         placeholder="如: home, game (限字母、数字、-、_)"
-        class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
-      >
-      <p class="text-xs text-gray-400 mt-1">设置后，订阅链接会更短，如 /token/home</p>
+      />
+      <p class="text-xs text-gray-400 mt-1 ml-1">设置后，订阅链接会更短，如 /token/home</p>
     </div>
   </div>
 

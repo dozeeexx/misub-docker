@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import Modal from '../forms/Modal.vue';
+import Input from '../ui/Input.vue';
 import { useDataStore } from '../../stores/useDataStore.js';
 import { useSubscriptions } from '../../composables/useSubscriptions.js';
 import { useBulkImportLogic } from '../../composables/useBulkImportLogic.js';
@@ -168,33 +169,24 @@ const protocolColorMap = {
       <div class="space-y-5">
         <!-- 名称和颜色标签 - 两栏布局 -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <!-- 节点名称 - 浮动标签样式 -->
+          <!-- 节点名称 -->
           <div class="relative">
-            <div 
-              class="relative border rounded-xl transition-all duration-200"
-              :class="[
-                nameFocused 
-                  ? 'border-indigo-500 ring-2 ring-indigo-500/20' 
-                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-              ]"
+            <Input
+              id="node-name"
+              v-model="editingNode.name"
+              placeholder="节点名称（可选）"
+              @focus="nameFocused = true"
+              @blur="nameFocused = false"
             >
-              <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <template #icon>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                <input
-                  type="text"
-                  id="node-name"
-                  v-model="editingNode.name"
-                  placeholder="节点名称（可选）"
-                  @focus="nameFocused = true"
-                  @blur="nameFocused = false"
-                  class="flex-1 px-3 py-2.5 bg-transparent border-0 focus:ring-0 dark:text-white placeholder-gray-400 text-sm"
-                >
-              </div>
-            </div>
+              </template>
+            </Input>
+            
             <!-- 名称建议 -->
-            <div v-if="suggestedName && !editingNode.name" class="mt-1.5 flex items-center gap-1.5">
+            <div v-if="suggestedName && !editingNode.name" class="mt-1.5 flex items-center gap-1.5 ml-1">
               <span class="text-xs text-gray-500 dark:text-gray-400">建议：</span>
               <button 
                 @click="applySuggestedName"
@@ -211,25 +203,25 @@ const protocolColorMap = {
           <!-- 颜色标签 - 紧凑样式 -->
           <div class="relative">
             <div 
-              class="relative border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+              class="relative border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20 rounded-xl px-3 py-2 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 transition-colors h-[50px] flex items-center"
             >
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between w-full">
                 <div class="flex items-center gap-2">
-                  <span class="text-xs text-gray-400 mr-1">标签</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 mr-1 font-medium">标签</span>
                   <button
                     v-for="color in ['red', 'orange', 'green', 'blue']"
                     :key="color"
                     @click="editingNode.colorTag = editingNode.colorTag === color ? null : color"
-                    class="w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center hover:scale-110"
+                    class="w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center hover:scale-110"
                     :class="[
                       editingNode.colorTag === color 
-                        ? 'border-white dark:border-gray-300 ring-2 ring-offset-1 ring-offset-white dark:ring-offset-gray-900 scale-110' 
+                        ? 'border-white dark:border-gray-800 ring-2 ring-offset-1 ring-offset-white dark:ring-offset-gray-900 scale-110' 
                         : 'border-transparent',
                       colorMap[color],
                       editingNode.colorTag === color ? `ring-${color}-500` : ''
                     ]"
                   >
-                    <svg v-if="editingNode.colorTag === color" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white drop-shadow" viewBox="0 0 20 20" fill="currentColor">
+                    <svg v-if="editingNode.colorTag === color" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white drop-shadow" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                     </svg>
                   </button>
@@ -247,20 +239,20 @@ const protocolColorMap = {
           </div>
         </div>
 
-        <!-- 节点链接 - 浮动标签样式 -->
-        <div class="relative">
+        <!-- 节点链接 -->
+        <div class="relative group">
           <div 
-            class="relative border rounded-xl transition-all duration-200"
+            class="relative border rounded-xl transition-all duration-300 overflow-hidden bg-gray-50 dark:bg-black/20 border-gray-200 dark:border-white/10"
             :class="[
               urlFocused 
-                ? 'border-indigo-500 ring-2 ring-indigo-500/20' 
-                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                ? 'ring-2 ring-primary-500/50 border-primary-500 dark:border-primary-500' 
+                : 'hover:border-gray-300 dark:hover:border-white/20'
             ]"
           >
             <!-- 协议检测徽章 - 显示在右上角 -->
             <div 
               v-if="singleProtocol && !isMultiLine" 
-              class="absolute right-3 top-0 -translate-y-1/2 px-2 py-0.5 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
+              class="absolute right-3 top-3 z-10 px-2 py-0.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm"
             >
               <span 
                 class="text-xs font-bold"
@@ -269,9 +261,10 @@ const protocolColorMap = {
                 {{ singleProtocol.name }}
               </span>
             </div>
-            <div class="flex">
-              <div class="py-3 pl-3 flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            
+            <div class="flex h-full">
+              <div class="py-3 pl-3 flex items-start text-gray-400 group-focus-within:text-primary-500 transition-colors pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
               </div>
@@ -282,10 +275,13 @@ const protocolColorMap = {
                 @focus="urlFocused = true"
                 @blur="urlFocused = false"
                 @input="$emit('input-url', $event)"
-                class="flex-1 px-3 py-2.5 bg-transparent border-0 focus:ring-0 dark:text-white placeholder-gray-400 text-sm font-mono resize-none"
+                class="flex-1 w-full bg-transparent border-0 focus:ring-0 dark:text-white placeholder-gray-400 text-sm font-mono resize-none py-3 pl-3 pr-20 min-h-[160px]"
                 placeholder="输入单个链接，或粘贴多行链接批量导入..."
               ></textarea>
             </div>
+            
+             <!-- Focus Glow -->
+            <div class="absolute inset-0 rounded-xl pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-100 ring-1 ring-primary-500/20"></div>
           </div>
         </div>
 
