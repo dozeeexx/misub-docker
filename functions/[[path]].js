@@ -135,6 +135,30 @@ export async function onRequest(context) {
                     customLoginPath // [新增] 自定义登录路径
                 ].some(route => url.pathname === route || url.pathname.startsWith(route + '/'));
 
+                const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
+                const isProtectedSpaRoute = isSpaRoute
+                    && url.pathname !== '/login'
+                    && url.pathname !== customLoginPath
+                    && !url.pathname.startsWith('/explore')
+                    && url.pathname !== '/offline';
+
+                // Route protection for SPA pages
+                // If accessing a protected route without auth, redirect to login
+                // [Fix] Exclude /explore from auth check
+                // [Fix] Skip auth check on localhost to avoid port 8787/5173 sync issues during dev
+                // [修复] 排除 /offline 路由的认证检查
+                if (isProtectedSpaRoute && !isLocalhost) {
+                    const { authMiddleware } = await import('./modules/auth-middleware.js');
+                    const isAuthenticated = await authMiddleware(request, env);
+                    if (!isAuthenticated) {
+                        // Redirect to login page
+                        return new Response(null, {
+                            status: 302,
+                            headers: { Location: '/login' }
+                        });
+                    }
+                }
+
                 // [Smart Disguise] Check if we need to disguise the SPA/Root
                 // Only applies to non-static assets
                 if ((url.pathname === '/' || isSpaRoute) && !isStaticAsset) {
@@ -162,24 +186,6 @@ export async function onRequest(context) {
                         // return next(); 
                     }
                     return await handleMisubRequest(context);
-                }
-
-                // Route protection for SPA pages
-                // If accessing a protected route without auth, redirect to login
-                // [Fix] Exclude /explore from auth check
-                // [Fix] Skip auth check on localhost to avoid port 8787/5173 sync issues during dev
-                const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
-                // [修复] 排除 /offline 路由的认证检查
-                if (isSpaRoute && url.pathname !== '/login' && url.pathname !== customLoginPath && !url.pathname.startsWith('/explore') && url.pathname !== '/offline' && !isLocalhost) {
-                    const { authMiddleware } = await import('./modules/auth-middleware.js');
-                    const isAuthenticated = await authMiddleware(request, env);
-                    if (!isAuthenticated) {
-                        // Redirect to login page
-                        return new Response(null, {
-                            status: 302,
-                            headers: { Location: '/login' }
-                        });
-                    }
                 }
 
                 // Continue to static assets or root

@@ -10,6 +10,7 @@ import { buildSubconverterUrlVariants, getSubconverterCandidates } from './subco
 import { resolveNodeListWithCache } from './cache-manager.js';
 import { logAccessError, logAccessSuccess, shouldSkipLogging as shouldSkipAccessLog } from './access-logger.js';
 import { isBrowserAgent } from './user-agent-utils.js'; // [Added] Import centralized util
+import { authMiddleware } from '../auth-middleware.js';
 
 /**
  * 处理MiSub订阅请求
@@ -37,10 +38,12 @@ export async function handleMisubRequest(context) {
 
     const isBrowser = isBrowserAgent(userAgentHeader);
 
-    if (config.disguise?.enabled && isBrowser && !url.searchParams.has('callback_token')) {
+    const isAuthenticated = await authMiddleware(request, env);
+
+    if (config.disguise?.enabled && isBrowser && !url.searchParams.has('callback_token') && !isAuthenticated) {
         // [Smart Camouflage]
-        // If disguise is enabled and it's a browser request (not a known client), 
-        // show the disguise page regardless of login status to ensure protection.
+        // If disguise is enabled and it's a browser request (not a known client),
+        // show the disguise page unless the user is authenticated.
         return createDisguiseResponse(config.disguise, request.url);
     }
 
