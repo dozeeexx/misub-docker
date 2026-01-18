@@ -42,6 +42,9 @@ if (typeof window !== 'undefined') {
 
   // 处理全局JavaScript错误
   window.addEventListener('error', (event) => {
+    if (event.target && event.target !== window) {
+      return;
+    }
     handleError(event.error || new Error(event.message), 'Global JavaScript Error', {
       filename: event.filename,
       lineno: event.lineno,

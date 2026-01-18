@@ -36,7 +36,6 @@ class ErrorHandler {
   constructor() {
     this.errorCounts = new Map();
     this.lastErrors = new Map();
-    this.maxErrorsPerType = 5;
     this.errorResetTime = 60000; // 1分钟
   }
 

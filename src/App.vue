@@ -38,21 +38,15 @@ const uiStore = useUIStore();
 const { layoutMode } = storeToRefs(uiStore);
 
 onMounted(async () => {
-
-
   initTheme();
   await checkSession();
-  
-  if (sessionState.value === 'loggedIn') {
-      await dataStore.fetchData();
-  }
 });
 
 watch(sessionState, async (newVal) => {
-    if (newVal === 'loggedIn') {
-        await dataStore.fetchData();
-    }
-});
+  if (newVal === 'loggedIn') {
+    await dataStore.fetchData();
+  }
+}, { immediate: true });
 
 const handleSave = async () => {
    await dataStore.saveData();

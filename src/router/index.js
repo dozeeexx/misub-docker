@@ -79,7 +79,9 @@ const router = createRouter({
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
     // Update title
-    document.title = to.meta.title ? `${to.meta.title} - MISUB` : 'MISUB';
+    if (typeof document !== 'undefined') {
+        document.title = to.meta.title ? `${to.meta.title} - MISUB` : 'MISUB';
+    }
 
     // Simple auth check: check if the user is visiting a protected route
     // We rely on the session store state or a quick check.
