@@ -11,7 +11,7 @@ const distDir = process.env.MISUB_DIST_DIR || path.join(rootDir, 'dist');
 const schemaPath = process.env.MISUB_SCHEMA_PATH || path.join(rootDir, 'schema.sql');
 const dbPath = process.env.MISUB_DB_PATH || path.join(rootDir, 'data', 'misub.db');
 const host = process.env.HOST || '0.0.0.0';
-const port = Number(process.env.PORT || 8787);
+const port = Number(process.env.PORT || 8080);
 
 const { kv, d1 } = createSqliteStore({ dbPath, schemaPath });
 const assets = createAssetFetcher({ distDir });
