@@ -194,7 +194,7 @@ wrangler d1 execute misub --file=schema.sql --remote
 |--------|------|------|
 | `CORS_ORIGINS` | 允许跨域访问的来源(逗号分隔)，同域可不填 | `https://example.com,http://localhost:5173` |
 | `MISUB_PUBLIC_URL` | 对外访问的公开域名，用于订阅转换回调（Docker/反代必填） | `https://your-domain.com` |
-| `MISUB_CALLBACK_URL` | 订阅转换回调基础地址（优先级高于 MISUB_PUBLIC_URL） | `http://misub:8787` |
+| `MISUB_CALLBACK_URL` | 订阅转换回调基础地址（优先级高于 MISUB_PUBLIC_URL） | `http://misub:8080` |
 
 **前端构建变量（可选）：**
 
@@ -218,7 +218,9 @@ wrangler d1 execute misub --file=schema.sql --remote
 docker compose up -d --build
 ```
 
-默认端口为 `8787`，访问 `http://<vps-ip>:8787`。
+默认端口为 `8080`，访问 `http://<vps-ip>:8080`。
+
+> ⚠️ 注意：仓库根目录的 `docker-compose.yml` 为 **镜像部署** 配置（默认 `ghcr.io/imzyb/misub:latest`）。如需源码构建，请自行新建包含 `build: .` 的 compose 文件。
 
 ### 2. 环境变量
 
@@ -227,7 +229,7 @@ docker compose up -d --build
 - `ADMIN_PASSWORD` 管理员密码（必填）
 - `COOKIE_SECRET` Cookie 加密密钥（必填）
 - `CORS_ORIGINS` 允许跨域访问的来源（可选）
-- `PORT` 服务端口（默认 8787）
+- `PORT` 服务端口（默认 8080）
 - `MISUB_DB_PATH` SQLite 数据库路径（默认 `/app/data/misub.db`）
 - `MISUB_PUBLIC_URL` 对外访问的公开域名，用于订阅转换回调（反代/公网环境建议配置）
 - `MISUB_CALLBACK_URL` 订阅转换回调基础地址（优先级高于 MISUB_PUBLIC_URL）
@@ -251,14 +253,17 @@ mkdir -p /opt/misub && cd /opt/misub
 ```yaml
 services:
   misub:
-    image: ghcr.io/imzyb/misub:2.4
+    image: ghcr.io/imzyb/misub:latest
     ports:
-      - "8790:8787"
+      - "8080:8080"
     environment:
-      PORT: 8787
+      PORT: 8080
       MISUB_DB_PATH: /app/data/misub.db
       ADMIN_PASSWORD: "change_me"
       COOKIE_SECRET: "change_me_too"
+      # CORS_ORIGINS: "https://example.com,http://localhost:5173"
+      # MISUB_PUBLIC_URL: "https://your-domain.com"
+      # MISUB_CALLBACK_URL: "https://your-domain.com"
     volumes:
       - ./data:/app/data
     restart: unless-stopped
@@ -272,7 +277,7 @@ docker compose up -d
 
 4. 访问：
 ```
-http://<vps-ip>:8790
+http://<vps-ip>:8080
 ```
 
 ---
@@ -299,6 +304,7 @@ http://<vps-ip>:8790
 5. 绑定域名或使用 Zeabur 提供的 `.zeabur.app` 域名
 
 > ⚠️ **注意**: Zeabur 部署默认使用端口 8080，已在 `zeabur.json` 中配置。
+> ⚠️ **注意**: 请在 Zeabur 中启用持久化存储并挂载到 `/app/data`，否则数据库会在重建后丢失。
 
 
 ## 💡 使用说明

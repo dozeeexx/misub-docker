@@ -14,7 +14,7 @@ RUN npm prune --omit=dev
 FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
 
-# 端口配置：默认8080兼容Zeabur，VPS可通过docker-compose覆盖
+# 端口配置：默认8080与本地/VPS文档一致，平台可通过环境变量覆盖
 ARG PORT=8080
 ENV NODE_ENV=production
 ENV PORT=${PORT}
@@ -31,6 +31,6 @@ COPY --from=build /app/schema.sql ./schema.sql
 COPY --from=build /app/src/shared ./src/shared
 COPY --from=build /app/package.json ./package.json
 
-# 同时暴露常用端口
-EXPOSE 8080 8787
+# 默认暴露端口
+EXPOSE 8080
 CMD ["node", "server/index.mjs"]

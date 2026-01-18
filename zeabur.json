@@ -6,8 +6,16 @@
     "deploy": {
         "environment": {
             "PORT": "8080",
-            "MISUB_DB_PATH": "/app/data/misub.db"
-        }
+            "MISUB_DB_PATH": "/app/data/misub.db",
+            "ADMIN_PASSWORD": "change_me",
+            "COOKIE_SECRET": "change_me_too"
+        },
+        "volumes": [
+            {
+                "name": "data",
+                "path": "/app/data"
+            }
+        ]
     },
     "ports": [
         {
