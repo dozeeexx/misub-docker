@@ -105,7 +105,7 @@ onMounted(() => {
 
           <!-- Footer Actions -->
           <div
-            class="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end sticky bottom-0 z-10 backdrop-blur-sm rounded-b-xl">
+            class="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end sticky bottom-0 z-10 backdrop-blur-sm rounded-b-3xl">
             <button @click="handleSave" :disabled="isSaving || hasWhitespace || !isStorageTypeValid"
               class="px-6 py-2 rounded-lg text-white font-medium shadow-sm transition-all flex items-center gap-2"
               :class="isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-md active:scale-95'">
