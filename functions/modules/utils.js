@@ -317,6 +317,12 @@ export function migrateConfigSettings(config) {
     if (migratedConfig.hasOwnProperty('enableTrafficNode')) {
         migratedConfig.enableTrafficNode = toBoolean(migratedConfig.enableTrafficNode);
     }
+    if (migratedConfig.hasOwnProperty('subConverterScv')) {
+        migratedConfig.subConverterScv = toBoolean(migratedConfig.subConverterScv);
+    }
+    if (migratedConfig.hasOwnProperty('subConverterUdp')) {
+        migratedConfig.subConverterUdp = toBoolean(migratedConfig.subConverterUdp);
+    }
 
     return migratedConfig;
 }
@@ -340,6 +346,27 @@ export function createJsonResponse(data, status = 200, headers = {}) {
             ...headers
         }
     });
+}
+
+/**
+ * 获取用于外部回调的基础 URL
+ * @param {Object} env - Cloudflare环境对象
+ * @param {URL} requestUrl - 当前请求 URL
+ * @returns {URL} - 规范化后的基础 URL
+ */
+export function getPublicBaseUrl(env, requestUrl) {
+    const configured = (env?.MISUB_CALLBACK_URL || env?.MISUB_PUBLIC_URL || '').trim();
+    if (!configured) {
+        return new URL(requestUrl.origin);
+    }
+
+    const hasProtocol = /^https?:\/\//i.test(configured);
+    const normalized = hasProtocol ? configured : `https://${configured}`;
+    const baseUrl = new URL(normalized);
+    baseUrl.pathname = '';
+    baseUrl.search = '';
+    baseUrl.hash = '';
+    return baseUrl;
 }
 
 /**

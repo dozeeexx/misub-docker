@@ -20,6 +20,8 @@ export const DEFAULT_SETTINGS = {
     profileToken: 'profiles',
     subConverter: 'url.v1.mk',
     subConfig: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full.ini',
+    subConverterScv: false,
+    subConverterUdp: false,
     enableAccessLog: false,
     NotifyThresholdDays: 3,
     NotifyThresholdPercent: 90,
