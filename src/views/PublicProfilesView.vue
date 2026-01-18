@@ -20,8 +20,8 @@ const { showToast } = useToastStore();
 const config = ref({});
 const announcement = computed(() => config.value.announcement);
 const heroConfig = computed(() => config.value.hero || {
-    title1: '发现优质',
-    title2: '订阅资源',
+    title1: '发现',
+    title2: '优质订阅',
     description: '浏览并获取由管理员分享的精选订阅组合，一键导入到您的客户端。'
 });
 const guestbookConfig = computed(() => config.value.guestbook || {});
@@ -244,7 +244,7 @@ onMounted(async () => {
                         <span class="block text-gray-900 dark:text-white drop-shadow-sm">
                             {{ heroConfig.title1 }}
                         </span>
-                        <span class="block bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-purple-500 to-indigo-500 dark:from-primary-400 dark:via-purple-400 dark:to-indigo-400 bg-[length:200%_auto] animate-gradient pb-2">
+                        <span class="block text-5xl sm:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-purple-500 to-indigo-500 dark:from-primary-400 dark:via-purple-400 dark:to-indigo-400 bg-[length:200%_auto] animate-gradient pb-2 mt-2">
                             {{ heroConfig.title2 }}
                         </span>
                     </h1>

@@ -59,7 +59,7 @@ const ICONS = {
     <div class="relative w-full">
         <!-- 背景装饰 -->
         <div
-            class="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-purple-50 dark:from-primary-950/30 dark:via-gray-800 dark:to-purple-950/30 rounded-[2.5rem]">
+            class="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-purple-50 dark:from-primary-900/20 dark:via-white/5 dark:to-purple-900/20 rounded-[2.5rem]">
         </div>
         <div
             class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-primary-200/40 to-transparent dark:from-primary-600/10 rounded-full blur-3xl animate-pulse-slow">

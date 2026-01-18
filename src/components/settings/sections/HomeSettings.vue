@@ -29,14 +29,14 @@ defineProps({
           <Input 
             label="主标题 (第一行)"
             v-model="settings.heroTitle1"
-            placeholder="默认：发现优质"
+            placeholder="默认：发现"
           />
         </div>
         <div>
           <Input 
             label="主标题 (第二行)"
             v-model="settings.heroTitle2"
-            placeholder="默认：订阅资源"
+            placeholder="默认：优质订阅"
           />
         </div>
         <div class="md:col-span-2">
