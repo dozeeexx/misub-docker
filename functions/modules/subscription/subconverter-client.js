@@ -87,6 +87,8 @@ export function getSubconverterCandidates(primary) {
  * @param {string|null} options.subConfig - 外部配置 URL
  * @param {string} options.subName - 订阅名称 (for filename)
  * @param {Object} options.cacheHeaders - 需要透传的缓存头
+ * @param {boolean} [options.enableScv=false] - 是否禁用证书校验
+ * @param {boolean} [options.enableUdp=false] - 是否启用 UDP
  * @param {number} [options.timeout=15000] - 单次请求超时时间(ms)
  * @returns {Promise<{response: Response, usedEndpoint: string}>}
  * @throws {Error} 如果所有尝试都失败
@@ -98,6 +100,8 @@ export async function fetchFromSubconverter(candidates, options) {
         subConfig,
         subName,
         cacheHeaders = {},
+        enableScv = false,
+        enableUdp = false,
         timeout = 15000
     } = options;
 
@@ -114,8 +118,12 @@ export async function fetchFromSubconverter(candidates, options) {
                 // Build Query Params
                 subconverterUrl.searchParams.set('target', targetFormat);
                 subconverterUrl.searchParams.set('url', callbackUrl);
-                subconverterUrl.searchParams.set('scv', 'true');
-                subconverterUrl.searchParams.set('udp', 'true');
+                if (enableScv) {
+                    subconverterUrl.searchParams.set('scv', 'true');
+                }
+                if (enableUdp) {
+                    subconverterUrl.searchParams.set('udp', 'true');
+                }
 
                 if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') &&
                     subConfig && subConfig.trim() !== '') {

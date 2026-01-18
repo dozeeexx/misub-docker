@@ -193,6 +193,8 @@ wrangler d1 execute misub --file=schema.sql --remote
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
 | `CORS_ORIGINS` | 允许跨域访问的来源(逗号分隔)，同域可不填 | `https://example.com,http://localhost:5173` |
+| `MISUB_PUBLIC_URL` | 对外访问的公开域名，用于订阅转换回调（Docker/反代必填） | `https://your-domain.com` |
+| `MISUB_CALLBACK_URL` | 订阅转换回调基础地址（优先级高于 MISUB_PUBLIC_URL） | `http://misub:8787` |
 
 **前端构建变量（可选）：**
 
@@ -227,6 +229,8 @@ docker compose up -d --build
 - `CORS_ORIGINS` 允许跨域访问的来源（可选）
 - `PORT` 服务端口（默认 8787）
 - `MISUB_DB_PATH` SQLite 数据库路径（默认 `/app/data/misub.db`）
+- `MISUB_PUBLIC_URL` 对外访问的公开域名，用于订阅转换回调（反代/公网环境建议配置）
+- `MISUB_CALLBACK_URL` 订阅转换回调基础地址（优先级高于 MISUB_PUBLIC_URL）
 
 ### 3. 数据持久化
 
