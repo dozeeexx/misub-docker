@@ -119,10 +119,10 @@ const handleDiscard = async () => {
                 </div>
 
                 <div class="flex items-center gap-1">
-                    <button v-if="saveState !== 'success'" @click="handleDiscard" class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10">
+                    <button v-if="saveState !== 'success'" @click="handleDiscard" class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 whitespace-nowrap">
                         放弃
                     </button>
-                    <button @click="handleSave" :disabled="saveState !== 'idle'" class="px-4 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white rounded-full shadow-lg shadow-primary-500/30 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none">
+                    <button @click="handleSave" :disabled="saveState !== 'idle'" class="px-4 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white rounded-full shadow-lg shadow-primary-500/30 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none whitespace-nowrap">
                         {{ saveState === 'saving' ? '保存中...' : (saveState === 'success' ? '完成' : '立即保存') }}
                     </button>
                 </div>

@@ -346,7 +346,7 @@ import DashboardBanner from './DashboardBanner.vue';
       </div>
 
       <!-- Right Column -->
-      <div class="lg:col-span-1 space-y-8">
+      <div class="lg:col-span-1 md:col-span-2 space-y-8">
         <RightPanel :config="config" :profiles="profiles" />
         <ProfilePanel :profiles="profiles" @add="handleAddProfile" @edit="handleEditProfile"
           @delete="handleDeleteProfile" @deleteAll="showDeleteProfilesModal = true" @toggle="handleProfileToggle"

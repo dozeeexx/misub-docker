@@ -51,7 +51,7 @@ const gridClass = computed(() => {
         @register-canvas="(id, el) => emit('register-canvas', id, el)" />
     </div>
     <!-- 桌面端：使用 Hero 样式 -->
-    <div class="hidden md:block max-w-4xl mx-auto">
+    <div class="hidden md:block max-w-2xl lg:max-w-4xl mx-auto">
       <HeroProfileCard :profile="profiles[0]" :profile-token="profileToken"
         @quick-import="emit('quick-import', profiles[0])" @preview="emit('preview', profiles[0])"
         @copy-link="emit('copy-link', profiles[0])" />
