@@ -146,15 +146,38 @@ class D1StorageAdapter {
                 { name: 'settings', keyField: 'key' }
             ];
             const keys = [];
+            const effectivePrefix = prefix || '';
+            const matchesKnownKey =
+                DATA_KEYS.SUBSCRIPTIONS.startsWith(effectivePrefix) ||
+                DATA_KEYS.PROFILES.startsWith(effectivePrefix) ||
+                DATA_KEYS.SETTINGS.startsWith(effectivePrefix) ||
+                effectivePrefix.startsWith(DATA_KEYS.SUBSCRIPTIONS) ||
+                effectivePrefix.startsWith(DATA_KEYS.PROFILES) ||
+                effectivePrefix.startsWith(DATA_KEYS.SETTINGS);
+
+            const shouldQuerySubscriptions = !effectivePrefix || effectivePrefix.startsWith(DATA_KEYS.SUBSCRIPTIONS);
+            const shouldQueryProfiles = !effectivePrefix || effectivePrefix.startsWith(DATA_KEYS.PROFILES);
+            const shouldQuerySettings = !effectivePrefix || !matchesKnownKey || effectivePrefix.startsWith(DATA_KEYS.SETTINGS);
 
             for (const table of tables) {
-                const results = await this.db.prepare(
-                    `SELECT ${table.keyField} FROM ${table.name}`
-                ).all();
+                if (table.name === 'subscriptions' && !shouldQuerySubscriptions) continue;
+                if (table.name === 'profiles' && !shouldQueryProfiles) continue;
+                if (table.name === 'settings' && !shouldQuerySettings) continue;
+
+                let results;
+                if (table.name === 'settings' && effectivePrefix) {
+                    results = await this.db.prepare(
+                        `SELECT ${table.keyField} FROM ${table.name} WHERE ${table.keyField} LIKE ?`
+                    ).bind(`${effectivePrefix}%`).all();
+                } else {
+                    results = await this.db.prepare(
+                        `SELECT ${table.keyField} FROM ${table.name}`
+                    ).all();
+                }
 
                 results.results.forEach(row => {
                     const key = this._buildKey(table.name, row[table.keyField]);
-                    if (key.startsWith(prefix)) {
+                    if (key.startsWith(effectivePrefix)) {
                         keys.push({ name: key });
                     }
                 });

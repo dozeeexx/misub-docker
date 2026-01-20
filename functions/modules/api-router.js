@@ -202,7 +202,7 @@ export async function handleApiRequest(request, env) {
 
     switch (path) {
         case '/logout':
-            return await handleLogout();
+            return await handleLogout(request);
 
         case '/misubs':
             return await handleMisubsSave(request, env);
