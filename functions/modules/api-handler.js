@@ -103,6 +103,13 @@ export async function handleMisubsSave(request, env) {
             } else {
                 finalProfiles = currentProfiles; // 无变动
             }
+
+            if (!Array.isArray(finalMisubs) || !Array.isArray(finalProfiles)) {
+                return createJsonResponse({
+                    success: false,
+                    message: '增量更新结果格式错误，请检查补丁数据'
+                }, 400);
+            }
         } else {
             // 步骤2: 验证必需字段 (仅在非Diff模式下)
             if (typeof misubs === 'undefined' || typeof profiles === 'undefined') {

@@ -202,6 +202,8 @@ wrangler d1 execute misub --file=schema.sql --remote
 |--------|------|------|
 | `VITE_ERROR_REPORT_URL` | 前端错误上报地址，不需要上报可不填 | `/api/system/error_report` |
 
+> 提示：启用错误上报后会发送页面地址与浏览器信息等运行数据，请根据隐私与合规要求进行评估与披露。
+
 ### 4. 重新部署
 
 完成配置后,在 `部署` 选项卡重新部署项目。

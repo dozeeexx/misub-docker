@@ -33,7 +33,19 @@ export async function verifySignedToken(key, token) {
     if (parts.length !== 2) return null;
     const [data] = parts;
     const expectedToken = await createSignedToken(key, data);
-    return token === expectedToken ? data : null;
+    return timingSafeEqual(token, expectedToken) ? data : null;
+}
+
+function timingSafeEqual(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;
+    const length = Math.max(a.length, b.length);
+    let result = a.length === b.length ? 0 : 1;
+    for (let i = 0; i < length; i += 1) {
+        const charA = a.charCodeAt(i) || 0;
+        const charB = b.charCodeAt(i) || 0;
+        result |= charA ^ charB;
+    }
+    return result === 0;
 }
 
 /**
@@ -84,9 +96,11 @@ export async function handleLogin(request, env) {
  * 处理用户登出
  * @returns {Promise<Response>} 登出响应
  */
-export async function handleLogout() {
+export async function handleLogout(request) {
     const headers = new Headers({ 'Content-Type': 'application/json' });
-    headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
+    const isSecure = typeof request?.url === 'string' && request.url.startsWith('https');
+    const secureFlag = isSecure ? 'Secure;' : '';
+    headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; ${secureFlag} SameSite=Strict; Max-Age=0`);
     return new Response(JSON.stringify({ success: true }), { headers });
 }
 
