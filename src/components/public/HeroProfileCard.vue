@@ -57,93 +57,87 @@ const ICONS = {
 
 <template>
     <div class="relative w-full">
-        <!-- 背景装饰 -->
+        <!-- Background Decoration -->
         <div
-            class="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-purple-50 dark:from-primary-900/20 dark:via-white/5 dark:to-purple-900/20 rounded-[2.5rem]">
+            class="absolute inset-0 bg-gradient-to-r from-primary-50 via-white to-purple-50 dark:from-primary-900/10 dark:via-[#1a1d29] dark:to-purple-900/10 rounded-[2.5rem]">
         </div>
         <div
-            class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-primary-200/40 to-transparent dark:from-primary-600/10 rounded-full blur-3xl animate-pulse-slow">
+            class="absolute top-0 right-0 w-96 h-96 bg-primary-200/20 dark:bg-primary-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none">
         </div>
+        
+        <!-- Main Card Content -->
         <div
-            class="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-purple-200/40 to-transparent dark:from-purple-600/10 rounded-full blur-3xl animate-pulse-slow delay-700">
-        </div>
-
-        <!-- 主卡片 -->
-        <div
-            class="relative glass-panel dark:bg-white/5 backdrop-blur-2xl rounded-[2rem] p-8 md:p-12 shadow-2xl shadow-primary-500/10 border-white/40 dark:border-white/10 hover:shadow-primary-500/20 transition-all duration-500">
-
-            <!-- 精选标签 -->
-            <div class="flex justify-center mb-8">
-                <div
-                    class="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-primary-500 to-purple-600 rounded-full shadow-lg shadow-primary-500/25 ring-1 ring-white/20">
-                    <span class="text-white text-sm font-bold tracking-wide">✨ 精选订阅推荐</span>
-                </div>
-            </div>
-
-            <!-- 内容区域 -->
-            <div class="flex flex-col xl:flex-row items-center gap-8 xl:gap-16">
-
-                <!-- 左侧信息 -->
-                <div class="flex-1 text-center xl:text-left">
-                    <!-- 图标和标题 -->
-                    <div class="flex flex-col xl:flex-row items-center xl:items-start gap-6 mb-8">
-                        <div
-                            class="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center shadow-lg shadow-primary-500/30 shrink-0 transform hover:scale-105 transition-transform duration-500">
-                            <span class="text-4xl drop-shadow-md">🚀</span>
+            class="relative glass-panel dark:bg-white/5 backdrop-blur-2xl rounded-[2rem] p-8 lg:p-10 shadow-xl border border-white/40 dark:border-white/5">
+            
+            <div class="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+                
+                <!-- 1. Brand / Header Column -->
+                <div class="flex-shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 rounded-full text-xs font-bold tracking-wide uppercase">
+                        <span>✨ Featured</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <div class="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center shadow-lg shadow-primary-500/20 text-3xl">
+                             🚀
                         </div>
                         <div>
-                            <h3 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-primary-800 to-gray-900 dark:from-white dark:via-primary-200 dark:to-white">
+                             <h3 class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
                                 {{ profile.name }}
                             </h3>
-                            <p class="mt-3 text-lg text-gray-500 dark:text-gray-400 max-w-lg leading-relaxed">
-                                {{ profile.description || '暂无简介' }}
-                            </p>
+                             <div class="flex items-center gap-1 mt-1">
+                                <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Online & Stable</span>
+                             </div>
                         </div>
-                    </div>
-
-
-
-                    <!-- 操作按钮 -->
-                    <div class="flex flex-wrap justify-center xl:justify-start gap-4">
-                        <button @click="emit('quick-import', profile)"
-                            class="inline-flex items-center px-8 py-3.5 bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-500 hover:to-purple-500 text-white font-bold rounded-2xl shadow-xl shadow-primary-500/30 transition-all hover:-translate-y-1 hover:scale-105 active:scale-95">
-                            <BaseIcon :path="ICONS.import" className="w-5 h-5 mr-2" />
-                            一键导入
-                        </button>
-                        <button @click="emit('preview', profile)"
-                            class="inline-flex items-center px-6 py-3.5 bg-white/80 dark:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 font-bold rounded-2xl hover:bg-white dark:hover:bg-white/20 transition-all hover:-translate-y-0.5 active:scale-95 backdrop-blur-sm">
-                            <BaseIcon :path="ICONS.preview" className="w-5 h-5 mr-2" />
-                            预览节点
-                        </button>
-                        <button @click="emit('copy-link', profile)"
-                            class="inline-flex items-center px-6 py-3.5 bg-white/80 dark:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 font-bold rounded-2xl hover:bg-white dark:hover:bg-white/20 transition-all hover:-translate-y-0.5 active:scale-95 backdrop-blur-sm">
-                            <BaseIcon :path="ICONS.link" className="w-5 h-5 mr-2" />
-                            复制链接
-                        </button>
                     </div>
                 </div>
 
-                <!-- 右侧二维码区域 -->
-                <div class="flex flex-col items-center">
-                    <div @click="toggleQR"
-                        class="relative w-56 h-56 bg-white/50 dark:bg-gray-800/50 rounded-3xl shadow-lg border-2 border-dashed border-gray-200 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all group backdrop-blur-sm">
-
-                        <!-- 未展开状态 -->
-                        <div v-if="!showQR" class="text-center">
-                            <div
-                                class="w-20 h-20 mx-auto mb-4 bg-primary-50 dark:bg-primary-900/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                <BaseIcon :path="ICONS.qr" className="w-10 h-10 text-primary-600 dark:text-primary-400" />
-                            </div>
-                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">点击显示二维码</span>
-                        </div>
-
-                        <!-- 二维码展示 -->
-                        <canvas v-show="showQR" ref="qrCanvas" class="rounded-xl shadow-sm"></canvas>
-                    </div>
-                    <p class="mt-4 text-xs font-medium text-gray-400 dark:text-gray-500 text-center uppercase tracking-wider">
-                        扫码快速导入
+                <!-- 2. Description Column (Middle) -->
+                <div class="flex-1 border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-white/5 pt-6 lg:pt-0 lg:pl-12 w-full lg:w-auto text-center lg:text-left">
+                    <p class="text-gray-600 dark:text-gray-400 text-base leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                        {{ profile.description || 'This subscription group provides high-speed, stable nodes optimized for various network environments. Ideal for streaming, gaming, and secure browsing.' }}
                     </p>
+                    <div class="mt-4 flex flex-wrap justify-center lg:justify-start gap-2">
+                         <span class="px-2 py-1 bg-gray-100 dark:bg-white/5 rounded text-xs text-gray-500 dark:text-gray-400">#HighSpeed</span>
+                         <span class="px-2 py-1 bg-gray-100 dark:bg-white/5 rounded text-xs text-gray-500 dark:text-gray-400">#LowLatency</span>
+                         <span class="px-2 py-1 bg-gray-100 dark:bg-white/5 rounded text-xs text-gray-500 dark:text-gray-400">#Secure</span>
+                    </div>
                 </div>
+
+                <!-- 3. Action Column (Right) -->
+                <div class="flex-shrink-0 w-full lg:w-auto flex flex-col gap-3 min-w-[200px]">
+                    <button @click="emit('quick-import', profile)"
+                        class="w-full flex items-center justify-center px-6 py-3.5 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 font-bold rounded-xl shadow-xl transition-transform active:scale-95 group">
+                        <BaseIcon :path="ICONS.import" className="w-5 h-5 mr-2 group-hover:animate-bounce" />
+                        一键导入
+                    </button>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <button @click="emit('preview', profile)"
+                            class="flex items-center justify-center px-4 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors text-sm">
+                            <BaseIcon :path="ICONS.preview" className="w-4 h-4 mr-1" />
+                            预览
+                        </button>
+                         <button @click="emit('copy-link', profile)"
+                            class="flex items-center justify-center px-4 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors text-sm">
+                            <BaseIcon :path="ICONS.link" className="w-4 h-4 mr-1" />
+                            复制
+                        </button>
+                    </div>
+
+                    <div @click="toggleQR" class="mt-1 flex items-center justify-center gap-2 cursor-pointer text-xs text-gray-400 hover:text-primary-500 transition-colors">
+                        <BaseIcon :path="ICONS.qr" className="w-4 h-4" />
+                        <span>{{ showQR ? '隐藏二维码' : '显示二维码' }}</span>
+                    </div>
+
+                     <!-- QR Dropdown/Expand -->
+                    <div v-if="showQR" class="absolute top-full right-0 mt-4 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 animate-fade-in-up">
+                        <canvas ref="qrCanvas" class="rounded-lg"></canvas>
+                        <p class="text-center text-xs text-gray-400 mt-2">Scan to Import</p>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
