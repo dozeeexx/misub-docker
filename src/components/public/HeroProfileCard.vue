@@ -17,35 +17,9 @@ const props = defineProps({
 const emit = defineEmits([
     'quick-import',
     'preview',
-    'copy-link'
+    'copy-link',
+    'toggle-qr'
 ]);
-
-// 二维码相关
-const showQR = ref(false);
-const qrCanvas = ref(null);
-
-const getSubscriptionUrl = () => {
-    const identifier = props.profile.customId || props.profile.id;
-    return `${window.location.origin}/${props.profileToken}/${identifier}`;
-};
-
-const toggleQR = async () => {
-    showQR.value = !showQR.value;
-    if (showQR.value) {
-        await nextTick();
-        if (qrCanvas.value) {
-            try {
-                await QRCode.toCanvas(qrCanvas.value, getSubscriptionUrl(), {
-                    width: 180,
-                    margin: 2,
-                    color: { dark: '#000000', light: '#FFFFFF' }
-                });
-            } catch (err) {
-                console.error('Failed to generate QR code:', err);
-            }
-        }
-    }
-};
 
 const ICONS = {
     import: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
@@ -126,16 +100,10 @@ const ICONS = {
                         </button>
                     </div>
 
-                    <div @click="toggleQR" class="mt-1 flex items-center justify-center gap-2 cursor-pointer text-xs text-gray-400 hover:text-primary-500 transition-colors">
+                    <button @click="emit('toggle-qr', profile)" class="mt-1 flex items-center justify-center gap-2 cursor-pointer text-xs text-gray-400 hover:text-primary-500 transition-colors w-full bg-transparent border-0">
                         <BaseIcon :path="ICONS.qr" className="w-4 h-4" />
-                        <span>{{ showQR ? '隐藏二维码' : '显示二维码' }}</span>
-                    </div>
-
-                     <!-- QR Dropdown/Expand -->
-                    <div v-if="showQR" class="absolute top-full right-0 mt-4 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 animate-fade-in-up">
-                        <canvas ref="qrCanvas" class="rounded-lg"></canvas>
-                        <p class="text-center text-xs text-gray-400 mt-2">Scan to Import</p>
-                    </div>
+                        <span>显示二维码</span>
+                    </button>
                 </div>
 
             </div>
