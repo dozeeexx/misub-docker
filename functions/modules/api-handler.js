@@ -271,8 +271,8 @@ export async function handlePublicProfilesRequest(env) {
 
         // Hero Configuration
         const hero = {
-            title1: settings.heroTitle1 || '发现优质',
-            title2: settings.heroTitle2 || '订阅资源',
+            title1: settings.heroTitle1 || '发现',
+            title2: settings.heroTitle2 || '优质订阅',
             description: settings.heroDescription || '浏览并获取由管理员分享的精选订阅组合，一键导入到您的客户端。'
         };
 
