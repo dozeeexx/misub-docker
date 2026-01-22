@@ -31,13 +31,7 @@ const ICONS = {
 
 <template>
     <div class="relative w-full">
-        <!-- Background Decoration -->
-        <div
-            class="absolute inset-0 bg-gradient-to-r from-primary-50 via-white to-purple-50 dark:from-primary-900/10 dark:via-[#1a1d29] dark:to-purple-900/10 rounded-[2.5rem]">
-        </div>
-        <div
-            class="absolute top-0 right-0 w-96 h-96 bg-primary-200/20 dark:bg-primary-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none">
-        </div>
+
         
         <!-- Main Card Content -->
         <div

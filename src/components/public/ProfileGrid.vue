@@ -34,8 +34,8 @@ const isTwoProfiles = computed(() => props.profiles.length === 2);
 // 动态网格类
 const gridClass = computed(() => {
   if (isSingleProfile.value) return '';
-  if (isTwoProfiles.value) return 'grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto';
-  return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8';
+  if (isTwoProfiles.value) return 'grid grid-cols-1 md:grid-cols-2 gap-8 w-full';
+  return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full';
 });
 </script>
 
@@ -51,7 +51,7 @@ const gridClass = computed(() => {
         @register-canvas="(id, el) => emit('register-canvas', id, el)" />
     </div>
     <!-- 桌面端：使用 Hero 样式 -->
-    <div class="hidden md:block max-w-2xl lg:max-w-4xl mx-auto">
+    <div class="hidden md:block w-full">
       <HeroProfileCard :profile="profiles[0]" :profile-token="profileToken"
         @quick-import="emit('quick-import', profiles[0])" @toggle-qr="emit('toggle-qr', profiles[0])" @preview="emit('preview', profiles[0])"
         @copy-link="emit('copy-link', profiles[0])" />

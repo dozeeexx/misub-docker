@@ -213,26 +213,15 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50 dark:bg-[#0f111a] transition-colors duration-500 selection:bg-primary-500/30 selection:text-white relative">
+    <div class="min-h-screen bg-transparent transition-colors duration-500 selection:bg-primary-500/30 selection:text-white relative">
         
-        <!-- Global Ambient Background (Fixed & Seamless) -->
-        <div class="fixed inset-0 pointer-events-none overflow-hidden">
-            <!-- Top Glow Base -->
-            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-gradient-to-b from-primary-200/20 via-primary-100/10 to-transparent dark:from-primary-900/15 dark:via-[#0f111a]/50 dark:to-transparent opacity-70 blur-3xl"></div>
-            
-            <!-- Animated Cosmic Blobs -->
-            <div class="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] rounded-full bg-primary-300/20 dark:bg-primary-600/10 blur-[120px] animate-blob mix-blend-multiply dark:mix-blend-screen opacity-60"></div>
-            <div class="absolute top-[10%] right-[-10%] w-[700px] h-[700px] rounded-full bg-purple-300/20 dark:bg-purple-600/10 blur-[120px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-screen opacity-60"></div>
-            <div class="absolute bottom-[-20%] left-[20%] w-[900px] h-[900px] rounded-full bg-indigo-300/10 dark:bg-indigo-600/5 blur-[120px] animate-blob animation-delay-4000 mix-blend-multiply dark:mix-blend-screen opacity-50"></div>
-        </div>
-
         <!-- Hero Section (Left Aligned & Open) -->
-        <div class="relative pt-20 pb-20 lg:pt-32 lg:pb-32 z-10 overflow-visible">
+        <div class="relative pt-10 pb-10 lg:pt-16 lg:pb-14 z-10 overflow-visible">
             <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative">
                 <!-- Left Content: Text (Wider column for no-wrap) -->
                 <div class="text-left relative z-20 lg:col-span-7 xl:col-span-8">
                     <!-- Badge -->
-                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-200/50 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-md mb-6 shadow-sm animate-fade-in-up">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-200/50 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-md mb-8 shadow-sm animate-fade-in-up">
                         <span class="relative flex h-2 w-2">
                           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
                           <span class="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
@@ -240,7 +229,7 @@ onMounted(async () => {
                         <span class="text-xs font-bold text-primary-700 dark:text-primary-300 tracking-widest uppercase">Cosmic Selection</span>
                     </div>
 
-                    <h1 class="text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-[1.05] mb-6 animate-fade-in-up delay-100">
+                    <h1 class="text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-[1.05] mb-8 animate-fade-in-up delay-100">
                         <span class="block text-gray-900 dark:text-white drop-shadow-sm">
                             {{ heroConfig.title1 }}
                         </span>
@@ -249,38 +238,14 @@ onMounted(async () => {
                         </span>
                     </h1>
                     
-                    <p class="text-base md:text-lg text-gray-500 dark:text-gray-400 leading-relaxed font-medium max-w-3xl mb-8 whitespace-nowrap overflow-hidden text-ellipsis animate-fade-in-up delay-200">
+                    <p class="text-base md:text-lg text-gray-500 dark:text-gray-400 leading-relaxed font-medium max-w-3xl mb-10 whitespace-nowrap overflow-hidden text-ellipsis animate-fade-in-up delay-200">
                         {{ heroConfig.description }}
                     </p>
                 </div>
 
                 <!-- Right Content: Top-Right Concentric Circles (Bottom-Left Quadrant) -->
                 <!-- -mt-20 lg:-mt-32 pulls it up to the very top edge, countering the parent's padding -->
-                <div class="absolute right-0 top-0 hidden lg:block pointer-events-none opacity-40 mix-blend-multiply dark:mix-blend-screen overflow-visible h-[600px] w-[600px] -mt-20 lg:-mt-32">
-                     <!-- Decorator SVG -->
-                     <svg class="w-full h-full text-primary-500 dark:text-primary-400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <linearGradient id="arcGradient" x1="100%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="currentColor" stop-opacity="0.3" />
-                                <stop offset="100%" stop-color="currentColor" stop-opacity="0.0" />
-                            </linearGradient>
-                        </defs>
-                        <!-- Center is Top-Right (400, 0) -->
-                        <!-- Drawing Arcs: M (Start X, Start Y) A (rx ry x-axis-rotation large-arc-flag sweep-flag) (End X, End Y) -->
-                        
-                        <!-- Ring 1 (Smallest) -->
-                        <path d="M400 80 A 80 80 0 0 1 320 0" stroke="url(#arcGradient)" stroke-width="20" stroke-linecap="round" />
-                        
-                        <!-- Ring 2 -->
-                        <path d="M400 160 A 160 160 0 0 1 240 0" stroke="url(#arcGradient)" stroke-width="15" stroke-linecap="round" />
-                        
-                        <!-- Ring 3 -->
-                        <path d="M400 240 A 240 240 0 0 1 160 0" stroke="url(#arcGradient)" stroke-width="10" stroke-linecap="round" />
-                        
-                        <!-- Ring 4 -->
-                        <path d="M400 320 A 320 320 0 0 1 80 0" stroke="url(#arcGradient)" stroke-width="8" stroke-linecap="round" />
-                     </svg>
-                </div>
+
             </div>
         </div>
 
@@ -349,7 +314,7 @@ onMounted(async () => {
             </div>
 
             <!-- Clients Section (Visually Separated) -->
-            <div class="mt-32 pt-20 pb-10 border-t border-gray-200/50 dark:border-white/5 bg-white/30 dark:bg-white/[0.02] backdrop-blur-sm">
+            <div class="mt-32 pt-20 pb-10 border-t border-transparent bg-transparent dark:bg-transparent backdrop-blur-sm">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="text-center mb-16 relative">
                         <div class="relative inline-flex flex-col items-center">
@@ -365,7 +330,7 @@ onMounted(async () => {
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                         <div v-for="client in clients" :key="client.name"
-                            class="group relative bg-white dark:bg-[#1a1d29] border border-gray-100 dark:border-white/5 rounded-3xl p-6 hover:border-primary-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/5">
+                            class="group relative glass-panel dark:bg-white/5 backdrop-blur-2xl rounded-[2rem] p-6 shadow-xl border border-white/40 dark:border-white/5 hover:border-primary-500/30 transition-all duration-300 hover:shadow-primary-500/5">
                             
                             <div class="flex items-start gap-5">
                                 <div class="h-14 w-14 rounded-2xl flex items-center justify-center text-3xl shadow-sm bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 group-hover:scale-105 transition-transform duration-300 shrink-0">
@@ -429,22 +394,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* Gradient Animation */
-@keyframes blob {
-    0% { transform: translate(0px, 0px) scale(1); }
-    33% { transform: translate(30px, -50px) scale(1.1); }
-    66% { transform: translate(-20px, 20px) scale(0.9); }
-    100% { transform: translate(0px, 0px) scale(1); }
-}
-.animate-blob {
-    animation: blob 7s infinite;
-}
-.animation-delay-2000 {
-    animation-delay: 2s;
-}
-.animation-delay-4000 {
-    animation-delay: 4s;
-}
+
 
 /* Entrance Animations */
 @keyframes fadeInUp {
