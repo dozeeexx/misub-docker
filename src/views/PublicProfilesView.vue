@@ -229,16 +229,16 @@ onMounted(async () => {
                         <span class="text-xs font-bold text-primary-700 dark:text-primary-300 tracking-widest uppercase">Cosmic Selection</span>
                     </div>
 
-                    <h1 class="text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-[1.05] mb-8 animate-fade-in-up delay-100">
+                    <h1 class="text-4xl sm:text-6xl lg:text-8xl font-black tracking-tight leading-[1.1] mb-8 animate-fade-in-up delay-100 break-words">
                         <span class="block text-gray-900 dark:text-white drop-shadow-sm">
                             {{ heroConfig.title1 }}
                         </span>
-                        <span class="block text-5xl sm:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-purple-500 to-indigo-500 dark:from-primary-400 dark:via-purple-400 dark:to-indigo-400 bg-[length:200%_auto] animate-gradient pb-2 mt-2">
+                        <span class="block text-3xl sm:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-purple-500 to-indigo-500 dark:from-primary-400 dark:via-purple-400 dark:to-indigo-400 bg-[length:200%_auto] animate-gradient pb-2 mt-2">
                             {{ heroConfig.title2 }}
                         </span>
                     </h1>
                     
-                    <p class="text-base md:text-lg text-gray-500 dark:text-gray-400 leading-relaxed font-medium max-w-3xl mb-10 whitespace-nowrap overflow-hidden text-ellipsis animate-fade-in-up delay-200">
+                    <p class="text-base md:text-lg text-gray-500 dark:text-gray-400 leading-relaxed font-medium max-w-3xl mb-10 animate-fade-in-up delay-200 break-words">
                         {{ heroConfig.description }}
                     </p>
                 </div>
@@ -259,12 +259,12 @@ onMounted(async () => {
             </div>
 
         <!-- Content Section -->
-        <div class="relative z-20 pb-32">
+        <div class="relative z-20 pb-24">
             
             <!-- Subscription Section -->
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Announcement Section -->
-                <AnnouncementCard v-if="announcement && announcement.enabled" :announcement="announcement" class="mb-16" />
+                <AnnouncementCard v-if="announcement && announcement.enabled" :announcement="announcement" class="mb-10" />
 
                 <!-- Loading State -->
                 <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -314,7 +314,7 @@ onMounted(async () => {
             </div>
 
             <!-- Clients Section (Visually Separated) -->
-            <div class="mt-32 pt-20 pb-10 border-t border-transparent bg-transparent dark:bg-transparent backdrop-blur-sm">
+            <div class="mt-16 pt-12 pb-10 border-t border-transparent bg-transparent dark:bg-transparent backdrop-blur-sm">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="text-center mb-16 relative">
                         <div class="relative inline-flex flex-col items-center">
