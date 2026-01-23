@@ -219,7 +219,7 @@ onMounted(async () => {
         <div class="relative pt-10 pb-10 lg:pt-16 lg:pb-14 z-10 overflow-visible">
             <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative">
                 <!-- Left Content: Text (Wider column for no-wrap) -->
-                <div class="text-left relative z-20 lg:col-span-7 xl:col-span-8">
+                <div class="text-left relative z-20 lg:col-span-12 xl:col-span-12">
                     <!-- Badge -->
                     <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-200/50 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-md mb-8 shadow-sm animate-fade-in-up">
                         <span class="relative flex h-2 w-2">
@@ -238,7 +238,7 @@ onMounted(async () => {
                         </span>
                     </h1>
                     
-                    <p class="text-base md:text-lg text-gray-500 dark:text-gray-400 leading-relaxed font-medium max-w-3xl mb-10 animate-fade-in-up delay-200 break-words">
+                    <p class="text-base md:text-lg text-gray-500 dark:text-gray-400 leading-relaxed font-medium max-w-5xl mb-10 animate-fade-in-up delay-200 break-words">
                         {{ heroConfig.description }}
                     </p>
                 </div>
