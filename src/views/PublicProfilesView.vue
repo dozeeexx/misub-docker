@@ -216,7 +216,7 @@ onMounted(async () => {
     <div class="min-h-screen bg-transparent transition-colors duration-500 selection:bg-primary-500/30 selection:text-white relative">
         
         <!-- Hero Section (Left Aligned & Open) -->
-        <div class="relative pt-10 pb-10 lg:pt-16 lg:pb-14 z-10 overflow-visible hero-section">
+        <div class="relative pt-10 pb-10 lg:pt-16 lg:pb-14 z-10 overflow-visible">
             <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative">
                 <!-- Left Content: Text (Wider column for no-wrap) -->
                 <div class="text-left relative z-20 lg:col-span-12 xl:col-span-12">
@@ -441,12 +441,5 @@ onMounted(async () => {
 
 .dark ::-webkit-scrollbar-thumb:hover {
     background: #64748b;
-}
-
-/* iOS Specific Optimization - Ensure Hero content is visible under fixed header */
-@supports (-webkit-touch-callout: none) {
-  .hero-section {
-    padding-top: calc(env(safe-area-inset-top) + 120px) !important;
-  }
 }
 </style>
