@@ -37,6 +37,39 @@ const navItems = [
 </script>
 
 <template>
+  <!-- Mobile Top Header (Moved to top for Sticky behavior) -->
+  <header class="md:hidden pointer-events-auto sticky top-0 z-50 flex items-center justify-between px-4 py-3 w-full bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-white/5 transition-all duration-300">
+      <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+              <svg width="18" height="18" viewBox="0 0 128 128" fill="currentColor">
+                  <path d="M64 128a64 64 0 1 1 64-64a64.07 64.07 0 0 1-64 64Zm0-122a58 58 0 1 0 58 58A58.07 58.07 0 0 0 64 6Z"/>
+                  <path d="M64 100a36 36 0 1 1 36-36a36 36 0 0 1-36 36Zm0-66a30 30 0 1 0 30 30a30 30 0 0 0-30-30Z"/>
+              </svg>
+          </div>
+          <span class="text-lg font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
+              MiSub
+          </span>
+      </div>
+      
+      <div class="flex items-center gap-2">
+            <ThemeToggle :theme="theme" @toggle="toggleTheme" />
+            <button 
+              @click="uiStore.toggleLayout()" 
+              class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 transition-colors"
+              aria-label="切换布局"
+            >
+              <BaseIcon :path="ICONS.layout" className="h-5 w-5" />
+            </button>
+            <button 
+              @click="emit('logout')" 
+              class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors"
+              aria-label="退出登录"
+            >
+              <BaseIcon :path="ICONS.logout" className="h-5 w-5" />
+            </button>
+      </div>
+  </header>
+
   <div class="pointer-events-none sticky top-0 z-50 w-full flex justify-center pt-4 px-4">
     <!-- Desktop Floating Island -->
     <header class="pointer-events-auto hidden md:flex items-center gap-2 p-2 rounded-full glass-panel shadow-2xl shadow-primary-500/10 border-white/40 dark:border-white/10 transition-all duration-500 hover:shadow-primary-500/20 max-w-4xl w-full justify-between bg-white/70 dark:bg-gray-900/70 backdrop-blur-2xl">
@@ -102,7 +135,7 @@ const navItems = [
     </header>
 
     <!-- Mobile Bottom Navigation -->
-    <nav v-if="isLoggedIn" class="md:hidden pointer-events-auto mobile-nav-glass fixed bottom-0 inset-x-0 pb-safe-bottom">
+    <nav v-if="isLoggedIn" class="md:hidden pointer-events-auto mobile-nav-glass fixed bottom-0 inset-x-0 pb-safe-bottom z-[60]">
         <div class="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
           <router-link 
             v-for="item in navItems" 
@@ -124,39 +157,6 @@ const navItems = [
           </router-link>
         </div>
     </nav>
-    
-    <!-- Mobile Top Header -->
-    <header class="md:hidden pointer-events-auto flex items-center justify-between px-4 py-2 w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/20 dark:border-white/5">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-                <svg width="18" height="18" viewBox="0 0 128 128" fill="currentColor">
-                    <path d="M64 128a64 64 0 1 1 64-64a64.07 64.07 0 0 1-64 64Zm0-122a58 58 0 1 0 58 58A58.07 58.07 0 0 0 64 6Z"/>
-                    <path d="M64 100a36 36 0 1 1 36-36a36 36 0 0 1-36 36Zm0-66a30 30 0 1 0 30 30a30 30 0 0 0-30-30Z"/>
-                </svg>
-            </div>
-            <span class="text-lg font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
-                MiSub
-            </span>
-        </div>
-        
-        <div class="flex items-center gap-2">
-             <ThemeToggle :theme="theme" @toggle="toggleTheme" />
-             <button 
-               @click="uiStore.toggleLayout()" 
-               class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 transition-colors"
-               aria-label="切换布局"
-             >
-                <BaseIcon :path="ICONS.layout" className="h-5 w-5" />
-             </button>
-             <button 
-               @click="emit('logout')" 
-               class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors"
-               aria-label="退出登录"
-             >
-                <BaseIcon :path="ICONS.logout" className="h-5 w-5" />
-             </button>
-        </div>
-    </header>
   </div>
 </template>
 
