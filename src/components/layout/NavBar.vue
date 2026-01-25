@@ -142,6 +142,13 @@ const navItems = [
         <div class="flex items-center gap-2">
              <ThemeToggle :theme="theme" @toggle="toggleTheme" />
              <button 
+               @click="uiStore.toggleLayout()" 
+               class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 transition-colors"
+               aria-label="切换布局"
+             >
+                <BaseIcon :path="ICONS.layout" className="h-5 w-5" />
+             </button>
+             <button 
                @click="emit('logout')" 
                class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors"
                aria-label="退出登录"
