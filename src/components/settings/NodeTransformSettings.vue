@@ -179,8 +179,8 @@ const PRESETS = {
   space: { label: 'Space (多余空格)', pattern: '\\s{2,}' },
   trim: { label: 'Trim (首尾空白)', pattern: '^\\s+|\\s+$' },
   // Expanded Presets
-  traffic: { label: '1.5x | 3倍 | 0.x (流量倍率)', pattern: '(\\d+\\.?\\d*|\\.\\d+)\\s*(x|X|倍率?)', flags: 'gi' },
-  provider: { label: '专线|BGP|IPLC|IEPL|Relay... (线路)', pattern: '(专线|BGP|IPLC|IEPL|Relay|Premium|Ultra|High Speed)', flags: 'gi' },
+  traffic: { label: '1.5x | 3倍 | 0.x (流量倍率)', pattern: '(\\d+(?:\\.\\d+)?|\\.\\d+)\\s*(x|X|倍速|倍|倍率)', flags: 'gi' },
+  provider: { label: '专线|BGP|IPLC|IEPL|CN2... (线路)', pattern: '(专线|BGP|IPLC|IEPL|CN2|GIA|Anycast|Relay|Premium|Ultra|High Speed|Game|Media)', flags: 'gi' },
   separator: { label: '- | _ | — (无用分隔符)', pattern: '[-|_|—|\\|]+' },
   ip: { label: '127.0.0.1 (IPv4)', pattern: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b' }
 };
@@ -188,13 +188,15 @@ const PRESETS = {
 const TEMPLATE_PRESETS = [
   { label: '标准', value: '{emoji} {region:zh}-{region:UPPER}-{index}', desc: '🇺🇸 美国-US-01' },
   { label: '极简', value: '{region} {index}', desc: 'US 01' },
+  { label: '国家协议序号', value: '{emoji} {region:zh} {protocol:UPPER} {index}', desc: '🇺🇸 美国 VMESS 01' },
   { label: '详细', value: '{emoji} {region} | {protocol} | {name}', desc: '🇺🇸 US | VMESS | 原始名称' },
   { label: '保留', value: '{emoji} {name}', desc: '🇺🇸 原始名称' },
   // Expanded Presets
   { label: '纯净', value: '{emoji} {region:zh} {index}', desc: '🇺🇸 美国 01' },
   { label: '协议', value: '{protocol:UPPER} {index}', desc: 'VMESS 01' },
   { label: '国别', value: '{emoji} {region} {protocol}', desc: '🇺🇸 US VMESS' },
-  { label: '标签', value: '[{region:zh}] {name}', desc: '[美国] 原始名称' }
+  { label: '标签', value: '[{region:zh}] {name}', desc: '[美国] 原始名称' },
+  { label: '仅名称', value: '{name}', desc: '原始名称' }
 ];
 
 const applyTemplate = (tpl) => {

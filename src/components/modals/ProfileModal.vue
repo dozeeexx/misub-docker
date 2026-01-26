@@ -30,6 +30,7 @@ const uiText = {
   nodeTransformTitle: '\u8282\u70b9\u51c0\u5316\u7ba1\u9053'
 };
 const prefixToggleOptions = [
+  { label: '\u9ed8\u8ba4(\u5168\u5c40)', value: null },
   { label: '\u542f\u7528', value: true },
   { label: '\u7981\u7528', value: false }
 ];
@@ -193,27 +194,19 @@ watch(() => props.profile, (newProfile) => {
         profileCopy.expiresAt = '';
       }
     }
-    // 初始化前缀设置
-    if (!profileCopy.prefixSettings) {
-      profileCopy.prefixSettings = {
-        enableManualNodes: true,
-        enableSubscriptions: true,
-        manualNodePrefix: '\u624b\u52a8\u8282\u70b9'
-      };
+    if (!profileCopy.prefixSettings || typeof profileCopy.prefixSettings !== 'object') {
+      profileCopy.prefixSettings = {};
     }
     profileCopy.prefixSettings.enableManualNodes =
-      profileCopy.prefixSettings.enableManualNodes ?? true;
+      profileCopy.prefixSettings.enableManualNodes ?? null;
     profileCopy.prefixSettings.enableSubscriptions =
-      profileCopy.prefixSettings.enableSubscriptions ?? true;
-    if (!profileCopy.prefixSettings.manualNodePrefix) {
-      profileCopy.prefixSettings.manualNodePrefix = '\u624b\u52a8\u8282\u70b9';
-    }
+      profileCopy.prefixSettings.enableSubscriptions ?? null;
+    profileCopy.prefixSettings.manualNodePrefix =
+      profileCopy.prefixSettings.manualNodePrefix ?? '';
     if (Object.prototype.hasOwnProperty.call(profileCopy.prefixSettings, 'enableNodeEmoji')) {
       delete profileCopy.prefixSettings.enableNodeEmoji;
     }
-    if (!profileCopy.nodeTransform) {
-      profileCopy.nodeTransform = createDefaultNodeTransform();
-    }
+    profileCopy.nodeTransform = profileCopy.nodeTransform ?? null;
     localProfile.value = profileCopy;
   } else {
     localProfile.value = { 
@@ -226,11 +219,11 @@ watch(() => props.profile, (newProfile) => {
       isPublic: true, // [新增] 默认为 true
       description: '', // [新增]
       prefixSettings: {
-        enableManualNodes: true,
-        enableSubscriptions: true,
-        manualNodePrefix: '\u624b\u52a8\u8282\u70b9'
+        enableManualNodes: null,
+        enableSubscriptions: null,
+        manualNodePrefix: ''
       },
-      nodeTransform: createDefaultNodeTransform()
+      nodeTransform: null
     };
   }
 }, { deep: true, immediate: true });
@@ -297,6 +290,7 @@ const handleDeselectAll = (listName, sourceArray) => {
           :show-advanced="showAdvanced"
           :ui-text="uiText"
           :prefix-toggle-options="prefixToggleOptions"
+          :create-default-node-transform="createDefaultNodeTransform"
           @toggle-advanced="showAdvanced = !showAdvanced"
         />
 

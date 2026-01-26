@@ -614,6 +614,7 @@ export function applyNodeTransformPipeline(nodeUrls, transformConfig = {}) {
 
     // Stage 3: 模板重命名
     if (cfg.rename.template.enabled) {
+        const templateHasEmoji = cfg.rename.template.template.includes('{emoji}');
         const groupBuckets = new Map();
         for (const r of records) {
             const gk = getIndexGroupKey(r, cfg.rename.template.indexScope);
@@ -657,7 +658,7 @@ export function applyNodeTransformPipeline(nodeUrls, transformConfig = {}) {
                     region: regionText,
                     protocol: protocolText,
                     index: padIndex(currentIndex, cfg.rename.template.indexPad),
-                    name: r.name,
+                    name: templateHasEmoji ? stripLeadingEmoji(r.name) : r.name,
                     server: r.server,
                     port: r.port
                 };

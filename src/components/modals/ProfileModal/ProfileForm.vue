@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import SubConverterSelector from '../../forms/SubConverterSelector.vue';
 import NodeTransformSettings from '../../settings/NodeTransformSettings.vue';
 import Input from '../../ui/Input.vue';
@@ -19,10 +20,27 @@ const props = defineProps({
   prefixToggleOptions: {
     type: Array,
     default: () => []
+  },
+  createDefaultNodeTransform: {
+    type: Function,
+    required: true
   }
 });
 
 const emit = defineEmits(['toggle-advanced']);
+
+const nodeTransformMode = computed({
+  get: () => (props.localProfile.nodeTransform ? 'custom' : 'global'),
+  set: (value) => {
+    if (value === 'custom') {
+      if (!props.localProfile.nodeTransform) {
+        props.localProfile.nodeTransform = props.createDefaultNodeTransform();
+      }
+    } else {
+      props.localProfile.nodeTransform = null;
+    }
+  }
+});
 </script>
 
 <template>
@@ -146,6 +164,7 @@ const emit = defineEmits(['toggle-advanced']);
             <input
               type="text"
               v-model="localProfile.prefixSettings.manualNodePrefix"
+              placeholder="留空则使用全局前缀"
               class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
             />
           </div>
@@ -177,7 +196,20 @@ const emit = defineEmits(['toggle-advanced']);
       <!-- Node Transform Settings -->
       <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-100 dark:border-gray-700">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ uiText.nodeTransformTitle }}</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">净化配置来源</label>
+            <select
+              v-model="nodeTransformMode"
+              class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 dark:text-white"
+            >
+              <option value="global">使用全局设置</option>
+              <option value="custom">自定义</option>
+            </select>
+          </div>
+        </div>
         <NodeTransformSettings
+          v-if="nodeTransformMode === 'custom'"
           :model-value="localProfile.nodeTransform"
           @update:model-value="val => localProfile.nodeTransform = val"
         />

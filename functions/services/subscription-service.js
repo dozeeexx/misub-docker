@@ -146,7 +146,7 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
     const defaultTemplate = '{emoji}{region}-{protocol}-{index}';
     const effectiveTemplate = nodeTransformConfig?.rename?.template?.template || defaultTemplate;
     const templateContainsEmoji = templateEnabled && effectiveTemplate.includes('{emoji}');
-    const shouldAddEmoji = templateContainsEmoji;
+    const shouldKeepEmoji = !templateEnabled || templateContainsEmoji;
 
     // 手动节点前缀文本
     const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ?? '\u624b\u52a8\u8282\u70b9';
@@ -250,12 +250,12 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         .map(line => line.trim())
         .filter(Boolean);
 
-    const normalizedLines = shouldAddEmoji
+    const normalizedLines = shouldKeepEmoji
         ? combinedLines
         : combinedLines.map(line => removeFlagEmoji(line));
 
     const outputLines = nodeTransformConfig?.enabled
-        ? applyNodeTransformPipeline(normalizedLines, { ...nodeTransformConfig, enableEmoji: shouldAddEmoji })
+        ? applyNodeTransformPipeline(normalizedLines, { ...nodeTransformConfig, enableEmoji: templateContainsEmoji })
         : [...new Set(normalizedLines)];
     const uniqueNodesString = outputLines.join('\n');
 

@@ -100,12 +100,14 @@ export async function handleMisubRequest(context) {
             // 判断是否需要在 subconverter 中启用 emoji：使用回退逻辑（订阅组 > 全局 > 默认）
             const defaultTemplate = '{emoji}{region}-{protocol}-{index}';
             const globalNodeTransform = config.defaultNodeTransform || {};
-            const profileNodeTransform = profile.nodeTransform || {};
+            const profileNodeTransform = profile.nodeTransform ?? null;
+            const hasProfileNodeTransform =
+                profileNodeTransform && Object.keys(profileNodeTransform).length > 0;
 
-            // 确定有效的 nodeTransform 配置
-            const effectiveTransform = profileNodeTransform.enabled !== undefined
+            // 确定有效的 nodeTransform 配置（全局 vs 订阅组完整覆盖）
+            const effectiveTransform = hasProfileNodeTransform
                 ? profileNodeTransform
-                : (globalNodeTransform.enabled ? globalNodeTransform : profileNodeTransform);
+                : globalNodeTransform;
 
             const userTemplate = effectiveTransform?.rename?.template?.template || defaultTemplate;
             const templateEnabled = effectiveTransform?.enabled && effectiveTransform?.rename?.template?.enabled;
@@ -271,19 +273,32 @@ export async function handleMisubRequest(context) {
 
         // 设置优先级：订阅组设置 > 全局设置 > 内置默认值
         // prefixSettings 回退逻辑
-        const effectivePrefixSettings = {
-            ...(config.defaultPrefixSettings || {}),    // 全局设置（已包含内置默认值）
-            ...(currentProfile?.prefixSettings || {})   // 订阅组设置覆盖
-        };
+        const globalPrefixSettings = config.defaultPrefixSettings || {};
+        const profilePrefixSettings = currentProfile?.prefixSettings || null;
+        const effectivePrefixSettings = { ...globalPrefixSettings };
+
+        if (profilePrefixSettings && typeof profilePrefixSettings === 'object') {
+            if (profilePrefixSettings.enableManualNodes !== null && profilePrefixSettings.enableManualNodes !== undefined) {
+                effectivePrefixSettings.enableManualNodes = profilePrefixSettings.enableManualNodes;
+            }
+            if (profilePrefixSettings.enableSubscriptions !== null && profilePrefixSettings.enableSubscriptions !== undefined) {
+                effectivePrefixSettings.enableSubscriptions = profilePrefixSettings.enableSubscriptions;
+            }
+            if (profilePrefixSettings.manualNodePrefix && profilePrefixSettings.manualNodePrefix.trim() !== '') {
+                effectivePrefixSettings.manualNodePrefix = profilePrefixSettings.manualNodePrefix;
+            }
+        }
 
         // nodeTransform 回退逻辑
         const globalNodeTransform = config.defaultNodeTransform || {};
-        const profileNodeTransform = currentProfile?.nodeTransform || {};
+        const profileNodeTransform = currentProfile?.nodeTransform ?? null;
+        const hasProfileNodeTransform =
+            profileNodeTransform && Object.keys(profileNodeTransform).length > 0;
 
-        // 深度合并 nodeTransform（订阅组优先）
-        const effectiveNodeTransform = profileNodeTransform.enabled !== undefined
-            ? profileNodeTransform  // 如果订阅组明确启用/禁用了转换，使用订阅组设置
-            : (globalNodeTransform.enabled ? globalNodeTransform : profileNodeTransform);  // 否则尝试全局设置
+        // nodeTransform 使用整体覆盖逻辑
+        const effectiveNodeTransform = hasProfileNodeTransform
+            ? profileNodeTransform
+            : globalNodeTransform;
 
         const generationSettings = {
             ...effectivePrefixSettings,
