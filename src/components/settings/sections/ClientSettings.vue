@@ -138,9 +138,9 @@ onMounted(fetchClients);
             <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white">客户端管理</h3>
             <div class="flex gap-2 w-full md:w-auto">
                 <button @click="handleInit"
-                    class="flex-1 md:flex-none px-3 py-1.5 text-center text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600">重置默认</button>
+                    class="flex-1 md:flex-none px-3 py-1.5 text-center text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl border border-gray-300 dark:border-gray-600">重置默认</button>
                 <button @click="handleAdd"
-                    class="flex-1 md:flex-none px-3 py-1.5 text-center text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-xs">新增客户端</button>
+                    class="flex-1 md:flex-none px-4 py-2 text-center text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-sm shadow-primary-500/20">新增客户端</button>
             </div>
         </div>
 
@@ -152,9 +152,9 @@ onMounted(fetchClients);
 
                 <div class="flex items-start gap-3 min-w-0">
                     <div
-                        class="h-12 w-12 rounded-xl flex items-center justify-center text-2xl shrink-0 bg-gray-50 dark:bg-gray-700/50 text-gray-600 overflow-hidden">
+                        class="h-12 w-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 bg-gray-50 dark:bg-gray-700/50 text-gray-600 overflow-hidden ring-1 ring-gray-200/60 dark:ring-white/10">
                         <img v-if="client.icon && client.icon.includes('/')" :src="client.icon" :alt="client.name"
-                            class="w-full h-full object-contain p-2" />
+                            class="w-full h-full object-contain" />
                         <span v-else>{{ client.icon }}</span>
                     </div>
                     <div class="min-w-0 flex-1">

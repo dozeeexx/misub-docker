@@ -73,9 +73,9 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8">
     <div
-      class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-2 border border-gray-100 dark:border-gray-700 shadow-sm">
+      class="bg-white/90 dark:bg-gray-900/70 rounded-3xl p-6 space-y-2 border border-gray-100/80 dark:border-white/10 shadow-sm">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -90,7 +90,7 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
     </div>
 
     <div
-      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white/90 dark:bg-gray-900/70 rounded-3xl p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -111,7 +111,7 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
           <div class="relative">
             <select
               v-model="settings.defaultPrefixSettings.enableManualNodes"
-              class="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/50 focus:outline-none transition-all appearance-none"
+              class="w-full bg-white/70 dark:bg-black/20 border border-gray-200/80 dark:border-white/10 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/40 focus:outline-none transition-all appearance-none"
             >
               <option v-for="option in prefixToggleOptions" :key="String(option.value)" :value="option.value">
                 {{ option.label }}
@@ -127,7 +127,7 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
           <div class="relative">
             <select
               v-model="settings.defaultPrefixSettings.enableSubscriptions"
-              class="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/50 focus:outline-none transition-all appearance-none"
+              class="w-full bg-white/70 dark:bg-black/20 border border-gray-200/80 dark:border-white/10 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/40 focus:outline-none transition-all appearance-none"
             >
               <option v-for="option in prefixToggleOptions" :key="String(option.value)" :value="option.value">
                 {{ option.label }}
@@ -142,7 +142,7 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
     </div>
 
     <div
-      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white/90 dark:bg-gray-900/70 rounded-3xl p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">

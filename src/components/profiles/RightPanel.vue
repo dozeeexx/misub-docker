@@ -67,12 +67,12 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <div class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md card-shadow hover:card-shadow-hover p-6 rounded-3xl transition-all duration-300">
+    <div class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md p-6 rounded-3xl border border-gray-100/80 dark:border-white/10 shadow-sm transition-all duration-300">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 list-item-animation" style="--delay-index: 0">生成订阅链接</h3>
 
       <div class="mb-4 list-item-animation" style="--delay-index: 1">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">1. 选择订阅内容</label>
-        <select v-model="selectedId" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white input-enhanced">
+        <select v-model="selectedId" class="w-full px-3 py-2.5 bg-white/80 dark:bg-gray-800/70 border border-gray-200/80 dark:border-white/10 rounded-xl shadow-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 text-sm text-gray-900 dark:text-white input-enhanced">
             <option value="default">默认订阅 (全部启用节点)</option>
             <option v-for="profile in profiles" :key="profile.id" :value="profile.customId || profile.id">
                 {{ profile.name }}
@@ -87,12 +87,13 @@ onUnmounted(() => {
               v-for="(format, index) in formats"
               :key="format"
               @click="selectedFormat = format"
-              class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex justify-center items-center list-item-animation"
+              :aria-pressed="selectedFormat === format"
+              class="px-3 py-2 text-xs font-medium rounded-xl border transition-colors flex justify-center items-center list-item-animation"
               :style="{ '--delay-index': index }"
               :class="[
                 selectedFormat === format
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-gray-200/80 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-300/80 dark:hover:bg-gray-600/50'
+                  ? 'bg-primary-600 text-white border-primary-600 shadow-sm shadow-primary-500/30'
+                  : 'bg-white/70 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-gray-800'
               ]"
             >
               {{ format }}
@@ -106,14 +107,14 @@ onUnmounted(() => {
           :value="subLink"
           readonly
           :disabled="!isLinkValid"
-          class="w-full text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 rounded-lg pl-3 pr-10 py-2.5 focus:outline-hidden focus:ring-2 font-mono input-enhanced"
+          class="w-full text-sm text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800/60 rounded-xl pl-3 pr-12 py-2.5 border border-gray-200/70 dark:border-white/10 focus:outline-hidden focus:ring-2 font-mono input-enhanced"
           :class="{
-            'focus:ring-indigo-500': isLinkValid,
+            'focus:ring-primary-500': isLinkValid,
             'focus:ring-red-500 cursor-not-allowed': !isLinkValid,
             'text-red-500 dark:text-red-500': !isLinkValid
           }"
         />
-        <button @click="copyToClipboard" :disabled="!isLinkValid" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors duration-200" :class="isLinkValid ? 'hover:text-indigo-500' : 'cursor-not-allowed'">
+        <button @click="copyToClipboard" :disabled="!isLinkValid" class="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 transition-colors duration-200" :class="isLinkValid ? 'hover:text-primary-600 hover:bg-white/80 dark:hover:bg-gray-800' : 'cursor-not-allowed'">
             <Transition name="fade" mode="out-in">
                 <svg v-if="copied" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />

@@ -96,8 +96,8 @@ const navItems = [
           class="relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 group"
           :class="[
             route.path === item.path 
-              ? 'text-white' 
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+              ? 'text-white font-semibold' 
+              : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/70 dark:hover:bg-white/10'
           ]"
         >
           <!-- Active Background Pill -->
@@ -115,7 +115,7 @@ const navItems = [
 
         <button 
           @click="uiStore.toggleLayout()" 
-          class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/50" 
+          class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/50" 
           title="Switch Layout"
           aria-label="切换布局"
         >
@@ -124,7 +124,7 @@ const navItems = [
         
         <button 
           @click="emit('logout')" 
-          class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50" 
+          class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-500 hover:text-red-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50" 
           title="Logout"
           aria-label="退出登录"
         >

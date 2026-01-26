@@ -115,7 +115,7 @@ async function testNotification() {
 
 <template>
   <!-- Telegram 通知 Bot 卡片 -->
-  <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+  <div class="bg-white/90 dark:bg-gray-900/70 rounded-3xl p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24"
         stroke="currentColor">
@@ -173,7 +173,7 @@ async function testNotification() {
   </div>
 
   <!-- Telegram 推送 Bot 卡片 -->
-  <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+  <div class="bg-white/90 dark:bg-gray-900/70 rounded-3xl p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24"
         stroke="currentColor">
@@ -183,7 +183,7 @@ async function testNotification() {
     </h3>
 
       <div
-        class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-lg">
+        class="flex items-center justify-between p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 rounded-2xl">
         <div>
           <label class="text-sm font-medium text-gray-900 dark:text-gray-200">启用节点推送功能</label>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">通过 Telegram Bot 快速推送代理节点</p>

@@ -12,7 +12,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8">
     <SubConverterCard :settings="settings" />
     <TelegramCard :settings="settings" />
     <CronCard :settings="settings" />

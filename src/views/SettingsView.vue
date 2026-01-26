@@ -58,14 +58,14 @@ onMounted(() => {
 
 <template>
   <div class="pt-0 pb-8">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1 mt-2">设置</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2 mt-2">设置</h1>
     <div class="md:grid md:grid-cols-12 md:gap-6">
 
       <!-- Sidebar -->
       <aside class="md:col-span-3 mb-4 md:mb-0">
         <div class="sticky top-0 z-20">
           <div
-            class="bg-transparent md:bg-white md:dark:bg-gray-800 md:shadow-xs md:rounded-3xl md:overflow-hidden md:border md:border-gray-100 md:dark:border-gray-700">
+            class="bg-transparent md:bg-white/90 md:dark:bg-gray-900/70 md:shadow-sm md:rounded-3xl md:overflow-hidden md:border md:border-gray-100/80 md:dark:border-white/10">
             <div class="md:p-2 md:space-y-1">
               <SettingsSidebar v-model:activeTab="activeTab" />
             </div>
@@ -75,7 +75,7 @@ onMounted(() => {
 
       <!-- Content -->
       <main class="md:col-span-9">
-        <div v-if="isLoading" class="text-center p-12 bg-white dark:bg-gray-800 rounded-3xl shadow-sm">
+        <div v-if="isLoading" class="text-center p-12 bg-white/90 dark:bg-gray-900/70 rounded-3xl shadow-sm border border-gray-100/80 dark:border-white/10">
           <svg class="animate-spin h-8 w-8 text-indigo-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none"
             viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -87,7 +87,7 @@ onMounted(() => {
         </div>
 
         <div v-else
-          class="bg-white dark:bg-gray-800 shadow-xs rounded-3xl border border-gray-100 dark:border-gray-700 min-h-[500px] flex flex-col">
+          class="bg-white/90 dark:bg-gray-900/70 shadow-sm rounded-3xl border border-gray-100/80 dark:border-white/10 min-h-[500px] flex flex-col">
           <!-- Header for Mobile (Removed as tabs are now visible) -->
 
           <!-- Scrollable Content -->
@@ -105,10 +105,10 @@ onMounted(() => {
 
           <!-- Footer Actions -->
           <div
-            class="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end sticky bottom-0 z-10 backdrop-blur-sm rounded-b-3xl">
+            class="px-6 py-4 bg-white/80 dark:bg-gray-900/70 border-t border-gray-100/70 dark:border-white/10 flex justify-end sticky bottom-0 z-10 backdrop-blur-sm rounded-b-3xl">
             <button @click="handleSave" :disabled="isSaving || hasWhitespace || !isStorageTypeValid"
-              class="px-6 py-2 rounded-lg text-white font-medium shadow-sm transition-all flex items-center gap-2"
-              :class="isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-md active:scale-95'">
+              class="px-6 py-2.5 rounded-xl text-white text-sm font-medium shadow-sm transition-all flex items-center gap-2"
+              :class="isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700 hover:shadow-md active:scale-95'">
               <svg v-if="isSaving" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
                 fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

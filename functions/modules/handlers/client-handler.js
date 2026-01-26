@@ -5,11 +5,49 @@ import { createJsonResponse, createErrorResponse } from '../utils.js';
 
 const KV_KEY_CLIENTS = 'misub_clients_v1';
 
+const LEGACY_CLIENT_ICONS = {
+    'clash-verge-rev': '⚡️',
+    'clash-party': '🎉',
+    'v2rayn': '💻',
+    'v2rayng': '📱',
+    'shadowrocket': '🚀',
+    'hiddify': '🛡️',
+    'nekobox': '🐱',
+    'stash': '📦',
+    'loon': '🎈',
+    'surge': '⚡️',
+    'flclash': '🦋',
+    'clashmi': 'Ⓜ️',
+    'flyclash': '✈️',
+    'karing': '🦌',
+    'quantumultx': '❌',
+    'clashbox': '📦'
+};
+
+const LEGACY_ICON_ALIASES = {
+    '/icons/clients/clash-verge-rev.png': '/icons/clients/clash-verge-rev.svg',
+    '/icons/clients/clash-party.png': '/icons/clients/clash-party.svg',
+    '/icons/clients/v2rayn.ico': '/icons/clients/v2rayn.svg',
+    '/icons/clients/v2rayng.png': '/icons/clients/v2rayng.svg',
+    '/icons/clients/shadowrocket.jpg': '/icons/clients/shadowrocket.svg',
+    '/icons/clients/hiddify.png': '/icons/clients/hiddify.svg',
+    '/icons/clients/nekobox.png': '/icons/clients/nekobox.svg',
+    '/icons/clients/stash.jpg': '/icons/clients/stash.svg',
+    '/icons/clients/loon.jpg': '/icons/clients/loon.svg',
+    '/icons/clients/surge.jpg': '/icons/clients/surge.svg',
+    '/icons/clients/flclash.png': '/icons/clients/flclash.svg',
+    '/icons/clients/clashmi.png': '/icons/clients/clashmi.svg',
+    '/icons/clients/flyclash.png': '/icons/clients/flyclash.svg',
+    '/icons/clients/karing.png': '/icons/clients/karing.svg',
+    '/icons/clients/quantumultx.jpg': '/icons/clients/quantumultx.svg',
+    '/icons/clients/clashbox.png': '/icons/clients/clashbox.svg'
+};
+
 const DEFAULT_CLIENTS = [
     {
         id: 'clash-verge-rev',
         name: 'Clash Verge Rev',
-        icon: '⚡️',
+        icon: '/icons/clients/clash-verge-rev.svg',
         description: '现代化的 Clash 客户端，界面美观，功能强大，支持多平台。',
         platforms: ['windows', 'macos', 'linux'],
         url: 'https://github.com/clash-verge-rev/clash-verge-rev/releases',
@@ -19,7 +57,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'clash-party',
         name: 'Clash-Party',
-        icon: '🎉',
+        icon: '/icons/clients/clash-party.svg',
         description: '基于 Electron 的 Mihomo 图形客户端，专注于简单易用的体验。',
         platforms: ['windows', 'macos', 'linux'],
         url: 'https://github.com/mihomo-party-org/clash-party/releases',
@@ -29,7 +67,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'v2rayn',
         name: 'v2rayN',
-        icon: '💻',
+        icon: '/icons/clients/v2rayn.svg',
         description: 'Windows 平台最流行的 V2Ray/Xray 客户端，功能强大且易于使用。',
         platforms: ['windows', 'linux'],
         url: 'https://github.com/2dust/v2rayN/releases',
@@ -39,7 +77,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'v2rayng',
         name: 'v2rayNG',
-        icon: '📱',
+        icon: '/icons/clients/v2rayng.svg',
         description: 'Android 平台上最流行的通用代理工具，支持多种协议。',
         platforms: ['android'],
         url: 'https://github.com/2dust/v2rayNG/releases',
@@ -49,7 +87,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'shadowrocket',
         name: 'Shadowrocket',
-        icon: '🚀',
+        icon: '/icons/clients/shadowrocket.svg',
         description: 'iOS 平台功能强大的网络工具，需使用非中国区 Apple ID 下载。',
         platforms: ['ios'],
         url: 'https://apps.apple.com/us/app/shadowrocket/id932747118',
@@ -59,7 +97,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'hiddify',
         name: 'Hiddify',
-        icon: '🛡️',
+        icon: '/icons/clients/hiddify.svg',
         description: '新一代通用客户端，支持 Sing-box 核心，全平台兼容。',
         platforms: ['windows', 'macos', 'linux', 'android', 'ios'],
         url: 'https://github.com/hiddify/hiddify-next/releases',
@@ -69,7 +107,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'nekobox',
         name: 'NekoBox',
-        icon: '🐱',
+        icon: '/icons/clients/nekobox.svg',
         description: '功能丰富的全能代理客户端，支持 Sing-box 和 Xray 核心。',
         platforms: ['android', 'windows'],
         url: 'https://github.com/MatsuriDayo/NekoBoxForAndroid/releases',
@@ -79,7 +117,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'stash',
         name: 'Stash',
-        icon: '📦',
+        icon: '/icons/clients/stash.svg',
         description: 'iOS 平台上强大的基于规则的代理实用工具，支持多种协议。',
         platforms: ['ios', 'macos'],
         url: 'https://apps.apple.com/us/app/stash-rule-based-proxy/id1596063349',
@@ -89,7 +127,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'loon',
         name: 'Loon',
-        icon: '🎈',
+        icon: '/icons/clients/loon.svg',
         description: 'iOS 平台功能强大的网络工具，界面简洁优雅，支持插件扩展。',
         platforms: ['ios', 'macos'],
         url: 'https://apps.apple.com/us/app/loon/id1373567447',
@@ -99,7 +137,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'surge',
         name: 'Surge',
-        icon: '⚡️',
+        icon: '/icons/clients/surge.svg',
         description: 'iOS/macOS 平台的高级网络工具，拥有强大的性能和丰富的功能。',
         platforms: ['ios', 'macos'],
         url: 'https://nssurge.com/',
@@ -109,7 +147,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'flclash',
         name: 'FlClash',
-        icon: '🦋',
+        icon: '/icons/clients/flclash.svg',
         description: '基于 Flutter 开发的多平台 Clash 客户端，界面美观流畅。',
         platforms: ['windows', 'linux', 'android'],
         url: 'https://github.com/chen08209/FlClash/releases',
@@ -119,7 +157,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'clashmi',
         name: 'ClashMI',
-        icon: 'Ⓜ️',
+        icon: '/icons/clients/clashmi.svg',
         description: '基于 Mihomo 内核的多平台客户端，简单易用，支持全平台。',
         platforms: ['windows', 'macos', 'linux', 'android', 'ios'],
         url: 'https://github.com/KaringX/clashmi/releases',
@@ -129,7 +167,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'flyclash',
         name: 'FlyClash',
-        icon: '✈️',
+        icon: '/icons/clients/flyclash.svg',
         description: '基于 ClashMeta 内核的轻量级客户端，专注于速度和稳定性。',
         platforms: ['windows', 'android'],
         url: 'https://github.com/GtxFury/FlyClash/releases',
@@ -139,7 +177,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'karing',
         name: 'Karing',
-        icon: '🦌',
+        icon: '/icons/clients/karing.svg',
         description: '简单的兼容 Clash/V2ray/Sing-box 的全平台客户端。',
         platforms: ['windows', 'macos', 'linux', 'android', 'ios'],
         url: 'https://github.com/KaringX/karing/releases',
@@ -149,7 +187,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'quantumultx',
         name: 'Quantumult X',
-        icon: '❌',
+        icon: '/icons/clients/quantumultx.svg',
         description: 'iOS 平台功能强大的网络工具，界面精美，支持脚本。',
         platforms: ['ios'],
         url: 'https://apps.apple.com/us/app/quantumult-x/id1443988620',
@@ -159,7 +197,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'clashbox',
         name: 'ClashBox',
-        icon: '📦',
+        icon: '/icons/clients/clashbox.svg',
         description: 'HarmonyOS NEXT 平台的原生 Clash 客户端，界面美观，性能强大。',
         platforms: ['HarmonyOS'],
         url: 'https://github.com/xiaobaigroup/ClashBox/releases',
@@ -167,6 +205,32 @@ const DEFAULT_CLIENTS = [
         version: null
     }
 ];
+
+const DEFAULT_ICON_BY_ID = DEFAULT_CLIENTS.reduce((map, client) => {
+    map[client.id] = client.icon;
+    return map;
+}, {});
+
+function migrateClientIcons(clients) {
+    let updated = false;
+    const nextClients = clients.map((client) => {
+        const legacyIcon = LEGACY_CLIENT_ICONS[client.id];
+        const defaultIcon = DEFAULT_ICON_BY_ID[client.id];
+        if (!defaultIcon) return client;
+        const aliasIcon = LEGACY_ICON_ALIASES[client.icon];
+        if (client.icon === legacyIcon) {
+            updated = true;
+            return { ...client, icon: defaultIcon };
+        }
+        if (aliasIcon) {
+            updated = true;
+            return { ...client, icon: aliasIcon };
+        }
+        return client;
+    });
+
+    return { updated, clients: nextClients };
+}
 
 /**
  * Robust UUID generator
@@ -193,6 +257,16 @@ export async function handleClientRequest(request, env) {
     try {
         if (request.method === 'GET') {
             const data = await env.MISUB_KV.get(KV_KEY_CLIENTS, 'json');
+            if (Array.isArray(data) && data.length > 0) {
+                const migration = migrateClientIcons(data);
+                if (migration.updated) {
+                    await env.MISUB_KV.put(KV_KEY_CLIENTS, JSON.stringify(migration.clients));
+                    return createJsonResponse({
+                        success: true,
+                        data: migration.clients
+                    });
+                }
+            }
             return createJsonResponse({
                 success: true,
                 data: data || []

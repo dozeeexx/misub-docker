@@ -333,9 +333,9 @@ onMounted(async () => {
                             class="group relative glass-panel dark:bg-white/5 backdrop-blur-2xl rounded-[2rem] p-6 shadow-xl border border-white/40 dark:border-white/5 hover:border-primary-500/30 transition-all duration-300 hover:shadow-primary-500/5">
                             
                             <div class="flex items-start gap-5">
-                                <div class="h-14 w-14 rounded-2xl flex items-center justify-center text-3xl shadow-sm bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 group-hover:scale-105 transition-transform duration-300 shrink-0">
+                                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-3xl shadow-sm bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 group-hover:scale-105 transition-transform duration-300 shrink-0 overflow-hidden">
                                     <img v-if="client.icon && client.icon.includes('/')" :src="client.icon"
-                                        :alt="client.name" class="w-full h-full object-contain p-2" />
+                                        :alt="client.name" class="w-full h-full object-contain" />
                                     <span v-else>{{ client.icon }}</span>
                                 </div>
                                 

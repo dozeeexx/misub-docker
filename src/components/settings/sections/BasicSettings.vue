@@ -14,10 +14,10 @@ import Switch from '../../ui/Switch.vue';
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8">
     <!-- 订阅基本信息配置 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white/90 dark:bg-gray-900/70 rounded-3xl p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -54,7 +54,7 @@ import Switch from '../../ui/Switch.vue';
 
     <!-- 功能开关区域 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white/90 dark:bg-gray-900/70 rounded-3xl p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -66,25 +66,26 @@ import Switch from '../../ui/Switch.vue';
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- 订阅自动更新间隔 -->
         <div
-          class="flex flex-col p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl">
+          class="flex flex-col p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 rounded-2xl">
           <div class="flex items-center justify-between mb-3">
             <div>
               <p class="text-sm font-medium text-gray-900 dark:text-gray-200">订阅自动更新间隔</p>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">页面打开时自动刷新订阅节点数和流量</p>
             </div>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <div class="flex items-center gap-1">
+          <div class="flex flex-wrap gap-3">
+            <div class="flex items-center gap-2">
               <input
                 type="number"
                 :value="![0, 30, 60, 120].includes(settings.autoUpdateInterval) ? settings.autoUpdateInterval : ''"
                 @input="e => { const v = parseInt(e.target.value); if (v >= 5) settings.autoUpdateInterval = v; }"
                 placeholder="自定义"
                 min="5"
-                class="w-20 px-2 py-1.5 text-xs bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all"
+                class="w-24 px-2.5 py-2 text-sm bg-white/70 dark:bg-black/20 border border-gray-200/80 dark:border-white/10 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 outline-none transition-all"
               >
               <span class="text-xs text-gray-500 dark:text-gray-400">分钟</span>
             </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 self-center">快捷选择</span>
             <button
               v-for="option in [
                 { value: 0, label: '禁用' },
@@ -94,11 +95,12 @@ import Switch from '../../ui/Switch.vue';
               ]"
               :key="option.value"
               @click="settings.autoUpdateInterval = option.value"
+              :aria-pressed="settings.autoUpdateInterval === option.value"
               :class="[
-                'px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
+                'px-3 py-2 text-xs font-medium rounded-lg border transition-colors',
                 settings.autoUpdateInterval === option.value
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  ? 'bg-primary-600 text-white border-primary-600 shadow-sm shadow-primary-500/30'
+                  : 'bg-white/70 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-gray-800'
               ]"
             >
               {{ option.label }}
@@ -111,7 +113,7 @@ import Switch from '../../ui/Switch.vue';
 
         <!-- 访问日志 -->
         <div
-          class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl">
+          class="flex items-center justify-between p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 rounded-2xl">
           <div>
             <p class="text-sm font-medium text-gray-900 dark:text-gray-200">开启访问日志 & 计数</p>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">记录订阅访问并统计流量与IP</p>
@@ -123,7 +125,7 @@ import Switch from '../../ui/Switch.vue';
 
         <!-- 流量统计节点 -->
         <div
-          class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl">
+          class="flex items-center justify-between p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 rounded-2xl">
           <div>
             <p class="text-sm font-medium text-gray-900 dark:text-gray-200">显示流量统计节点</p>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">在订阅中生成虚拟节点显示剩余流量</p>
@@ -139,7 +141,7 @@ import Switch from '../../ui/Switch.vue';
 
     <!-- Web 访问控制 -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-3xl p-6 space-y-4 border border-gray-100 dark:border-gray-700 elevation-2 hover:elevation-3 transition-shadow duration-300">
+      class="bg-white/90 dark:bg-gray-900/70 rounded-3xl p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
       <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24"
           stroke="currentColor">
@@ -150,10 +152,10 @@ import Switch from '../../ui/Switch.vue';
       </h3>
 
       <div
-        class="bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
+        class="bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 rounded-2xl divide-y divide-gray-200/60 dark:divide-white/10 overflow-hidden">
         <!-- 公开页访问 -->
         <div
-          class="p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors">
+          class="p-4 flex items-center justify-between hover:bg-gray-50/80 dark:hover:bg-white/5 transition-colors">
           <div>
             <p class="text-sm font-medium text-gray-900 dark:text-gray-200">允许未登录访问公开页</p>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">关闭后访问首页将跳转登录页面</p>
@@ -176,7 +178,7 @@ import Switch from '../../ui/Switch.vue';
           </div>
 
           <!-- 自定义登录路径设置 -->
-          <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+          <div class="pt-4 border-t border-gray-200/70 dark:border-white/10">
              <div class="max-w-md">
                 <Input 
                   label="自定义管理后台路径"
@@ -191,7 +193,7 @@ import Switch from '../../ui/Switch.vue';
           </div>
 
             <div v-show="disguiseConfig.enabled"
-            class="bg-white dark:bg-gray-800 rounded-md p-4 space-y-4 border border-gray-200 dark:border-gray-600 transition-all duration-300">
+            class="bg-white/80 dark:bg-gray-900/60 rounded-2xl p-4 space-y-4 border border-gray-200/70 dark:border-white/10 transition-all duration-300">
             <div>
               <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">伪装策略</label>
               <div class="flex flex-col sm:flex-row gap-4">
@@ -231,7 +233,7 @@ import Switch from '../../ui/Switch.vue';
             </div>
 
             <div
-              class="flex items-start gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+              class="flex items-start gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/20 p-2.5 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0 mt-0.5" viewBox="0 0 20 20"
                 fill="currentColor">
                 <path fill-rule="evenodd"

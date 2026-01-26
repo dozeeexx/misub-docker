@@ -21,10 +21,11 @@ const tabs = [
 <template>
   <nav class="grid grid-cols-2 gap-2 p-1 md:flex md:flex-col md:space-y-1 md:gap-0 md:p-0">
     <button v-for="tab in tabs" :key="tab.id" @click="emit('update:activeTab', tab.id)"
-      class="flex items-center justify-center md:justify-start px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-200"
+      class="relative flex items-center justify-center md:justify-start px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-200"
       :class="activeTab === tab.id
-        ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
-        : 'text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-gray-200 border border-transparent'">
+        ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/25 border border-white/10'
+        : 'text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-gray-200'">
+      <span v-if="activeTab === tab.id" class="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full bg-white/90"></span>
       <svg class="mr-2 md:mr-3 flex-shrink-0 h-5 w-5 md:h-6 md:w-6"
         :class="activeTab === tab.id ? 'text-white' : 'text-gray-400 dark:text-gray-500'"
         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
