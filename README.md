@@ -209,7 +209,7 @@ wrangler d1 execute misub --file=schema.sql --remote
 完成配置后,在 `部署` 选项卡重新部署项目。
 
 ---
-
+<s>
 ## 🐳 VPS / Docker 部署
 
 适用于自建服务器部署（与 Cloudflare Pages 保持功能兼容）。
@@ -307,7 +307,7 @@ http://<vps-ip>:8080
 
 > ⚠️ **注意**: Zeabur 部署默认使用端口 8080，已在 `zeabur.json` 中配置。
 > ⚠️ **注意**: 请在 Zeabur 中启用持久化存储并挂载到 `/app/data`，否则数据库会在重建后丢失。
-
+</s>
 
 ## 💡 使用说明
 
