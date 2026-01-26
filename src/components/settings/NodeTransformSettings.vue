@@ -3,6 +3,7 @@ import { ref, watch, computed } from 'vue';
 import DOMPurify from 'dompurify';
 import RulePreview from './NodeTransformSettings/RulePreview.vue';
 import RuleEditor from './NodeTransformSettings/RuleEditor.vue';
+import { extractNodeRegion, getRegionEmoji, REGION_KEYWORDS } from '../../../functions/modules/utils/geo-utils.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -45,21 +46,19 @@ const config = ref({
 
 // --- 预览数据 ---
 const DEFAULT_MOCK_NODES = [
-  { name: '🇺🇸 美国 [高速] 01 @100M', region: 'US', protocol: 'vmess', server: 'us1.gw', port: '443' },
-  { name: 'Hong Kong 01 | IPLC [VIP]', region: 'HK', protocol: 'trojan', server: 'hk1.gw', port: '8443' },
-  { name: '🇯🇵 日本 BGP [专线]', region: 'JP', protocol: 'vless', server: 'jp1.gw', port: '443' },
-  { name: '新加坡 SG-02 [流媒体]', region: 'SG', protocol: 'shadowsocks', server: 'sg2.gw', port: '8388' },
-  { name: '🇨🇳 台湾 Hysteria2 [0.5倍率]', region: 'TW', protocol: 'hysteria2', server: 'tw1.gw', port: '443' },
-  { name: '🇰🇷 South Korea SK [原生]', region: 'KR', protocol: 'ss', server: 'kr1.gw', port: '443' },
-  { name: '🇩🇪 德国法兰克福 CN2', region: 'DE', protocol: 'vmess', server: 'de1.gw', port: '443' },
-  { name: '⛔️ 到期时间: 2099-12-31', region: 'US', protocol: 'trojan', server: 'info.gw', port: '443' }
+  { name: '🇺🇸 美国 [高速] 01 @100M', protocol: 'vmess', server: 'us1.gw', port: '443' },
+  { name: 'Hong Kong 01 | IPLC [VIP]', protocol: 'trojan', server: 'hk1.gw', port: '8443' },
+  { name: '🇯🇵 日本 BGP [专线]', protocol: 'vless', server: 'jp1.gw', port: '443' },
+  { name: '新加坡 SG-02 [流媒体]', protocol: 'ss', server: 'sg2.gw', port: '8388' },
+  { name: '🇰🇷 South Korea SK [原生]', protocol: 'ss', server: 'kr1.gw', port: '443' },
+  { name: '⛔️ 到期时间: 2099-12-31', protocol: 'trojan', server: 'info.gw', port: '443' }
 ];
 const customNodeInput = ref('');
 const customMockNode = ref(null);
 
 const activeMockNodes = computed(() => {
   if (customMockNode.value) {
-    return [customMockNode.value, ...DEFAULT_MOCK_NODES.slice(0, 7)];
+    return [customMockNode.value, ...DEFAULT_MOCK_NODES.slice(0, 5)];
   }
   return DEFAULT_MOCK_NODES;
 });
@@ -71,94 +70,301 @@ const addCustomNode = () => {
   }
   customMockNode.value = {
     name: customNodeInput.value,
-    region: 'US', // 模拟数据，实际无法探测
     protocol: 'vmess',
     server: 'custom.gw',
     port: '443'
   };
 };
 
+const DEFAULT_SORT_KEYS = [
+  { key: 'region', order: 'asc', customOrder: ['香港', '台湾', '日本', '新加坡', '美国', '韩国', '英国', '德国', '法国', '加拿大'] },
+  { key: 'protocol', order: 'asc', customOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] },
+  { key: 'name', order: 'asc' }
+];
+
+const REGION_ZH_TO_CODE = (() => {
+  const map = {};
+  for (const [zhName, keywords] of Object.entries(REGION_KEYWORDS || {})) {
+    if (!Array.isArray(keywords)) continue;
+    for (const keyword of keywords) {
+      const code = String(keyword || '').trim();
+      if (/^[A-Za-z]{2,3}$/.test(code)) {
+        map[zhName] = code.toUpperCase();
+        break;
+      }
+    }
+  }
+  return map;
+})();
+
+function normalizeProtocol(proto) {
+  const p = String(proto || 'unknown').toLowerCase();
+  if (p === 'hy' || p === 'hy2' || p === 'hysteria') return 'hysteria2';
+  if (p === 'shadowsocks') return 'ss';
+  return p;
+}
+
+function stripLeadingEmoji(name) {
+  return String(name || '').replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/g, '').trim();
+}
+
+function toRegionCode(zhRegion) {
+  const region = String(zhRegion || '').trim();
+  if (!region) return '';
+  if (/^[A-Za-z]{2,3}$/.test(region)) return region.toUpperCase();
+  return REGION_ZH_TO_CODE[region] || region;
+}
+
+function applyRegexRename(name, rules) {
+  let result = String(name || '');
+  for (const rule of rules) {
+    if (!rule?.pattern) continue;
+    try {
+      const re = new RegExp(rule.pattern, rule.flags || 'g');
+      result = result.replace(re, rule.replacement || '');
+    } catch (error) {
+      if (isDev) {
+        console.debug('[NodeTransformSettings] Invalid regex rule:', rule, error);
+      }
+    }
+  }
+  return result.trim();
+}
+
+function getIndexGroupKey(record, scope) {
+  switch (scope) {
+    case 'region': return `r:${record.region}`;
+    case 'protocol': return `p:${record.protocol}`;
+    case 'regionProtocol': return `rp:${record.region}|${record.protocol}`;
+    default: return 'global';
+  }
+}
+
+function padIndex(n, width) {
+  return width > 0 ? String(n).padStart(width, '0') : String(n);
+}
+
+function applyModifier(key, value, modifier, record) {
+  const val = value == null ? '' : String(value);
+  switch (modifier) {
+    case 'UPPER': return val.toUpperCase();
+    case 'lower': return val.toLowerCase();
+    case 'Title': return val.charAt(0).toUpperCase() + val.slice(1);
+    case 'zh':
+      if (key === 'region' && record && record.regionZh) return record.regionZh;
+      return val;
+    default: return val;
+  }
+}
+
+function renderTemplate(template, vars, record) {
+  return String(template || '').replace(/\{([a-zA-Z0-9_]+)(?::([a-zA-Z]+))?\}/g, (_, key, modifier) => {
+    if (!Object.prototype.hasOwnProperty.call(vars, key)) return '';
+    let v = vars[key];
+    if (modifier) v = applyModifier(key, v, modifier, record);
+    return v == null ? '' : String(v);
+  }).trim();
+}
+
+function makeComparator(sortCfg) {
+  const keys = sortCfg.keys || [];
+  const nameIgnoreEmoji = sortCfg.nameIgnoreEmoji !== false;
+
+  const customOrderMaps = keys.map(k => {
+    if (!Array.isArray(k?.customOrder)) return null;
+    const map = new Map();
+    k.customOrder.forEach((v, i) => map.set(String(v), i));
+    return map;
+  });
+
+  const cmpStr = (a, b) => String(a || '').localeCompare(String(b || ''));
+  const cmpNum = (a, b) => {
+    const an = Number(a), bn = Number(b);
+    if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
+    if (Number.isNaN(an)) return 1;
+    if (Number.isNaN(bn)) return -1;
+    return an - bn;
+  };
+
+  return (ra, rb) => {
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (!k?.key) continue;
+      const key = String(k.key);
+      const order = String(k.order || 'asc').toLowerCase() === 'desc' ? -1 : 1;
+      const orderMap = customOrderMaps[i];
+
+      let va, vb;
+      if (key === 'name') {
+        va = nameIgnoreEmoji ? stripLeadingEmoji(ra.name) : ra.name;
+        vb = nameIgnoreEmoji ? stripLeadingEmoji(rb.name) : rb.name;
+        const r = cmpStr(va, vb);
+        if (r !== 0) return r * order;
+        continue;
+      }
+      if (key === 'region') {
+        va = ra.regionZh || ra.region;
+        vb = rb.regionZh || rb.region;
+        if (orderMap) {
+          const ia = orderMap.get(String(va || ''));
+          const ib = orderMap.get(String(vb || ''));
+          const raIdx = ia === undefined ? Number.MAX_SAFE_INTEGER : ia;
+          const rbIdx = ib === undefined ? Number.MAX_SAFE_INTEGER : ib;
+          if (raIdx !== rbIdx) return (raIdx - rbIdx) * order;
+        }
+        const r = cmpStr(va, vb);
+        if (r !== 0) return r * order;
+        continue;
+      }
+      if (key === 'port') {
+        const r = cmpNum(ra.port, rb.port);
+        if (r !== 0) return r * order;
+        continue;
+      }
+
+      va = ra[key];
+      vb = rb[key];
+
+      if (orderMap) {
+        const ia = orderMap.get(String(va || ''));
+        const ib = orderMap.get(String(vb || ''));
+        const raIdx = ia === undefined ? Number.MAX_SAFE_INTEGER : ia;
+        const rbIdx = ib === undefined ? Number.MAX_SAFE_INTEGER : ib;
+        if (raIdx !== rbIdx) return (raIdx - rbIdx) * order;
+      }
+
+      const r = cmpStr(va, vb);
+      if (r !== 0) return r * order;
+    }
+    return 0;
+  };
+}
+
+function choosePreferred(existing, candidate, protocolOrder) {
+  if (!existing) return candidate;
+  if (!protocolOrder?.length) return existing;
+  const rank = p => {
+    const idx = protocolOrder.indexOf(String(p || '').toLowerCase());
+    return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+  };
+  return rank(candidate.protocol) < rank(existing.protocol) ? candidate : existing;
+}
+
 const previewResult = computed(() => {
   if (!config.value.enabled) return activeMockNodes.value.map(n => n.name);
 
-  return activeMockNodes.value.map((node, index) => {
-    let newName = node.name;
+  const cfg = config.value;
+  const sortKeys = cfg.sort.enabled ? (cfg.sort.keys || []) : [];
+  const effectiveSort = cfg.sort.enabled && sortKeys.length > 0
+    ? { ...cfg.sort, keys: sortKeys }
+    : { ...cfg.sort, keys: DEFAULT_SORT_KEYS };
 
-    // 1. 正则重命名
-    if (config.value.rename.regex.enabled) {
-      for (const rule of config.value.rename.regex.rules) {
-        try {
-          if (!rule.pattern) continue;
-          let patternStr = rule.pattern;
-          let flags = rule.flags || 'g';
-          const regex = new RegExp(patternStr, flags);
-          newName = newName.replace(regex, rule.replacement || '');
-        } catch (e) {
-          if (isDev) {
-            console.debug('[NodeTransformSettings] Invalid regex rule:', rule, e);
-          }
-        }
+  let records = activeMockNodes.value.map(node => {
+    const protocol = normalizeProtocol(node.protocol);
+    const name = String(node.name || '');
+    const url = `${protocol}://${node.server || ''}:${node.port || ''}#${encodeURIComponent(name)}`;
+    return { ...node, protocol, name, originalName: name, region: '', regionZh: '', emoji: '', url };
+  });
+
+  if (cfg.rename.regex.enabled && cfg.rename.regex.rules.length > 0) {
+    records = records.map(r => ({
+      ...r,
+      name: applyRegexRename(r.name, cfg.rename.regex.rules)
+    }));
+  }
+
+  if (cfg.dedup.enabled) {
+    if (cfg.dedup.mode === 'url') {
+      const seen = new Set();
+      records = records.filter(r => {
+        if (seen.has(r.url)) return false;
+        seen.add(r.url);
+        return true;
+      });
+    } else {
+      const map = new Map();
+      for (const r of records) {
+        const server = String(r.server || '').trim().toLowerCase();
+        const port = String(r.port || '').trim();
+        const base = server && port ? `${server}:${port}` : '';
+        const key = base
+          ? (cfg.dedup.includeProtocol ? `${r.protocol}|${base}` : base)
+          : `__raw__:${r.url}`;
+        map.set(key, choosePreferred(map.get(key), r, cfg.dedup.prefer?.protocolOrder || []));
+      }
+      records = Array.from(map.values());
+    }
+  }
+
+  records = records.map(r => {
+    let regionZh = extractNodeRegion(r.name);
+    if (regionZh === '其他' && r.server) regionZh = extractNodeRegion(r.server);
+    const regionCode = toRegionCode(regionZh);
+    const emoji = getRegionEmoji(regionZh);
+    return { ...r, region: regionCode, regionZh, emoji };
+  });
+
+  if (cfg.rename.template.enabled) {
+    const template = cfg.rename.template.template || '';
+    const templateHasEmoji = template.includes('{emoji}');
+    const groupBuckets = new Map();
+    for (const r of records) {
+      const gk = getIndexGroupKey(r, cfg.rename.template.indexScope);
+      const arr = groupBuckets.get(gk) || [];
+      arr.push(r);
+      groupBuckets.set(gk, arr);
+    }
+
+    const cmpStr = (a, b) => String(a || '').localeCompare(String(b || ''));
+    const cmpPort = (a, b) => {
+      const an = Number(a), bn = Number(b);
+      if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
+      if (Number.isNaN(an)) return 1;
+      if (Number.isNaN(bn)) return -1;
+      return an - bn;
+    };
+
+    for (const arr of groupBuckets.values()) {
+      arr.sort((a, b) => {
+        const r1 = cmpStr(String(a.server || '').toLowerCase(), String(b.server || '').toLowerCase());
+        if (r1 !== 0) return r1;
+        const r2 = cmpPort(a.port, b.port);
+        if (r2 !== 0) return r2;
+        const r3 = cmpStr(a.protocol, b.protocol);
+        if (r3 !== 0) return r3;
+        return cmpStr(a.name, b.name);
+      });
+    }
+
+    const nextIndex = new Map();
+    for (const [gk, arr] of groupBuckets.entries()) {
+      nextIndex.set(gk, cfg.rename.template.indexStart);
+      for (const r of arr) {
+        const regionText = cfg.rename.template.regionAlias?.[r.region] || r.region;
+        const protocolText = cfg.rename.template.protocolAlias?.[r.protocol] || r.protocol;
+        const currentIndex = nextIndex.get(gk);
+        nextIndex.set(gk, currentIndex + 1);
+
+        const vars = {
+          emoji: r.emoji,
+          region: regionText,
+          protocol: protocolText,
+          index: padIndex(currentIndex, cfg.rename.template.indexPad),
+          name: templateHasEmoji ? stripLeadingEmoji(r.name) : r.name,
+          server: r.server,
+          port: r.port
+        };
+        r.name = renderTemplate(template, vars, r);
       }
     }
+  }
 
-    // 2. 模板重命名
-    if (config.value.rename.template.enabled) {
-      const tpl = config.value.rename.template.template || '';
-      const regionCode = node.region;  // 地区代码，如 'US'
-      const regionZh = REGION_NAMES[regionCode] || regionCode;  // 中文地区名，如 '美国'
-      const emoji = getEmoji(regionCode);
-      const protocol = node.protocol;
-      const idx = String(index + config.value.rename.template.indexStart).padStart(config.value.rename.template.indexPad, '0');
+  if (cfg.sort.enabled && effectiveSort.keys.length > 0) {
+    records.sort(makeComparator(effectiveSort));
+  }
 
-      let processed = tpl
-        .replace(/{name}/g, newName)
-        .replace(/{region}/g, regionCode)  // {region} 返回地区代码
-        .replace(/{emoji}/g, emoji)
-        .replace(/{protocol}/g, protocol)
-        .replace(/{index}/g, idx)
-        .replace(/{server}/g, node.server)
-        .replace(/{port}/g, node.port || '')
-
-        // Modifiers
-        .replace(/{region:UPPER}/g, regionCode.toUpperCase())  // {region:UPPER} 返回大写地区代码
-        .replace(/{region:lower}/g, regionCode.toLowerCase())
-        .replace(/{region:zh}/g, regionZh)  // {region:zh} 返回中文地区名
-        .replace(/{protocol:UPPER}/g, protocol.toUpperCase())
-        .replace(/{protocol:Title}/g, protocol.charAt(0).toUpperCase() + protocol.slice(1))
-        .replace(/{name:UPPER}/g, newName.toUpperCase())
-        .replace(/{name:lower}/g, newName.toLowerCase());
-
-      newName = processed;
-    }
-
-    return newName;
-  });
+  return records.map(r => r.name);
 });
-
-// 地区代码 -> 中文名称映射
-const REGION_NAMES = {
-  'US': '美国', 'HK': '香港', 'JP': '日本', 'SG': '新加坡', 'TW': '台湾', 'KR': '韩国',
-  'DE': '德国', 'GB': '英国', 'UK': '英国', 'TR': '土耳其', 'FR': '法国', 'CA': '加拿大', 'AU': '澳大利亚',
-  'NL': '荷兰', 'RU': '俄罗斯', 'IN': '印度', 'MY': '马来西亚', 'TH': '泰国', 'VN': '越南',
-  'PH': '菲律宾', 'ID': '印尼', 'CH': '瑞士', 'IT': '意大利', 'ES': '西班牙', 'BR': '巴西',
-  'AR': '阿根廷', 'MX': '墨西哥', 'ZA': '南非', 'EG': '埃及', 'IL': '以色列', 'AE': '阿联酋',
-  'SA': '沙特', 'PL': '波兰', 'CZ': '捷克', 'HU': '匈牙利', 'RO': '罗马尼亚', 'BG': '保加利亚',
-  'GR': '希腊', 'PT': '葡萄牙', 'SE': '瑞典', 'NO': '挪威', 'DK': '丹麦', 'FI': '芬兰', 'AT': '奥地利'
-};
-
-// 获取地区 Emoji
-function getEmoji(regionCode) {
-  const map = {
-    US: '🇺🇸', HK: '🇭🇰', JP: '🇯🇵', SG: '🇸🇬', TW: '🇨🇳', KR: '🇰🇷',
-    GB: '🇬🇧', UK: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷', CA: '🇨🇦', AU: '🇦🇺',
-    NL: '🇳🇱', RU: '🇷🇺', IN: '🇮🇳', TR: '🇹🇷', MY: '🇲🇾', TH: '🇹🇭',
-    VN: '🇻🇳', PH: '🇵🇭', ID: '🇮🇩', CH: '🇨🇭', IT: '🇮🇹', ES: '🇪🇸',
-    BR: '🇧🇷', AR: '🇦🇷', MX: '🇲🇽', ZA: '🇿🇦', EG: '🇪🇬', IL: '🇮🇱',
-    AE: '🇦🇪', SA: '🇸🇦', PL: '🇵🇱', CZ: '🇨🇿', HU: '🇭🇺', RO: '🇷🇴',
-    BG: '🇧🇬', GR: '🇬🇷', PT: '🇵🇹', SE: '🇸🇪', NO: '🇳🇴', DK: '🇩🇰', FI: '🇫🇮', AT: '🇦🇹'
-  };
-  return map[regionCode] || '🌍';
-}
 
 // --- 规则构建器 ---
 const ruleBuilder = ref({
@@ -215,41 +421,23 @@ const sanitizeHighlightedHtml = (value) => DOMPurify.sanitize(value, {
 
 const getHighlightedName = (name) => {
   const safeName = sanitizePlainText(String(name ?? ''));
-  // 如果规则构建器没有内容，直接返回原名
-  if (!ruleBuilder.value.customInput && ruleBuilder.value.targetType !== 'preset') return safeName;
+  if (!config.value.rename.regex.enabled || config.value.rename.regex.rules.length === 0) return safeName;
 
-  let pattern = '';
-  if (ruleBuilder.value.targetType === 'preset') {
-    const p = PRESETS[ruleBuilder.value.preset];
-    pattern = p ? p.pattern : '';
-  } else {
-    const raw = ruleBuilder.value.customInput;
-    if (raw) {
-      if (raw.includes('|')) {
-        pattern = raw.split('|').map(p => p.trim()).filter(Boolean).map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-      } else {
-        pattern = raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      }
+  let highlighted = safeName;
+
+  for (const rule of config.value.rename.regex.rules) {
+    if (!rule?.pattern) continue;
+    if (rule.action === 'prefix' || rule.action === 'suffix') continue;
+    try {
+      const flags = rule.flags || 'g';
+      const regex = new RegExp(`(${rule.pattern})`, flags);
+      highlighted = highlighted.replace(regex, '<span class="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 line-through decoration-red-500">$1</span>');
+    } catch (e) {
+      return safeName;
     }
   }
 
-  if (!pattern) return safeName;
-
-  try {
-    let flags = 'g';
-    if (ruleBuilder.value.targetType === 'preset') {
-      const p = PRESETS[ruleBuilder.value.preset];
-      if (p && p.flags) flags = p.flags;
-      else if (ruleBuilder.value.preset === 'emoji') flags = 'gu';
-    }
-
-    const regex = new RegExp(`(${pattern})`, flags);
-    // Highlight matches with red strikethrough
-    const highlighted = safeName.replace(regex, '<span class="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 line-through decoration-red-500">$1</span>');
-    return sanitizeHighlightedHtml(highlighted);
-  } catch (e) {
-    return safeName;
-  }
+  return sanitizeHighlightedHtml(highlighted);
 };
 
 const getRuleLabel = (rule) => {
@@ -317,12 +505,20 @@ const addVisualRule = () => {
     replacement = ruleBuilder.value.replacement;
   }
 
+  const targetDisplay = ruleBuilder.value.targetType === 'preset'
+    ? (PRESETS[ruleBuilder.value.preset]?.label || ruleBuilder.value.preset)
+    : ruleBuilder.value.customInput;
+
   config.value.rename.regex.rules.push({
     action: ruleBuilder.value.action,
     pattern,
     replacement: ruleBuilder.value.action === 'remove' ? '' : (replacement || ruleBuilder.value.replacement),
     label: getRuleLabel(ruleBuilder.value),
-    flags // Save flags to rule
+    flags,
+    _meta: {
+      action: ruleBuilder.value.action,
+      targetDisplay
+    }
   });
 
   ruleBuilder.value.customInput = '';

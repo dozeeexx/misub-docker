@@ -230,6 +230,15 @@ function getNodeName(url, protocol) {
         }
     }
 
+    const nameMatch = String(url || '').match(/[?&](name|tag)=([^&#]+)/i);
+    if (nameMatch && nameMatch[2]) {
+        try {
+            return decodeURIComponent(nameMatch[2]).trim();
+        } catch {
+            return nameMatch[2].trim();
+        }
+    }
+
     if (proto === 'vmess') {
         try {
             const payload = getSchemePayload(url, 8);
@@ -511,6 +520,20 @@ function makeComparator(sortCfg) {
                 if (r !== 0) return r * order;
                 continue;
             }
+            if (key === 'region') {
+                va = ra.regionZh || ra.region;
+                vb = rb.regionZh || rb.region;
+                if (orderMap) {
+                    const ia = orderMap.get(String(va || ''));
+                    const ib = orderMap.get(String(vb || ''));
+                    const raIdx = ia === undefined ? Number.MAX_SAFE_INTEGER : ia;
+                    const rbIdx = ib === undefined ? Number.MAX_SAFE_INTEGER : ib;
+                    if (raIdx !== rbIdx) return (raIdx - rbIdx) * order;
+                }
+                const r = cmpStr(va, vb);
+                if (r !== 0) return r * order;
+                continue;
+            }
             if (key === 'port') {
                 const r = cmpNum(ra.port, rb.port);
                 if (r !== 0) return r * order;
@@ -605,7 +628,10 @@ export function applyNodeTransformPipeline(nodeUrls, transformConfig = {}) {
     // 注意：extractNodeRegion 返回中文地区名，我们需要同时保存中文名和代码
     if (needRegionEmoji) {
         records = records.map(r => {
-            const regionZh = extractNodeRegion(r.name);           // 中文地区名，如 '美国'
+            let regionZh = extractNodeRegion(r.name);           // 中文地区名，如 '美国'
+            if (regionZh === '其他' && r.server) {
+                regionZh = extractNodeRegion(r.server);
+            }
             const regionCode = toRegionCode(regionZh);             // 地区代码，如 'US'
             const emoji = cfg.enableEmoji ? getRegionEmoji(regionZh) : '';  // emoji 需要用中文名查找
             return { ...r, region: regionCode, regionZh, emoji };
