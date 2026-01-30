@@ -22,7 +22,8 @@ const emit = defineEmits([
   'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import', 'deleteAll', 'reorder',
   'rename-group', 'delete-group',
   'set-group-filter', 'batch-update-group', 'batch-delete-nodes',
-  'update:itemsPerPage' // Added
+  'update:itemsPerPage', // Added
+  'open-batch-group-modal' // Added
 ]);
 
 const isSelectionMode = ref(false);
@@ -58,11 +59,16 @@ const toggleSelectAll = () => {
     }
 };
 
-const handleBatchGroup = (group) => {
-    emit('batch-update-group', Array.from(selectedNodeIds.value), group);
-    // Maintain selection? Or clear? Usually clear after action.
-    selectedNodeIds.value.clear();
-    isSelectionMode.value = false;
+const handleBatchGroup = () => {
+    emit('open-batch-group-modal', Array.from(selectedNodeIds.value));
+    // Do not clear selection yet, wait for action to complete?
+    // Or clear it now? If user cancels modal, selection is lost.
+    // Better to keep selection until action confirms.
+    // But if we clear here, we can't re-select easily.
+    // Let's NOT clear here. The parent can handle it or we clear on success?
+    // Actually, usually we clear after the operation is DONE.
+    // Since operation is async/handled by parent, we might need a way to clear selection.
+    // For now, let's keep selection.
 };
 
 const handleBatchDelete = () => {

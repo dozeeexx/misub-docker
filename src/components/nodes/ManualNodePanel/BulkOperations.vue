@@ -21,10 +21,7 @@ const props = defineProps({
 const emit = defineEmits(['toggle-select-all', 'batch-group', 'batch-delete', 'exit']);
 
 const handleMoveToGroup = () => {
-  const group = prompt('请输入要移动到的分组名称 (留空移动到未分组):');
-  if (group !== null) { // Cancel returns null
-    emit('batch-group', group);
-  }
+  emit('batch-group');
 };
 </script>
 

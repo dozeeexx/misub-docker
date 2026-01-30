@@ -32,6 +32,7 @@ const ProfileModal = defineAsyncComponent(() => import('../../modals/ProfileModa
 const SubscriptionImportModal = defineAsyncComponent(() => import('../../modals/SubscriptionImportModal.vue'));
 const LogModal = defineAsyncComponent(() => import('../../modals/LogModal.vue'));
 const NodePreviewModal = defineAsyncComponent(() => import('../../modals/NodePreview/NodePreviewModal.vue'));
+const BatchGroupModal = defineAsyncComponent(() => import('../../modals/BatchGroupModal.vue')); // Added
 
 // --- 基礎 Props 和狀態 ---
 const props = defineProps({ data: Object });
@@ -120,6 +121,8 @@ const showBatchDeleteModal = ref(false);
 const batchDeleteIds = ref([]);
 const showDedupModal = ref(false);
 const dedupPlan = ref(null);
+const showBatchGroupModal = ref(false); // Added
+const batchGroupIds = ref([]); // Added
 
 // 节点预览相关状态
 const showNodePreviewModal = ref(false);
@@ -261,6 +264,16 @@ const confirmBatchDelete = () => {
   showBatchDeleteModal.value = false;
 };
 
+const handleOpenBatchGroupModal = (ids) => {
+  batchGroupIds.value = ids;
+  showBatchGroupModal.value = true;
+};
+
+const handleBatchGroupConfirm = (groupName) => {
+  batchUpdateGroup(batchGroupIds.value, groupName);
+  batchGroupIds.value = [];
+};
+
 // 节点预览处理函数
 const handlePreviewSubscription = (subscriptionId) => {
   const subscription = subscriptions.value.find(s => s.id === subscriptionId);
@@ -346,7 +359,8 @@ import DashboardBanner from './DashboardBanner.vue';
           @delete-all="showDeleteNodesModal = true" @reorder="reorderManualNodes" @set-group-filter="setGroupFilter"
           @batch-update-group="(ids, group) => batchUpdateGroup(ids, group)" 
           @batch-delete-nodes="handleBatchDeleteRequest" 
-          @rename-group="renameGroup" @delete-group="deleteGroup" />
+          @rename-group="renameGroup" @delete-group="deleteGroup"
+          @open-batch-group-modal="handleOpenBatchGroupModal" />
       </div>
 
       <!-- Right Column -->
@@ -393,6 +407,8 @@ import DashboardBanner from './DashboardBanner.vue';
     @confirm="handleSaveNode" @input-url="handleNodeUrlInput" />
   <ManualNodeDedupModal v-model:show="showDedupModal" :plan="dedupPlan"
     @confirm="applyDedupPlan(dedupPlan); showDedupModal = false; dedupPlan = null" />
+  
+  <BatchGroupModal v-model:show="showBatchGroupModal" :groups="manualNodeGroups" @confirm="handleBatchGroupConfirm" />
 
   <SubscriptionEditModal v-model:show="showSubModal" :is-new="isNewSubscription"
     :editing-subscription="editingSubscription" @confirm="handleSaveSubscription" />

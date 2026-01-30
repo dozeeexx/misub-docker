@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import Modal from '../forms/Modal.vue';
+import GroupSelector from '../ui/GroupSelector.vue'; // Added
 import { useManualNodes } from '../../composables/useManualNodes.js';
 import { useDataStore } from '../../stores/useDataStore.js';
 
@@ -51,25 +52,11 @@ const handleConfirm = () => {
             <label for="import-group" class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 ml-1">
               自动分配分组 (可选)
             </label>
-            <div class="relative">
-              <input
-                id="import-group"
-                v-model="selectedGroup"
-                list="import-group-options"
-                type="text"
-                placeholder="选择或输入分组..."
-                class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all h-[50px]"
-              />
-               <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
-                  <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd" />
-                </svg>
-              </div>
-              <datalist id="import-group-options">
-                <option v-for="g in manualNodeGroups" :key="g" :value="g">{{ g }}</option>
-              </datalist>
-            </div>
+            <GroupSelector
+              v-model="selectedGroup"
+              :groups="manualNodeGroups"
+              placeholder="选择或输入分组..."
+            />
           </div>
         </div>
 
