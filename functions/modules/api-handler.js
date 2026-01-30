@@ -4,7 +4,7 @@
  */
 
 import { StorageFactory } from '../storage-adapter.js';
-import { createJsonResponse, createErrorResponse } from './utils.js';
+import { getCookieSecret, getAdminPassword, setAdminPassword, isUsingDefaultPassword, createJsonResponse, createErrorResponse } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout, createUnauthorizedResponse } from './auth-middleware.js';
 import { sendTgNotification, checkAndNotify } from './notifications.js';
 import { clearAllNodeCaches } from '../services/node-cache-service.js';
@@ -37,7 +37,9 @@ export async function handleDataRequest(env) {
         const config = {
             FileName: settings.FileName || 'MISUB',
             mytoken: settings.mytoken || 'auto',
-            profileToken: settings.profileToken || 'profiles'
+
+            profileToken: settings.profileToken || 'profiles',
+            isDefaultPassword: await isUsingDefaultPassword(env)
         };
         return createJsonResponse({ misubs, profiles, config });
     } catch (e) {
@@ -332,5 +334,32 @@ export async function handlePublicConfig(env) {
     } catch (e) {
         console.error('[API Error /public/config]', e);
         return createErrorResponse('获取公开配置失败', 'APIHandler', 500);
+    }
+}
+
+/**
+ * 处理密码更新API
+ * @param {Object} request - HTTP请求对象
+ * @param {Object} env - Cloudflare环境对象
+ * @returns {Promise<Response>} HTTP响应
+ */
+export async function handleUpdatePassword(request, env) {
+    if (request.method !== 'POST') {
+        return createErrorResponse('Method Not Allowed', 405);
+    }
+
+    try {
+        const { password } = await request.json();
+
+        if (!password || typeof password !== 'string' || password.length < 6) {
+            return createErrorResponse('密码必须至少6位字符', 400);
+        }
+
+        await setAdminPassword(env, password);
+        return createJsonResponse({ success: true, message: '密码已更新' });
+
+    } catch (e) {
+        console.error('[API Error /settings/password]', e);
+        return createErrorResponse('Failed to update password', 500);
     }
 }

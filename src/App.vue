@@ -59,6 +59,28 @@ const loginComponent = computed(() =>
   sessionStore.publicConfig?.customLoginPath ? NotFound : Login
 );
 
+const isDefaultPassword = computed(() => {
+  return sessionStore.subscriptionConfig?.isDefaultPassword === true;
+});
+
+const goToSettings = () => {
+    // Navigate to settings (if using router)
+    // For now, if no router link, we can just suggest it. 
+    // But we are in App.vue, we have access to router.
+    // Assuming UI flow allows it. 
+    // If layoutMode is 'modern' we have router. 
+    // If not, Dashboard has tabs.
+    // Let's just create a global event or rely on user navigation? 
+    // Better to provide a button.
+    if (layoutMode.value === 'modern') {
+        const { useRouter } = require('vue-router'); // dynamic import or use existing
+        // route is already imported
+        // router is not, need to use useRouter()
+    }
+};
+// Clean way: just show message and link text
+
+
 onMounted(async () => {
   initTheme();
   await checkSession();
@@ -106,8 +128,21 @@ const handleDiscard = async () => {
     >
       <div v-if="sessionState === 'loading'" class="flex justify-center p-8">Loading...</div>
       
-      <!-- LOGGED IN VIEW -->
       <template v-else-if="isLoggedIn">
+           <!-- Security Banner -->
+           <div v-if="isDefaultPassword" class="bg-red-600 px-4 py-3 text-white">
+             <div class="mx-auto flex max-w-7xl items-center justify-between">
+               <div class="flex items-center gap-3">
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                   <path fill-rule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clip-rule="evenodd" />
+                 </svg>
+                 <p class="text-sm font-medium">
+                   安全警告：检测到您正在使用默认密码 "admin"。为了您的系统安全，请立即前往设置修改密码。
+                 </p>
+               </div>
+             </div>
+           </div>
+
           <Transition name="slide-fade">
             <div v-if="showSavePrompt" 
                 class="fixed bottom-24 md:bottom-auto md:top-24 left-1/2 -translate-x-1/2 z-40 p-1.5 pr-2 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 backdrop-blur-xl border border-white/20 dark:border-white/10"

@@ -9,7 +9,49 @@ defineProps({
 });
 
 import { useToastStore } from '../../../stores/toast.js';
+import Input from '../../ui/Input.vue';
+import { ref } from 'vue';
+
 const { showToast } = useToastStore();
+
+const passwordForm = ref({
+  newPassword: '',
+  confirmPassword: ''
+});
+const isUpdatingPassword = ref(false);
+
+const handleUpdatePassword = async () => {
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    showToast('两次输入的密码不一致', 'error');
+    return;
+  }
+  if (passwordForm.value.newPassword.length < 6) {
+    showToast('密码长度至少需要6位', 'error');
+    return;
+  }
+
+  isUpdatingPassword.value = true;
+  try {
+    const res = await fetch('/api/settings/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: passwordForm.value.newPassword })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('密码更新成功', 'success');
+      passwordForm.value.newPassword = '';
+      passwordForm.value.confirmPassword = '';
+    } else {
+      showToast(data.error || '更新失败', 'error');
+    }
+  } catch (e) {
+    showToast('请求失败: ' + e.message, 'error');
+  } finally {
+    isUpdatingPassword.value = false;
+  }
+};
+
 
 const SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS subscriptions (
     id TEXT PRIMARY KEY,
@@ -119,6 +161,55 @@ const emit = defineEmits(['migrate']);
                     class="px-4 py-2 text-sm font-medium text-white rounded-xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700">导出备份</button>
                 <button @click="importBackup"
                     class="px-4 py-2 text-sm font-medium text-white rounded-xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-orange-500 hover:bg-orange-600">导入备份</button>
+            </div>
+        </div>
+
+        <!-- 管理员安全设置 -->
+        <div
+            class="bg-white/90 dark:bg-gray-900/70 rounded-3xl p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                管理员安全设置
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/70 dark:bg-gray-900/50 p-6 rounded-2xl border border-gray-200/70 dark:border-white/10">
+                <div class="space-y-4">
+                <div>
+                    <Input 
+                    label="新密码"
+                    v-model="passwordForm.newPassword"
+                    type="password"
+                    placeholder="请输入新密码"
+                    class="rounded-xl"
+                    />
+                </div>
+                <div>
+                    <Input 
+                    label="确认密码"
+                    v-model="passwordForm.confirmPassword"
+                    type="password"
+                    placeholder="请再次输入新密码"
+                    class="rounded-xl"
+                    />
+                </div>
+                </div>
+                <div class="flex items-end">
+                <button 
+                    @click="handleUpdatePassword"
+                    :disabled="isUpdatingPassword || !passwordForm.newPassword"
+                    class="px-6 py-2.5 rounded-xl text-white text-sm font-medium shadow-sm transition-all flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <svg v-if="isUpdatingPassword" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{{ isUpdatingPassword ? '更新中...' : '修改管理员密码' }}</span>
+                </button>
+                </div>
             </div>
         </div>
     </div>

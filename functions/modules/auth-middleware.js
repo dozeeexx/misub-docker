@@ -4,6 +4,7 @@
  */
 
 import { COOKIE_NAME, SESSION_DURATION } from './config.js';
+import { getCookieSecret, getAdminPassword } from './utils.js';
 
 /**
  * 创建HMAC签名的令牌
@@ -55,12 +56,13 @@ function timingSafeEqual(a, b) {
  * @returns {Promise<boolean>} 是否认证通过
  */
 export async function authMiddleware(request, env) {
-    if (!env.COOKIE_SECRET) return false;
+    const secret = await getCookieSecret(env);
+    if (!secret) return false;
     const cookie = request.headers.get('Cookie');
     const sessionCookie = cookie?.split(';').find(c => c.trim().startsWith(`${COOKIE_NAME}=`));
     if (!sessionCookie) return false;
     const token = sessionCookie.split('=')[1];
-    const verifiedData = await verifySignedToken(env.COOKIE_SECRET, token);
+    const verifiedData = await verifySignedToken(secret, token);
     return verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
 }
 
@@ -77,8 +79,10 @@ export async function handleLogin(request, env) {
 
     try {
         const { password } = await request.json();
-        if (password === env.ADMIN_PASSWORD) {
-            const token = await createSignedToken(env.COOKIE_SECRET, String(Date.now()));
+        const currentPassword = await getAdminPassword(env);
+        if (password === currentPassword) {
+            const secret = await getCookieSecret(env);
+            const token = await createSignedToken(secret, String(Date.now()));
             const headers = new Headers({ 'Content-Type': 'application/json' });
             const isSecure = request.url.startsWith('https');
             const cookieString = `${COOKIE_NAME}=${token}; Path=/; HttpOnly; ${isSecure ? 'Secure;' : ''} SameSite=Lax; Max-Age=${SESSION_DURATION / 1000}`;

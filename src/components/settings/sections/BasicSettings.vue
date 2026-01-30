@@ -9,8 +9,10 @@ defineProps({
     required: true
   }
 });
+
 import Input from '../../ui/Input.vue';
 import Switch from '../../ui/Switch.vue';
+
 </script>
 
 <template>
@@ -242,10 +244,13 @@ import Switch from '../../ui/Switch.vue';
               </svg>
               <span>伪装仅对浏览器 (User-Agent) 访问生效，不会影响 Clash、V2Ray 等代理客户端的正常订阅更新。</span>
             </div>
-          </div>
-        </div>
+      </div>
       </div>
     </div>
+  </div>
+
+
+
   </div>
 </template>
 

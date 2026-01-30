@@ -60,6 +60,66 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
     }
 }
 
+/**
+ * 获取或生成 Cookie 加密密钥
+ * 优先从 KV 读取，不存在则生成新的并保存
+ * @param {Object} env - Cloudflare环境对象
+ * @returns {Promise<string>} 密钥
+ */
+export async function getCookieSecret(env) {
+    // 1. 尝试从 KV 读取
+    const kvSecret = await env.MISUB_KV.get('SYSTEM_COOKIE_SECRET');
+    if (kvSecret) {
+        return kvSecret;
+    }
+
+    // 2. 兼容旧版：尝试读取环境变量
+    if (env.COOKIE_SECRET) {
+        // 将环境变量迁移到 KV 以便后续统一管理
+        await env.MISUB_KV.put('SYSTEM_COOKIE_SECRET', env.COOKIE_SECRET);
+        return env.COOKIE_SECRET;
+    }
+
+    // 3. 生成新密钥并保存
+    const newSecret = crypto.randomUUID();
+    await env.MISUB_KV.put('SYSTEM_COOKIE_SECRET', newSecret);
+    return newSecret;
+}
+
+/**
+ * 获取管理员密码
+ * 优先从 KV 读取，不存在则使用环境变量
+ * @param {Object} env - Cloudflare环境对象
+ * @returns {Promise<string>} 密码
+ */
+export async function getAdminPassword(env) {
+    const kvPassword = await env.MISUB_KV.get('SYSTEM_ADMIN_PASSWORD');
+    if (kvPassword) {
+        return kvPassword;
+    }
+    // Return env password if exists, otherwise default to 'admin'
+    return env.ADMIN_PASSWORD || 'admin';
+}
+
+/**
+ * 检查是否正在使用默认密码
+ * @param {Object} env 
+ * @returns {Promise<boolean>}
+ */
+export async function isUsingDefaultPassword(env) {
+    const current = await getAdminPassword(env);
+    return current === 'admin';
+}
+
+/**
+ * 设置管理员密码
+ * @param {Object} env - Cloudflare环境对象
+ * @param {string} newPassword - 新密码
+ */
+export async function setAdminPassword(env, newPassword) {
+    await env.MISUB_KV.put('SYSTEM_ADMIN_PASSWORD', newPassword);
+}
+
 export { formatBytes } from '../../src/shared/utils.js';
 
 /**
