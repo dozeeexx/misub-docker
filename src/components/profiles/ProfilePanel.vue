@@ -145,6 +145,7 @@ onUnmounted(() => {
             @move-up="handleMoveUp(index)"
             @move-down="handleMoveDown(index)"
             @view-logs="emit('viewLogs', profile.id)"
+            @copy-link="handleCopyLink(profile.id)"
           />
         </div>
       </div>
