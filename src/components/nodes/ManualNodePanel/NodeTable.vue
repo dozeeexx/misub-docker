@@ -67,7 +67,7 @@ const handleItemsPerPageChange = (event) => {
 </script>
 
 <template>
-  <div v-if="manualNodes.length > 0">
+  <div v-if="manualNodes.length > 0" :class="{ 'pb-48': isSelectionMode }">
     <!-- 如果有搜索词，显示搜索提示 -->
     <div v-if="localSearchTerm && filteredNodes.length === 0" class="text-center py-8 text-gray-500">
       <p>没有找到包含 "{{ localSearchTerm }}" 的节点</p>

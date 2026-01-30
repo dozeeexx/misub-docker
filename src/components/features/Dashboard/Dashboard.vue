@@ -342,7 +342,7 @@ const handleProfileReorder = (fromIndex, toIndex) => {
 const formattedTotalRemainingTraffic = computed(() => formatBytes(totalRemainingTraffic.value));
 
 import DashboardHeader from './DashboardHeader.vue';
-import DashboardBanner from './DashboardBanner.vue';
+import SavePrompt from '../../ui/SavePrompt.vue';
 </script>
 
 <template>
@@ -358,11 +358,11 @@ import DashboardBanner from './DashboardBanner.vue';
       @open-bulk-import="showBulkImportModal = true"
     />
 
-    <DashboardBanner
-      :is-dirty="isDirty"
-      :save-state="saveState"
-      @save="handleSave"
-      @discard="handleDiscard"
+    <SavePrompt 
+      :is-dirty="isDirty" 
+      :save-state="saveState" 
+      @save="handleSave" 
+      @discard="handleDiscard" 
     />
 
     <!-- Main Grid -->

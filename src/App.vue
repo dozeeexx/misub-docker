@@ -18,6 +18,7 @@ const PWAUpdatePrompt = defineAsyncComponent(() => import('./components/features
 const PWADevTools = defineAsyncComponent(() => import('./components/features/PWADevTools.vue'));
 const Dashboard = defineAsyncComponent(() => import('./components/features/Dashboard/Dashboard.vue'));
 const Header = defineAsyncComponent(() => import('./components/layout/Header.vue'));
+const SavePrompt = defineAsyncComponent(() => import('./components/ui/SavePrompt.vue'));
 
 const route = useRoute();
 const themeStore = useThemeStore();
@@ -143,29 +144,12 @@ const handleDiscard = async () => {
              </div>
            </div>
 
-          <Transition name="slide-fade">
-            <div v-if="showSavePrompt" 
-                class="fixed bottom-24 md:bottom-auto md:top-24 left-1/2 -translate-x-1/2 z-40 p-1.5 pr-2 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 backdrop-blur-xl border border-white/20 dark:border-white/10"
-                :class="saveState === 'success' ? 'bg-teal-500/20 text-teal-600 dark:text-teal-300 shadow-teal-500/10' : 'bg-white/80 dark:bg-gray-900/80 shadow-black/10'">
-                
-                <div class="pl-2 pr-1 flex items-center gap-2">
-                    <span v-if="saveState === 'success'" class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
-                    <span v-else class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                    <p class="text-xs font-semibold whitespace-nowrap">
-                        {{ saveState === 'success' ? '已保存更改' : '未保存更改' }}
-                    </p>
-                </div>
-
-                <div class="flex items-center gap-1">
-                    <button v-if="saveState !== 'success'" @click="handleDiscard" class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 whitespace-nowrap">
-                        放弃
-                    </button>
-                    <button @click="handleSave" :disabled="saveState !== 'idle'" class="px-4 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white rounded-full shadow-lg shadow-primary-500/30 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none whitespace-nowrap">
-                        {{ saveState === 'saving' ? '保存中...' : (saveState === 'success' ? '完成' : '立即保存') }}
-                    </button>
-                </div>
-            </div>
-          </Transition>
+          <SavePrompt 
+            :is-dirty="showSavePrompt" 
+            :save-state="saveState" 
+            @save="handleSave" 
+            @discard="handleDiscard" 
+          />
 
           <router-view v-if="layoutMode === 'modern'" v-slot="{ Component }">
             <transition name="fade" mode="out-in">
