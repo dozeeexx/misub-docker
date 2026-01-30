@@ -139,7 +139,7 @@ onUnmounted(() => {
         <div
           v-if="isOpen && groups.length > 0"
           id="group-selector-dropdown"
-          class="fixed z-[9999] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-60 overflow-auto py-1 custom-scrollbar"
+          class="absolute z-[9999] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-60 overflow-auto py-1 custom-scrollbar"
           :style="dropdownStyle"
         >
           <div v-if="filteredGroups.length === 0" class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">

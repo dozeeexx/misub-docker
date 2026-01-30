@@ -31,7 +31,7 @@ const handleConfirm = () => {
 <template>
   <Modal
     :show="show"
-    size="sm"
+    size="lg"
     @update:show="emit('update:show', $event)"
     @confirm="handleConfirm"
   >

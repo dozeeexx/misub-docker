@@ -60,6 +60,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
           class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full text-left ring-1 ring-black/5 dark:ring-white/10 flex flex-col max-h-[85vh] border border-white/20 dark:border-white/5"
           :class="{
             'max-w-sm': size === 'sm',
+            'max-w-md': size === 'md',
+            'max-w-lg': size === 'lg',
+            'max-w-xl': size === 'xl',
             'max-w-2xl': size === '2xl',
             'max-w-4xl': size === '4xl',
             'max-w-5xl': size === '5xl',
