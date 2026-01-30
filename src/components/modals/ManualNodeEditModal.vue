@@ -18,7 +18,7 @@ const dataStore = useDataStore();
 const { markDirty } = dataStore;
 
 const { addSubscriptionsFromBulk } = useSubscriptions(markDirty);
-const { addNodesFromBulk } = useManualNodes(markDirty);
+const { addNodesFromBulk, manualNodeGroups } = useManualNodes(markDirty);
 const { handleBulkImport } = useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk });
 
 // 浮动标签状态
@@ -104,7 +104,13 @@ const applySuggestedName = () => {
 
 const handleConfirm = () => {
   if (props.isNew && isMultiLine.value) {
-    handleBulkImport(props.editingNode.url, props.editingNode.colorTag);
+    // Pass group if specified (though bulk import logic might need update to support group, currently logic is simple)
+    // Actually handleBulkImport second arg was colorTag. Now it should be group.
+    // Let's check handleBulkImport usage.
+    // Line 107 in original: handleBulkImport(props.editingNode.url, props.editingNode.colorTag);
+    // Depending on useBulkImportLogic, we might need to update it too.
+    // For now, let's assume we pass group.
+    handleBulkImport(props.editingNode.url, props.editingNode.group);
     emit('update:show', false);
     return;
   }
@@ -171,69 +177,64 @@ const protocolColorMap = {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <!-- 节点名称 -->
           <div class="relative">
-            <Input
-              id="node-name"
-              v-model="editingNode.name"
-              placeholder="节点名称（可选）"
-              @focus="nameFocused = true"
-              @blur="nameFocused = false"
-            >
-              <template #icon>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-              </template>
-            </Input>
-            
-            <!-- 名称建议 -->
-            <div v-if="suggestedName && !editingNode.name" class="mt-1.5 flex items-center gap-1.5 ml-1">
-              <span class="text-xs text-gray-500 dark:text-gray-400">建议：</span>
-              <button 
-                @click="applySuggestedName"
-                class="text-xs text-indigo-500 hover:text-indigo-600 font-medium flex items-center gap-1 hover:underline"
+             <div class="flex flex-col">
+              <label for="node-name" class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 ml-1">
+                节点名称 (可选)
+              </label>
+              <Input
+                id="node-name"
+                v-model="editingNode.name"
+                placeholder="节点名称（可选）"
+                @focus="nameFocused = true"
+                @blur="nameFocused = false"
               >
-                {{ suggestedName }}
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd" />
-                </svg>
-              </button>
+                <template #icon>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                </template>
+              </Input>
+              
+              <!-- 名称建议 -->
+              <div v-if="suggestedName && !editingNode.name" class="mt-1.5 flex items-center gap-1.5 ml-1">
+                <span class="text-xs text-gray-500 dark:text-gray-400">建议：</span>
+                <button 
+                  @click="applySuggestedName"
+                  class="text-xs text-indigo-500 hover:text-indigo-600 font-medium flex items-center gap-1 hover:underline"
+                >
+                  {{ suggestedName }}
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- 颜色标签 - 紧凑样式 -->
+          <!-- 分组选择 -->
           <div class="relative">
-            <div 
-              class="relative border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20 rounded-xl px-3 py-2 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 transition-colors h-[50px] flex items-center"
-            >
-              <div class="flex items-center justify-between w-full">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs text-gray-500 dark:text-gray-400 mr-1 font-medium">标签</span>
-                  <button
-                    v-for="color in ['red', 'orange', 'green', 'blue']"
-                    :key="color"
-                    @click="editingNode.colorTag = editingNode.colorTag === color ? null : color"
-                    class="w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center hover:scale-110"
-                    :class="[
-                      editingNode.colorTag === color 
-                        ? 'border-white dark:border-gray-800 ring-2 ring-offset-1 ring-offset-white dark:ring-offset-gray-900 scale-110' 
-                        : 'border-transparent',
-                      colorMap[color],
-                      editingNode.colorTag === color ? `ring-${color}-500` : ''
-                    ]"
-                  >
-                    <svg v-if="editingNode.colorTag === color" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white drop-shadow" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                    </svg>
-                  </button>
+            <div class="flex flex-col">
+              <label for="node-group" class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 ml-1">
+                分组 (可选)
+              </label>
+              <div class="relative">
+                <input
+                  id="node-group"
+                  v-model="editingNode.group"
+                  list="group-options"
+                  type="text"
+                  placeholder="选择或输入新分组..."
+                  class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all h-[50px]"
+                />
+                 <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
+                    <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd" />
+                  </svg>
                 </div>
-                <button
-                  v-if="editingNode.colorTag"
-                  @click="editingNode.colorTag = null"
-                  class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                >
-                  清除
-                </button>
-                <span v-else class="text-xs text-gray-400">无</span>
+                <datalist id="group-options">
+                  <option v-for="g in manualNodeGroups" :key="g" :value="g">{{ g }}</option>
+                </datalist>
               </div>
             </div>
           </div>

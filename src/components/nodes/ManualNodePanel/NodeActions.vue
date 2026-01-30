@@ -14,9 +14,13 @@ const props = defineProps({
     type: String,
     default: ''
   },
-  activeColorFilter: {
+  activeGroupFilter: {
     type: String,
     default: null
+  },
+  manualNodeGroups: {
+    type: Array,
+    default: () => []
   },
   viewMode: {
     type: String,
@@ -35,7 +39,7 @@ const props = defineProps({
 const emit = defineEmits([
   'update:searchTerm',
   'update:viewMode',
-  'set-color-filter',
+  'set-group-filter',
   'add',
   'import',
   'auto-sort',
@@ -74,24 +78,22 @@ onUnmounted(() => {
       <h2 class="text-xl font-bold text-gray-900 dark:text-white">手动节点</h2>
       <span class="px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700/50 rounded-full">{{ manualNodesCount }}</span>
       
-      <!-- Mobile Color Filter -->
-      <div class="flex md:hidden items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-0.5 ml-auto sm:ml-2">
+      <!-- Mobile Group Filter -->
+      <div class="flex md:hidden items-center overflow-x-auto no-scrollbar gap-2 py-1 max-w-full">
+         <button 
+          @click="emit('set-group-filter', null)"
+          class="px-2.5 py-1 text-xs font-medium rounded-full transition-all border shrink-0 whitespace-nowrap"
+          :class="!activeGroupFilter ? 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'"
+        >全部</button>
         <button 
-          @click="emit('set-color-filter', null)"
-          class="px-3 py-1 text-xs font-medium rounded-lg transition-all !min-w-0 !min-h-0"
-          :class="!activeColorFilter ? 'bg-white dark:bg-gray-700 shadow-xs text-gray-800 dark:text-white' : 'text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200'"
-        >全</button>
-        <div class="w-px h-3 bg-gray-300 dark:bg-gray-600 mx-0.5"></div>
-        <button 
-          v-for="color in ['red', 'orange', 'green', 'blue']" 
-          :key="color"
-          @click="emit('set-color-filter', activeColorFilter === color ? null : color)"
-          class="w-6 h-6 mx-0.5 rounded-full flex items-center justify-center transition-transform !min-w-0 !min-h-0"
-          :class="[
-            `bg-${color}-500`,
-            activeColorFilter === color ? 'ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-gray-900 scale-110' : 'opacity-60'
-          ]"
-        ></button>
+          v-for="group in manualNodeGroups" 
+          :key="group"
+          @click="emit('set-group-filter', activeGroupFilter === group ? null : group)"
+          class="px-2.5 py-1 text-xs font-medium rounded-full transition-all border shrink-0 whitespace-nowrap"
+          :class="activeGroupFilter === group ? 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'"
+        >
+          {{ group }}
+        </button>
       </div>
 
       <span v-if="searchTerm" class="px-2.5 py-0.5 text-sm font-semibold text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-500/20 rounded-full w-full sm:w-auto mt-2 sm:mt-0">
@@ -99,24 +101,7 @@ onUnmounted(() => {
       </span>
     </div>
     <div class="flex items-center gap-2 w-full sm:w-auto">
-      <!-- Color Filter -->
-      <div class="hidden md:flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-0.5 mr-2 shrink-0">
-        <button 
-          @click="emit('set-color-filter', null)"
-          class="px-2 py-0.5 text-[11px] font-medium rounded-lg transition-all"
-          :class="!activeColorFilter ? 'bg-white dark:bg-gray-700 shadow-xs text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-        >全部</button>
-        <button 
-          v-for="color in ['red', 'orange', 'green', 'blue']" 
-          :key="color"
-          @click="emit('set-color-filter', color)"
-          class="w-5 h-5 mx-0.5 rounded-full flex items-center justify-center transition-transform hover:scale-110"
-          :class="[
-            `bg-${color}-500`,
-            activeColorFilter === color ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-gray-900 scale-110' : 'opacity-70 hover:opacity-100'
-          ]"
-        ></button>
-      </div>
+
 
       <div class="relative grow">
         <input 
@@ -165,6 +150,29 @@ onUnmounted(() => {
         </Transition>
       </div>
     </div>
+  </div>
+  
+  <!-- Group Filter Chips (New Line) -->
+  <div class="hidden md:flex items-center gap-2 mb-4 overflow-x-auto no-scrollbar mask-gradient-r pb-1">
+    <button 
+      @click="emit('set-group-filter', null)"
+      class="px-3 py-1 text-xs font-medium rounded-lg transition-all border shrink-0"
+      :class="!activeGroupFilter ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700/50 dark:text-indigo-300' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700'"
+    >全部</button>
+    <button 
+      @click="emit('set-group-filter', '默认')"
+      class="px-3 py-1 text-xs font-medium rounded-lg transition-all border shrink-0"
+      :class="activeGroupFilter === '默认' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700/50 dark:text-indigo-300' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700'"
+    >未分组</button>
+    <button 
+      v-for="group in manualNodeGroups" 
+      :key="group"
+      @click="emit('set-group-filter', activeGroupFilter === group ? null : group)"
+      class="px-3 py-1 text-xs font-medium rounded-lg transition-all border shrink-0"
+      :class="activeGroupFilter === group ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700/50 dark:text-indigo-300' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700'"
+    >
+      {{ group }}
+    </button>
   </div>
 </template>
 

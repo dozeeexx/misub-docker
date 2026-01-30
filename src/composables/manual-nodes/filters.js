@@ -72,7 +72,11 @@ export function filterManualNodes(nodes, searchTerm, activeColorFilter) {
   let filtered = nodes;
 
   if (activeColorFilter) {
-    filtered = filtered.filter(n => n.colorTag === activeColorFilter);
+    if (activeColorFilter === '默认') {
+      filtered = filtered.filter(n => !n.group);
+    } else {
+      filtered = filtered.filter(n => n.group === activeColorFilter);
+    }
   }
 
   if (!searchTerm) {

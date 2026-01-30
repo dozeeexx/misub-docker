@@ -13,7 +13,7 @@ const props = defineProps({
   searchTerm: String,
   viewMode: String,
   groups: { type: Array, default: () => [] },
-  activeColorFilter: { type: String, default: null }, // New
+  activeGroupFilter: { type: String, default: null }, // New
   itemsPerPage: { type: Number, default: 24 }, // Added
 });
 
@@ -21,7 +21,7 @@ const emit = defineEmits([
   'add', 'delete', 'edit', 'changePage', 'update:searchTerm', 'update:viewMode',
   'toggleSort', 'markDirty', 'autoSort', 'deduplicate', 'import', 'deleteAll', 'reorder',
   'rename-group', 'delete-group',
-  'set-color-filter', 'batch-update-color', 'batch-delete-nodes',
+  'set-group-filter', 'batch-update-group', 'batch-delete-nodes',
   'update:itemsPerPage' // Added
 ]);
 
@@ -58,8 +58,8 @@ const toggleSelectAll = () => {
     }
 };
 
-const handleBatchColor = (color) => {
-    emit('batch-update-color', Array.from(selectedNodeIds.value), color);
+const handleBatchGroup = (group) => {
+    emit('batch-update-group', Array.from(selectedNodeIds.value), group);
     // Maintain selection? Or clear? Usually clear after action.
     selectedNodeIds.value.clear();
     isSelectionMode.value = false;
@@ -296,13 +296,14 @@ const handleDeleteAll = () => {
       :manual-nodes-count="manualNodes.length"
       :filtered-nodes-count="filteredNodes.length"
       :search-term="localSearchTerm"
-      :active-color-filter="activeColorFilter"
+      :active-group-filter="activeGroupFilter"
+      :manual-node-groups="groups"
       :view-mode="viewMode"
       :is-sorting="isSorting"
       :is-selection-mode="isSelectionMode"
       @update:search-term="localSearchTerm = $event"
       @update:view-mode="handleSetViewMode"
-      @set-color-filter="emit('set-color-filter', $event)"
+      @set-group-filter="emit('set-group-filter', $event)"
       @add="handleAdd"
       @import="handleImport"
       @auto-sort="handleAutoSort"
@@ -316,8 +317,9 @@ const handleDeleteAll = () => {
       :is-selection-mode="isSelectionMode"
       :is-all-selected="isAllSelected"
       :selected-count="selectedCount"
+      :groups="groups"
       @toggle-select-all="toggleSelectAll"
-      @batch-color="handleBatchColor"
+      @batch-group="handleBatchGroup"
       @batch-delete="handleBatchDelete"
       @exit="() => { selectedNodeIds.clear(); isSelectionMode = false; }"
     />

@@ -7,7 +7,7 @@ export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk 
     const { showToast } = useToastStore();
     const showModal = ref(false);
 
-    const handleBulkImport = (importText, colorTag) => {
+    const handleBulkImport = (importText, group) => {
         if (!importText) return;
 
         const lines = importText.split('\n').map(line => line.trim()).filter(Boolean);
@@ -20,7 +20,8 @@ export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk 
                 url: line,
                 enabled: true,
                 status: 'unchecked',
-                colorTag: colorTag || null,
+                group: group || null,
+                colorTag: null,
                 // Default fields for subscriptions
                 exclude: '',
                 customUserAgent: '',

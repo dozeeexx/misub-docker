@@ -31,7 +31,7 @@ const {
   addNodesFromBulk, autoSortNodes, deduplicateNodes, buildDedupPlan, applyDedupPlan,
   reorderManualNodes,
   manualNodeGroups, renameGroup, deleteGroup,
-  activeColorFilter, setColorFilter, batchUpdateColor, batchDeleteNodes,
+  activeGroupFilter, setGroupFilter, batchUpdateGroup, batchDeleteNodes,
   manualNodesPerPage
 } = useManualNodes(markDirty);
 
@@ -101,7 +101,7 @@ const confirmBatchDelete = () => {
     <ManualNodePanel :manual-nodes="manualNodes" :paginated-manual-nodes="paginatedManualNodes"
       :current-page="manualNodesCurrentPage" :total-pages="manualNodesTotalPages" :is-sorting="isSortingNodes"
       :search-term="searchTerm" :view-mode="manualNodeViewMode" :groups="manualNodeGroups"
-      :active-color-filter="activeColorFilter" :items-per-page="manualNodesPerPage"
+      :active-group-filter="activeGroupFilter" :items-per-page="manualNodesPerPage"
       @update:items-per-page="val => manualNodesPerPage = val"
       @add="handleAddNode" @delete="handleDeleteNodeWithCleanup"
       @edit="(id) => handleEditNode(manualNodes.find(n => n.id === id))" @change-page="changeManualNodesPage"
@@ -109,7 +109,7 @@ const confirmBatchDelete = () => {
       @toggle-sort="isSortingNodes = !isSortingNodes" @mark-dirty="markDirty" @auto-sort="handleAutoSortNodes"
       @deduplicate="handleDeduplicateNodes" @import="showSubscriptionImportModal = true"
       @delete-all="showDeleteNodesModal = true" @reorder="reorderManualNodes" @rename-group="renameGroup"
-      @delete-group="deleteGroup" @set-color-filter="setColorFilter" @batch-update-color="batchUpdateColor"
+      @delete-group="deleteGroup" @set-group-filter="setGroupFilter" @batch-update-group="(ids, group) => batchUpdateGroup(ids, group)"
       @batch-delete-nodes="handleBatchDeleteRequest" />
 
     <ManualNodeEditModal v-model:show="showNodeModal" :is-new="isNewNode" :editing-node="editingNode"

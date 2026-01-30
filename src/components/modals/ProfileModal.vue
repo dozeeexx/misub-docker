@@ -4,6 +4,11 @@ import Modal from '../forms/Modal.vue';
 import ProfileForm from './ProfileModal/ProfileForm.vue';
 import SubscriptionSelector from './ProfileModal/SubscriptionSelector.vue';
 import NodeSelector from './ProfileModal/NodeSelector.vue';
+import { useManualNodes } from '../../composables/useManualNodes.js';
+import { useDataStore } from '../../stores/useDataStore.js';
+
+const dataStore = useDataStore();
+const { manualNodeGroups } = useManualNodes(dataStore.markDirty);
 
 const props = defineProps({
   show: Boolean,
@@ -18,7 +23,7 @@ const emit = defineEmits(['update:show', 'save']);
 const localProfile = ref({});
 const subscriptionSearchTerm = ref('');
 const nodeSearchTerm = ref('');
-const activeManualNodeColorFilter = ref(null);
+const activeManualNodeGroupFilter = ref(null);
 const showAdvanced = ref(false);
 const uiText = {
   prefixTitle: '\u8282\u70b9\u524d\u7f00\u8bbe\u7f6e',
@@ -156,8 +161,12 @@ const filteredSubscriptions = computed(() => {
 const filteredManualNodes = computed(() => {
   let nodes = props.allManualNodes;
 
-  if (activeManualNodeColorFilter.value) {
-    nodes = nodes.filter(n => n.colorTag === activeManualNodeColorFilter.value);
+      if (activeManualNodeGroupFilter.value) {
+    if (activeManualNodeGroupFilter.value === '默认') {
+      nodes = nodes.filter(n => !n.group);
+    } else {
+      nodes = nodes.filter(n => n.group === activeManualNodeGroupFilter.value);
+    }
   }
 
   if (!nodeSearchTerm.value) {
@@ -311,10 +320,11 @@ const handleDeselectAll = (listName, sourceArray) => {
             :nodes="allManualNodes"
             :filtered-nodes="filteredManualNodes"
             :search-term="nodeSearchTerm"
-            :active-color-filter="activeManualNodeColorFilter"
+            :active-group-filter="activeManualNodeGroupFilter"
+            :groups="manualNodeGroups"
             :selected-ids="localProfile.manualNodes || []"
             @update:search-term="nodeSearchTerm = $event"
-            @update:color-filter="activeManualNodeColorFilter = $event"
+            @update:group-filter="activeManualNodeGroupFilter = $event"
             @toggle-selection="toggleSelection('manualNodes', $event)"
             @select-all="handleSelectAll('manualNodes', filteredManualNodes)"
             @deselect-all="handleDeselectAll('manualNodes', filteredManualNodes)"

@@ -11,10 +11,21 @@ const props = defineProps({
   selectedCount: {
     type: Number,
     default: 0
+  },
+  groups: {
+    type: Array,
+    default: () => []
   }
 });
 
-const emit = defineEmits(['toggle-select-all', 'batch-color', 'batch-delete', 'exit']);
+const emit = defineEmits(['toggle-select-all', 'batch-group', 'batch-delete', 'exit']);
+
+const handleMoveToGroup = () => {
+  const group = prompt('请输入要移动到的分组名称 (留空移动到未分组):');
+  if (group !== null) { // Cancel returns null
+    emit('batch-group', group);
+  }
+};
 </script>
 
 <template>
@@ -37,18 +48,15 @@ const emit = defineEmits(['toggle-select-all', 'batch-color', 'batch-delete', 'e
 
       <div class="flex flex-col sm:flex-row items-center justify-between w-full sm:w-auto gap-3 sm:gap-2">
         <div class="flex items-center justify-center w-full sm:w-auto gap-2 sm:gap-3 overflow-x-auto no-scrollbar mask-gradient">
-          <span class="text-xs text-gray-500 hidden sm:inline">标记:</span>
+          <span class="text-xs text-gray-500 hidden sm:inline">批量操作:</span>
           <div class="flex items-center gap-3 sm:gap-2">
             <button
-              v-for="color in ['red', 'orange', 'green', 'blue']"
-              :key="color"
-              @click="emit('batch-color', color)"
-              class="w-6 h-6 sm:w-6 sm:h-6 rounded-full hover:scale-110 transition-transform ring-1 ring-black/5"
-              :class="`bg-${color}-500 shadow-sm`"
-            ></button>
+               @click="handleMoveToGroup"
+               class="text-xs font-medium px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-200 hover:bg-indigo-100 hover:text-indigo-800 transition-colors"
+            >
+              移动所属分组...
+            </button>
           </div>
-          <div class="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-1 hidden sm:block"></div>
-          <button @click="emit('batch-color', null)" class="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 whitespace-nowrap px-1 py-1 sm:px-0">清除颜色</button>
         </div>
         
         <div class="flex items-center justify-center w-full sm:w-auto gap-4 sm:gap-2 shrink-0 sm:ml-1 sm:pl-2 sm:border-l border-gray-200 dark:border-gray-600 pt-1 sm:pt-0 border-t sm:border-t-0 w-full sm:w-auto">

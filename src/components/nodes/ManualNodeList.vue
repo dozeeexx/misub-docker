@@ -64,15 +64,7 @@ const protocolStyle = computed(() => {
   return styles[p] || styles['unknown'];
 });
 
-const colorTagClass = computed(() => {
-    switch (props.node.colorTag) {
-        case 'red': return 'bg-red-500';
-        case 'orange': return 'bg-orange-500';
-        case 'green': return 'bg-green-500';
-        case 'blue': return 'bg-blue-500';
-        default: return null;
-    }
-});
+
 </script>
 
 <template>
@@ -99,8 +91,13 @@ const colorTagClass = computed(() => {
       </span>
     </div>
     
-    <!-- Color Dot -->
-    <div class="w-2.5 h-2.5 rounded-full shrink-0" :class="colorTagClass || 'opacity-0'"></div>
+    <!-- Group Badge -->
+    <div v-if="node.group" class="shrink-0 w-16 px-1">
+      <div class="text-[10px] text-center font-medium px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 truncate" :title="node.group">
+        {{ node.group }}
+      </div>
+    </div>
+    <div v-else class="shrink-0 w-0"></div>
 
     <div class="shrink-0 w-20 text-center">
       <div

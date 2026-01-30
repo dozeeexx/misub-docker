@@ -30,10 +30,10 @@ export function useManualNodes(markDirty) {
     manualNodesCurrentPage.value = 1;
   });
 
-  const activeColorFilter = ref(null); // null = all, or color string
+  const activeGroupFilter = ref(null); // null = all, or group name string
 
   const filteredManualNodes = computed(() => {
-    return filterManualNodes(manualNodes.value, searchTerm.value, activeColorFilter.value);
+    return filterManualNodes(manualNodes.value, searchTerm.value, activeGroupFilter.value);
   });
 
   const manualNodesTotalPages = computed(() => {
@@ -58,20 +58,20 @@ export function useManualNodes(markDirty) {
     manualNodesCurrentPage.value = p;
   }
 
-  function setColorFilter(color) {
-    activeColorFilter.value = color;
+  function setGroupFilter(group) {
+    activeGroupFilter.value = group;
     manualNodesCurrentPage.value = 1; // Reset to page 1
   }
 
-  function batchUpdateColor(nodeIds, color) {
+  function batchUpdateGroup(nodeIds, groupName) {
     if (!nodeIds || nodeIds.length === 0) return;
     const idsSet = new Set(nodeIds);
     const updates = manualNodes.value
       .filter(n => idsSet.has(n.id))
       .map(n => {
         // Only update if changed
-        if (n.colorTag === color) return null;
-        return { id: n.id, updates: { ...n, colorTag: color } };
+        if (n.group === groupName) return null;
+        return { id: n.id, updates: { ...n, group: groupName } };
       })
       .filter(u => u);
 
@@ -80,7 +80,7 @@ export function useManualNodes(markDirty) {
         dataStore.updateSubscription(id, updates);
       });
       markDirty();
-      showToast(`已标记 ${updates.length} 个节点`, 'success');
+      showToast(`已将 ${updates.length} 个节点移动到分组 ${groupName || '默认'}`, 'success');
     }
   }
 
@@ -253,7 +253,7 @@ export function useManualNodes(markDirty) {
     paginatedManualNodes,
     enabledManualNodesCount: computed(() => enabledManualNodes.value.length),
     searchTerm,
-    activeColorFilter, // New
+    activeGroupFilter, // New
     changeManualNodesPage,
     addNode,
     updateNode,
@@ -267,8 +267,8 @@ export function useManualNodes(markDirty) {
     reorderManualNodes, // Added
     renameGroup,
     deleteGroup,
-    setColorFilter, // New
-    batchUpdateColor, // New
+    setGroupFilter, // New
+    batchUpdateGroup, // New
     batchDeleteNodes, // New
     manualNodesPerPage // Added
   };
