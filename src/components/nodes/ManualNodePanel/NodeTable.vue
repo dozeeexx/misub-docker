@@ -254,5 +254,6 @@ const handleItemsPerPageChange = (event) => {
 }
 .remove-arrow {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 </style>
