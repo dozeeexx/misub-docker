@@ -11,7 +11,7 @@ const props = defineProps({
   isSorting: Boolean,
 });
 
-const emit = defineEmits(['add', 'delete', 'changePage', 'updateNodeCount', 'edit', 'toggleSort', 'markDirty', 'preview', 'deleteAll', 'refreshAll', 'reorder', 'import']);
+const emit = defineEmits(['add', 'delete', 'changePage', 'updateNodeCount', 'edit', 'toggleSort', 'markDirty', 'preview', 'deleteAll', 'refreshAll', 'reorder', 'import', 'qrcode']);
 
 const draggableSubscriptions = computed({
     get: () => [...props.subscriptions],
@@ -25,6 +25,7 @@ const handleDelete = (id) => emit('delete', id);
 const handleEdit = (id) => emit('edit', id);
 const handleUpdate = (id) => emit('updateNodeCount', id);
 const handlePreview = (id) => emit('preview', id);
+const handleQRCode = (id) => emit('qrcode', id);
 const handleAdd = () => emit('add');
 const handleChangePage = (page) => emit('changePage', page);
 const handleToggleSort = () => {
@@ -111,7 +112,8 @@ onUnmounted(() => {
                   @change="handleSortEnd"
                   @update="handleUpdate(subscription.id)"
                   @edit="handleEdit(subscription.id)"
-                  @preview="handlePreview(subscription.id)" />
+                  @preview="handlePreview(subscription.id)"
+                  @qrcode="handleQRCode(subscription.id)" />
           </div>
         </template>
       </draggable>
@@ -128,7 +130,8 @@ onUnmounted(() => {
                   @change="handleSortEnd"
                   @update="handleUpdate(subscription.id)"
                   @edit="handleEdit(subscription.id)"
-                  @preview="handlePreview(subscription.id)" />
+                  @preview="handlePreview(subscription.id)"
+                  @qrcode="handleQRCode(subscription.id)" />
           </div>
       </div>
       <div v-if="totalPages > 1 && !isSorting" class="flex justify-center items-center space-x-4 mt-8 text-sm font-medium">

@@ -17,7 +17,7 @@ export function useSubscriptionForms({ addSubscription, updateSubscription }) {
             url: '',
             enabled: true,
             exclude: '',
-            customUserAgent: '',
+            customUserAgent: 'MiSub',
             notes: ''
         };
         showModal.value = true;

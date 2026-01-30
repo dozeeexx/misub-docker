@@ -54,6 +54,30 @@ const handleViewLogs = (profileId) => {
         showLogModal.value = true;
     }
 };
+
+// QRCode
+const QRCodeModal = defineAsyncComponent(() => import('../components/modals/QRCodeModal.vue'));
+const showQRCodeModal = ref(false);
+const qrCodeUrl = ref('');
+const qrCodeTitle = ref('');
+const { settings } = storeToRefs(dataStore); // Check if settings is already imported or available from dataStore
+
+const handleQRCode = (profileId) => {
+    const profile = profiles.value.find(p => p.id === profileId || p.customId === profileId);
+    if (profile) {
+      if (!settings.value.profileToken) {
+          showToast("未配置订阅组 Token，无法生成链接", "error");
+          return;
+      }
+      const token = settings.value.profileToken;
+      const baseUrl = window.location.origin;
+      // Use customId if available, otherwise use id
+      const idToUse = profile.customId || profile.id;
+      qrCodeUrl.value = `${baseUrl}/sub/${token}/${idToUse}`; 
+      qrCodeTitle.value = profile.name || '订阅组二维码';
+      showQRCodeModal.value = true;
+    }
+};
 </script>
 
 <template>
@@ -75,6 +99,7 @@ const handleViewLogs = (profileId) => {
       @reorder="handleProfileReorder"
       @change-page="changeProfilesPage"
       @viewLogs="handleViewLogs"
+      @qrcode="handleQRCode"
     />
 
     <LogModal
@@ -107,6 +132,12 @@ const handleViewLogs = (profileId) => {
         :profile-id="previewProfileId"
         :profile-name="previewProfileName"
         @update:show="showNodePreviewModal = $event"
+    />
+
+    <QRCodeModal 
+        v-model:show="showQRCodeModal" 
+        :url="qrCodeUrl" 
+        :title="qrCodeTitle" 
     />
   </div>
 </template>

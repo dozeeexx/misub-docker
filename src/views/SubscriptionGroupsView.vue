@@ -77,6 +77,21 @@ const handlePreviewSubscription = (subscriptionId) => {
 
 // Bulk Import Logic
 const BulkImportModal = defineAsyncComponent(() => import('../components/modals/BulkImportModal.vue'));
+
+// QRCode
+const QRCodeModal = defineAsyncComponent(() => import('../components/modals/QRCodeModal.vue'));
+const showQRCodeModal = ref(false);
+const qrCodeUrl = ref('');
+const qrCodeTitle = ref('');
+
+const handleQRCode = (id) => {
+  const sub = subscriptions.value.find(s => s.id === id);
+  if (sub) {
+    qrCodeUrl.value = sub.url;
+    qrCodeTitle.value = sub.name || '订阅二维码';
+    showQRCodeModal.value = true;
+  }
+};
 </script>
 
 <template>
@@ -101,6 +116,7 @@ const BulkImportModal = defineAsyncComponent(() => import('../components/modals/
       @preview="handlePreviewSubscription"
       @reorder="reorderSubscriptions"
       @import="showBulkImportModal = true"
+      @qrcode="handleQRCode"
     >
         <!-- Slot removed as user requested button move to dropdown -->
     </SubscriptionPanel>
@@ -133,6 +149,12 @@ const BulkImportModal = defineAsyncComponent(() => import('../components/modals/
         :profile-id="null"
         :profile-name="''"
         @update:show="showNodePreviewModal = $event"
+    />
+
+    <QRCodeModal 
+        v-model:show="showQRCodeModal" 
+        :url="qrCodeUrl" 
+        :title="qrCodeTitle" 
     />
   </div>
 </template>

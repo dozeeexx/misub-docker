@@ -12,7 +12,7 @@ const props = defineProps({
   totalPages: Number,
 });
 
-const emit = defineEmits(['add', 'edit', 'delete', 'deleteAll', 'toggle', 'copyLink', 'preview', 'reorder', 'changePage', 'viewLogs']);
+const emit = defineEmits(['add', 'edit', 'delete', 'deleteAll', 'toggle', 'copyLink', 'preview', 'reorder', 'changePage', 'viewLogs', 'qrcode']);
 
 // [FIX] Compute profiles to display: use paginated if available, else all profiles
 const displayProfiles = computed(() => {
@@ -44,6 +44,8 @@ const handleDeleteAll = () => {
   emit('deleteAll');
   showProfilesMoreMenu.value = false;
 };
+
+const handleQRCode = (profileId) => emit('qrcode', profileId);
 
 // [新增] 排序处理函数
 const handleMoveUp = (index) => {
@@ -138,8 +140,8 @@ onUnmounted(() => {
             @edit="handleEdit(profile.id)"
             @delete="handleDelete(profile.id)"
             @change="handleToggle($event)"
-            @copy-link="handleCopyLink(profile.id)"
             @preview="handlePreview(profile.id)"
+            @qrcode="handleQRCode(profile.id)"
             @move-up="handleMoveUp(index)"
             @move-down="handleMoveDown(index)"
             @view-logs="emit('viewLogs', profile.id)"

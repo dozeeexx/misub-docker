@@ -17,6 +17,7 @@ const props = defineProps({
     <select id="sub-edit-ua" v-model="editingSubscription.customUserAgent"
       class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md dark:text-white">
       <option value="">使用默认 UA</option>
+      <option value="MiSub">MiSub</option>
       <option value="clash.meta">Clash Meta</option>
       <option value="v2rayN/7.23">v2rayN</option>
       <option value="Shadowrocket/1.9.0">Shadowrocket</option>

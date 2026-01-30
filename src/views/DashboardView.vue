@@ -85,8 +85,21 @@ const {
 const ProfileModal = defineAsyncComponent(() => import('../components/modals/ProfileModal.vue'));
 
 // --- Log Modal Logic ---
+// --- Log Modal Logic ---
 const showLogModal = ref(false);
 const LogModal = defineAsyncComponent(() => import('../components/modals/LogModal.vue'));
+
+// --- QRCode Modal Logic ---
+const QRCodeModal = defineAsyncComponent(() => import('../components/modals/QRCodeModal.vue'));
+const showQRCodeModal = ref(false);
+const qrCodeUrl = ref('');
+const qrCodeTitle = ref('');
+
+const handleQRCode = (url, title) => {
+    qrCodeUrl.value = url;
+    qrCodeTitle.value = title;
+    showQRCodeModal.value = true;
+};
 </script>
 
 <template>
@@ -162,7 +175,7 @@ const LogModal = defineAsyncComponent(() => import('../components/modals/LogModa
         </div>
 
         <div class="lg:col-span-1">
-             <RightPanel :config="settings" :profiles="profiles" />
+             <RightPanel :config="settings" :profiles="profiles" @qrcode="handleQRCode" />
         </div>
       </div>
 
@@ -187,6 +200,12 @@ const LogModal = defineAsyncComponent(() => import('../components/modals/LogModa
       <LogModal
         :show="showLogModal"
         @update:show="showLogModal = $event"
+      />
+
+      <QRCodeModal 
+        v-model:show="showQRCodeModal" 
+        :url="qrCodeUrl" 
+        :title="qrCodeTitle" 
       />
     </template>
   </div>
