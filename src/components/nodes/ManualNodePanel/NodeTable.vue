@@ -28,7 +28,8 @@ const emit = defineEmits([
   'delete',
   'sort-end',
   'change-page',
-  'update:itemsPerPage' // Added
+  'update:itemsPerPage', // Added
+  'set-group-filter' // Added
 ]);
 
 const draggableModel = computed({
@@ -91,7 +92,8 @@ const handleItemsPerPageChange = (event) => {
                 :is-selected="selectedNodeIds.has(node.id)"
                 @toggle-select="emit('toggle-select', node.id)"
                 @edit="emit('edit', node.id)" 
-                @delete="emit('delete', node.id)" />
+                @delete="emit('delete', node.id)"
+                @filter-group="emit('set-group-filter', $event)" />
             </div>
           </template>
         </draggable>
@@ -114,6 +116,7 @@ const handleItemsPerPageChange = (event) => {
                 :style="{ '--delay-index': Math.min(index, 20) }"
                 @edit="emit('edit', node.id)"
                 @delete="emit('delete', node.id)"
+                @filter-group="emit('set-group-filter', $event)"
               />
             </div>
           </template>
@@ -137,6 +140,7 @@ const handleItemsPerPageChange = (event) => {
             @toggle-select="emit('toggle-select', node.id)"
             @edit="emit('edit', node.id)" 
             @delete="emit('delete', node.id)" 
+            @filter-group="emit('set-group-filter', $event)" 
           />
         </div>
       </div>
@@ -153,6 +157,7 @@ const handleItemsPerPageChange = (event) => {
           @toggle-select="emit('toggle-select', node.id)"
           @edit="emit('edit', node.id)"
           @delete="emit('delete', node.id)"
+          @filter-group="emit('set-group-filter', $event)"
         />
       </div>
     </div>

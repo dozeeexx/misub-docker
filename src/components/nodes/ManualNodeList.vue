@@ -15,7 +15,7 @@ const props = defineProps({
   isSelected: Boolean
 });
 
-const emit = defineEmits(['delete', 'edit', 'toggle-select']);
+const emit = defineEmits(['delete', 'edit', 'toggle-select', 'filter-group']);
 
 const getProtocol = (url) => {
   try {
@@ -92,8 +92,12 @@ const protocolStyle = computed(() => {
     </div>
     
     <!-- Group Badge -->
-    <div v-if="node.group" class="shrink-0 w-16 px-1">
-      <div class="text-[10px] text-center font-medium px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 truncate" :title="node.group">
+    <div v-if="node.group" class="shrink-0 w-auto min-w-[60px] max-w-[120px] px-1">
+      <div 
+        class="text-[10px] text-center font-medium px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 truncate cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" 
+        :title="node.group"
+        @click.stop="$emit('filter-group', node.group)"
+      >
         {{ node.group }}
       </div>
     </div>

@@ -345,6 +345,7 @@ const handleDeleteAll = () => {
       @delete="handleDelete"
       @sort-end="handleSortEnd"
       @change-page="handleChangePage"
+      @set-group-filter="emit('set-group-filter', $event)"
     />
   </div>
 </template>
