@@ -80,19 +80,31 @@ export async function handleMisubRequest(context) {
                 targetMisubs = [{ id: 'expired-node', url: DEFAULT_EXPIRED_NODE, name: '您的订阅已到期', isExpiredNode: true }]; // Set expired node as the only targetMisub
             } else {
                 subName = profile.name;
-                const profileSubIds = new Set(profile.subscriptions);
-                const profileNodeIds = new Set(profile.manualNodes);
-                targetMisubs = allMisubs.filter(item => {
-                    const isSubscription = item.url.startsWith('http');
-                    const isManualNode = !isSubscription;
+                targetMisubs = [];
+                // Create a map for quick lookup
+                const misubMap = new Map(allMisubs.map(item => [item.id, item]));
 
-                    // Check if the item belongs to the current profile and is enabled
-                    const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) || (isManualNode && profileNodeIds.has(item.id));
-                    if (!item.enabled || !belongsToProfile) {
-                        return false;
-                    }
-                    return true;
-                });
+                // 1. Add subscriptions in order defined by profile
+                const profileSubIds = profile.subscriptions || [];
+                if (Array.isArray(profileSubIds)) {
+                    profileSubIds.forEach(id => {
+                        const sub = misubMap.get(id);
+                        if (sub && sub.enabled && sub.url.startsWith('http')) {
+                            targetMisubs.push(sub);
+                        }
+                    });
+                }
+
+                // 2. Add manual nodes in order defined by profile
+                const profileNodeIds = profile.manualNodes || [];
+                if (Array.isArray(profileNodeIds)) {
+                    profileNodeIds.forEach(id => {
+                        const node = misubMap.get(id);
+                        if (node && node.enabled && !node.url.startsWith('http')) {
+                            targetMisubs.push(node);
+                        }
+                    });
+                }
             }
             effectiveSubConverter = profile.subConverter && profile.subConverter.trim() !== '' ? profile.subConverter : config.subConverter;
             effectiveSubConfig = profile.subConfig && profile.subConfig.trim() !== '' ? profile.subConfig : config.subConfig;

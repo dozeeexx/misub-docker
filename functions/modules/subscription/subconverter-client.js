@@ -130,7 +130,8 @@ export async function fetchFromSubconverter(candidates, options) {
                     subconverterUrl.searchParams.set('config', subConfig);
                 }
 
-                subconverterUrl.searchParams.set('new_name', 'true');
+                // [Fixed] Do not force 'new_name=true' as it causes Subconverter to reorder/rename nodes
+                // subconverterUrl.searchParams.set('new_name', 'true');
 
                 // Timeout Control
                 const controller = new AbortController();

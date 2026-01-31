@@ -92,7 +92,9 @@ export async function handleSubscriptionNodesRequest(request, env) {
         let result;
         switch (mode) {
             case 'profile':
-                result = await handleProfileMode(request, env, profileId, userAgent, applyTransform);
+                // [Modified] Default applyTransform to true for profile preview if not specified
+                // This ensures preview matches the final output ("What You See Is What You Get")
+                result = await handleProfileMode(request, env, profileId, userAgent, requestData.applyTransform !== undefined ? requestData.applyTransform : true);
                 break;
             case 'subscription':
                 result = await handleSingleSubscriptionMode(request, env, subscriptionId, userAgent);

@@ -29,19 +29,32 @@ export async function handleProfileMode(request, env, profileId, userAgent, appl
         return createJsonResponse({ error: '订阅组不存在或已禁用' }, 404);
     }
 
-    const profileSubIds = new Set(profile.subscriptions || []);
-    const profileNodeIds = new Set(profile.manualNodes || []);
+    // Create a map for quick lookup
+    const misubMap = new Map(allSubscriptions.map(item => [item.id, item]));
 
-    // 过滤属于当前订阅组且已启用的项目
-    const targetMisubs = allSubscriptions.filter(item => {
-        const isSubscription = item.url && item.url.startsWith('http');
-        const isManualNode = !isSubscription;
+    const targetMisubs = [];
 
-        const belongsToProfile = (isSubscription && profileSubIds.has(item.id)) ||
-            (isManualNode && profileNodeIds.has(item.id));
+    // 1. Add subscriptions in order defined by profile
+    const profileSubIds = profile.subscriptions || [];
+    if (Array.isArray(profileSubIds)) {
+        profileSubIds.forEach(id => {
+            const sub = misubMap.get(id);
+            if (sub && sub.enabled && sub.url.startsWith('http')) {
+                targetMisubs.push(sub);
+            }
+        });
+    }
 
-        return item.enabled && belongsToProfile;
-    });
+    // 2. Add manual nodes in order defined by profile
+    const profileNodeIds = profile.manualNodes || [];
+    if (Array.isArray(profileNodeIds)) {
+        profileNodeIds.forEach(id => {
+            const node = misubMap.get(id);
+            if (node && node.enabled && !node.url.startsWith('http')) {
+                targetMisubs.push(node);
+            }
+        });
+    }
 
     // 分离HTTP订阅和手工节点
     const targetSubscriptions = targetMisubs.filter(item => item.url.startsWith('http'));
