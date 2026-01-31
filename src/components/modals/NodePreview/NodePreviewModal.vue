@@ -31,7 +31,7 @@ const allNodes = ref([]); // 存储所有节点
 const currentPage = ref(1);
 const pageSize = ref(24);
 const viewMode = ref('list'); // 'list' 或 'card'
-const showProcessed = ref(false); // 是否显示处理后的节点名称
+const showProcessed = ref(true); // 是否显示处理后的节点名称（默认显示处理后结果）
 
 // 响应式视图模式 - 移动端强制卡片视图
 const effectiveViewMode = computed(() => {
