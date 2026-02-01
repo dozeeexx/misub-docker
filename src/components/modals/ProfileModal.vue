@@ -251,6 +251,7 @@ const handleConfirm = () => {
       profileToSave.expiresAt = ''; 
     }
   }
+  // 顺序已由用户通过拖拽确定，无需额外排序
   emit('save', profileToSave);
 };
 
@@ -273,6 +274,11 @@ const handleSelectAll = (listName, sourceArray) => {
 const handleDeselectAll = (listName, sourceArray) => {
     const sourceIds = sourceArray.map(item => item.id);
     localProfile.value[listName] = localProfile.value[listName].filter(id => !sourceIds.includes(id));
+};
+
+// 处理拖拽排序后的 ID 顺序更新
+const updateSelectedIds = (listName, newIds) => {
+    localProfile.value[listName] = newIds;
 };
 
 </script>
@@ -311,6 +317,7 @@ const handleDeselectAll = (listName, sourceArray) => {
             :search-term="subscriptionSearchTerm"
             :selected-ids="localProfile.subscriptions || []"
             @update:search-term="subscriptionSearchTerm = $event"
+            @update:selected-ids="updateSelectedIds('subscriptions', $event)"
             @toggle-selection="toggleSelection('subscriptions', $event)"
             @select-all="handleSelectAll('subscriptions', filteredSubscriptions)"
             @deselect-all="handleDeselectAll('subscriptions', filteredSubscriptions)"
@@ -325,6 +332,7 @@ const handleDeselectAll = (listName, sourceArray) => {
             :selected-ids="localProfile.manualNodes || []"
             @update:search-term="nodeSearchTerm = $event"
             @update:group-filter="activeManualNodeGroupFilter = $event"
+            @update:selected-ids="updateSelectedIds('manualNodes', $event)"
             @toggle-selection="toggleSelection('manualNodes', $event)"
             @select-all="handleSelectAll('manualNodes', filteredManualNodes)"
             @deselect-all="handleDeselectAll('manualNodes', filteredManualNodes)"
