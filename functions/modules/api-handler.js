@@ -57,7 +57,7 @@ export async function handleDataRequest(env) {
             hasKv: !!env?.MISUB_KV,
             hasD1: !!env?.MISUB_DB
         });
-        return createErrorResponse('读取初始数据失败', 500);
+        return createErrorResponse(e, 500);
     }
 }
 

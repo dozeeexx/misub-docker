@@ -67,6 +67,9 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
  * @returns {Promise<string>} 密钥
  */
 export async function getCookieSecret(env) {
+    if (!env?.MISUB_KV) {
+        throw new Error('KV 绑定 MISUB_KV 缺失');
+    }
     // 1. 尝试从 KV 读取
     const kvSecret = await env.MISUB_KV.get('SYSTEM_COOKIE_SECRET');
     if (kvSecret) {
@@ -93,6 +96,9 @@ export async function getCookieSecret(env) {
  * @returns {Promise<string>} 密码
  */
 export async function getAdminPassword(env) {
+    if (!env?.MISUB_KV) {
+        throw new Error('KV 绑定 MISUB_KV 缺失');
+    }
     const kvPassword = await env.MISUB_KV.get('SYSTEM_ADMIN_PASSWORD');
     if (kvPassword) {
         return kvPassword;
@@ -117,6 +123,9 @@ export async function isUsingDefaultPassword(env) {
  * @param {string} newPassword - 新密码
  */
 export async function setAdminPassword(env, newPassword) {
+    if (!env?.MISUB_KV) {
+        throw new Error('KV 绑定 MISUB_KV 缺失');
+    }
     await env.MISUB_KV.put('SYSTEM_ADMIN_PASSWORD', newPassword);
 }
 

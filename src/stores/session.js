@@ -1,10 +1,11 @@
 
-import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { defineStore } from 'pinia';
+import router from '../router';
 import { fetchInitialData, login as apiLogin, fetchPublicConfig } from '../lib/api';
 import { api } from '../lib/http.js';
+import { handleError } from '../utils/errorHandler.js';
 import { useDataStore } from './useDataStore';
-import router from '../router';
 
 export const useSessionStore = defineStore('session', () => {
   const sessionState = ref('loading'); // loading, loggedIn, loggedOut
@@ -45,6 +46,9 @@ export const useSessionStore = defineStore('session', () => {
       } else {
         // Network or other error, still show logged out
         console.error("Session check failed:", dataResult.error);
+        handleError(new Error(dataResult.error || '会话检查失败'), '会话检查', {
+          errorType: dataResult.errorType
+        });
         sessionState.value = 'loggedOut';
       }
     }

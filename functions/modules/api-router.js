@@ -159,6 +159,9 @@ export async function handleApiRequest(request, env) {
 
     // Special handling for /data to return 200 OK for unauthenticated requests
     if (path === '/data') {
+        if (!env?.MISUB_KV) {
+            return createErrorResponse('KV 绑定 MISUB_KV 缺失', 500);
+        }
         if (!await authMiddleware(request, env)) {
             return createJsonResponse({
                 authenticated: false,
