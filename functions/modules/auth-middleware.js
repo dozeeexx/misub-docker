@@ -1,5 +1,7 @@
-/**
- * 认证中间件模�? * 处理用户认证和会话管�? */
+﻿/**
+ * 认证中间件模块
+ * 处理用户认证和会话管理
+ */
 
 import { COOKIE_NAME, SESSION_DURATION } from './config.js';
 import { getCookieSecret, getAdminPassword } from './utils.js';
@@ -20,7 +22,8 @@ function buildRequestMeta(request, env) {
 }
 
 /**
- * 创建HMAC签名的令�? * @param {string} key - 签名密钥
+ * 创建 HMAC 签名的令牌
+ * @param {string} key - 签名密钥
  * @param {string} data - 要签名的数据
  * @returns {Promise<string>} 签名后的令牌
  */
@@ -35,10 +38,10 @@ export async function createSignedToken(key, data) {
 }
 
 /**
- * 验证HMAC签名令牌
+ * 验证 HMAC 签名令牌
  * @param {string} key - 验证密钥
  * @param {string} token - 要验证的令牌
- * @returns {Promise<string|null>} 验证成功返回数据，失败返回null
+ * @returns {Promise<string|null>} 验证成功返回数据，失败返回 null
  */
 export async function verifySignedToken(key, token) {
     if (!key || !token) return null;
@@ -62,16 +65,16 @@ function timingSafeEqual(a, b) {
 }
 
 /**
- * 认证中间�?- 检查用户是否已登录
- * @param {Request} request - HTTP请求对象
- * @param {Object} env - Cloudflare环境对象
+ * 认证中间件 - 检查用户是否已登录
+ * @param {Request} request - HTTP 请求对象
+ * @param {Object} env - Cloudflare 环境对象
  * @returns {Promise<boolean>} 是否认证通过
  */
 export async function authMiddleware(request, env) {
     const logMeta = buildRequestMeta(request, env);
     try {
         if (!env?.MISUB_KV) {
-            console.error('[Auth] KV �� MISUB_KV ȱʧ', logMeta);
+            console.error('[Auth] KV 绑定 MISUB_KV 缺失', logMeta);
             return false;
         }
         const secret = await getCookieSecret(env);
@@ -83,15 +86,15 @@ export async function authMiddleware(request, env) {
         const verifiedData = await verifySignedToken(secret, token);
         return verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
     } catch (e) {
-        console.error('[Auth] ��Ȩʧ��', { ...logMeta, error: e?.message });
+        console.error('[Auth] 鉴权失败', { ...logMeta, error: e?.message });
         return false;
     }
 }
 
 /**
  * 处理用户登录
- * @param {Request} request - HTTP请求对象
- * @param {Object} env - Cloudflare环境对象
+ * @param {Request} request - HTTP 请求对象
+ * @param {Object} env - Cloudflare 环境对象
  * @returns {Promise<Response>} 登录响应
  */
 export async function handleLogin(request, env) {
@@ -105,12 +108,12 @@ export async function handleLogin(request, env) {
         payload = await request.json();
     } catch (e) {
         console.error('[API Error /login] Request body parse failed', { ...logMeta, error: e?.message });
-        return new Response(JSON.stringify({ error: '���������ʧ��' }), { status: 400 });
+        return new Response(JSON.stringify({ error: '请求体解析失败' }), { status: 400 });
     }
 
     if (!env?.MISUB_KV) {
-        console.error('[API Error /login] KV �� MISUB_KV ȱʧ', logMeta);
-        return new Response(JSON.stringify({ error: 'KV �� MISUB_KV ȱʧ' }), { status: 500 });
+        console.error('[API Error /login] KV 绑定 MISUB_KV 缺失', logMeta);
+        return new Response(JSON.stringify({ error: 'KV 绑定 MISUB_KV 缺失' }), { status: 500 });
     }
 
     try {
@@ -125,10 +128,10 @@ export async function handleLogin(request, env) {
             headers.append('Set-Cookie', cookieString);
             return new Response(JSON.stringify({ success: true }), { headers });
         }
-        return new Response(JSON.stringify({ error: '�������' }), { status: 401 });
+        return new Response(JSON.stringify({ error: '密码错误' }), { status: 401 });
     } catch (e) {
         console.error('[API Error /login] Login handler failed', { ...logMeta, error: e?.message });
-        return new Response(JSON.stringify({ error: '��¼����ʧ��' }), { status: 500 });
+        return new Response(JSON.stringify({ error: '登录处理失败' }), { status: 500 });
     }
 }
 
@@ -145,10 +148,10 @@ export async function handleLogout(request) {
 }
 
 /**
- * 获取认证失败的响�? * @param {string} message - 错误消息
- * @returns {Response} 401响应
+ * 获取认证失败的响应
+ * @param {string} message - 错误消息
+ * @returns {Response} 401 响应
  */
 export function createUnauthorizedResponse(message = 'Unauthorized') {
     return new Response(JSON.stringify({ error: message }), { status: 401 });
 }
-
