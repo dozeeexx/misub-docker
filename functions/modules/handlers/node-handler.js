@@ -18,13 +18,13 @@ const NODE_PROTOCOL_GLOBAL_REGEX = new RegExp('^(ss|ssr|vmess|vless|trojan|hyste
  */
 export async function handleNodeCountRequest(request, env) {
     if (request.method !== 'POST') {
-        return createErrorResponse('Method Not Allowed', 'NodeHandler', 405);
+        return createErrorResponse('Method Not Allowed', 405);
     }
 
     try {
         const { url: subUrl } = await request.json();
         if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
-            return createErrorResponse('Invalid or missing url', 'NodeHandler', 400);
+            return createErrorResponse('Invalid or missing url', 400);
         }
 
         const result = { count: 0, userInfo: null };
@@ -206,7 +206,7 @@ export async function handleNodeCountRequest(request, env) {
 
         return createJsonResponse(result);
     } catch (e) {
-        return createErrorResponse(`获取节点数量失败: ${e.message}`, 'NodeHandler', 500);
+        return createErrorResponse(`获取节点数量失败: ${e.message}`, 500);
     }
 }
 
@@ -338,7 +338,7 @@ export async function handleBatchUpdateNodesRequest(request, env) {
             }
         });
     } catch (e) {
-        return createErrorResponse(`批量更新失败: ${e.message}`, 'NodeHandler', 500);
+        return createErrorResponse(`批量更新失败: ${e.message}`, 500);
     }
 }
 
@@ -365,7 +365,7 @@ export async function handleCleanNodesRequest(request, env) {
             const previewResult = await handleSubscriptionNodesRequest(request, env);
 
             if (!previewResult.success) {
-                return createErrorResponse(`获取订阅组节点失败: ${previewResult.error}`, 'NodeHandler', 400);
+                return createErrorResponse(`获取订阅组节点失败: ${previewResult.error}`, 400);
             }
 
             // 去重处理
@@ -389,10 +389,10 @@ export async function handleCleanNodesRequest(request, env) {
             });
         } else {
             // 清理所有订阅的节点（全局清理）
-            return createErrorResponse('全局节点清理功能暂未实现，请指定profileId', 'NodeHandler', 501);
+            return createErrorResponse('全局节点清理功能暂未实现，请指定profileId', 501);
         }
     } catch (e) {
-        return createErrorResponse(`节点清理失败: ${e.message}`, 'NodeHandler', 500);
+        return createErrorResponse(`节点清理失败: ${e.message}`, 500);
     }
 }
 

@@ -27,8 +27,16 @@ async function getStorageAdapter(env) {
  * @returns {Promise<Response>} HTTP响应
  */
 export async function handleDataRequest(env) {
+    let storageType = 'unknown';
     try {
-        const storageAdapter = await getStorageAdapter(env);
+        storageType = await StorageFactory.getStorageType(env);
+        if (storageType === 'd1' && !env.MISUB_DB) {
+            console.error('[API Error /data] D1 binding missing while storageType=d1');
+        }
+        if (storageType === 'kv' && !env.MISUB_KV) {
+            console.error('[API Error /data] KV binding missing while storageType=kv');
+        }
+        const storageAdapter = StorageFactory.createAdapter(env, storageType);
         const [misubs, profiles, settings] = await Promise.all([
             storageAdapter.get(KV_KEY_SUBS).then(res => res || []),
             storageAdapter.get(KV_KEY_PROFILES).then(res => res || []),
@@ -43,8 +51,13 @@ export async function handleDataRequest(env) {
         };
         return createJsonResponse({ misubs, profiles, config });
     } catch (e) {
-        console.error('[API Error /data]', 'Failed to read from storage:', e);
-        return createErrorResponse('读取初始数据失败', 'APIHandler', 500);
+        console.error('[API Error /data] Failed to read from storage', {
+            error: e?.message,
+            storageType,
+            hasKv: !!env?.MISUB_KV,
+            hasD1: !!env?.MISUB_DB
+        });
+        return createErrorResponse('读取初始数据失败', 500);
     }
 }
 
@@ -210,7 +223,7 @@ export async function handleSettingsGet(env) {
         const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
         return createJsonResponse({ ...defaultSettings, ...settings });
     } catch (e) {
-        return createErrorResponse('读取设置失败', 'APIHandler', 500);
+        return createErrorResponse('读取设置失败', 500);
     }
 }
 
@@ -242,7 +255,7 @@ export async function handleSettingsSave(request, env) {
 
         return createJsonResponse({ success: true, message: '设置已保存' });
     } catch (e) {
-        return createErrorResponse('保存设置失败', 'APIHandler', 500);
+        return createErrorResponse('保存设置失败', 500);
     }
 }
 
@@ -310,7 +323,7 @@ export async function handlePublicProfilesRequest(env) {
         });
     } catch (e) {
         console.error('[API Error /public/profiles]', e);
-        return createErrorResponse('获取公开订阅组失败', 'APIHandler', 500);
+        return createErrorResponse('获取公开订阅组失败', 500);
     }
 }
 
@@ -333,7 +346,7 @@ export async function handlePublicConfig(env) {
         });
     } catch (e) {
         console.error('[API Error /public/config]', e);
-        return createErrorResponse('获取公开配置失败', 'APIHandler', 500);
+        return createErrorResponse('获取公开配置失败', 500);
     }
 }
 

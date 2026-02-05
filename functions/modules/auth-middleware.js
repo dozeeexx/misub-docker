@@ -91,7 +91,19 @@ export async function handleLogin(request, env) {
         }
         return new Response(JSON.stringify({ error: '密码错误' }), { status: 401 });
     } catch (e) {
-        console.error('[API Error /login]', e);
+        const logMeta = {
+            url: request.url,
+            method: request.method,
+            contentType: request.headers.get('Content-Type'),
+            contentLength: request.headers.get('Content-Length'),
+            userAgent: request.headers.get('User-Agent'),
+            origin: request.headers.get('Origin'),
+            referer: request.headers.get('Referer'),
+            cfRay: request.headers.get('CF-Ray'),
+            hasKv: !!env?.MISUB_KV,
+            hasD1: !!env?.MISUB_DB
+        };
+        console.error('[API Error /login] Request body parse failed', { ...logMeta, error: e?.message });
         return new Response(JSON.stringify({ error: '请求体解析失败' }), { status: 400 });
     }
 }

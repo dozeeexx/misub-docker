@@ -31,7 +31,7 @@ export async function handleDebugSubscriptionRequest(request, env) {
 
         // 验证必需参数
         if (!subscriptionUrl && !subscriptionId && !profileId) {
-            return createErrorResponse('请提供订阅URL、订阅ID或订阅组ID', 'DebugHandler', 400);
+            return createErrorResponse('请提供订阅URL、订阅ID或订阅组ID', 400);
         }
 
         // 使用订阅处理器获取节点信息
@@ -158,7 +158,7 @@ export async function handleSystemInfoRequest(request, env) {
             systemInfo
         });
     } catch (e) {
-        return createErrorResponse(`获取系统信息失败: ${e.message}`, 'DebugHandler', 500);
+        return createErrorResponse(`获取系统信息失败: ${e.message}`, 500);
     }
 }
 
@@ -289,7 +289,7 @@ export async function handleExportDataRequest(request, env) {
             }
         });
     } catch (e) {
-        return createErrorResponse(`数据导出失败: ${e.message}`, 'DebugHandler', 500);
+        return createErrorResponse(`数据导出失败: ${e.message}`, 500);
     }
 }
 
@@ -376,7 +376,7 @@ export async function handlePreviewContentRequest(request, env) {
             fullContent: request.fullExport ? decodedContent : null
         });
     } catch (e) {
-        return createErrorResponse(`内容预览失败: ${e.message}`, 'DebugHandler', 500);
+        return createErrorResponse(`内容预览失败: ${e.message}`, 500);
     }
 }
 
