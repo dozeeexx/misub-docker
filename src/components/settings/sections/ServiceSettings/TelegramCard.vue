@@ -355,16 +355,27 @@ async function testNotification() {
           <div class="text-sm text-green-700 dark:text-green-300 space-y-3">
             <!-- Bot 命令 -->
             <div>
-              <p class="font-medium mb-1">📖 Bot 命令</p>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 ml-4">
-                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded text-xs">/start</code> - 欢迎信息
-                </div>
-                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded text-xs">/help</code> - 帮助信息
-                </div>
-                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded text-xs">/list</code> - 节点列表
-                </div>
-                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded text-xs">/stats</code> - 统计信息
-                </div>
+              <p class="font-medium mb-1">📖 基础命令</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 ml-4 text-xs">
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/start</code> - 欢迎信息</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/help</code> - 帮助信息</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/menu</code> - 快捷菜单</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/list</code> - 节点列表</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/stats</code> - 统计信息</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/search</code> - 搜索节点</div>
+              </div>
+            </div>
+
+            <!-- 管理命令 -->
+            <div>
+              <p class="font-medium mb-1">✏️ 管理命令</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 ml-4 text-xs">
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/delete 1</code> - 删除节点</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/enable 1</code> - 启用节点</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/disable 1</code> - 禁用节点</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/rename 1 新名</code> - 重命名</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/sub</code> - 获取订阅链接</div>
+                <div><code class="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded">/delete all</code> - 删除全部</div>
               </div>
             </div>
 
@@ -373,19 +384,9 @@ async function testNotification() {
               <p class="font-medium mb-1">📤 推送方式</p>
               <ul class="space-y-0.5 ml-4 text-xs">
                 <li>• <strong class="text-green-800 dark:text-green-200">直接发送节点链接</strong>（无需命令）</li>
-                <li>• 单个：发送一条链接</li>
                 <li>• 批量：一次多条（每行一个）</li>
-                <li>• 协议：SS, VMess, Trojan, Hysteria 等</li>
+                <li>• 协议：SS, VMess, VLESS, Trojan, Hysteria 等</li>
               </ul>
-            </div>
-
-            <!-- 示例 -->
-            <div>
-              <p class="font-medium mb-1">💡 示例</p>
-              <div class="bg-green-100 dark:bg-green-800 px-2 py-1 rounded text-xs space-y-0.5">
-                <div class="font-mono">ss://YWVz...#香港节点</div>
-                <div class="text-green-700 dark:text-green-300">👆 复制粘贴，直接发送即可</div>
-              </div>
             </div>
 
             <!-- 注意事项 -->
@@ -394,7 +395,7 @@ async function testNotification() {
               <ul class="space-y-0.5 ml-4 text-xs">
                 <li>• 节点在 <strong>手动节点</strong> 页面查看</li>
                 <li>• 需在 <strong>订阅组</strong> 中勾选使用</li>
-                <li>• 限制：1000/分钟，10000/天</li>
+                <li>• 序号支持：单个(1)、多个(1,3,5)、全部(all)</li>
               </ul>
             </div>
           </div>
