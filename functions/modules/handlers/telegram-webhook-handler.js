@@ -16,10 +16,10 @@
  * /sub - 获取订阅链接
  * /info - 节点详情
  * /copy - 复制节点链接
- * /export - 导出节点
- * /import - 导入节点
  * /sort - 节点排序
  * /dup - 去重检测
+ * /bind - 绑定订阅组
+ * /unbind - 解除绑定
  */
 
 import { StorageFactory } from '../../storage-adapter.js';
@@ -344,7 +344,7 @@ async function handleStartCommand(chatId, env) {
  */
 async function handleHelpCommand(chatId, env) {
     const message =
-        '📖 <b>MiSub Bot v2 命令帮助</b>\n\n' +
+        '📖 <b>MiSub Bot 命令帮助</b>\n\n' +
         '<b>📤 添加节点</b>\n' +
         '直接发送节点链接（支持批量）\n\n' +
         '<b>📋 查看</b>\n' +
@@ -357,16 +357,13 @@ async function handleHelpCommand(chatId, env) {
         '/disable <序号> - 禁用\n' +
         '/rename <序号> <名> - 重命名\n' +
         '/delete <序号> - 删除\n\n' +
-        '<b>📦 导入导出</b>\n' +
-        '/copy <序号> - 复制链接\n' +
-        '/export - 导出节点\n' +
-        '/import <链接> - 导入节点\n\n' +
         '<b>🔧 工具</b>\n' +
+        '/bind - 绑定订阅组\n' +
         '/sort <类型> - 排序\n' +
-        '/dup - 去重检测\n' +
-        '/sub - 订阅链接\n' +
+        '/dup - 去重\n' +
+        '/copy <序号> - 复制链接\n' +
         '/menu - 快捷菜单\n\n' +
-        '序号：单个(1)、多个(1,3)、全部(all)';
+        '💡 序号支持：1 | 1,3,5 | all';
 
     await sendTelegramMessage(chatId, message, env);
 }
@@ -383,19 +380,17 @@ async function handleMenuCommand(chatId, env) {
                 { text: '🔍 搜索', callback_data: 'prompt_search' }
             ],
             [
-                { text: '📥 导入', callback_data: 'prompt_import' },
-                { text: '📤 导出', callback_data: 'cmd_export' },
-                { text: '🔗 订阅', callback_data: 'cmd_sub' }
-            ],
-            [
+                { text: '🔗 绑定', callback_data: 'cmd_bind' },
                 { text: '🔄 排序', callback_data: 'prompt_sort' },
-                { text: '🔍 去重', callback_data: 'cmd_dup' },
-                { text: '❓ 帮助', callback_data: 'cmd_help' }
+                { text: '🧹 去重', callback_data: 'cmd_dup' }
             ],
             [
                 { text: '✅ 全启用', callback_data: 'cmd_enable_all' },
-                { text: '⛔ 全禁用', callback_data: 'cmd_disable_all' },
-                { text: '🗑️ 全删除', callback_data: 'confirm_delete_all' }
+                { text: '⛔ 全禁用', callback_data: 'cmd_disable_all' }
+            ],
+            [
+                { text: '❓ 帮助', callback_data: 'cmd_help' },
+                { text: '🗑️ 清空', callback_data: 'confirm_delete_all' }
             ]
         ]
     };
@@ -738,6 +733,7 @@ async function handleSubCommand(chatId, args, env, request) {
     try {
         const storageAdapter = await getStorageAdapter(env);
         const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+        const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
 
         // 获取公开的订阅组
         const publicProfiles = profiles.filter(p => p.isPublic);
@@ -751,9 +747,16 @@ async function handleSubCommand(chatId, args, env, request) {
             return;
         }
 
-        // 获取基础 URL
-        const url = new URL(request.url);
-        const baseUrl = `${url.protocol}//${url.host}`;
+        // 获取基础 URL - 优先使用设置中的域名
+        let baseUrl = settings.custom_domain || settings.publicDomain || '';
+        if (!baseUrl && request?.url) {
+            try {
+                const url = new URL(request.url);
+                baseUrl = `${url.protocol}//${url.host}`;
+            } catch (e) {
+                baseUrl = '';
+            }
+        }
 
         if (args.length > 0) {
             // 查找指定订阅组
@@ -768,11 +771,14 @@ async function handleSubCommand(chatId, args, env, request) {
                 return;
             }
 
-            const subUrl = `${baseUrl}/sub/${profile.id}`;
-            const message =
-                `🔗 <b>${profile.name}</b>\n\n` +
-                `订阅链接：\n<code>${subUrl}</code>\n\n` +
-                `点击链接可复制`;
+            let message = `🔗 <b>${profile.name}</b>\n\n`;
+            if (baseUrl) {
+                message += `订阅链接：\n<code>${baseUrl}/sub/${profile.id}</code>\n\n`;
+                message += `点击链接可复制`;
+            } else {
+                message += `订阅组 ID：<code>${profile.id}</code>\n\n`;
+                message += `💡 请在设置中配置公开域名以获取完整链接`;
+            }
 
             await sendTelegramMessage(chatId, message, env);
 
@@ -781,12 +787,19 @@ async function handleSubCommand(chatId, args, env, request) {
             let message = `🔗 <b>订阅组列表</b>\n\n`;
 
             publicProfiles.forEach((profile, i) => {
-                const subUrl = `${baseUrl}/sub/${profile.id}`;
                 message += `<b>${i + 1}. ${profile.name}</b>\n`;
-                message += `<code>${subUrl}</code>\n\n`;
+                if (baseUrl) {
+                    message += `<code>${baseUrl}/sub/${profile.id}</code>\n\n`;
+                } else {
+                    message += `ID: <code>${profile.id}</code>\n\n`;
+                }
             });
 
-            message += `💡 使用 /sub <名称> 获取指定订阅`;
+            if (!baseUrl) {
+                message += `💡 请在设置中配置公开域名`;
+            } else {
+                message += `💡 使用 /sub <名称> 获取指定订阅`;
+            }
 
             await sendTelegramMessage(chatId, message, env);
         }
@@ -1737,6 +1750,11 @@ async function handleCallbackQuery(callbackQuery, env, request) {
             case 'cmd_dup':
                 await answerCallbackQuery(callbackQuery.id, '', env);
                 await handleDupCommand(chatId, userId, [], env);
+                break;
+
+            case 'cmd_bind':
+                await answerCallbackQuery(callbackQuery.id, '', env);
+                await handleBindCommand(chatId, userId, [], env);
                 break;
 
             case 'prompt_import':
