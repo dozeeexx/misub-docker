@@ -2082,7 +2082,9 @@ async function handleCallbackQuery(callbackQuery, env, request) {
                         { text: '✏️ 重命名', callback_data: `prompt_rename_${idx}` },
                         { text: '🗑️ 删除', callback_data: `confirm_delete_${idx}` }
                     ]);
-                    buttons.push([{ text: '◀️ 返回列表', callback_data: 'cmd_list' }]);
+                    const isSub = /^https?:\/\//i.test(node.url || '');
+                    const listCmd = isSub ? 'cmd_list_sub' : 'cmd_list_node';
+                    buttons.push([{ text: '◀️ 返回列表', callback_data: listCmd }]);
 
                     await answerCallbackQuery(callbackQuery.id, '', env);
                     await editTelegramMessage(chatId, messageId, message, env, {
