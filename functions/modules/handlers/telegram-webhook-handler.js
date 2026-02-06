@@ -357,18 +357,18 @@ async function handleHelpCommand(chatId, env) {
         '<b>📋 查看</b>\n' +
         '/list - 节点列表\n' +
         '/stats - 统计信息\n' +
-        '/info <序号> - 节点详情\n' +
-        '/search <词> - 搜索节点\n\n' +
+        '/info [序号] - 节点详情\n' +
+        '/search [词] - 搜索节点\n\n' +
         '<b>✏️ 编辑</b>\n' +
-        '/enable <序号> - 启用\n' +
-        '/disable <序号> - 禁用\n' +
-        '/rename <序号> <名> - 重命名\n' +
-        '/delete <序号> - 删除\n\n' +
+        '/enable [序号] - 启用\n' +
+        '/disable [序号] - 禁用\n' +
+        '/rename [序号] [名] - 重命名\n' +
+        '/delete [序号] - 删除\n\n' +
         '<b>🔧 工具</b>\n' +
         '/bind - 绑定订阅组\n' +
-        '/sort <类型> - 排序\n' +
+        '/sort [类型] - 排序\n' +
         '/dup - 去重\n' +
-        '/copy <序号> - 复制链接\n' +
+        '/copy [序号] - 复制链接\n' +
         '/menu - 快捷菜单\n\n' +
         '💡 序号支持：1 | 1,3,5 | all';
 
@@ -872,7 +872,7 @@ async function handleRenameCommand(chatId, userId, args, env) {
         if (args.length < 2) {
             await sendTelegramMessage(chatId,
                 '✏️ <b>重命名节点</b>\n\n' +
-                '用法：/rename <序号> <新名称>\n\n' +
+                '用法：/rename [序号] [新名称]\n\n' +
                 '示例：/rename 1 香港节点01',
                 env
             );
@@ -1415,7 +1415,7 @@ async function handleBindCommand(chatId, userId, args, env) {
                 const isCurrent = p.id === config.default_profile_id;
                 message += `${isCurrent ? '✅' : ''} ${i + 1}. ${p.name}\n`;
             });
-            message += '\n用法: /bind <序号>';
+            message += '\n用法: /bind [序号]';
 
             // 生成快捷按钮
             const buttons = profiles.slice(0, 6).map((p, i) => ({
@@ -1982,7 +1982,7 @@ async function handleCallbackQuery(callbackQuery, env, request) {
                     const idx = parseInt(data.replace('prompt_rename_', ''));
                     await answerCallbackQuery(callbackQuery.id, '', env);
                     await sendTelegramMessage(chatId,
-                        `✏️ 重命名节点 #${idx + 1}\n\n请发送：/rename ${idx + 1} <新名称>`,
+                        `✏️ 重命名节点 #${idx + 1}\n\n请发送：/rename ${idx + 1} [新名称]`,
                         env
                     );
 
