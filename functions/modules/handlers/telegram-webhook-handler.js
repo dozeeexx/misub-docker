@@ -444,10 +444,13 @@ async function handleListCommand(chatId, userId, env, page = 0) {
 
         for (let i = startIdx; i < endIdx; i++) {
             const node = userNodes[i];
-            const protocol = node.url.split('://')[0].toUpperCase();
+            const isSub = /^https?:\/\//i.test(node.url);
+            const protocol = isSub ? '订阅' : (node.url.split('://')[0].toUpperCase() || '未知');
             const status = node.enabled ? '✅' : '⛔';
             const inProfile = boundNodeIds.has(node.id) ? '🔗' : '';
-            message += `<b>${i + 1}.</b> ${status}${inProfile} ${node.name}\n`;
+            const typeIcon = isSub ? '📡 ' : '';
+
+            message += `<b>${i + 1}.</b> ${status}${inProfile} ${typeIcon}${escapeHtml(node.name)} <small>${protocol}</small>\n`;
         }
 
         message += '\n点击序号查看详情和操作';
@@ -570,6 +573,14 @@ async function handleDeleteCommand(chatId, userId, args, env) {
             return;
         }
 
+        // 收集要删除的 ID
+        const deletedIds = [];
+        for (const idx of indicesToDelete) {
+            if (allSubscriptions[idx]) {
+                deletedIds.push(allSubscriptions[idx].id);
+            }
+        }
+
         // 删除节点（从后往前删除以保持索引正确）
         indicesToDelete.sort((a, b) => b - a);
         const deletedNames = [];
@@ -579,6 +590,37 @@ async function handleDeleteCommand(chatId, userId, args, env) {
         }
 
         await storageAdapter.put(KV_KEY_SUBS, allSubscriptions);
+
+        // 3. 清理订阅组中的引用
+        try {
+            const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+            if (profiles.length > 0) {
+                let profilesUpdated = false;
+                const idsToRemove = new Set(deletedIds);
+
+                profiles.forEach(profile => {
+                    // 清理 manualNodes
+                    if (Array.isArray(profile.manualNodes)) {
+                        const prevLen = profile.manualNodes.length;
+                        profile.manualNodes = profile.manualNodes.filter(id => !idsToRemove.has(id));
+                        if (profile.manualNodes.length !== prevLen) profilesUpdated = true;
+                    }
+                    // 清理 subscriptions
+                    if (Array.isArray(profile.subscriptions)) {
+                        const prevLen = profile.subscriptions.length;
+                        profile.subscriptions = profile.subscriptions.filter(id => !idsToRemove.has(id));
+                        if (profile.subscriptions.length !== prevLen) profilesUpdated = true;
+                    }
+                });
+
+                if (profilesUpdated) {
+                    await storageAdapter.put(KV_KEY_PROFILES, profiles);
+                    console.info(`[Telegram Push] Cleaned up ${deletedIds.length} node references from profiles`);
+                }
+            }
+        } catch (cleanupError) {
+            console.error('[Telegram Push] Cleanup profiles error:', cleanupError);
+        }
 
         let message = `✅ <b>已删除 ${deletedNames.length} 个节点</b>\n\n`;
         if (deletedNames.length <= 5) {
@@ -1508,13 +1550,31 @@ async function handleNodeInput(chatId, text, userId, env) {
             return createJsonResponse({ ok: true });
         }
 
-        // 提取节点链接
-        const nodeUrls = extractNodeUrls(text);
+        // 1. 尝试提取节点链接 (SS, VLESS 等)
+        let nodeUrls = extractNodeUrls(text);
+        let importType = 'node'; // node | subscription
+
+        // 2. 如果未识别到节点，检查是否为 HTTP/HTTPS 订阅链接
+        if (nodeUrls.length === 0) {
+            const trimmedText = text.trim();
+            if (/^https?:\/\//i.test(trimmedText)) {
+                // 简单的 URL 验证
+                try {
+                    new URL(trimmedText);
+                    nodeUrls = [trimmedText];
+                    importType = 'subscription';
+                } catch (e) {
+                    // 无效 URL，忽略
+                }
+            }
+        }
 
         if (nodeUrls.length === 0) {
             await sendTelegramMessage(chatId,
-                '❌ <b>未识别到有效的节点链接</b>\n\n' +
-                '支持的协议：SS, SSR, VMess, VLESS, Trojan, Hysteria, Hysteria2, TUIC, Snell\n\n' +
+                '❌ <b>未识别到有效的链接</b>\n\n' +
+                '支持的内容：\n' +
+                '1. 节点链接 (SS, VMess, VLESS, Hysteria, etc.)\n' +
+                '2. 订阅链接 (HTTP/HTTPS)\n\n' +
                 '发送 /help 查看使用帮助',
                 env
             );
@@ -1524,12 +1584,24 @@ async function handleNodeInput(chatId, text, userId, env) {
         const storageAdapter = await getStorageAdapter(env);
         const allSubscriptions = await storageAdapter.get(KV_KEY_SUBS) || [];
 
-        // 批量添加节点
+        // 3. 批量处理与去重
         const addedNodes = [];
+        const ignoredUrls = [];
+
         for (const url of nodeUrls) {
+            // 去重检测
+            const exists = allSubscriptions.some(sub => sub.url === url);
+            if (exists) {
+                ignoredUrls.push(url);
+                continue;
+            }
+
+            const isSubscription = /^https?:\/\//i.test(url);
+            const defaultName = isSubscription ? `订阅源 ${new URL(url).hostname}` : extractNodeName(url);
+
             const node = {
                 id: generateId(),
-                name: extractNodeName(url),
+                name: defaultName,
                 url: url,
                 enabled: true,
                 source: 'telegram',
@@ -1537,77 +1609,109 @@ async function handleNodeInput(chatId, text, userId, env) {
                 created_at: new Date().toISOString()
             };
 
+            // 注意：MiSub 中订阅源也通过 KV_KEY_SUBS 存储
+            // 前端通过 URL 格式区分是“手动节点”还是“订阅源”
+            // 订阅源 -> type: subscription or implied by http protocol
+
             allSubscriptions.unshift(node);
             addedNodes.push(node);
         }
 
+        if (addedNodes.length === 0) {
+            await sendTelegramMessage(chatId,
+                `⚠️ <b>未添加任何节点</b>\n\n` +
+                `检测到 ${ignoredUrls.length} 个重复链接，已自动忽略。`,
+                env
+            );
+            return createJsonResponse({ ok: true });
+        }
+
         await storageAdapter.put(KV_KEY_SUBS, allSubscriptions);
 
-        // [Verification] Double check if the write was successful (Read-Your-Writes)
-        // 尝试立即读取并验证 ID 是否存在
+        // [Verification] Read-Your-Writes Check
         try {
             const verifySubs = await storageAdapter.get(KV_KEY_SUBS) || [];
             const isVerified = addedNodes.every(added => verifySubs.some(s => s.id === added.id));
             if (!isVerified) {
-                console.warn('[Telegram Push] KV Verification failed: Nodes not found after write');
-                // 此时虽然写入可能在传播中，但为了稳妥，提示用户可能需要等待
-                // 或者我们可以重试写入？这里选择抛出错误让用户重试
-                throw new Error('KV Write Verification Failed (Not Found). Please try again.');
+                console.warn('[Telegram Push] KV Verification failed');
+                throw new Error('KV Write Verification Failed. Please try again.');
             }
         } catch (verifyError) {
             console.error('[Telegram Push] KV Verification error:', verifyError);
-            if (verifyError.message.includes('Verification Failed')) {
-                throw verifyError;
-            }
-            // 其他读取错误忽略，因为写入可能已经成功
+            if (verifyError.message.includes('Verification Failed')) throw verifyError;
         }
 
-        // 自动关联到订阅组
+        // 4. 自动关联到订阅组 (分类处理)
         let boundProfileName = '';
         if (config.auto_bind && config.default_profile_id) {
             const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
             const targetProfile = profiles.find(p => p.id === config.default_profile_id);
 
             if (targetProfile) {
-                // 将新节点 ID 添加到订阅组的 manualNodes
-                const nodeIds = addedNodes.map(n => n.id);
-                targetProfile.manualNodes = targetProfile.manualNodes || [];
-                targetProfile.manualNodes.push(...nodeIds);
+                // 分类 ID
+                const subIds = addedNodes.filter(n => /^https?:\/\//i.test(n.url)).map(n => n.id);
+                const nodeIds = addedNodes.filter(n => !/^https?:\/\//i.test(n.url)).map(n => n.id);
 
-                await storageAdapter.put(KV_KEY_PROFILES, profiles);
-                boundProfileName = targetProfile.name;
+                let updated = false;
+
+                if (nodeIds.length > 0) {
+                    targetProfile.manualNodes = targetProfile.manualNodes || [];
+                    targetProfile.manualNodes.push(...nodeIds);
+                    updated = true;
+                }
+
+                if (subIds.length > 0) {
+                    targetProfile.subscriptions = targetProfile.subscriptions || [];
+                    targetProfile.subscriptions.push(...subIds);
+                    updated = true;
+                }
+
+                if (updated) {
+                    await storageAdapter.put(KV_KEY_PROFILES, profiles);
+                    boundProfileName = targetProfile.name;
+                }
             }
         }
 
-        // 发送成功反馈
+        // 5. 发送反馈消息
         let message;
+        const totalIgnored = ignoredUrls.length;
+        const ignoreMsg = totalIgnored > 0 ? `\n⚠️ 已跳过 ${totalIgnored} 个重复链接` : '';
+
         if (addedNodes.length === 1) {
             const node = addedNodes[0];
-            message = `✅ <b>节点添加成功！</b>\n\n` +
-                `📋 节点信息：\n` +
-                `• 名称: ${node.name}\n` +
-                `• 协议: ${node.url.split('://')[0].toUpperCase()}`;
+            const isSub = /^https?:\/\//i.test(node.url);
+            const typeLabel = isSub ? '📡 订阅源' : '🚀 节点';
+
+            message = `✅ <b>${typeLabel}添加成功！</b>\n\n` +
+                `📋 信息：\n` +
+                `• 名称: ${escapeHtml(node.name)}\n` +
+                // 对于订阅源显示域名，对于节点显示协议
+                `• 类型: ${isSub ? new URL(node.url).hostname : node.url.split('://')[0].toUpperCase()}`;
+
             if (boundProfileName) {
-                message += `\n• 已关联: ${boundProfileName}`;
+                message += `\n• 已关联: ${escapeHtml(boundProfileName)}`;
             }
-            message += `\n\n💡 发送 /list 查看节点列表`;
+            message += ignoreMsg;
+            message += `\n\n💡 发送 /list 查看列表`;
         } else {
-            message = `✅ <b>成功添加 ${addedNodes.length} 个节点</b>\n\n`;
+            message = `✅ <b>成功添加 ${addedNodes.length} 个项目</b>${ignoreMsg}\n\n`;
             addedNodes.slice(0, 5).forEach((node, index) => {
-                const protocol = node.url.split('://')[0].toUpperCase();
-                message += `${index + 1}. ${node.name} (${protocol})\n`;
+                const isSub = /^https?:\/\//i.test(node.url);
+                const label = isSub ? '[订阅]' : `[${node.url.split('://')[0].toUpperCase()}]`;
+                message += `${index + 1}. ${escapeHtml(node.name)} ${label}\n`;
             });
             if (addedNodes.length > 5) {
-                message += `... 等 ${addedNodes.length} 个节点\n`;
+                message += `... 等 ${addedNodes.length} 个\n`;
             }
             if (boundProfileName) {
-                message += `\n🔗 已关联到: ${boundProfileName}`;
+                message += `\n🔗 已关联到: ${escapeHtml(boundProfileName)}`;
             }
             message += `\n📋 发送 /list 查看完整列表`;
         }
 
         await sendTelegramMessage(chatId, message, env);
-        console.info(`[Telegram Push] User ${userId} added ${addedNodes.length} nodes${boundProfileName ? ` to ${boundProfileName}` : ''}`);
+        console.info(`[Telegram Push] User ${userId} added ${addedNodes.length} items (Ignored ${totalIgnored})`);
 
         return createJsonResponse({ ok: true });
 
