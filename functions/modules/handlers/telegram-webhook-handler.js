@@ -392,21 +392,21 @@ async function handleMenuCommand(chatId, env) {
     const keyboard = {
         inline_keyboard: [
             [
-                { text: '� 节点列表', callback_data: 'cmd_list_node' },
-                { text: '� 订阅列表', callback_data: 'cmd_list_sub' },
-                { text: '� 统计', callback_data: 'cmd_stats' }
+                { text: '\uD83D\uDE80 节点列表', callback_data: 'cmd_list_node' }, // 🚀
+                { text: '\uD83D\uDCE1 订阅列表', callback_data: 'cmd_list_sub' },  // 📡
+                { text: '\uD83D\uDCCA 统计', callback_data: 'cmd_stats' }      // 📊
             ],
             [
-                { text: '🔗 绑定', callback_data: 'cmd_bind' },
-                { text: '� 搜索', callback_data: 'prompt_search' },
-                { text: '❓ 帮助', callback_data: 'cmd_help' }
+                { text: '\uD83D\uDD17 绑定', callback_data: 'cmd_bind' },      // 🔗
+                { text: '\uD83D\uDD0D 搜索', callback_data: 'prompt_search' }, // 🔍
+                { text: '\u2753 帮助', callback_data: 'cmd_help' }            // ❓
             ],
             [
-                { text: '✅ 全启用', callback_data: 'cmd_enable_all' },
-                { text: '⛔ 全禁用', callback_data: 'cmd_disable_all' }
+                { text: '\u2705 全启用', callback_data: 'cmd_enable_all' },    // ✅
+                { text: '\u26D4 全禁用', callback_data: 'cmd_disable_all' }    // ⛔
             ],
             [
-                { text: '🗑️ 清空', callback_data: 'confirm_delete_all' }
+                { text: '\uD83D\uDDD1\uFE0F 清空', callback_data: 'confirm_delete_all' } // 🗑️
             ]
         ]
     };
@@ -432,10 +432,16 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
         let title = '列表';
         if (type === 'node') {
             userNodes = allNodes.filter(n => !/^https?:\/\//i.test(n.url || ''));
-            title = '🚀 节点列表';
+            title = '\uD83D\uDE80 节点列表'; // 🚀
         } else if (type === 'sub') {
             userNodes = allNodes.filter(n => /^https?:\/\//i.test(n.url || ''));
-            title = '📡 订阅列表';
+            title = '\uD83D\uDCE1 订阅列表'; // 📡
+        }
+
+        // DEBUG: 临时调试日志 (请在验证后删除)
+        console.log(`[List Debug] User: ${userId}, Type: ${type}, All: ${allNodes.length}, Filtered: ${userNodes.length}`);
+        if (type !== 'all') {
+            await sendTelegramMessage(chatId, `\uD83D\uDD0D Debug: Type=${type}, All=${allNodes.length}, Filtered=${userNodes.length}`, env); // 🔍
         }
 
         // 获取当前绑定的订阅组
@@ -445,7 +451,7 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
         const boundNodeIds = new Set(boundProfile?.manualNodes || []);
 
         if (userNodes.length === 0) {
-            let emptyMsg = `📋 <b>暂无${type === 'sub' ? '订阅' : (type === 'node' ? '节点' : '资源')}</b>\n\n`;
+            let emptyMsg = `\uD83D\uDCCB <b>暂无${type === 'sub' ? '订阅' : (type === 'node' ? '节点' : '资源')}</b>\n\n`; // 📋
             if (type === 'sub') emptyMsg += '发送包含 http/https 的链接即可添加订阅';
             else emptyMsg += '直接发送 ss/vless 等链接即可添加节点';
 
@@ -459,7 +465,7 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
         const startIdx = currentPage * pageSize;
         const endIdx = Math.min(startIdx + pageSize, userNodes.length);
 
-        let message = `📋 <b>${title}</b> (${userNodes.length} 个)\n`;
+        let message = `\uD83D\uDCCB <b>${title}</b> (${userNodes.length} 个)\n`; // 📋
         message += `第 ${currentPage + 1}/${totalPages} 页`;
         if (boundProfile) {
             message += ` | 绑定: ${boundProfile.name}`;
@@ -478,9 +484,9 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
                 protocol = nodeUrl.split('://')[0].toUpperCase();
             }
 
-            const status = node.enabled ? '✅' : '⛔';
-            const inProfile = boundNodeIds.has(node.id) ? '🔗' : '';
-            const typeIcon = isSub ? '📡 ' : '🚀 ';
+            const status = node.enabled ? '\u2705' : '\u26D4'; // ✅ ⛔
+            const inProfile = boundNodeIds.has(node.id) ? '\uD83D\uDD17' : ''; // 🔗
+            const typeIcon = isSub ? '\uD83D\uDCE1 ' : '\uD83D\uDE80 '; // 📡 🚀
 
             message += `<b>${i + 1}.</b> ${status}${inProfile} ${typeIcon}${escapeHtml(node.name || '未命名')} <small>${protocol}</small>\n`;
         }
@@ -550,14 +556,14 @@ async function handleStatsCommand(chatId, userId, env) {
 
         const disabledCount = userNodes.length - enabledCount;
 
-        let message = `📊 <b>统计信息</b>\n\n`;
+        let message = `\uD83D\uDCCA <b>统计信息</b>\n\n`; // 📊
         message += `资源总数: <b>${userNodes.length}</b>\n`;
         message += `├─ 订阅源: <b>${subCount}</b>\n`;
         message += `└─ 手动节点: <b>${nodeCount}</b>\n\n`;
 
         message += `状态:\n`;
-        message += `✅ 已启用: <b>${enabledCount}</b>\n`;
-        message += `⛔ 已禁用: <b>${disabledCount}</b>\n\n`;
+        message += `\u2705 已启用: <b>${enabledCount}</b>\n`; // ✅
+        message += `\u26D4 已禁用: <b>${disabledCount}</b>\n\n`; // ⛔
 
         if (Object.keys(protocolCounts).length > 0) {
             message += `<b>节点协议分布：</b>\n`;
@@ -571,7 +577,7 @@ async function handleStatsCommand(chatId, userId, env) {
         await sendTelegramMessage(chatId, message, env);
     } catch (error) {
         console.error('[Telegram Push] Stats command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 获取统计失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `\u274C 获取统计失败: ${error.message}`, env); // ❌
     }
 }
 
