@@ -486,7 +486,7 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
             const inProfile = boundNodeIds.has(node.id) ? '\uD83D\uDD17' : ''; // 🔗
             const typeIcon = isSub ? '\uD83D\uDCE1 ' : '\uD83D\uDE80 '; // 📡 🚀
 
-            message += `<b>${i + 1}.</b> ${status}${inProfile} ${typeIcon}${escapeHtml(node.name || '未命名')} <small>${protocol}</small>\n`;
+            message += `<b>${i + 1}.</b> ${status}${inProfile} ${typeIcon}${escapeHtml(node.name || '未命名')} <code>${protocol}</code>\n`;
         }
 
         message += '\n点击序号查看详情和操作';
