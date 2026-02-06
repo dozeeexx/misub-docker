@@ -302,6 +302,16 @@ async function getUserNodes(userId, env) {
     const storageAdapter = await getStorageAdapter(env);
     const allSubscriptions = await storageAdapter.get(KV_KEY_SUBS) || [];
 
+    // 检查用户是否在白名单中
+    const config = await getTelegramPushConfig(env);
+    const permission = checkUserPermission(userId, config);
+
+    // 如果用户有权限（白名单用户），则显示所有节点（包括 Web 端添加的）
+    if (permission.allowed) {
+        return allSubscriptions;
+    }
+
+    // 否则仅返回该用户通过 Telegram 添加的节点（兜底逻辑）
     return allSubscriptions.filter(sub =>
         sub.source === 'telegram' && sub.telegram_user_id === userId
     );
@@ -444,13 +454,21 @@ async function handleListCommand(chatId, userId, env, page = 0) {
 
         for (let i = startIdx; i < endIdx; i++) {
             const node = userNodes[i];
-            const isSub = /^https?:\/\//i.test(node.url);
-            const protocol = isSub ? '订阅' : (node.url.split('://')[0].toUpperCase() || '未知');
+            const nodeUrl = node.url || '';
+            const isSub = /^https?:\/\//i.test(nodeUrl);
+
+            let protocol = '未知';
+            if (isSub) {
+                protocol = '订阅';
+            } else if (nodeUrl.includes('://')) {
+                protocol = nodeUrl.split('://')[0].toUpperCase();
+            }
+
             const status = node.enabled ? '✅' : '⛔';
             const inProfile = boundNodeIds.has(node.id) ? '🔗' : '';
             const typeIcon = isSub ? '📡 ' : '';
 
-            message += `<b>${i + 1}.</b> ${status}${inProfile} ${typeIcon}${escapeHtml(node.name)} <small>${protocol}</small>\n`;
+            message += `<b>${i + 1}.</b> ${status}${inProfile} ${typeIcon}${escapeHtml(node.name || '未命名')} <small>${protocol}</small>\n`;
         }
 
         message += '\n点击序号查看详情和操作';
