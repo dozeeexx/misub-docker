@@ -53,7 +53,9 @@ async function getTelegramPushConfig(env) {
         rate_limit: config.rate_limit || {
             max_per_minute: 1000,
             max_per_day: 10000
-        }
+        },
+        default_profile_id: config.default_profile_id || '',  // 默认关联的订阅组
+        auto_bind: config.auto_bind ?? true  // 是否自动关联
     };
 }
 
@@ -376,69 +378,105 @@ async function handleMenuCommand(chatId, env) {
     const keyboard = {
         inline_keyboard: [
             [
-                { text: '📋 节点列表', callback_data: 'cmd_list' },
-                { text: '📊 统计信息', callback_data: 'cmd_stats' }
+                { text: '📋 列表', callback_data: 'cmd_list' },
+                { text: '📊 统计', callback_data: 'cmd_stats' },
+                { text: '🔍 搜索', callback_data: 'prompt_search' }
             ],
             [
-                { text: '🔗 获取订阅', callback_data: 'cmd_sub' },
-                { text: '🔍 搜索节点', callback_data: 'prompt_search' }
+                { text: '📥 导入', callback_data: 'prompt_import' },
+                { text: '📤 导出', callback_data: 'cmd_export' },
+                { text: '🔗 订阅', callback_data: 'cmd_sub' }
             ],
             [
-                { text: '✅ 全部启用', callback_data: 'cmd_enable_all' },
-                { text: '⛔ 全部禁用', callback_data: 'cmd_disable_all' }
+                { text: '🔄 排序', callback_data: 'prompt_sort' },
+                { text: '🔍 去重', callback_data: 'cmd_dup' },
+                { text: '❓ 帮助', callback_data: 'cmd_help' }
             ],
             [
-                { text: '🗑️ 删除全部', callback_data: 'confirm_delete_all' }
+                { text: '✅ 全启用', callback_data: 'cmd_enable_all' },
+                { text: '⛔ 全禁用', callback_data: 'cmd_disable_all' },
+                { text: '🗑️ 全删除', callback_data: 'confirm_delete_all' }
             ]
         ]
     };
 
-    await sendTelegramMessage(chatId, '📱 <b>快捷操作菜单</b>\n\n选择一个操作：', env, {
+    await sendTelegramMessage(chatId, '📱 <b>快捷菜单</b>', env, {
         reply_markup: keyboard
     });
 }
 
 /**
- * 处理 /list 命令 - 节点列表（带分页）
+ * 处理 /list 命令 - 节点列表（带分页和操作按钮）
  */
 async function handleListCommand(chatId, userId, env, page = 0) {
     try {
+        const storageAdapter = await getStorageAdapter(env);
         const userNodes = await getUserNodes(userId, env);
+        const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+        const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+        const config = settings.telegram_push_config || {};
+
+        // 获取当前绑定的订阅组
+        const boundProfile = config.default_profile_id
+            ? profiles.find(p => p.id === config.default_profile_id)
+            : null;
+        const boundNodeIds = new Set(boundProfile?.manualNodes || []);
 
         if (userNodes.length === 0) {
             await sendTelegramMessage(chatId, '📋 <b>暂无节点</b>\n\n直接发送节点链接即可添加', env);
             return;
         }
 
-        const pageSize = 8;
+        const pageSize = 6; // 减少每页数量以容纳更多信息
         const totalPages = Math.ceil(userNodes.length / pageSize);
         const currentPage = Math.min(Math.max(0, page), totalPages - 1);
         const startIdx = currentPage * pageSize;
         const endIdx = Math.min(startIdx + pageSize, userNodes.length);
 
         let message = `📋 <b>节点列表</b> (${userNodes.length} 个)\n`;
-        message += `第 ${currentPage + 1}/${totalPages} 页\n\n`;
+        message += `第 ${currentPage + 1}/${totalPages} 页`;
+        if (boundProfile) {
+            message += ` | 绑定: ${boundProfile.name}`;
+        }
+        message += '\n\n';
 
         for (let i = startIdx; i < endIdx; i++) {
             const node = userNodes[i];
             const protocol = node.url.split('://')[0].toUpperCase();
             const status = node.enabled ? '✅' : '⛔';
-            message += `<b>${i + 1}.</b> ${status} ${node.name}\n`;
-            message += `    <code>${protocol}</code>\n`;
+            const inProfile = boundNodeIds.has(node.id) ? '🔗' : '';
+            message += `<b>${i + 1}.</b> ${status}${inProfile} ${node.name}\n`;
+        }
+
+        message += '\n点击序号查看详情和操作';
+
+        // 构建按钮：当前页节点的快捷按钮
+        const nodeButtons = [];
+        for (let i = startIdx; i < endIdx; i++) {
+            nodeButtons.push({
+                text: `${i + 1}`,
+                callback_data: `node_action_${i}`
+            });
         }
 
         // 分页按钮
-        const buttons = [];
+        const navButtons = [];
         if (currentPage > 0) {
-            buttons.push({ text: '⬅️ 上一页', callback_data: `list_page_${currentPage - 1}` });
+            navButtons.push({ text: '⬅️', callback_data: `list_page_${currentPage - 1}` });
         }
+        navButtons.push({ text: `${currentPage + 1}/${totalPages}`, callback_data: 'noop' });
         if (currentPage < totalPages - 1) {
-            buttons.push({ text: '下一页 ➡️', callback_data: `list_page_${currentPage + 1}` });
+            navButtons.push({ text: '➡️', callback_data: `list_page_${currentPage + 1}` });
         }
 
-        const keyboard = buttons.length > 0 ? { inline_keyboard: [buttons] } : undefined;
+        const keyboard = {
+            inline_keyboard: [
+                nodeButtons,
+                navButtons
+            ]
+        };
 
-        await sendTelegramMessage(chatId, message, env, keyboard ? { reply_markup: keyboard } : {});
+        await sendTelegramMessage(chatId, message, env, { reply_markup: keyboard });
     } catch (error) {
         console.error('[Telegram Push] List command failed:', error);
         await sendTelegramMessage(chatId, `❌ 获取列表失败: ${error.message}`, env);
@@ -755,6 +793,53 @@ async function handleSubCommand(chatId, args, env, request) {
 
     } catch (error) {
         console.error('[Telegram Push] Sub command failed:', error);
+        await sendTelegramMessage(chatId, `❌ 获取订阅失败: ${error.message}`, env);
+    }
+}
+
+/**
+ * 处理订阅获取 - 简化版（用于快捷菜单，不需要 request）
+ */
+async function handleSubCommandSimple(chatId, env) {
+    try {
+        const storageAdapter = await getStorageAdapter(env);
+        const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+        const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+
+        // 获取公开的订阅组
+        const publicProfiles = profiles.filter(p => p.isPublic);
+
+        if (publicProfiles.length === 0) {
+            await sendTelegramMessage(chatId,
+                '🔗 <b>暂无公开订阅组</b>\n\n' +
+                '请在 Web 界面创建订阅组并设为公开',
+                env
+            );
+            return;
+        }
+
+        // 尝试从设置中获取域名
+        const customDomain = settings.custom_domain || settings.publicDomain || '';
+
+        let message = '🔗 <b>订阅组列表</b>\n\n';
+
+        publicProfiles.forEach((profile, i) => {
+            message += `<b>${i + 1}. ${profile.name}</b>\n`;
+            message += `ID: <code>${profile.id}</code>\n`;
+            if (customDomain) {
+                message += `链接: <code>${customDomain}/sub/${profile.id}</code>\n`;
+            }
+            message += '\n';
+        });
+
+        if (!customDomain) {
+            message += '💡 请使用 /sub 命令获取完整链接';
+        }
+
+        await sendTelegramMessage(chatId, message, env);
+
+    } catch (error) {
+        console.error('[Telegram Push] Sub command simple failed:', error);
         await sendTelegramMessage(chatId, `❌ 获取订阅失败: ${error.message}`, env);
     }
 }
@@ -1279,6 +1364,117 @@ async function handleDupCommand(chatId, userId, args, env) {
 }
 
 /**
+ * 处理 /bind 命令 - 绑定默认订阅组
+ */
+async function handleBindCommand(chatId, userId, args, env) {
+    try {
+        const storageAdapter = await getStorageAdapter(env);
+        const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+        const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+        const config = settings.telegram_push_config || {};
+
+        // 没有参数时列出订阅组
+        if (args.length === 0) {
+            if (profiles.length === 0) {
+                await sendTelegramMessage(chatId, '📋 暂无订阅组\n\n请在 Web 界面创建', env);
+                return;
+            }
+
+            let message = '🔗 <b>绑定订阅组</b>\n\n';
+            message += '当前绑定: ';
+
+            if (config.default_profile_id) {
+                const current = profiles.find(p => p.id === config.default_profile_id);
+                message += current ? `<b>${current.name}</b>` : '(已失效)';
+            } else {
+                message += '无';
+            }
+
+            message += '\n\n可用订阅组:\n';
+            profiles.forEach((p, i) => {
+                const isCurrent = p.id === config.default_profile_id;
+                message += `${isCurrent ? '✅' : ''} ${i + 1}. ${p.name}\n`;
+            });
+            message += '\n用法: /bind <序号>';
+
+            // 生成快捷按钮
+            const buttons = profiles.slice(0, 6).map((p, i) => ({
+                text: `${i + 1}. ${p.name.substring(0, 8)}`,
+                callback_data: `bind_profile_${p.id}`
+            }));
+
+            const keyboard = {
+                inline_keyboard: [
+                    buttons.slice(0, 3),
+                    buttons.slice(3, 6),
+                    [{ text: '❌ 解除绑定', callback_data: 'unbind_profile' }]
+                ].filter(row => row.length > 0)
+            };
+
+            await sendTelegramMessage(chatId, message, env, { reply_markup: keyboard });
+            return;
+        }
+
+        // 绑定指定订阅组
+        const idx = parseInt(args[0]) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= profiles.length) {
+            await sendTelegramMessage(chatId, '❌ 无效的序号', env);
+            return;
+        }
+
+        const targetProfile = profiles[idx];
+
+        // 更新配置
+        config.default_profile_id = targetProfile.id;
+        config.auto_bind = true;
+        settings.telegram_push_config = config;
+        await storageAdapter.put(KV_KEY_SETTINGS, settings);
+
+        await sendTelegramMessage(chatId,
+            `✅ <b>绑定成功</b>\n\n` +
+            `已绑定到: <b>${targetProfile.name}</b>\n\n` +
+            `之后添加的节点将自动关联到此订阅组`,
+            env
+        );
+
+    } catch (error) {
+        console.error('[Telegram Push] Bind command failed:', error);
+        await sendTelegramMessage(chatId, `❌ 绑定失败: ${error.message}`, env);
+    }
+}
+
+/**
+ * 处理 /unbind 命令 - 解除绑定
+ */
+async function handleUnbindCommand(chatId, env) {
+    try {
+        const storageAdapter = await getStorageAdapter(env);
+        const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+        const config = settings.telegram_push_config || {};
+
+        if (!config.default_profile_id) {
+            await sendTelegramMessage(chatId, '📋 当前未绑定任何订阅组', env);
+            return;
+        }
+
+        config.default_profile_id = '';
+        config.auto_bind = false;
+        settings.telegram_push_config = config;
+        await storageAdapter.put(KV_KEY_SETTINGS, settings);
+
+        await sendTelegramMessage(chatId,
+            '✅ <b>解除绑定成功</b>\n\n' +
+            '之后添加的节点将不再自动关联订阅组',
+            env
+        );
+
+    } catch (error) {
+        console.error('[Telegram Push] Unbind command failed:', error);
+        await sendTelegramMessage(chatId, `❌ 解除绑定失败: ${error.message}`, env);
+    }
+}
+
+/**
  * 处理节点输入（核心逻辑）
  */
 async function handleNodeInput(chatId, text, userId, env) {
@@ -1327,6 +1523,23 @@ async function handleNodeInput(chatId, text, userId, env) {
 
         await storageAdapter.put(KV_KEY_SUBS, allSubscriptions);
 
+        // 自动关联到订阅组
+        let boundProfileName = '';
+        if (config.auto_bind && config.default_profile_id) {
+            const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+            const targetProfile = profiles.find(p => p.id === config.default_profile_id);
+
+            if (targetProfile) {
+                // 将新节点 ID 添加到订阅组的 manualNodes
+                const nodeIds = addedNodes.map(n => n.id);
+                targetProfile.manualNodes = targetProfile.manualNodes || [];
+                targetProfile.manualNodes.push(...nodeIds);
+
+                await storageAdapter.put(KV_KEY_PROFILES, profiles);
+                boundProfileName = targetProfile.name;
+            }
+        }
+
         // 发送成功反馈
         let message;
         if (addedNodes.length === 1) {
@@ -1334,8 +1547,11 @@ async function handleNodeInput(chatId, text, userId, env) {
             message = `✅ <b>节点添加成功！</b>\n\n` +
                 `📋 节点信息：\n` +
                 `• 名称: ${node.name}\n` +
-                `• 协议: ${node.url.split('://')[0].toUpperCase()}\n\n` +
-                `💡 发送 /list 查看节点列表`;
+                `• 协议: ${node.url.split('://')[0].toUpperCase()}`;
+            if (boundProfileName) {
+                message += `\n• 已关联: ${boundProfileName}`;
+            }
+            message += `\n\n💡 发送 /list 查看节点列表`;
         } else {
             message = `✅ <b>成功添加 ${addedNodes.length} 个节点</b>\n\n`;
             addedNodes.slice(0, 5).forEach((node, index) => {
@@ -1345,11 +1561,14 @@ async function handleNodeInput(chatId, text, userId, env) {
             if (addedNodes.length > 5) {
                 message += `... 等 ${addedNodes.length} 个节点\n`;
             }
+            if (boundProfileName) {
+                message += `\n🔗 已关联到: ${boundProfileName}`;
+            }
             message += `\n📋 发送 /list 查看完整列表`;
         }
 
         await sendTelegramMessage(chatId, message, env);
-        console.info(`[Telegram Push] User ${userId} added ${addedNodes.length} nodes`);
+        console.info(`[Telegram Push] User ${userId} added ${addedNodes.length} nodes${boundProfileName ? ` to ${boundProfileName}` : ''}`);
 
         return createJsonResponse({ ok: true });
 
@@ -1449,6 +1668,14 @@ async function handleCommand(chatId, text, userId, env, request) {
             await handleDupCommand(chatId, userId, args, env);
             break;
 
+        case '/bind':
+            await handleBindCommand(chatId, userId, args, env);
+            break;
+
+        case '/unbind':
+            await handleUnbindCommand(chatId, env);
+            break;
+
         default:
             await sendTelegramMessage(chatId,
                 '❌ 未知命令\n\n发送 /help 查看可用命令\n发送 /menu 打开快捷菜单',
@@ -1493,62 +1720,199 @@ async function handleCallbackQuery(callbackQuery, env, request) {
 
             case 'cmd_sub':
                 await answerCallbackQuery(callbackQuery.id, '', env);
-                await handleSubCommand(chatId, [], env, request);
+                // 获取订阅 - 不需要 request，直接列出订阅组
+                await handleSubCommandSimple(chatId, env);
+                break;
+
+            case 'cmd_help':
+                await answerCallbackQuery(callbackQuery.id, '', env);
+                await handleHelpCommand(chatId, env);
+                break;
+
+            case 'cmd_export':
+                await answerCallbackQuery(callbackQuery.id, '', env);
+                await handleExportCommand(chatId, userId, [], env);
+                break;
+
+            case 'cmd_dup':
+                await answerCallbackQuery(callbackQuery.id, '', env);
+                await handleDupCommand(chatId, userId, [], env);
+                break;
+
+            case 'prompt_import':
+                await answerCallbackQuery(callbackQuery.id, '', env);
+                await sendTelegramMessage(chatId,
+                    '📥 <b>导入节点</b>\n\n请发送：\n/import <订阅链接>\n或\n/import <Base64>',
+                    env
+                );
+                break;
+
+            case 'prompt_sort':
+                await answerCallbackQuery(callbackQuery.id, '', env);
+                await sendTelegramMessage(chatId,
+                    '🔄 <b>排序节点</b>\n\n/sort name - 按名称\n/sort protocol - 按协议\n/sort time - 按时间\n/sort status - 按状态',
+                    env
+                );
                 break;
 
             case 'cmd_enable_all':
-                await answerCallbackQuery(callbackQuery.id, '正在启用所有节点...', env);
+                await answerCallbackQuery(callbackQuery.id, '启用中...', env);
                 await handleEnableCommand(chatId, userId, ['all'], env);
                 break;
 
             case 'cmd_disable_all':
-                await answerCallbackQuery(callbackQuery.id, '正在禁用所有节点...', env);
+                await answerCallbackQuery(callbackQuery.id, '禁用中...', env);
                 await handleDisableCommand(chatId, userId, ['all'], env);
                 break;
 
             case 'confirm_delete_all':
-                // 显示确认按钮
                 const confirmKeyboard = {
                     inline_keyboard: [
                         [
-                            { text: '⚠️ 确认删除全部', callback_data: 'do_delete_all' },
+                            { text: '⚠️ 确认删除', callback_data: 'do_delete_all' },
                             { text: '❌ 取消', callback_data: 'cancel_action' }
                         ]
                     ]
                 };
                 await answerCallbackQuery(callbackQuery.id, '', env);
                 await editTelegramMessage(chatId, messageId,
-                    '⚠️ <b>确认删除全部节点？</b>\n\n此操作不可撤销！',
+                    '⚠️ <b>确认删除全部？</b>',
                     env, { reply_markup: confirmKeyboard }
                 );
                 break;
 
             case 'do_delete_all':
-                await answerCallbackQuery(callbackQuery.id, '正在删除...', env);
+                await answerCallbackQuery(callbackQuery.id, '删除中...', env);
                 await handleDeleteCommand(chatId, userId, ['all'], env);
                 break;
 
             case 'cancel_action':
                 await answerCallbackQuery(callbackQuery.id, '已取消', env);
-                await editTelegramMessage(chatId, messageId, '❌ 操作已取消', env);
+                await editTelegramMessage(chatId, messageId, '❌ 已取消', env);
                 break;
 
             case 'prompt_search':
                 await answerCallbackQuery(callbackQuery.id, '', env);
                 await sendTelegramMessage(chatId,
-                    '🔍 请发送搜索关键词\n\n格式：/search <关键词>\n示例：/search 香港',
+                    '🔍 <b>搜索节点</b>\n\n请发送：/search <关键词>\n例：/search 香港',
                     env
                 );
                 break;
 
             case 'cmd_dup_clean':
-                await answerCallbackQuery(callbackQuery.id, '正在清理重复节点...', env);
+                await answerCallbackQuery(callbackQuery.id, '清理中...', env);
                 await handleDupCommand(chatId, userId, ['clean'], env);
                 break;
 
             default:
                 // 处理动态回调
-                if (data.startsWith('copy_node_')) {
+                if (data.startsWith('node_action_')) {
+                    // 节点操作面板
+                    const idx = parseInt(data.replace('node_action_', ''));
+                    const storageAdapter = await getStorageAdapter(env);
+                    const userNodes = await getUserNodes(userId, env);
+                    const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+                    const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+                    const config = settings.telegram_push_config || {};
+
+                    if (idx < 0 || idx >= userNodes.length) {
+                        await answerCallbackQuery(callbackQuery.id, '节点不存在', env, true);
+                        return createJsonResponse({ ok: true });
+                    }
+
+                    const node = userNodes[idx];
+                    const boundProfile = config.default_profile_id
+                        ? profiles.find(p => p.id === config.default_profile_id)
+                        : null;
+                    const isInProfile = boundProfile?.manualNodes?.includes(node.id);
+
+                    const protocol = node.url.split('://')[0].toUpperCase();
+                    let message = `📋 <b>节点 #${idx + 1}</b>\n\n`;
+                    message += `名称: ${node.name}\n`;
+                    message += `协议: ${protocol}\n`;
+                    message += `状态: ${node.enabled ? '✅ 启用' : '⛔ 禁用'}\n`;
+                    if (boundProfile) {
+                        message += `订阅组: ${isInProfile ? '🔗 已关联' : '未关联'}\n`;
+                    }
+
+                    // 构建操作按钮
+                    const buttons = [
+                        [
+                            { text: node.enabled ? '⛔ 禁用' : '✅ 启用', callback_data: `toggle_node_${idx}` },
+                            { text: '📋 复制', callback_data: `copy_node_${idx}` }
+                        ]
+                    ];
+
+                    // 如果有绑定的订阅组，添加关联/取消关联按钮
+                    if (boundProfile) {
+                        buttons.push([{
+                            text: isInProfile ? '➖ 从订阅组移除' : '➕ 添加到订阅组',
+                            callback_data: isInProfile ? `unlink_node_${idx}` : `link_node_${idx}`
+                        }]);
+                    }
+
+                    buttons.push([
+                        { text: '✏️ 重命名', callback_data: `prompt_rename_${idx}` },
+                        { text: '🗑️ 删除', callback_data: `confirm_delete_${idx}` }
+                    ]);
+                    buttons.push([{ text: '◀️ 返回列表', callback_data: 'cmd_list' }]);
+
+                    await answerCallbackQuery(callbackQuery.id, '', env);
+                    await editTelegramMessage(chatId, messageId, message, env, {
+                        reply_markup: { inline_keyboard: buttons }
+                    });
+
+                } else if (data.startsWith('link_node_')) {
+                    // 添加节点到订阅组
+                    const idx = parseInt(data.replace('link_node_', ''));
+                    const storageAdapter = await getStorageAdapter(env);
+                    const userNodes = await getUserNodes(userId, env);
+                    const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+                    const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+                    const config = settings.telegram_push_config || {};
+
+                    if (idx >= 0 && idx < userNodes.length && config.default_profile_id) {
+                        const node = userNodes[idx];
+                        const profile = profiles.find(p => p.id === config.default_profile_id);
+                        if (profile) {
+                            profile.manualNodes = profile.manualNodes || [];
+                            if (!profile.manualNodes.includes(node.id)) {
+                                profile.manualNodes.push(node.id);
+                                await storageAdapter.put(KV_KEY_PROFILES, profiles);
+                            }
+                            await answerCallbackQuery(callbackQuery.id, `已添加到 ${profile.name}`, env);
+                            // 刷新操作面板
+                            await editTelegramMessage(chatId, messageId,
+                                `✅ 节点 #${idx + 1} 已添加到 <b>${profile.name}</b>`, env);
+                        }
+                    } else {
+                        await answerCallbackQuery(callbackQuery.id, '操作失败', env, true);
+                    }
+
+                } else if (data.startsWith('unlink_node_')) {
+                    // 从订阅组移除节点
+                    const idx = parseInt(data.replace('unlink_node_', ''));
+                    const storageAdapter = await getStorageAdapter(env);
+                    const userNodes = await getUserNodes(userId, env);
+                    const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+                    const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+                    const config = settings.telegram_push_config || {};
+
+                    if (idx >= 0 && idx < userNodes.length && config.default_profile_id) {
+                        const node = userNodes[idx];
+                        const profile = profiles.find(p => p.id === config.default_profile_id);
+                        if (profile && profile.manualNodes) {
+                            profile.manualNodes = profile.manualNodes.filter(id => id !== node.id);
+                            await storageAdapter.put(KV_KEY_PROFILES, profiles);
+                            await answerCallbackQuery(callbackQuery.id, `已从 ${profile.name} 移除`, env);
+                            await editTelegramMessage(chatId, messageId,
+                                `✅ 节点 #${idx + 1} 已从 <b>${profile.name}</b> 移除`, env);
+                        }
+                    } else {
+                        await answerCallbackQuery(callbackQuery.id, '操作失败', env, true);
+                    }
+
+                } else if (data.startsWith('copy_node_')) {
                     const idx = parseInt(data.replace('copy_node_', ''));
                     await answerCallbackQuery(callbackQuery.id, '', env);
                     await handleCopyCommand(chatId, userId, [(idx + 1).toString()], env);
@@ -1596,6 +1960,44 @@ async function handleCallbackQuery(callbackQuery, env, request) {
                         `✏️ 重命名节点 #${idx + 1}\n\n请发送：/rename ${idx + 1} <新名称>`,
                         env
                     );
+
+                } else if (data.startsWith('bind_profile_')) {
+                    // 绑定订阅组
+                    const profileId = data.replace('bind_profile_', '');
+                    const storageAdapter = await getStorageAdapter(env);
+                    const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+                    const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+                    const config = settings.telegram_push_config || {};
+
+                    const targetProfile = profiles.find(p => p.id === profileId);
+                    if (targetProfile) {
+                        config.default_profile_id = profileId;
+                        config.auto_bind = true;
+                        settings.telegram_push_config = config;
+                        await storageAdapter.put(KV_KEY_SETTINGS, settings);
+
+                        await answerCallbackQuery(callbackQuery.id, `已绑定: ${targetProfile.name}`, env);
+                        await editTelegramMessage(chatId, messageId,
+                            `✅ <b>绑定成功</b>\n\n已绑定到: <b>${targetProfile.name}</b>`,
+                            env
+                        );
+                    } else {
+                        await answerCallbackQuery(callbackQuery.id, '订阅组不存在', env, true);
+                    }
+
+                } else if (data === 'unbind_profile') {
+                    // 解除绑定
+                    const storageAdapter = await getStorageAdapter(env);
+                    const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+                    const config = settings.telegram_push_config || {};
+
+                    config.default_profile_id = '';
+                    config.auto_bind = false;
+                    settings.telegram_push_config = config;
+                    await storageAdapter.put(KV_KEY_SETTINGS, settings);
+
+                    await answerCallbackQuery(callbackQuery.id, '已解除绑定', env);
+                    await editTelegramMessage(chatId, messageId, '✅ 已解除绑定', env);
 
                 } else {
                     await answerCallbackQuery(callbackQuery.id, '未知操作', env);
