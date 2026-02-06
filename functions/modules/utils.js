@@ -452,6 +452,21 @@ export class APIError extends Error {
 }
 
 /**
+ * 转义HTML特殊字符，防止XSS和Telegram解析错误
+ * @param {string} str - 需要转义的字符串
+ * @returns {string} - 转义后的字符串
+ */
+export function escapeHtml(str) {
+    if (typeof str !== 'string') return str;
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+/**
  * 创建标准错误响应
  * @param {Error|string} error - 错误对象或错误消息
  * @param {number} status - HTTP状态码 (默认500)

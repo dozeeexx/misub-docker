@@ -23,7 +23,7 @@
  */
 
 import { StorageFactory } from '../../storage-adapter.js';
-import { createJsonResponse } from '../utils.js';
+import { createJsonResponse, escapeHtml } from '../utils.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS } from '../config.js';
 
 // ==================== 存储与配置 ====================
@@ -774,7 +774,7 @@ async function handleSubCommand(chatId, args, env, request) {
             );
 
             if (!profile) {
-                await sendTelegramMessage(chatId, `❌ 未找到名为 "<b>${args.join(' ')}</b>" 的订阅组`, env);
+                await sendTelegramMessage(chatId, `❌ 未找到名为 "<b>${escapeHtml(args.join(' '))}</b>" 的订阅组`, env);
                 return;
             }
 
@@ -813,7 +813,7 @@ async function handleSubCommand(chatId, args, env, request) {
 
     } catch (error) {
         console.error('[Telegram Push] Sub command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 获取订阅失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 获取订阅失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -860,7 +860,7 @@ async function handleSubCommandSimple(chatId, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Sub command simple failed:', error);
-        await sendTelegramMessage(chatId, `❌ 获取订阅失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 获取订阅失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -914,7 +914,7 @@ async function handleRenameCommand(chatId, userId, args, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Rename command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 重命名失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 重命名失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -986,7 +986,7 @@ async function handleInfoCommand(chatId, userId, args, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Info command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 获取详情失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 获取详情失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -1046,7 +1046,7 @@ async function handleCopyCommand(chatId, userId, args, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Copy command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 复制失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 复制失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -1113,7 +1113,7 @@ async function handleExportCommand(chatId, userId, args, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Export command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 导出失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 导出失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -1220,7 +1220,7 @@ async function handleImportCommand(chatId, userId, args, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Import command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 导入失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 导入失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -1302,7 +1302,7 @@ async function handleSortCommand(chatId, userId, args, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Sort command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 排序失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 排序失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -1379,7 +1379,7 @@ async function handleDupCommand(chatId, userId, args, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Dup command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 去重检测失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 去重检测失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -1459,7 +1459,7 @@ async function handleBindCommand(chatId, userId, args, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Bind command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 绑定失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 绑定失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -1490,7 +1490,7 @@ async function handleUnbindCommand(chatId, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Unbind command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 解除绑定失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ 解除绑定失败: ${escapeHtml(error.message)}`, env);
     }
 }
 
@@ -1543,6 +1543,25 @@ async function handleNodeInput(chatId, text, userId, env) {
 
         await storageAdapter.put(KV_KEY_SUBS, allSubscriptions);
 
+        // [Verification] Double check if the write was successful (Read-Your-Writes)
+        // 尝试立即读取并验证 ID 是否存在
+        try {
+            const verifySubs = await storageAdapter.get(KV_KEY_SUBS) || [];
+            const isVerified = addedNodes.every(added => verifySubs.some(s => s.id === added.id));
+            if (!isVerified) {
+                console.warn('[Telegram Push] KV Verification failed: Nodes not found after write');
+                // 此时虽然写入可能在传播中，但为了稳妥，提示用户可能需要等待
+                // 或者我们可以重试写入？这里选择抛出错误让用户重试
+                throw new Error('KV Write Verification Failed (Not Found). Please try again.');
+            }
+        } catch (verifyError) {
+            console.error('[Telegram Push] KV Verification error:', verifyError);
+            if (verifyError.message.includes('Verification Failed')) {
+                throw verifyError;
+            }
+            // 其他读取错误忽略，因为写入可能已经成功
+        }
+
         // 自动关联到订阅组
         let boundProfileName = '';
         if (config.auto_bind && config.default_profile_id) {
@@ -1594,7 +1613,7 @@ async function handleNodeInput(chatId, text, userId, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Node addition failed:', error);
-        await sendTelegramMessage(chatId, `❌ <b>添加失败</b>\n\n错误: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `❌ <b>添加失败</b>\n\n错误: ${escapeHtml(error.message)}`, env);
         return createJsonResponse({ ok: true });
     }
 }
