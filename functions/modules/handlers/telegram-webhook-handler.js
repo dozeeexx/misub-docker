@@ -438,12 +438,6 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
             title = '\uD83D\uDCE1 订阅列表'; // 📡
         }
 
-        // DEBUG: 临时调试日志 (请在验证后删除)
-        console.log(`[List Debug] User: ${userId}, Type: ${type}, All: ${allNodes.length}, Filtered: ${userNodes.length}`);
-        if (type !== 'all') {
-            await sendTelegramMessage(chatId, `\uD83D\uDD0D Debug: Type=${type}, All=${allNodes.length}, Filtered=${userNodes.length}`, env); // 🔍
-        }
-
         // 获取当前绑定的订阅组
         const boundProfile = config.default_profile_id
             ? profiles.find(p => p.id === config.default_profile_id)
@@ -468,7 +462,7 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
         let message = `\uD83D\uDCCB <b>${title}</b> (${userNodes.length} 个)\n`; // 📋
         message += `第 ${currentPage + 1}/${totalPages} 页`;
         if (boundProfile) {
-            message += ` | 绑定: ${boundProfile.name}`;
+            message += ` | 绑定: ${escapeHtml(boundProfile.name)}`;
         }
         message += '\n\n';
 
@@ -481,7 +475,11 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
             if (isSub) {
                 protocol = '订阅';
             } else if (nodeUrl.includes('://')) {
-                protocol = nodeUrl.split('://')[0].toUpperCase();
+                try {
+                    protocol = nodeUrl.split('://')[0].toUpperCase();
+                } catch (e) {
+                    protocol = 'UNKNOWN';
+                }
             }
 
             const status = node.enabled ? '\u2705' : '\u26D4'; // ✅ ⛔
@@ -507,11 +505,11 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
         const typePrefix = type !== 'all' ? `${type}_` : '';
 
         if (currentPage > 0) {
-            navButtons.push({ text: '⬅️', callback_data: `list_page_${typePrefix}${currentPage - 1}` });
+            navButtons.push({ text: '\u2B05\uFE0F', callback_data: `list_page_${typePrefix}${currentPage - 1}` }); // ⬅️
         }
         navButtons.push({ text: `${currentPage + 1}/${totalPages}`, callback_data: 'noop' });
         if (currentPage < totalPages - 1) {
-            navButtons.push({ text: '➡️', callback_data: `list_page_${typePrefix}${currentPage + 1}` });
+            navButtons.push({ text: '\u27A1\uFE0F', callback_data: `list_page_${typePrefix}${currentPage + 1}` }); // ➡️
         }
 
         const keyboard = {
@@ -521,10 +519,17 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
             ]
         };
 
-        await sendTelegramMessage(chatId, message, env, { reply_markup: keyboard });
+        const response = await sendTelegramMessage(chatId, message, env, { reply_markup: keyboard });
+
+        // 错误处理：如果发送失败（如 HTML 解析错误），回退到纯文本报错
+        if (response && !response.ok) {
+            const errText = await response.text();
+            console.error('[Telegram Push] List send failed:', errText);
+            await sendTelegramMessage(chatId, `\u274C <b>列表显示因错误中断</b>\n\n可能原因：HTML 解析错误 (特殊字符)\nTelegram 返回: ${escapeHtml(errText)}`, env);
+        }
     } catch (error) {
         console.error('[Telegram Push] List command failed:', error);
-        await sendTelegramMessage(chatId, `❌ 获取列表失败: ${error.message}`, env);
+        await sendTelegramMessage(chatId, `\u274C 获取列表失败: ${error.message}`, env); // ❌
     }
 }
 
