@@ -255,7 +255,14 @@ function checkUserPermission(userId, config) {
         return { allowed: false, reason: 'Bot 已被管理员禁用' };
     }
 
-    if (!config.allowed_user_ids.includes(userId.toString())) {
+    // 如果白名单为空，允许所有用户
+    if (!config.allowed_user_ids || config.allowed_user_ids.length === 0) {
+        return { allowed: true };
+    }
+
+    // 检查用户是否在白名单中
+    const userIdStr = userId.toString();
+    if (!config.allowed_user_ids.some(id => id.toString().trim() === userIdStr)) {
         return { allowed: false, reason: '无权限使用此 Bot，请联系管理员添加白名单' };
     }
 
