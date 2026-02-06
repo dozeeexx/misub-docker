@@ -392,21 +392,20 @@ async function handleMenuCommand(chatId, env) {
     const keyboard = {
         inline_keyboard: [
             [
-                { text: '📋 列表', callback_data: 'cmd_list' },
-                { text: '📊 统计', callback_data: 'cmd_stats' },
-                { text: '🔍 搜索', callback_data: 'prompt_search' }
+                { text: '� 节点列表', callback_data: 'cmd_list_node' },
+                { text: '� 订阅列表', callback_data: 'cmd_list_sub' },
+                { text: '� 统计', callback_data: 'cmd_stats' }
             ],
             [
                 { text: '🔗 绑定', callback_data: 'cmd_bind' },
-                { text: '🔄 排序', callback_data: 'prompt_sort' },
-                { text: '🧹 去重', callback_data: 'cmd_dup' }
+                { text: '� 搜索', callback_data: 'prompt_search' },
+                { text: '❓ 帮助', callback_data: 'cmd_help' }
             ],
             [
                 { text: '✅ 全启用', callback_data: 'cmd_enable_all' },
                 { text: '⛔ 全禁用', callback_data: 'cmd_disable_all' }
             ],
             [
-                { text: '❓ 帮助', callback_data: 'cmd_help' },
                 { text: '🗑️ 清空', callback_data: 'confirm_delete_all' }
             ]
         ]
@@ -420,13 +419,24 @@ async function handleMenuCommand(chatId, env) {
 /**
  * 处理 /list 命令 - 节点列表（带分页和操作按钮）
  */
-async function handleListCommand(chatId, userId, env, page = 0) {
+async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
     try {
         const storageAdapter = await getStorageAdapter(env);
-        const userNodes = await getUserNodes(userId, env);
+        const allNodes = await getUserNodes(userId, env);
         const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
         const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
         const config = settings.telegram_push_config || {};
+
+        // 过滤节点
+        let userNodes = allNodes;
+        let title = '列表';
+        if (type === 'node') {
+            userNodes = allNodes.filter(n => !/^https?:\/\//i.test(n.url || ''));
+            title = '🚀 节点列表';
+        } else if (type === 'sub') {
+            userNodes = allNodes.filter(n => /^https?:\/\//i.test(n.url || ''));
+            title = '📡 订阅列表';
+        }
 
         // 获取当前绑定的订阅组
         const boundProfile = config.default_profile_id
@@ -435,7 +445,11 @@ async function handleListCommand(chatId, userId, env, page = 0) {
         const boundNodeIds = new Set(boundProfile?.manualNodes || []);
 
         if (userNodes.length === 0) {
-            await sendTelegramMessage(chatId, '📋 <b>暂无节点</b>\n\n直接发送节点链接即可添加', env);
+            let emptyMsg = `📋 <b>暂无${type === 'sub' ? '订阅' : (type === 'node' ? '节点' : '资源')}</b>\n\n`;
+            if (type === 'sub') emptyMsg += '发送包含 http/https 的链接即可添加订阅';
+            else emptyMsg += '直接发送 ss/vless 等链接即可添加节点';
+
+            await sendTelegramMessage(chatId, emptyMsg, env);
             return;
         }
 
@@ -445,7 +459,7 @@ async function handleListCommand(chatId, userId, env, page = 0) {
         const startIdx = currentPage * pageSize;
         const endIdx = Math.min(startIdx + pageSize, userNodes.length);
 
-        let message = `📋 <b>节点列表</b> (${userNodes.length} 个)\n`;
+        let message = `📋 <b>${title}</b> (${userNodes.length} 个)\n`;
         message += `第 ${currentPage + 1}/${totalPages} 页`;
         if (boundProfile) {
             message += ` | 绑定: ${boundProfile.name}`;
@@ -466,7 +480,7 @@ async function handleListCommand(chatId, userId, env, page = 0) {
 
             const status = node.enabled ? '✅' : '⛔';
             const inProfile = boundNodeIds.has(node.id) ? '🔗' : '';
-            const typeIcon = isSub ? '📡 ' : '';
+            const typeIcon = isSub ? '📡 ' : '🚀 ';
 
             message += `<b>${i + 1}.</b> ${status}${inProfile} ${typeIcon}${escapeHtml(node.name || '未命名')} <small>${protocol}</small>\n`;
         }
@@ -484,12 +498,14 @@ async function handleListCommand(chatId, userId, env, page = 0) {
 
         // 分页按钮
         const navButtons = [];
+        const typePrefix = type !== 'all' ? `${type}_` : '';
+
         if (currentPage > 0) {
-            navButtons.push({ text: '⬅️', callback_data: `list_page_${currentPage - 1}` });
+            navButtons.push({ text: '⬅️', callback_data: `list_page_${typePrefix}${currentPage - 1}` });
         }
         navButtons.push({ text: `${currentPage + 1}/${totalPages}`, callback_data: 'noop' });
         if (currentPage < totalPages - 1) {
-            navButtons.push({ text: '➡️', callback_data: `list_page_${currentPage + 1}` });
+            navButtons.push({ text: '➡️', callback_data: `list_page_${typePrefix}${currentPage + 1}` });
         }
 
         const keyboard = {
@@ -1878,18 +1894,34 @@ async function handleCallbackQuery(callbackQuery, env, request) {
 
     try {
         // 分页命令
+        // 分页命令 (格式: list_page_type_page 或 list_page_page 兼容旧版)
         if (data.startsWith('list_page_')) {
-            const page = parseInt(data.replace('list_page_', ''));
+            const parts = data.replace('list_page_', '').split('_');
+            let type = 'all';
+            let page = 0;
+
+            if (parts.length === 2 && isNaN(parseInt(parts[0]))) {
+                type = parts[0];
+                page = parseInt(parts[1]);
+            } else {
+                page = parseInt(parts[0]);
+            }
+
             await answerCallbackQuery(callbackQuery.id, '', env);
-            await handleListCommand(chatId, userId, env, page);
+            await handleListCommand(chatId, userId, env, page, type);
             return createJsonResponse({ ok: true });
         }
 
         // 快捷菜单命令
         switch (data) {
-            case 'cmd_list':
+            case 'cmd_list_node':
                 await answerCallbackQuery(callbackQuery.id, '', env);
-                await handleListCommand(chatId, userId, env, 0);
+                await handleListCommand(chatId, userId, env, 0, 'node');
+                break;
+
+            case 'cmd_list_sub':
+                await answerCallbackQuery(callbackQuery.id, '', env);
+                await handleListCommand(chatId, userId, env, 0, 'sub');
                 break;
 
             case 'cmd_stats':
