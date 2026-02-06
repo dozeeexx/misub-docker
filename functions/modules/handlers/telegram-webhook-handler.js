@@ -494,21 +494,39 @@ async function handleListCommand(chatId, userId, env, page = 0) {
 async function handleStatsCommand(chatId, userId, env) {
     try {
         const userNodes = await getUserNodes(userId, env);
-        const enabledNodes = userNodes.filter(n => n.enabled);
 
+        let subCount = 0;
+        let nodeCount = 0;
+        let enabledCount = 0;
         const protocolCounts = {};
+
         userNodes.forEach(node => {
-            const protocol = node.url.split('://')[0].toUpperCase();
-            protocolCounts[protocol] = (protocolCounts[protocol] || 0) + 1;
+            const isSub = /^https?:\/\//i.test(node.url);
+
+            if (isSub) {
+                subCount++;
+            } else {
+                nodeCount++;
+                const protocol = node.url.split('://')[0].toUpperCase();
+                protocolCounts[protocol] = (protocolCounts[protocol] || 0) + 1;
+            }
+
+            if (node.enabled) enabledCount++;
         });
 
-        let message = `📊 <b>节点统计</b>\n\n`;
-        message += `总节点数: <b>${userNodes.length}</b>\n`;
-        message += `已启用: <b>${enabledNodes.length}</b>\n`;
-        message += `已禁用: <b>${userNodes.length - enabledNodes.length}</b>\n\n`;
+        const disabledCount = userNodes.length - enabledCount;
+
+        let message = `📊 <b>统计信息</b>\n\n`;
+        message += `资源总数: <b>${userNodes.length}</b>\n`;
+        message += `├─ 订阅源: <b>${subCount}</b>\n`;
+        message += `└─ 手动节点: <b>${nodeCount}</b>\n\n`;
+
+        message += `状态:\n`;
+        message += `✅ 已启用: <b>${enabledCount}</b>\n`;
+        message += `⛔ 已禁用: <b>${disabledCount}</b>\n\n`;
 
         if (Object.keys(protocolCounts).length > 0) {
-            message += `<b>协议分布：</b>\n`;
+            message += `<b>节点协议分布：</b>\n`;
             Object.entries(protocolCounts)
                 .sort((a, b) => b[1] - a[1])
                 .forEach(([protocol, count]) => {
