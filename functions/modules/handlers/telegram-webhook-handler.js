@@ -180,7 +180,7 @@ async function sendTelegramMessage(chatId, text, env, options = {}) {
         });
 
         if (!response.ok) {
-            console.error('[Telegram Push] Failed to send message:', await response.text());
+            console.error('[Telegram Push] Failed to send message:', await response.clone().text());
         }
 
         return response;
