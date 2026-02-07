@@ -2041,11 +2041,8 @@ async function handleCallbackQuery(callbackQuery, env, request) {
 
             default:
                 // 处理动态回调
+                // 处理动态回调
                 if (data.startsWith('node_action_')) {
-                    // 节点操作面板
-                    const idx = parseInt(data.replace('node_action_', ''));
-                    const storageAdapter = await getStorageAdapter(env);
-                } else if (data.startsWith('node_action_')) {
                     // 节点/订阅 详情展示
                     // 格式: node_action_node_{idx} 或 node_action_sub_{idx}
                     // 兼容旧格式: node_action_{idx} (默认为node)
