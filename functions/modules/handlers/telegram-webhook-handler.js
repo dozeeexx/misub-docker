@@ -2086,7 +2086,14 @@ async function handleCallbackQuery(callbackQuery, env, request) {
 
                     // Note: Manual nodes use 'id', subscriptions might not have 'id' in the same way or logic might differ.
                     // Subscriptions usually have 'id' too.
-                    const isInProfile = boundProfile?.manualNodes?.includes(node.id);
+                    let isInProfile = false;
+                    if (boundProfile) {
+                        if (type === 'sub') {
+                            isInProfile = (boundProfile.subscriptions || []).includes(node.id);
+                        } else {
+                            isInProfile = (boundProfile.manualNodes || []).includes(node.id);
+                        }
+                    }
 
                     const protocol = (node.url || '').split('://')[0].toUpperCase();
                     const typeLabel = type === 'sub' ? '订阅' : '节点';
@@ -2096,8 +2103,7 @@ async function handleCallbackQuery(callbackQuery, env, request) {
                     message += `协议: ${protocol}\n`;
                     message += `状态: ${node.enabled ? '✅ 启用' : '⛔ 禁用'}\n`;
 
-                    // Only manual nodes are typically linked to profiles in this system context
-                    if (type === 'node' && boundProfile) {
+                    if (boundProfile) {
                         message += `订阅组: ${isInProfile ? '🔗 已关联' : '未关联'}\n`;
                     }
 
@@ -2113,11 +2119,13 @@ async function handleCallbackQuery(callbackQuery, env, request) {
                         { text: '📋 复制', callback_data: copyCmd }
                     ]);
 
-                    // 如果有绑定的订阅组，添加关联/取消关联按钮 (仅限节点)
-                    if (type === 'node' && boundProfile) {
+                    // 如果有绑定的订阅组，添加关联/取消关联按钮
+                    if (boundProfile) {
+                        const linkCmd = type === 'sub' ? `link_sub_${idx}` : `link_node_${idx}`;
+                        const unlinkCmd = type === 'sub' ? `unlink_sub_${idx}` : `unlink_node_${idx}`;
                         buttons.push([{
                             text: isInProfile ? '➖ 从订阅组移除' : '➕ 添加到订阅组',
-                            callback_data: isInProfile ? `unlink_node_${idx}` : `link_node_${idx}`
+                            callback_data: isInProfile ? unlinkCmd : linkCmd
                         }]);
                     }
 
@@ -2184,6 +2192,55 @@ async function handleCallbackQuery(callbackQuery, env, request) {
                             await answerCallbackQuery(callbackQuery.id, `已从 ${profile.name} 移除`, env);
                             await editTelegramMessage(chatId, messageId,
                                 `✅ 节点 #${idx + 1} 已从 <b>${profile.name}</b> 移除`, env);
+                        }
+                    } else {
+                        await answerCallbackQuery(callbackQuery.id, '操作失败', env, true);
+                    }
+
+                } else if (data.startsWith('link_sub_')) {
+                    // 添加订阅到订阅组
+                    const idx = parseInt(data.replace('link_sub_', ''));
+                    const storageAdapter = await getStorageAdapter(env);
+                    const subs = await storageAdapter.get(KV_KEY_SUBS) || [];
+                    const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+                    const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+                    const config = settings.telegram_push_config || {};
+
+                    if (idx >= 0 && idx < subs.length && config.default_profile_id) {
+                        const sub = subs[idx];
+                        const profile = profiles.find(p => p.id === config.default_profile_id);
+                        if (profile) {
+                            profile.subscriptions = profile.subscriptions || [];
+                            if (!profile.subscriptions.includes(sub.id)) {
+                                profile.subscriptions.push(sub.id);
+                                await storageAdapter.put(KV_KEY_PROFILES, profiles);
+                            }
+                            await answerCallbackQuery(callbackQuery.id, `已添加到 ${profile.name}`, env);
+                            await editTelegramMessage(chatId, messageId,
+                                `✅ 订阅 #${idx + 1} 已添加到 <b>${profile.name}</b>`, env);
+                        }
+                    } else {
+                        await answerCallbackQuery(callbackQuery.id, '操作失败', env, true);
+                    }
+
+                } else if (data.startsWith('unlink_sub_')) {
+                    // 从订阅组移除订阅
+                    const idx = parseInt(data.replace('unlink_sub_', ''));
+                    const storageAdapter = await getStorageAdapter(env);
+                    const subs = await storageAdapter.get(KV_KEY_SUBS) || [];
+                    const profiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
+                    const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+                    const config = settings.telegram_push_config || {};
+
+                    if (idx >= 0 && idx < subs.length && config.default_profile_id) {
+                        const sub = subs[idx];
+                        const profile = profiles.find(p => p.id === config.default_profile_id);
+                        if (profile && profile.subscriptions) {
+                            profile.subscriptions = profile.subscriptions.filter(id => id !== sub.id);
+                            await storageAdapter.put(KV_KEY_PROFILES, profiles);
+                            await answerCallbackQuery(callbackQuery.id, `已从 ${profile.name} 移除`, env);
+                            await editTelegramMessage(chatId, messageId,
+                                `✅ 订阅 #${idx + 1} 已从 <b>${profile.name}</b> 移除`, env);
                         }
                     } else {
                         await answerCallbackQuery(callbackQuery.id, '操作失败', env, true);
