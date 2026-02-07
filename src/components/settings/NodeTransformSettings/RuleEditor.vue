@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import TagBuilder from './TagBuilder.vue';
+import SortRuleEditor from './SortRuleEditor.vue';
 
 const props = defineProps({
   config: {
@@ -249,23 +250,5 @@ const protocolOrderModel = computed({
   </div>
 
   <!-- 5. 节点排序 -->
-  <div class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-    <div class="flex items-center justify-between mb-2">
-      <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">📶 节点排序</h4>
-      <label class="inline-flex items-center text-xs text-gray-500 dark:text-gray-400">
-        <input type="checkbox" v-model="config.sort.enabled"
-          class="mr-1 rounded text-indigo-600 focus:ring-indigo-500">
-        启用排序
-      </label>
-    </div>
-    <div v-if="config.sort.enabled"
-      class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700 space-y-2">
-      <p class="text-xs text-gray-400">默认排序规则: 地区(香港→台湾→日本...) → 协议 → 名称</p>
-      <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-        <input type="checkbox" v-model="config.sort.nameIgnoreEmoji"
-          class="rounded text-indigo-600 focus:ring-indigo-500">
-        排序时忽略国旗 Emoji
-      </label>
-    </div>
-  </div>
+  <SortRuleEditor :config="config.sort" @update:config="config.sort = $event" />
 </template>
