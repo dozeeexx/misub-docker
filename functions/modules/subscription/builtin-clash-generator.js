@@ -8,6 +8,45 @@ import { urlToClashProxy, urlsToClashProxies } from '../../utils/url-to-clash.js
 import yaml from 'js-yaml';
 
 /**
+ * 清理字符串中的控制字符（保留换行和制表符）
+ * @param {string} str - 输入字符串
+ * @returns {string} 清理后的字符串
+ */
+function cleanControlChars(str) {
+    if (typeof str !== 'string') return str;
+    // 移除控制字符，但保留换行(\n)、回车(\r)、制表符(\t)
+    // eslint-disable-next-line no-control-regex
+    return str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+}
+
+/**
+ * 递归清理对象中所有字符串的控制字符
+ * @param {any} obj - 输入对象
+ * @returns {any} 清理后的对象
+ */
+function deepCleanControlChars(obj) {
+    if (obj === null || obj === undefined) return obj;
+
+    if (typeof obj === 'string') {
+        return cleanControlChars(obj);
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => deepCleanControlChars(item));
+    }
+
+    if (typeof obj === 'object') {
+        const cleaned = {};
+        for (const [key, value] of Object.entries(obj)) {
+            cleaned[cleanControlChars(key)] = deepCleanControlChars(value);
+        }
+        return cleaned;
+    }
+
+    return obj;
+}
+
+/**
  * 生成内置 Clash 配置
  * @param {string} nodeList - 节点列表（换行分隔的 URL）
  * @param {Object} options - 配置选项
@@ -27,7 +66,10 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         .filter(line => line && !line.startsWith('#'));
 
     // 转换为 Clash 代理对象
-    const proxies = urlsToClashProxies(nodeUrls);
+    let proxies = urlsToClashProxies(nodeUrls);
+
+    // 清理控制字符
+    proxies = deepCleanControlChars(proxies);
 
     if (proxies.length === 0) {
         return '# No valid proxies found\nproxies: []\n';
@@ -99,13 +141,15 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
 
     // 生成 YAML
     try {
-        return yaml.dump(config, {
+        const yamlStr = yaml.dump(config, {
             indent: 2,
             lineWidth: -1,
             noRefs: true,
             quotingType: '"',
             forceQuotes: false
         });
+        // 最终清理，确保输出没有控制字符
+        return cleanControlChars(yamlStr);
     } catch (e) {
         console.error('[BuiltinClash] YAML generation failed:', e);
         // Fallback: 使用简单的 JSON 转换
@@ -124,14 +168,18 @@ export function generateProxiesOnly(nodeList) {
         .map(line => line.trim())
         .filter(line => line && !line.startsWith('#'));
 
-    const proxies = urlsToClashProxies(nodeUrls);
+    let proxies = urlsToClashProxies(nodeUrls);
+
+    // 清理控制字符
+    proxies = deepCleanControlChars(proxies);
 
     try {
-        return yaml.dump({ proxies }, {
+        const yamlStr = yaml.dump({ proxies }, {
             indent: 2,
             lineWidth: -1,
             noRefs: true
         });
+        return cleanControlChars(yamlStr);
     } catch (e) {
         return `proxies:\n${proxies.map(p => `  - ${JSON.stringify(p)}`).join('\n')}\n`;
     }
