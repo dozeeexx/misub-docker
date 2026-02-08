@@ -111,7 +111,8 @@ export function convertVlessToUrl(proxy) {
         }
 
         // TLS/Reality 安全配置
-        if (proxy.reality) {
+        // 修复: Clash 配置使用 reality-opts 字段，不是 reality 布尔值
+        if (proxy['reality-opts'] || proxy.reality) {
             params.set('security', 'reality');
             if (proxy['reality-opts']) {
                 if (proxy['reality-opts']['public-key']) {
@@ -157,6 +158,11 @@ export function convertVlessToUrl(proxy) {
             }
         } else {
             params.set('security', 'none');
+        }
+
+        // dialer-proxy 链式代理支持 (使用自定义参数 dp)
+        if (proxy['dialer-proxy']) {
+            params.set('dp', proxy['dialer-proxy']);
         }
 
         // 构建 URL
