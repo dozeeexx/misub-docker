@@ -4,7 +4,9 @@
  */
 export function convertVlessToUrl(proxy) {
     try {
-        if (!proxy.server || !proxy.port || !proxy.uuid) {
+        // 兼容 uuid 和 UUID 两种写法
+        const uuid = proxy.uuid || proxy.UUID;
+        if (!proxy.server || !proxy.port || !uuid) {
             return null;
         }
 
@@ -158,7 +160,7 @@ export function convertVlessToUrl(proxy) {
         }
 
         // 构建 URL
-        const url = `vless://${proxy.uuid}@${proxy.server}:${proxy.port}?${params.toString()}`;
+        const url = `vless://${uuid}@${proxy.server}:${proxy.port}?${params.toString()}`;
 
         // Fragment (节点名称)
         if (proxy.name) {
