@@ -109,7 +109,7 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
             {
                 'name': '🚀 节点选择',
                 'type': 'select',
-                'proxies': ['♻️ 自动选择', '🔯 故障转移', ...proxyNames]
+                'proxies': [...proxyNames, '♻️ 自动选择', '🔯 故障转移',]
             },
             {
                 'name': '♻️ 自动选择',
