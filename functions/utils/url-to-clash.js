@@ -282,7 +282,13 @@ function parseVmessUrl(url) {
         let normalized = base64Part.replace(/-/g, '+').replace(/_/g, '/');
         while (normalized.length % 4) normalized += '=';
 
-        const jsonStr = atob(normalized);
+        // 使用 TextDecoder 正确解码 UTF-8 内容
+        const binaryString = atob(normalized);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        const jsonStr = new TextDecoder('utf-8').decode(bytes);
         const config = JSON.parse(jsonStr);
 
         const proxy = {
