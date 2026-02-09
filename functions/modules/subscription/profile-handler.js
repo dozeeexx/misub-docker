@@ -5,6 +5,7 @@ import { calculateProtocolStats, calculateRegionStats } from '../utils/node-pars
 import { applyNodeTransformPipeline } from '../../utils/node-transformer.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES } from '../config.js';
 import { fetchSubscriptionNodes } from './node-fetcher.js';
+import { applyManualNodeName } from '../utils/node-cleaner.js';
 
 /**
  * 处理订阅组模式的节点获取
@@ -61,14 +62,20 @@ export async function handleProfileMode(request, env, profileId, userAgent, appl
     const targetManualNodes = targetMisubs.filter(item => !item.url.startsWith('http'));
 
     // 处理手工节点（直接解析节点URL）
+    // 先将用户自定义名称写入 URL（与订阅生成流程保持一致），
+    // 确保 parseNodeInfo 和节点转换管道能基于正确名称工作
     const manualNodeResults = targetManualNodes.map(node => {
-        const nodeInfo = parseNodeInfo(node.url);
+        const customName = typeof node.name === 'string' ? node.name.trim() : '';
+        const effectiveUrl = customName ? applyManualNodeName(node.url, customName) : node.url;
+
+        const nodeInfo = parseNodeInfo(effectiveUrl);
         return {
             subscriptionName: node.name || '手工节点',
-            url: node.url,
+            url: effectiveUrl,
             success: true,
             nodes: [{
                 ...nodeInfo,
+                url: effectiveUrl,
                 subscriptionName: node.name || '手工节点'
             }],
             error: null,
