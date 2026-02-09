@@ -79,5 +79,5 @@ jobs:
           fi
 
           # 如果仍处于 merge 状态（例如冲突已解决），提交会自动成为 merge commit
-          git commit -m "Auto-sync with upstream $(date +'%Y-%m-%d %H:%M:%S')"
+          git commit -m "Auto-sync with upstream $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M:%S')"
           git push origin main
