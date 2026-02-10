@@ -12,6 +12,24 @@ defineProps({
 
 import Input from '../../ui/Input.vue';
 import Switch from '../../ui/Switch.vue';
+import { watch } from 'vue';
+import { useToastStore } from '../../../../stores/toast';
+
+const { showToast } = useToastStore();
+
+// 监听自定义登录路径，禁止特殊字符和空格
+watch(() => props.settings.customLoginPath, (val) => {
+  if (!val) return;
+  
+  // 仅允许字母、数字、下划线、中划线和斜杠
+  const sanitized = val.replace(/[^a-zA-Z0-9-_\/]/g, '');
+  
+  if (sanitized !== val) {
+    props.settings.customLoginPath = sanitized;
+    showToast('路径仅允许字母、数字、下划线、中划线', 'warning');
+  }
+});
+
 
 </script>
 
