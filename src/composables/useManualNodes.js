@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useDataStore } from '../stores/useDataStore.js';
+import { useToastStore } from '../stores/toast.js'; // Restored
 import { extractNodeName } from '../lib/utils.js';
 import { filterManualNodes, isManualNodeEntry } from './manual-nodes/filters.js';
 import { buildDedupPlan as buildDedupPlanCore } from './manual-nodes/dedup.js';
