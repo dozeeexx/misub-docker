@@ -68,16 +68,21 @@ jobs:
             echo "conflict=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit and Push (only if changed)
+      - name: Commit and Push (if changed)
         run: |
           set -e
 
-          # 没有任何变更就直接结束（避免 nothing to commit 报错）
-          if git diff --quiet && git diff --cached --quiet; then
-            echo "No changes to sync. Exiting."
-            exit 0
+          # 检查是否有正在进行的合并（冲突解决后需提交）
+          if [ -f .git/MERGE_HEAD ]; then
+             echo "Conflict resolved, committing merge..."
+             git commit -m "Auto-sync with upstream (Conflict Resolved) $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M:%S')"
           fi
 
-          # 如果仍处于 merge 状态（例如冲突已解决），提交会自动成为 merge commit
-          git commit -m "Auto-sync with upstream $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M:%S')"
-          git push origin main
+          # 检查本地是否领先于远程（即是否有新提交需要推送）
+          # 注意：git merge upstream/main 成功后，本地 HEAD 会超前 origin/main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+             echo "Pushing changes..."
+             git push origin main
+          else
+             echo "No changes to push."
+          fi
