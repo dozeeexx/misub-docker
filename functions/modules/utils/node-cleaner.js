@@ -221,7 +221,10 @@ export function applyManualNodeName(nodeUrl, customName) {
         }
     }
 
-    return nodeUrl;
+    // 通用 fallback：对所有其他协议（socks5/http/snell/socks 等）通过 #fragment 写入名称
+    const hashIndex = nodeUrl.indexOf('#');
+    const baseUrl = hashIndex === -1 ? nodeUrl : nodeUrl.substring(0, hashIndex);
+    return `${baseUrl}#${encodedName}`;
 }
 
 /**

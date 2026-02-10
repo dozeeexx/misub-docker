@@ -1,0 +1,83 @@
+name: Fork Sync
+
+on:
+  schedule:
+    - cron: "0 19 * * *"   # 北京时间 03:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync_with_upstream:
+    name: Sync with Upstream
+    runs-on: ubuntu-latest
+    if: ${{ github.event.repository.fork }}
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: main
+
+      - name: Configure Git & remotes
+        run: |
+          set -e
+          git config user.name "GitHub Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 确保在 main 分支
+          git checkout main
+
+          # upstream remote：存在则改 URL，不存在则新增
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream https://github.com/imzyb/MiSub.git
+          else
+            git remote add upstream https://github.com/imzyb/MiSub.git
+          fi
+
+          git fetch --prune upstream
+          git fetch --prune origin
+
+      - name: Merge from upstream and resolve conflicts (prefer upstream)
+        id: merge_attempt
+        run: |
+          set -e
+
+          # 尝试合并（不吞错误；我们自己接管冲突逻辑）
+          if ! git merge upstream/main --no-ff --no-edit; then
+            echo "merge_failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "merge_failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # 如果存在冲突文件，统一用上游版本（theirs=upstream）
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+            echo "合并冲突：将使用上游版本覆盖冲突文件"
+
+            CONFLICT_FILES=$(git diff --name-only --diff-filter=U)
+            for file in $CONFLICT_FILES; do
+              echo "使用上游版本: $file"
+              git checkout --theirs "$file"
+              git add "$file"
+            done
+          else
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and Push (only if changed)
+        run: |
+          set -e
+
+          # 没有任何变更就直接结束（避免 nothing to commit 报错）
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to sync. Exiting."
+            exit 0
+          fi
+
+          # 如果仍处于 merge 状态（例如冲突已解决），提交会自动成为 merge commit
+          git commit -m "Auto-sync with upstream $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M:%S')"
+          git push origin main
