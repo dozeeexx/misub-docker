@@ -388,7 +388,7 @@ async function handleHelpCommand(chatId, env) {
 /**
  * 处理 /menu 命令 - 快捷菜单
  */
-async function handleMenuCommand(chatId, env) {
+async function handleMenuCommand(chatId, env, messageId = null) {
     const keyboard = {
         inline_keyboard: [
             [
@@ -411,15 +411,21 @@ async function handleMenuCommand(chatId, env) {
         ]
     };
 
-    await sendTelegramMessage(chatId, '📱 <b>快捷菜单</b>', env, {
-        reply_markup: keyboard
-    });
+    if (messageId) {
+        await editTelegramMessage(chatId, messageId, '📱 <b>快捷菜单</b>', env, {
+            reply_markup: keyboard
+        });
+    } else {
+        await sendTelegramMessage(chatId, '📱 <b>快捷菜单</b>', env, {
+            reply_markup: keyboard
+        });
+    }
 }
 
 /**
  * 处理 /list 命令 - 节点列表（带分页和操作按钮）
  */
-async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
+async function handleListCommand(chatId, userId, env, page = 0, type = 'all', messageId = null) {
     try {
         const storageAdapter = await getStorageAdapter(env);
         const allNodes = await getUserNodes(userId, env);
@@ -449,7 +455,15 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
             if (type === 'sub') emptyMsg += '发送包含 http/https 的链接即可添加订阅';
             else emptyMsg += '直接发送 ss/vless 等链接即可添加节点';
 
-            await sendTelegramMessage(chatId, emptyMsg, env);
+            if (messageId) {
+                // Add back button even for empty list
+                const keyboard = {
+                    inline_keyboard: [[{ text: '🔙 返回菜单', callback_data: 'cmd_menu' }]]
+                };
+                await editTelegramMessage(chatId, messageId, emptyMsg, env, { reply_markup: keyboard });
+            } else {
+                await sendTelegramMessage(chatId, emptyMsg, env);
+            }
             return;
         }
 
@@ -515,26 +529,36 @@ async function handleListCommand(chatId, userId, env, page = 0, type = 'all') {
         if (currentPage > 0) {
             navButtons.push({ text: '\u2B05\uFE0F', callback_data: `list_page_${typePrefix}${currentPage - 1}` }); // ⬅️
         }
+
+        // Add Back button in the middle or separate row?
+        // Let's put pagination < > on one row, and Back on another or same?
+        // Standard: <  Page  >
+        // Row 2: Back
+
         navButtons.push({ text: `${currentPage + 1}/${totalPages}`, callback_data: 'noop' });
+
         if (currentPage < totalPages - 1) {
             navButtons.push({ text: '\u27A1\uFE0F', callback_data: `list_page_${typePrefix}${currentPage + 1}` }); // ➡️
         }
 
+        const backButtonRow = [
+            { text: '🔙 返回菜单', callback_data: 'cmd_menu' }
+        ];
+
         const keyboard = {
             inline_keyboard: [
                 nodeButtons,
-                navButtons
+                navButtons,
+                backButtonRow
             ]
         };
 
-        const response = await sendTelegramMessage(chatId, message, env, { reply_markup: keyboard });
-
-        // 错误处理：如果发送失败（如 HTML 解析错误），回退到纯文本报错
-        if (response && !response.ok) {
-            const errText = await response.text();
-            console.error('[Telegram Push] List send failed:', errText);
-            await sendTelegramMessage(chatId, `\u274C <b>列表显示因错误中断</b>\n\n可能原因：HTML 解析错误 (特殊字符)\nTelegram 返回: ${escapeHtml(errText)}`, env);
+        if (messageId) {
+            await editTelegramMessage(chatId, messageId, message, env, { reply_markup: keyboard });
+        } else {
+            await sendTelegramMessage(chatId, message, env, { reply_markup: keyboard });
         }
+
     } catch (error) {
         console.error('[Telegram Push] List command failed:', error);
         await sendTelegramMessage(chatId, `\u274C 获取列表失败: ${error.message}`, env); // ❌
@@ -1927,20 +1951,25 @@ async function handleCallbackQuery(callbackQuery, env, request) {
             }
 
             await answerCallbackQuery(callbackQuery.id, '', env);
-            await handleListCommand(chatId, userId, env, page, type);
+            await handleListCommand(chatId, userId, env, page, type, messageId);
             return createJsonResponse({ ok: true });
         }
 
         // 快捷菜单命令
         switch (data) {
+            case 'cmd_menu':
+                await answerCallbackQuery(callbackQuery.id, '', env);
+                await handleMenuCommand(chatId, env, messageId);
+                break;
+
             case 'cmd_list_node':
                 await answerCallbackQuery(callbackQuery.id, '', env);
-                await handleListCommand(chatId, userId, env, 0, 'node');
+                await handleListCommand(chatId, userId, env, 0, 'node', messageId);
                 break;
 
             case 'cmd_list_sub':
                 await answerCallbackQuery(callbackQuery.id, '', env);
-                await handleListCommand(chatId, userId, env, 0, 'sub');
+                await handleListCommand(chatId, userId, env, 0, 'sub', messageId);
                 break;
 
             case 'cmd_stats':
