@@ -13,7 +13,7 @@ defineProps({
 import Input from '../../ui/Input.vue';
 import Switch from '../../ui/Switch.vue';
 import { watch } from 'vue';
-import { useToastStore } from '../../../../stores/toast';
+import { useToastStore } from '../../../stores/toast';
 
 const { showToast } = useToastStore();
 
