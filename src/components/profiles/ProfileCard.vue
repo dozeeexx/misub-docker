@@ -49,8 +49,8 @@ import Switch from '../ui/Switch.vue';
       包含 {{ profile.subscriptions.length }} 个订阅,{{ profile.manualNodes.length }} 个节点
     </p>
 
-    <div class="flex justify-between items-center mt-3">
-      <div class="flex items-center gap-4">
+    <div class="flex flex-wrap justify-between items-center mt-3 gap-y-3">
+      <div class="flex items-center gap-2 sm:gap-4">
         <!-- 启用开关 -->
         <Switch 
           :model-value="profile.enabled"
