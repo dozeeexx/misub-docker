@@ -1,8 +1,7 @@
 // FILE: src/composables/useManualNodes.js
 import { ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useDataStore } from '../stores/useDataStore';
-import { useToastStore } from '../stores/toast';
+import { useDataStore } from '../stores/useDataStore.js';
 import { extractNodeName } from '../lib/utils.js';
 import { filterManualNodes, isManualNodeEntry } from './manual-nodes/filters.js';
 import { buildDedupPlan as buildDedupPlanCore } from './manual-nodes/dedup.js';
@@ -148,10 +147,14 @@ export function useManualNodes(markDirty) {
     showToast(`已清空 ${idsToRemove.length} 个节点`, 'success');
   }
 
-  function addNodesFromBulk(nodes) {
-    // Reverse insert
+  function addNodesFromBulk(nodes, groupName = '') {
+    // Reverse insert so they appear in correct order when unshifted
     for (let i = nodes.length - 1; i >= 0; i--) {
-      dataStore.addSubscription(nodes[i]);
+      const node = { ...nodes[i] };
+      if (groupName) {
+        node.group = groupName;
+      }
+      dataStore.addSubscription(node);
     }
     markDirty();
   }

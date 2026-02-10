@@ -11,12 +11,17 @@ import { api, APIError } from '../../lib/http.js';
 import FormatDetector from './SubscriptionImport/FormatDetector.vue';
 import ImportForm from './SubscriptionImport/ImportForm.vue';
 import ParseResult from './SubscriptionImport/ParseResult.vue';
+import GroupSelector from '../ui/GroupSelector.vue'; // Added
 
 const isDev = import.meta.env.DEV;
 
 const props = defineProps({
   show: Boolean,
   addNodesFromBulk: Function,
+  groups: { // Added
+    type: Array,
+    default: () => []
+  }
 });
 
 const emit = defineEmits(['update:show']);
@@ -26,6 +31,7 @@ const isLoading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const parseStatus = ref('');
+const groupName = ref(''); // Added
 
 const toastStore = useToastStore();
 
@@ -33,6 +39,7 @@ watch(() => props.show, (newVal) => {
   if (!newVal) {
     // 重置所有状态
     subscriptionUrl.value = '';
+    groupName.value = ''; // Added
     errorMessage.value = '';
     successMessage.value = '';
     parseStatus.value = '';
@@ -398,9 +405,7 @@ const parseNodes = (content) => {
  * 导入订阅
  */
 const importSubscription = async () => {
-  errorMessage.value = '';
-  successMessage.value = '';
-  parseStatus.value = '';
+  const targetGroupName = groupName.value; // Capture immediately to avoid reset by watcher when modal closes
 
   // 验证URL
   if (!isValidUrl(subscriptionUrl.value)) {
@@ -479,9 +484,11 @@ const importSubscription = async () => {
 
       const duplicateCount = nodes.length - uniqueNodes.length;
 
-      props.addNodesFromBulk(uniqueNodes);
+      props.addNodesFromBulk(uniqueNodes, targetGroupName); // Updated
 
-      const successMsg = `成功添加 ${uniqueNodes.length} 个节点${duplicateCount > 0 ? `（去重 ${duplicateCount} 个重复节点）` : ''}`;
+      const successMsg = `成功添加 ${uniqueNodes.length} 个节点` + 
+        (targetGroupName ? ` 到分组 "${targetGroupName}"` : '') +
+        (duplicateCount > 0 ? `（去重 ${duplicateCount} 个重复节点）` : '');
       successMessage.value = successMsg;
 
       toastStore.showToast(successMsg, 'success');
@@ -522,6 +529,20 @@ const importSubscription = async () => {
     <template #body>
       <div class="space-y-4">
         <FormatDetector />
+        
+        <!-- Group Selector Added -->
+        <div class="relative">
+          <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 ml-1 block">
+             导入分组
+          </label>
+          <GroupSelector
+             v-model="groupName"
+             :groups="groups"
+             placeholder="选择或输入分组（可选）"
+             class="w-full"
+          />
+        </div>
+
         <ImportForm
           :subscription-url="subscriptionUrl"
           :is-loading="isLoading"

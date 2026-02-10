@@ -55,6 +55,10 @@ const selectGroup = (group) => {
   isOpen.value = false;
 };
 
+const toggleDropdown = () => {
+  isOpen.value = !isOpen.value;
+};
+
 const handleClickOutside = (e) => {
   if (containerRef.value && !containerRef.value.contains(e.target)) {
     // Check if clicking inside the dropdown (which is teleported)
@@ -119,7 +123,11 @@ onUnmounted(() => {
       </div>
       
       <!-- Arrow Icon -->
-      <div class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200" :class="{ 'rotate-180': isOpen }">
+      <div 
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer transition-transform duration-200 hover:text-gray-600 dark:hover:text-gray-300" 
+        :class="{ 'rotate-180': isOpen }"
+        @click.stop="toggleDropdown"
+      >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
@@ -142,9 +150,13 @@ onUnmounted(() => {
           class="absolute z-[9999] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-60 overflow-auto py-1 custom-scrollbar"
           :style="dropdownStyle"
         >
-          <div v-if="filteredGroups.length === 0" class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+          <button
+            v-if="filteredGroups.length === 0" 
+            class="w-full text-left px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 block transition-colors"
+            @click="selectGroup(modelValue)"
+          >
             创建新分组 "{{ modelValue }}"
-          </div>
+          </button>
           <button
             v-for="group in filteredGroups"
             :key="group"

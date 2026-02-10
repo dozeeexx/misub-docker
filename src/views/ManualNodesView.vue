@@ -162,6 +162,6 @@ const confirmBatchDelete = () => {
     </Modal>
 
     <SubscriptionImportModal :show="showSubscriptionImportModal" @update:show="showSubscriptionImportModal = $event"
-      :add-nodes-from-bulk="addNodesFromBulk" />
+      :add-nodes-from-bulk="addNodesFromBulk" :groups="manualNodeGroups" />
   </div>
 </template>
