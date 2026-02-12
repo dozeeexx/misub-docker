@@ -557,8 +557,9 @@ export async function handleMisubRequest(context) {
         console.error('[MiSub] Subconverter call failed:', e);
     }
 
-    const errorMessage = lastError ? lastError.message : 'Unknown subconverter error';
-    console.error(`[MiSub Final Error] ${errorMessage}`);
+    // 净化错误信息（移除换行符），防止 header 异常
+    const safeErrorMessage = (lastError ? lastError.message : 'Unknown subconverter error').replace(/[\r\n]+/g, ' ').trim();
+    console.error(`[MiSub Final Error] ${safeErrorMessage}`);
 
     // [Deferred Logging] Log Error for Subconverter Failures (Timeout/Error)
     if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
@@ -572,7 +573,7 @@ export async function handleMisubRequest(context) {
             profileIdentifier,
             subName,
             domain,
-            errorMessage
+            errorMessage: safeErrorMessage
         });
     }
 
@@ -590,7 +591,7 @@ export async function handleMisubRequest(context) {
         });
 
         // 附带简短错误信息，防止 header 过长
-        fallbackHeaders.set('X-MiSub-Error', errorMessage.slice(0, 200));
+        fallbackHeaders.set('X-MiSub-Error', safeErrorMessage.slice(0, 200));
 
         // [Fallback Success] 也发送 Telegram 通知，因为用户仍获取了订阅内容
         if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
@@ -603,7 +604,7 @@ export async function handleMisubRequest(context) {
                     config,
                     '🛰️ *订阅被访问* (Fallback)',
                     clientIp,
-                    `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`base64\`\n*订阅组:* \`${subName}\``
+                    `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`base64\`\n*订阅组:* \`${subName}\`\n*错误:* \`${safeErrorMessage}\``
                 )
             );
         }
@@ -612,7 +613,7 @@ export async function handleMisubRequest(context) {
         if (targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') {
             const fallbackYaml = `
 proxies:
-  - name: "❌ 订阅生成失败 (Fallback)"
+  - name: "❌ 生成失败: ${safeErrorMessage.slice(0, 50).replace(/:/g, ' ')}"
     type: trojan
     server: 127.0.0.1
     port: 443
@@ -625,7 +626,7 @@ proxy-groups:
   - name: "⚠️ 错误节点"
     type: select
     proxies:
-      - "❌ 订阅生成失败 (Fallback)"
+      - "❌ 生成失败: ${safeErrorMessage.slice(0, 50).replace(/:/g, ' ')}"
 
 rules:
   - MATCH,DIRECT
@@ -635,7 +636,7 @@ rules:
                     "Content-Type": "text/yaml; charset=utf-8",
                     'Cache-Control': 'no-store, no-cache',
                     'X-MiSub-Fallback': 'yaml',
-                    'X-MiSub-Error': errorMessage.slice(0, 200)
+                    'X-MiSub-Error': safeErrorMessage.slice(0, 200)
                 },
                 status: 200
             });
