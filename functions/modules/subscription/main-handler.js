@@ -409,6 +409,12 @@ export async function handleMisubRequest(context) {
     const callbackPath = profileIdentifier ? `/${token}/${profileIdentifier}` : `/${token}`;
     const publicBaseUrl = getPublicBaseUrl(env, url);
     const callbackUrl = `${publicBaseUrl.origin}${callbackPath}?target=base64&callback_token=${callbackToken}`;
+
+    // [Debug Logging for Docker/Zeabur]
+    if (!env.workers) { // 简单判断非 Workers 环境（Docker 环境通常没有 env.workers 属性，或者可以凭其他特征判断）
+        console.log(`[MiSub Debug] Profile: ${profileIdentifier}, Token: ${token}`);
+        console.log(`[MiSub Debug] Callback URL: ${callbackUrl}`);
+    }
     if (url.searchParams.get('callback_token') === callbackToken) {
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });

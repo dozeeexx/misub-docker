@@ -178,6 +178,10 @@ export async function fetchFromSubconverter(candidates, options) {
 
             } catch (error) {
                 lastError = error;
+                // [Enhanced Logging] 打印完整堆栈和错误详情
+                console.error(`[SubConverter Error] Backend: ${subconverterUrl.origin}, URL: ${subconverterUrl.toString()}`);
+                console.error(`[SubConverter Error] Details:`, error);
+
                 console.warn(`[SubConverter] Error with backend ${subconverterUrl.origin}: ${error.message}`);
                 // Continue to next variant/candidate
             }
