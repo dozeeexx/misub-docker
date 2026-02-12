@@ -102,7 +102,7 @@ export async function fetchFromSubconverter(candidates, options) {
         cacheHeaders = {},
         enableScv = false,
         enableUdp = false,
-        enableEmoji = false, // [Added]
+        enableEmoji = false,
         timeout = 15000
     } = options;
 
@@ -128,15 +128,12 @@ export async function fetchFromSubconverter(candidates, options) {
                 if (enableUdp) {
                     subconverterUrl.searchParams.set('udp', 'true');
                 }
-                subconverterUrl.searchParams.set('emoji', enableEmoji ? 'true' : 'false'); // [Added]
+                subconverterUrl.searchParams.set('emoji', enableEmoji ? 'true' : 'false');
 
                 if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') &&
                     subConfig && subConfig.trim() !== '') {
                     subconverterUrl.searchParams.set('config', subConfig);
                 }
-
-                // [Fixed] Do not force 'new_name=true' as it causes Subconverter to reorder/rename nodes
-                // subconverterUrl.searchParams.set('new_name', 'true');
 
                 // Timeout Control
                 const controller = new AbortController();
@@ -161,109 +158,54 @@ export async function fetchFromSubconverter(candidates, options) {
                 // Success! Prepare Response
                 let responseText = await response.text();
 
-                // [Sanitize Response] Fix YAML syntax errors (e.g. name: * ...)
-                // Support both Plain Text and Base64 response
-                let replaceCount = 0;
+                // [Sanitize Response V9] TRUE Whitelist & Hex Logging
                 let isBase64 = false;
                 let decodedText = responseText;
 
-                // Simple Base64 detection (no spaces, high entropy?) 
-                // Alternatively, blindly try to decode if target=base64 param is present?
-                // But we don't have easy access to params here without passing them.
-                // Let's try heuristic: if no newlines and looks like base64.
+                // Simple Base64 detection
                 if (!responseText.includes('\n') && /^[A-Za-z0-9+/=]+$/.test(responseText.trim())) {
                     try {
                         const rawDecoded = atob(responseText.trim());
-                        // Verify if it looks like YAML/Config (contains "proxies:" or "name:")
+                        // Verify if it looks like YAML/Config
                         if (rawDecoded.includes('proxies:') || rawDecoded.includes('name:')) {
                             decodedText = rawDecoded;
                             isBase64 = true;
                         }
                     } catch (e) {
-                        // Not base64 or failed to decode, treat as text
+                        // Not base64, treat as text
                     }
                 }
 
-                // [Sanitize Response V8] Aggressive Whitelist & Hex Logging
-                // Find 'name:' and check the immediate next non-whitespace char
-                // If it is NOT a safe char (Letter, Number, Chinese, opened parenthesis, etc), replace it.
-
-                // Regex to find "name:" followed by optional spaces, then capture the next char
-                // We also capture the position to log context
                 const namePattern = /(name:\s*)([^])/g;
-                // [^] matches any char including newline (though name: usually single line)
-
                 if (decodedText) {
                     let logCount = 0;
                     decodedText = decodedText.replace(namePattern, (match, prefix, char) => {
-                        // Whitelist: 
-                        // \w (Alphanumeric + _)
-                        // \u4e00-\u9fa5 (Chinese)
-                        // \u0000-\u007F (ASCII - we filter unsafe ones)
-                        // Safe Symbols: ( [ { " ' < -
+                        // Strict Whitelist logic
+                        const isSafe = /[a-zA-Z0-9_\u4e00-\u9fa5\s\(\)'"\.\-]/.test(char);
 
-                        // Check for UNSAFE chars: 
-                        // * & ! # % @ | > ? : 
-                        const isUnsafe = /[*&!#%@|>:?]/.test(char);
-
-                        // Check if it is a control char?
-                        const code = char.codePointAt(0);
-                        const isControl = code < 32 && code !== 10 && code !== 13; // Ignore newline/cr
-
-                        if (isUnsafe || isControl) {
+                        if (!isSafe) {
                             logCount++;
                             if (logCount <= 5) {
-                                console.log(`[MiSub Sanitize V8] Replaced unsafe char '${char}' (Hex: 0x${code.toString(16).toUpperCase()}) at "${match.slice(0, 20)}..."`);
+                                const code = char.codePointAt(0);
+                                const hex = code ? code.toString(16).toUpperCase() : 'NULL';
+                                console.log(`[MiSub Sanitize V9] Replaced suspicious char '${char}' (Hex: 0x${hex}) at "${match.slice(0, 20)}..."`);
                             }
-                            // Replace with Fullwidth Star
                             return prefix + '★';
                         }
-
                         return match;
                     });
-                }
 
-                // Re-assign responseText
-                if (isBase64) {
-                    responseText = btoa(decodedText);
-                } else {
-                    responseText = decodedText;
-                }
-
-                if (replaceCount > 0) {
-                    console.log(`[MiSub Sanitize] Replaced ${replaceCount} unsafe chars in ${isBase64 ? 'Base64' : 'Plain'} content.`);
-                    if (isBase64) {
-                        responseText = btoa(decodedText);
-                    } else {
-                        responseText = decodedText;
-                    }
-                } else if (isBase64) {
-                    // Check if we missed something by logging a sample
-                    const nameMsg = decodedText.match(/name:\s*.{0,10}/);
-                    if (nameMsg) {
-                        console.log(`[MiSub Debug V7] Found name sample: "${nameMsg[0]}"`);
-                        // Log Hex of the char after name:
-                        const afterName = nameMsg[0].replace(/name:\s*/, '');
-                        if (afterName.length > 0) {
-                            console.log(`[MiSub Debug V7] Char after name hex: ${afterName.codePointAt(0).toString(16)}`);
+                    if (logCount > 0) {
+                        console.log(`[MiSub Sanitize V9] Total replaced: ${logCount} in ${isBase64 ? 'Base64' : 'Plain'} content.`);
+                        if (isBase64) {
+                            responseText = btoa(decodedText);
+                        } else {
+                            responseText = decodedText;
                         }
                     }
                 }
 
-                if (replaceCount > 0) {
-                    console.log(`[MiSub Sanitize] Replaced ${replaceCount} unsafe chars in ${isBase64 ? 'Base64' : 'Plain'} content.`);
-                    if (isBase64) {
-                        responseText = btoa(decodedText);
-                    } else {
-                        responseText = decodedText;
-                    }
-                } else if (isBase64) {
-                    // Even if no replace, we decoded/encoded? No, keep original responseText if no changes needed.
-                    // But if we want to be safe, maybe we should use our re-encoded version? 
-                    // No, simpler to touch only if needed.
-                }
-
-                // [Debug Logging Response - Forced STDERR]
+                // [Debug Logging Response]
                 console.log(`[SubConverter Response] Status: ${response.status}`);
                 console.log(`[SubConverter Preview] ${responseText.slice(0, 500)}`);
 
@@ -295,12 +237,10 @@ export async function fetchFromSubconverter(candidates, options) {
 
             } catch (error) {
                 lastError = error;
-                // [Enhanced Logging] 打印完整堆栈和错误详情
+                // [Enhanced Logging]
                 console.log(`[SubConverter Error] Backend: ${subconverterUrl.origin}, URL: ${subconverterUrl.toString()}`);
                 console.log(`[SubConverter Error] Details:`, error);
-
                 console.warn(`[SubConverter] Error with backend ${subconverterUrl.origin}: ${error.message}`);
-                // Continue to next variant/candidate
             }
         }
     }
