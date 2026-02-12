@@ -102,11 +102,15 @@ export async function fetchFromSubconverter(candidates, options) {
         cacheHeaders = {},
         enableScv = false,
         enableUdp = false,
+        enableEmoji = false, // [Added]
         timeout = 15000
     } = options;
 
     const triedEndpoints = [];
     let lastError = null;
+
+    // [Debug Logging Entry]
+    console.log(`[SubConverter Start] Candidates: ${JSON.stringify(candidates)}`);
 
     for (const backend of candidates) {
         const variants = buildSubconverterUrlVariants(backend);
@@ -124,6 +128,7 @@ export async function fetchFromSubconverter(candidates, options) {
                 if (enableUdp) {
                     subconverterUrl.searchParams.set('udp', 'true');
                 }
+                subconverterUrl.searchParams.set('emoji', enableEmoji ? 'true' : 'false'); // [Added]
 
                 if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') &&
                     subConfig && subConfig.trim() !== '') {
@@ -157,8 +162,8 @@ export async function fetchFromSubconverter(candidates, options) {
                 const responseText = await response.text();
 
                 // [Debug Logging Response - Forced STDERR]
-                console.error(`[SubConverter Response] Status: ${response.status}`);
-                console.error(`[SubConverter Preview] ${responseText.slice(0, 500)}`);
+                console.log(`[SubConverter Response] Status: ${response.status}`);
+                console.log(`[SubConverter Preview] ${responseText.slice(0, 500)}`);
 
                 // [Validation] Check for invalid HTML response 
                 if (responseText.trim().startsWith('<!DOCTYPE html>') || responseText.includes('<html')) {
@@ -189,8 +194,8 @@ export async function fetchFromSubconverter(candidates, options) {
             } catch (error) {
                 lastError = error;
                 // [Enhanced Logging] 打印完整堆栈和错误详情
-                console.error(`[SubConverter Error] Backend: ${subconverterUrl.origin}, URL: ${subconverterUrl.toString()}`);
-                console.error(`[SubConverter Error] Details:`, error);
+                console.log(`[SubConverter Error] Backend: ${subconverterUrl.origin}, URL: ${subconverterUrl.toString()}`);
+                console.log(`[SubConverter Error] Details:`, error);
 
                 console.warn(`[SubConverter] Error with backend ${subconverterUrl.origin}: ${error.message}`);
                 // Continue to next variant/candidate

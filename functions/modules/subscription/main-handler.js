@@ -6,7 +6,7 @@ import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defa
 import { createDisguiseResponse } from '../disguise-page.js';
 import { generateCacheKey, setCache } from '../../services/node-cache-service.js';
 import { resolveRequestContext } from './request-context.js';
-import { buildSubconverterUrlVariants, getSubconverterCandidates } from './subconverter-client.js';
+import { buildSubconverterUrlVariants, getSubconverterCandidates, fetchFromSubconverter } from './subconverter-client.js';
 import { resolveNodeListWithCache } from './cache-manager.js';
 import { logAccessError, logAccessSuccess, shouldSkipLogging as shouldSkipAccessLog } from './access-logger.js';
 import { isBrowserAgent } from './user-agent-utils.js'; // [Added] Import centralized util
@@ -505,90 +505,59 @@ export async function handleMisubRequest(context) {
 
     const candidates = getSubconverterCandidates(effectiveSubConverter);
     let lastError = null;
-    const triedEndpoints = [];
 
-    for (const backend of candidates) {
-        const variants = buildSubconverterUrlVariants(backend);
-        for (const subconverterUrl of variants) {
-            triedEndpoints.push(subconverterUrl.origin + subconverterUrl.pathname);
-            try {
-                subconverterUrl.searchParams.set('target', targetFormat);
-                subconverterUrl.searchParams.set('url', callbackUrl);
-                if (shouldSkipCertificateVerify) {
-                    subconverterUrl.searchParams.set('scv', 'true');
-                }
-                if (shouldEnableUdp) {
-                    subconverterUrl.searchParams.set('udp', 'true');
-                }
-                subconverterUrl.searchParams.set('emoji', shouldUseEmoji ? 'true' : 'false');  // 根据模板动态设置 emoji 参数
-                if ((targetFormat === 'clash' || targetFormat === 'loon' || targetFormat === 'surge') && effectiveSubConfig && effectiveSubConfig.trim() !== '') {
-                    subconverterUrl.searchParams.set('config', effectiveSubConfig);
-                }
-                subconverterUrl.searchParams.set('new_name', 'true');
+    try {
+        // [New Implementation] Use centralized client
+        const result = await fetchFromSubconverter(candidates, {
+            targetFormat,
+            callbackUrl,
+            subConfig: effectiveSubConfig,
+            subName,
+            cacheHeaders,
+            enableScv: shouldSkipCertificateVerify,
+            enableUdp: shouldEnableUdp,
+            enableEmoji: shouldUseEmoji,
+            timeout: 30000 // 30s timeout
+        });
 
-                const subconverterResponse = await fetch(subconverterUrl.toString(), {
-                    method: 'GET',
-                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MiSub-Backend)' },
+        // [Success Logic]
+        if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
+            const clientIp = request.headers.get('CF-Connecting-IP')
+                || request.headers.get('X-Real-IP')
+                || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+                || 'N/A';
+            context.waitUntil(
+                sendEnhancedTgNotification(
+                    config,
+                    '🛰️ *订阅被访问*',
+                    clientIp,
+                    `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`${targetFormat}\`\n*订阅组:* \`${subName}\``
+                )
+            );
+
+            if (config.enableAccessLog) {
+                logAccessSuccess({
+                    context,
+                    env,
+                    request,
+                    userAgentHeader,
+                    targetFormat,
+                    token,
+                    profileIdentifier,
+                    subName,
+                    domain
                 });
-                if (!subconverterResponse.ok) {
-                    const errorBody = await subconverterResponse.text();
-                    lastError = new Error(`Subconverter(${subconverterUrl.origin}) returned status ${subconverterResponse.status}. Body: ${errorBody}`);
-                    console.warn('[SubConverter] Non-OK response, trying next backend if available:', lastError.message);
-                    continue;
-                }
-                const responseText = await subconverterResponse.text();
-
-                const responseHeaders = new Headers(subconverterResponse.headers);
-                responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
-                responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
-                responseHeaders.set('Cache-Control', 'no-store, no-cache');
-
-                // 添加缓存状态头
-                Object.entries(cacheHeaders).forEach(([key, value]) => {
-                    responseHeaders.set(key, value);
-                });
-
-                // [Deferred Logging] Log Success for Subconverter
-                if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
-                    // 发送 Telegram 通知（独立于访问日志开关）
-                    const clientIp = request.headers.get('CF-Connecting-IP')
-                        || request.headers.get('X-Real-IP')
-                        || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
-                        || 'N/A';
-                    context.waitUntil(
-                        sendEnhancedTgNotification(
-                            config,
-                            '🛰️ *订阅被访问*',
-                            clientIp,
-                            `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`${targetFormat}\`\n*订阅组:* \`${subName}\``
-                        )
-                    );
-
-                    // 访问日志（需要 enableAccessLog 开关）
-                    if (config.enableAccessLog) {
-                        logAccessSuccess({
-                            context,
-                            env,
-                            request,
-                            userAgentHeader,
-                            targetFormat,
-                            token,
-                            profileIdentifier,
-                            subName,
-                            domain
-                        });
-                    }
-                }
-
-                return new Response(responseText, { status: subconverterResponse.status, statusText: subconverterResponse.statusText, headers: responseHeaders });
-            } catch (error) {
-                lastError = error;
-                console.warn(`[SubConverter] Error with backend ${subconverterUrl.origin}: ${error.message}. Trying next fallback if available.`);
             }
         }
+
+        return result.response;
+
+    } catch (e) {
+        lastError = e;
+        console.error('[MiSub] Subconverter call failed:', e);
     }
 
-    const errorMessage = lastError ? `${lastError.message}. Tried: ${triedEndpoints.join(', ')}` : 'Unknown subconverter error';
+    const errorMessage = lastError ? lastError.message : 'Unknown subconverter error';
     console.error(`[MiSub Final Error] ${errorMessage}`);
 
     // [Deferred Logging] Log Error for Subconverter Failures (Timeout/Error)
