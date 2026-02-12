@@ -184,18 +184,70 @@ export async function fetchFromSubconverter(candidates, options) {
                     }
                 }
 
-                const unsafePattern = /(name:\s*)([*&!#])/g;
-                if (unsafePattern.test(decodedText)) {
-                    decodedText = decodedText.replace(unsafePattern, (match, prefix, char) => {
-                        replaceCount++;
-                        const replacement = {
-                            '*': '★',
-                            '&': '＆',
-                            '!': '！',
-                            '#': '＃'
-                        }[char] || char;
-                        return prefix + replacement;
+                // [Sanitize Response V8] Aggressive Whitelist & Hex Logging
+                // Find 'name:' and check the immediate next non-whitespace char
+                // If it is NOT a safe char (Letter, Number, Chinese, opened parenthesis, etc), replace it.
+
+                // Regex to find "name:" followed by optional spaces, then capture the next char
+                // We also capture the position to log context
+                const namePattern = /(name:\s*)([^])/g;
+                // [^] matches any char including newline (though name: usually single line)
+
+                if (decodedText) {
+                    let logCount = 0;
+                    decodedText = decodedText.replace(namePattern, (match, prefix, char) => {
+                        // Whitelist: 
+                        // \w (Alphanumeric + _)
+                        // \u4e00-\u9fa5 (Chinese)
+                        // \u0000-\u007F (ASCII - we filter unsafe ones)
+                        // Safe Symbols: ( [ { " ' < -
+
+                        // Check for UNSAFE chars: 
+                        // * & ! # % @ | > ? : 
+                        const isUnsafe = /[*&!#%@|>:?]/.test(char);
+
+                        // Check if it is a control char?
+                        const code = char.codePointAt(0);
+                        const isControl = code < 32 && code !== 10 && code !== 13; // Ignore newline/cr
+
+                        if (isUnsafe || isControl) {
+                            logCount++;
+                            if (logCount <= 5) {
+                                console.log(`[MiSub Sanitize V8] Replaced unsafe char '${char}' (Hex: 0x${code.toString(16).toUpperCase()}) at "${match.slice(0, 20)}..."`);
+                            }
+                            // Replace with Fullwidth Star
+                            return prefix + '★';
+                        }
+
+                        return match;
                     });
+                }
+
+                // Re-assign responseText
+                if (isBase64) {
+                    responseText = btoa(decodedText);
+                } else {
+                    responseText = decodedText;
+                }
+
+                if (replaceCount > 0) {
+                    console.log(`[MiSub Sanitize] Replaced ${replaceCount} unsafe chars in ${isBase64 ? 'Base64' : 'Plain'} content.`);
+                    if (isBase64) {
+                        responseText = btoa(decodedText);
+                    } else {
+                        responseText = decodedText;
+                    }
+                } else if (isBase64) {
+                    // Check if we missed something by logging a sample
+                    const nameMsg = decodedText.match(/name:\s*.{0,10}/);
+                    if (nameMsg) {
+                        console.log(`[MiSub Debug V7] Found name sample: "${nameMsg[0]}"`);
+                        // Log Hex of the char after name:
+                        const afterName = nameMsg[0].replace(/name:\s*/, '');
+                        if (afterName.length > 0) {
+                            console.log(`[MiSub Debug V7] Char after name hex: ${afterName.codePointAt(0).toString(16)}`);
+                        }
+                    }
                 }
 
                 if (replaceCount > 0) {
