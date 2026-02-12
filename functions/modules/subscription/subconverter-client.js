@@ -1,6 +1,6 @@
 const DEFAULT_SUBCONVERTER_FALLBACKS = [
+    'sub.d1.mk', // [Changed] Prioritize d1.mk
     'subapi.cmliussss.net',
-    'sub.d1.mk',
     'sub.xeton.dev'
 ];
 
@@ -156,9 +156,14 @@ export async function fetchFromSubconverter(candidates, options) {
                 // Success! Prepare Response
                 const responseText = await response.text();
 
-                // [Debug Logging Response]
-                console.log(`[SubConverter Response] Status: ${response.status}`);
-                console.log(`[SubConverter Preview] ${responseText.slice(0, 500)}`);
+                // [Debug Logging Response - Forced STDERR]
+                console.error(`[SubConverter Response] Status: ${response.status}`);
+                console.error(`[SubConverter Preview] ${responseText.slice(0, 500)}`);
+
+                // [Validation] Check for invalid HTML response 
+                if (responseText.trim().startsWith('<!DOCTYPE html>') || responseText.includes('<html')) {
+                    throw new Error(`Backend returned HTML instead of subscription content: ${responseText.slice(0, 100)}...`);
+                }
 
                 const responseHeaders = new Headers(response.headers);
 
