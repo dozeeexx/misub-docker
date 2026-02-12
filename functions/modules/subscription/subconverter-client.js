@@ -161,12 +161,32 @@ export async function fetchFromSubconverter(candidates, options) {
                 // Success! Prepare Response
                 let responseText = await response.text();
 
-                // [Sanitize Response] Fix YAML syntax errors from Subconverter
-                // Remove \b to be safer, match 'name:' followed by space and special char
+                // [Sanitize Response] Fix YAML syntax errors (e.g. name: * ...)
+                // Support both Plain Text and Base64 response
                 let replaceCount = 0;
+                let isBase64 = false;
+                let decodedText = responseText;
+
+                // Simple Base64 detection (no spaces, high entropy?) 
+                // Alternatively, blindly try to decode if target=base64 param is present?
+                // But we don't have easy access to params here without passing them.
+                // Let's try heuristic: if no newlines and looks like base64.
+                if (!responseText.includes('\n') && /^[A-Za-z0-9+/=]+$/.test(responseText.trim())) {
+                    try {
+                        const rawDecoded = atob(responseText.trim());
+                        // Verify if it looks like YAML/Config (contains "proxies:" or "name:")
+                        if (rawDecoded.includes('proxies:') || rawDecoded.includes('name:')) {
+                            decodedText = rawDecoded;
+                            isBase64 = true;
+                        }
+                    } catch (e) {
+                        // Not base64 or failed to decode, treat as text
+                    }
+                }
+
                 const unsafePattern = /(name:\s*)([*&!#])/g;
-                if (unsafePattern.test(responseText)) {
-                    responseText = responseText.replace(unsafePattern, (match, prefix, char) => {
+                if (unsafePattern.test(decodedText)) {
+                    decodedText = decodedText.replace(unsafePattern, (match, prefix, char) => {
                         replaceCount++;
                         const replacement = {
                             '*': '★',
@@ -177,7 +197,19 @@ export async function fetchFromSubconverter(candidates, options) {
                         return prefix + replacement;
                     });
                 }
-                console.log(`[MiSub Sanitize] Replaced ${replaceCount} unsafe chars in YAML.`);
+
+                if (replaceCount > 0) {
+                    console.log(`[MiSub Sanitize] Replaced ${replaceCount} unsafe chars in ${isBase64 ? 'Base64' : 'Plain'} content.`);
+                    if (isBase64) {
+                        responseText = btoa(decodedText);
+                    } else {
+                        responseText = decodedText;
+                    }
+                } else if (isBase64) {
+                    // Even if no replace, we decoded/encoded? No, keep original responseText if no changes needed.
+                    // But if we want to be safe, maybe we should use our re-encoded version? 
+                    // No, simpler to touch only if needed.
+                }
 
                 // [Debug Logging Response - Forced STDERR]
                 console.log(`[SubConverter Response] Status: ${response.status}`);
