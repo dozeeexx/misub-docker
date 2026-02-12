@@ -370,6 +370,10 @@ export async function handleMisubRequest(context) {
         targetMisubsCount: targetMisubs.length
     });
 
+    if (!env.workers) {
+        console.log(`[MiSub Nodes] Count/Length: ${combinedNodeList ? combinedNodeList.length : 0}`);
+    }
+
     const domain = url.hostname;
 
     if (targetFormat === 'base64') {

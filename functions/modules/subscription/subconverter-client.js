@@ -155,6 +155,11 @@ export async function fetchFromSubconverter(candidates, options) {
 
                 // Success! Prepare Response
                 const responseText = await response.text();
+
+                // [Debug Logging Response]
+                console.log(`[SubConverter Response] Status: ${response.status}`);
+                console.log(`[SubConverter Preview] ${responseText.slice(0, 500)}`);
+
                 const responseHeaders = new Headers(response.headers);
 
                 // Set Filename
