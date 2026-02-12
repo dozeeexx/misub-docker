@@ -557,8 +557,11 @@ export async function handleMisubRequest(context) {
         console.error('[MiSub] Subconverter call failed:', e);
     }
 
-    // 净化错误信息（移除换行符），防止 header 异常
-    const safeErrorMessage = (lastError ? lastError.message : 'Unknown subconverter error').replace(/[\r\n]+/g, ' ').trim();
+    // 净化错误信息（移除换行符和双引号），防止 header 异常和 YAML 语法错误
+    const safeErrorMessage = (lastError ? lastError.message : 'Unknown subconverter error')
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/"/g, "'")
+        .trim();
     console.error(`[MiSub Final Error] ${safeErrorMessage}`);
 
     // [Deferred Logging] Log Error for Subconverter Failures (Timeout/Error)

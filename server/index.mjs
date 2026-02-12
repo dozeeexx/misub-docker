@@ -13,6 +13,17 @@ const dbPath = process.env.MISUB_DB_PATH || path.join(rootDir, 'data', 'misub.db
 const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PORT || 8080);
 
+console.log('[MiSub] Deployment ID:', process.env.ZEABUR_DEPLOYMENT_ID || 'Local');
+console.log('[MiSub] Server process initialized.');
+
+process.on('uncaughtException', (err) => {
+    console.error('[MiSub] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[MiSub] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const { kv, d1 } = createSqliteStore({ dbPath, schemaPath });
 const assets = createAssetFetcher({ distDir });
 
@@ -101,7 +112,7 @@ const server = http.createServer(async (req, res) => {
 
         if (waitUntilTasks.length) {
             setImmediate(() => {
-                Promise.allSettled(waitUntilTasks).catch(() => {});
+                Promise.allSettled(waitUntilTasks).catch(() => { });
             });
         }
     } catch (error) {
