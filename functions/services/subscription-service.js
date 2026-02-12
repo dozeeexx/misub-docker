@@ -5,7 +5,7 @@
 
 import { parseNodeList } from '../modules/utils/node-parser.js';
 import { getProcessedUserAgent } from '../utils/format-utils.js';
-import { prependNodeName, removeFlagEmoji, fixNodeUrlEncoding } from '../utils/node-utils.js';
+import { prependNodeName, removeFlagEmoji, fixNodeUrlEncoding, sanitizeNodeForYaml } from '../utils/node-utils.js';
 import { applyNodeTransformPipeline } from '../utils/node-transformer.js';
 import { createTimeoutFetch } from '../modules/utils.js';
 
@@ -254,9 +254,12 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
         ? combinedLines
         : combinedLines.map(line => removeFlagEmoji(line));
 
+    // [Sanitize] Always sanitize node names for YAML compatibility (Subconverter issue with unquoted special chars)
+    const sanitizedLines = normalizedLines.map(line => sanitizeNodeForYaml(line));
+
     const outputLines = nodeTransformConfig?.enabled
-        ? applyNodeTransformPipeline(normalizedLines, { ...nodeTransformConfig, enableEmoji: templateContainsEmoji })
-        : [...new Set(normalizedLines)];
+        ? applyNodeTransformPipeline(sanitizedLines, { ...nodeTransformConfig, enableEmoji: templateContainsEmoji })
+        : [...new Set(sanitizedLines)];
     const uniqueNodesString = outputLines.join('\n');
 
     // 确保最终的字符串在非空时以换行符结束，以兼容 subconverter

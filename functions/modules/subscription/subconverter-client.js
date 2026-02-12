@@ -159,7 +159,15 @@ export async function fetchFromSubconverter(candidates, options) {
                 }
 
                 // Success! Prepare Response
-                const responseText = await response.text();
+                let responseText = await response.text();
+
+                // [Sanitize Response] Fix YAML syntax errors from Subconverter (e.g. name: * ...)
+                // This happens when Subconverter preserves special chars/emojis corrupted as *
+                // We replace unsafe starting chars in 'name: ...' with safe variants
+                responseText = responseText.replace(/(\bname:\s*)([*])/g, '$1★')
+                    .replace(/(\bname:\s*)([&])/g, '$1＆')
+                    .replace(/(\bname:\s*)([!])/g, '$1！')
+                    .replace(/(\bname:\s*)([#])/g, '$1＃');
 
                 // [Debug Logging Response - Forced STDERR]
                 console.log(`[SubConverter Response] Status: ${response.status}`);
