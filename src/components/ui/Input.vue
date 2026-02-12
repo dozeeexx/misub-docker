@@ -37,6 +37,14 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  autocomplete: {
+    type: String,
+    default: 'off'
+  },
+  name: {
+    type: String,
+    default: undefined
   }
 });
 
@@ -49,7 +57,7 @@ const updateValue = (event) => {
 
 <template>
   <div class="w-full">
-    <label v-if="label" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ml-1">
+    <label v-if="label" :for="id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ml-1">
       {{ label }}
     </label>
     <div class="relative group">
@@ -70,6 +78,9 @@ const updateValue = (event) => {
       </div>
       
       <input
+        :id="id"
+        :name="name"
+        :autocomplete="autocomplete"
         :value="modelValue"
         @input="updateValue"
         :type="type"

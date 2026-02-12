@@ -205,6 +205,8 @@ watch(() => props.settings.customLoginPath, (val) => {
                   v-model="settings.customLoginPath"
                   placeholder="默认: login"
                   prefix="/"
+                  autocomplete="new-password"
+                  name="custom_admin_path_setting_no_autofill"
                 />
              </div>
              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
