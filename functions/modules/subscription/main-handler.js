@@ -23,6 +23,12 @@ export async function handleMisubRequest(context) {
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
+    // [Debug Logging Entry]
+    if (!env.workers) {
+        console.log(`\n[MiSub Request] ${request.method} ${url.pathname}${url.search}`);
+        console.log(`[MiSub UA] ${userAgentHeader}`);
+    }
+
     const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
     const [settingsData, misubsData, profilesData] = await Promise.all([
         storageAdapter.get(KV_KEY_SETTINGS),
@@ -46,6 +52,11 @@ export async function handleMisubRequest(context) {
 
     const isBrowser = isBrowserAgent(userAgentHeader);
 
+    // [Debug Logging Logic]
+    if (!env.workers) {
+        console.log(`[MiSub Logic] isBrowser: ${isBrowser}, Disguise: ${config.disguise?.enabled}`);
+    }
+
     const isAuthenticated = await authMiddleware(request, env);
 
     if (config.disguise?.enabled && isBrowser && !url.searchParams.has('callback_token') && !isAuthenticated) {
@@ -56,6 +67,11 @@ export async function handleMisubRequest(context) {
     }
 
     const { token, profileIdentifier } = resolveRequestContext(url, config, allProfiles);
+
+    // [Debug Logging Parse]
+    if (!env.workers) {
+        console.log(`[MiSub Parse] Token: ${token}, Profile: ${profileIdentifier}`);
+    }
     const shouldSkipLogging = shouldSkipAccessLog(userAgentHeader);
 
     let targetMisubs;
