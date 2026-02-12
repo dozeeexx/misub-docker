@@ -4,7 +4,7 @@
  */
 
 import { StorageFactory } from '../storage-adapter.js';
-import { getCookieSecret, getAdminPassword, setAdminPassword, isUsingDefaultPassword, createJsonResponse, createErrorResponse } from './utils.js';
+import { getCookieSecret, getAdminPassword, setAdminPassword, isUsingDefaultPassword, createJsonResponse, createErrorResponse, migrateProfileIds } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout, createUnauthorizedResponse } from './auth-middleware.js';
 import { sendTgNotification, checkAndNotify } from './notifications.js';
 import { clearAllNodeCaches } from '../services/node-cache-service.js';
@@ -42,6 +42,13 @@ export async function handleDataRequest(env) {
             storageAdapter.get(KV_KEY_PROFILES).then(res => res || []),
             storageAdapter.get(KV_KEY_SETTINGS).then(res => res || {})
         ]);
+
+        // 自动迁移旧版 profile ID（去除 'profile_' 前缀）
+        if (migrateProfileIds(profiles)) {
+            storageAdapter.put(KV_KEY_PROFILES, profiles).catch(err =>
+                console.error('[Migration] Failed to persist migrated profile IDs:', err)
+            );
+        }
         const config = {
             FileName: settings.FileName || 'MISUB',
             mytoken: settings.mytoken || 'auto',

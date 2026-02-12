@@ -1,5 +1,5 @@
 import { StorageFactory } from '../../storage-adapter.js';
-import { migrateConfigSettings, formatBytes, getCallbackToken, getPublicBaseUrl } from '../utils.js';
+import { migrateConfigSettings, formatBytes, getCallbackToken, getPublicBaseUrl, migrateProfileIds } from '../utils.js';
 import { generateCombinedNodeList } from '../../services/subscription-service.js';
 import { sendEnhancedTgNotification } from '../notifications.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from '../config.js';
@@ -32,6 +32,13 @@ export async function handleMisubRequest(context) {
     const settings = settingsData || {};
     const allMisubs = misubsData || [];
     const allProfiles = profilesData || [];
+
+    // 自动迁移旧版 profile ID（去除 'profile_' 前缀）
+    if (migrateProfileIds(allProfiles)) {
+        storageAdapter.put(KV_KEY_PROFILES, allProfiles).catch(err =>
+            console.error('[Migration] Failed to persist migrated profile IDs:', err)
+        );
+    }
     // 关键：我们在这里定义了 `config`，后续都应该使用它
     const config = migrateConfigSettings({ ...defaultSettings, ...settings });
 
