@@ -27,6 +27,33 @@ export function sanitizeConvertedSubscriptionContent(content) {
 }
 
 /**
+ * 构建返回给客户端的响应头，避免透传与实际响应体不一致的压缩/长度头。
+ * @param {Headers} backendHeaders
+ * @param {string} subName
+ * @param {Object} cacheHeaders
+ * @returns {Headers}
+ */
+export function buildClientResponseHeaders(backendHeaders, subName, cacheHeaders = {}) {
+    const responseHeaders = new Headers(backendHeaders);
+
+    // Node.js fetch 可能已自动解压，但仍保留 content-encoding，
+    // 会导致客户端二次解压报错（如 Clash 的 Filter error, bad data）。
+    responseHeaders.delete('content-encoding');
+    responseHeaders.delete('content-length');
+    responseHeaders.delete('transfer-encoding');
+
+    responseHeaders.set('Content-Disposition', `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
+    responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
+    responseHeaders.set('Cache-Control', 'no-store, no-cache');
+
+    Object.entries(cacheHeaders).forEach(([key, value]) => {
+        responseHeaders.set(key, value);
+    });
+
+    return responseHeaders;
+}
+
+/**
  * 构建 SubConverter 请求的基础 URL，兼容带/不带协议的配置
  * @param {string} backend - 用户配置的 SubConverter 地址
  * @returns {URL} - 规范化后的 URL 对象，指向 /sub 路径
@@ -217,17 +244,7 @@ export async function fetchFromSubconverter(candidates, options) {
                     throw new Error(`Backend returned HTML instead of subscription content: ${responseText.slice(0, 100)}...`);
                 }
 
-                const responseHeaders = new Headers(response.headers);
-
-                // Set Filename
-                responseHeaders.set("Content-Disposition", `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
-                responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
-                responseHeaders.set('Cache-Control', 'no-store, no-cache');
-
-                // Pass-through Cache Headers
-                Object.entries(cacheHeaders).forEach(([key, value]) => {
-                    responseHeaders.set(key, value);
-                });
+                const responseHeaders = buildClientResponseHeaders(response.headers, subName, cacheHeaders);
 
                 return {
                     response: new Response(responseText, {

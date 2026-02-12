@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeConvertedSubscriptionContent } from '../../functions/modules/subscription/subconverter-client.js';
+import {
+    sanitizeConvertedSubscriptionContent,
+    buildClientResponseHeaders
+} from '../../functions/modules/subscription/subconverter-client.js';
 
 describe('subconverter-client sanitize', () => {
     it('keeps unicode and emoji in node names', () => {
@@ -16,5 +19,25 @@ describe('subconverter-client sanitize', () => {
 
         expect(result.content).toBe('name: "HKNode"\nproxies:\n  - type: ss\n');
         expect(result.replacedCount).toBe(2);
+    });
+});
+
+describe('subconverter-client response headers', () => {
+    it('removes encoding and length headers that can break clients', () => {
+        const backendHeaders = new Headers({
+            'content-encoding': 'gzip',
+            'content-length': '1024',
+            'transfer-encoding': 'chunked',
+            'x-backend': 'subconverter'
+        });
+
+        const headers = buildClientResponseHeaders(backendHeaders, 'MiSub', { 'X-Cache-Status': 'HIT' });
+
+        expect(headers.get('content-encoding')).toBeNull();
+        expect(headers.get('content-length')).toBeNull();
+        expect(headers.get('transfer-encoding')).toBeNull();
+        expect(headers.get('x-backend')).toBe('subconverter');
+        expect(headers.get('content-type')).toBe('text/plain; charset=utf-8');
+        expect(headers.get('x-cache-status')).toBe('HIT');
     });
 });
