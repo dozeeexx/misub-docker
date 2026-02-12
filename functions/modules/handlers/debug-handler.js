@@ -316,9 +316,8 @@ export async function handlePreviewContentRequest(request, env) {
 
         const response = await fetch(new Request(url, {
             headers: { 'User-Agent': userAgent },
-            redirect: "follow",
-            cf: { insecureSkipVerify: true }
-        }));
+            redirect: "follow"
+        }), { cf: { insecureSkipVerify: true } });
 
         if (!response.ok) {
             return createJsonResponse({

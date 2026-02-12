@@ -302,7 +302,10 @@ export async function generateCombinedNodeList(context, config, userAgent, misub
                 geoInfo = context.logMetadata.geoInfo || geoInfo;
             } else if (context && context.request) {
                 const cf = context.request.cf;
-                clientIp = context.request.headers.get('CF-Connecting-IP') || 'Unknown';
+                clientIp = context.request.headers.get('CF-Connecting-IP')
+                    || context.request.headers.get('X-Real-IP')
+                    || context.request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+                    || 'Unknown';
                 if (cf) {
                     geoInfo = {
                         country: cf.country,

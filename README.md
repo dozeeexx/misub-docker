@@ -236,6 +236,8 @@ docker compose up -d --build
 - `MISUB_PUBLIC_URL` 对外访问的公开域名，用于订阅转换回调（反代/公网环境建议配置）
 - `MISUB_CALLBACK_URL` 订阅转换回调基础地址（优先级高于 MISUB_PUBLIC_URL）
 
+> ⚠️ **关于修改 PORT**：如果将 `PORT` 修改为非 8080 的值（如 `3000`），需要同步修改 `docker-compose.yml` 中的 `ports` 映射，例如 `"3000:3000"`，确保宿主机端口与容器内端口一致。
+
 ### 3. 数据持久化
 
 默认通过 `./data` 目录持久化数据库文件。

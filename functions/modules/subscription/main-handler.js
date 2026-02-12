@@ -269,7 +269,10 @@ export async function handleMisubRequest(context) {
         context.startTime = Date.now();
 
         // Prepare log metadata to pass down
-        const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+        const clientIp = request.headers.get('CF-Connecting-IP')
+            || request.headers.get('X-Real-IP')
+            || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+            || 'N/A';
         const country = request.headers.get('CF-IPCountry') || 'N/A';
         const domain = url.hostname;
 
@@ -361,7 +364,10 @@ export async function handleMisubRequest(context) {
         // [Deferred Logging] Log Success for Base64 (Direct Return)
         if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
             // 发送 Telegram 通知（独立于访问日志开关，只需配置 BotToken 和 ChatID）
-            const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+            const clientIp = request.headers.get('CF-Connecting-IP')
+                || request.headers.get('X-Real-IP')
+                || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+                || 'N/A';
             context.waitUntil(
                 sendEnhancedTgNotification(
                     config,
@@ -428,7 +434,10 @@ export async function handleMisubRequest(context) {
 
             // 发送通知和日志
             if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
-                const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+                const clientIp = request.headers.get('CF-Connecting-IP')
+                    || request.headers.get('X-Real-IP')
+                    || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+                    || 'N/A';
                 context.waitUntil(
                     sendEnhancedTgNotification(
                         config,
@@ -509,7 +518,10 @@ export async function handleMisubRequest(context) {
                 // [Deferred Logging] Log Success for Subconverter
                 if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
                     // 发送 Telegram 通知（独立于访问日志开关）
-                    const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+                    const clientIp = request.headers.get('CF-Connecting-IP')
+                        || request.headers.get('X-Real-IP')
+                        || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+                        || 'N/A';
                     context.waitUntil(
                         sendEnhancedTgNotification(
                             config,
@@ -580,7 +592,10 @@ export async function handleMisubRequest(context) {
 
         // [Fallback Success] 也发送 Telegram 通知，因为用户仍获取了订阅内容
         if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
-            const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+            const clientIp = request.headers.get('CF-Connecting-IP')
+                || request.headers.get('X-Real-IP')
+                || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+                || 'N/A';
             context.waitUntil(
                 sendEnhancedTgNotification(
                     config,

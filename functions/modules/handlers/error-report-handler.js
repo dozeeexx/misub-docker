@@ -49,7 +49,9 @@ export async function handleErrorReportRequest(request, env) {
             userAgent: safeString(body?.userAgent, 300),
             additionalData: safeAdditionalData(body?.additionalData),
             origin: safeString(request.headers.get('Origin'), 200),
-            ip: safeString(request.headers.get('CF-Connecting-IP'), 100)
+            ip: safeString(request.headers.get('CF-Connecting-IP')
+                || request.headers.get('X-Real-IP')
+                || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim(), 100)
         };
 
         let reports = await env.MISUB_KV.get(ERROR_REPORT_KV_KEY, 'json');

@@ -36,17 +36,17 @@ export async function handleNodeCountRequest(request, env) {
             // 使用统一的User-Agent策略
             const fetchOptions = {
                 headers: { 'User-Agent': 'v2rayN/7.23' },
-                redirect: "follow",
-                cf: { insecureSkipVerify: true }
+                redirect: "follow"
             };
             const trafficFetchOptions = {
                 headers: { 'User-Agent': 'clash-verge/v2.4.3' },
-                redirect: "follow",
-                cf: { insecureSkipVerify: true }
+                redirect: "follow"
             };
 
-            const trafficRequest = fetch(new Request(subUrl, trafficFetchOptions));
-            const nodeCountRequest = fetch(new Request(subUrl, fetchOptions));
+            // cf 选项需传给 fetch() 而非 Request()：Cloudflare 环境生效，Node.js 安全忽略
+            const cfOptions = { cf: { insecureSkipVerify: true } };
+            const trafficRequest = fetch(new Request(subUrl, trafficFetchOptions), cfOptions);
+            const nodeCountRequest = fetch(new Request(subUrl, fetchOptions), cfOptions);
 
             // 使用 Promise.allSettled 替换 Promise.all
             const responses = await Promise.allSettled([trafficRequest, nodeCountRequest]);
@@ -255,9 +255,8 @@ export async function handleBatchUpdateNodesRequest(request, env) {
                 // 使用 Promise.race 实现超时
                 const fetchPromise = fetch(new Request(subscription.url, {
                     headers: { 'User-Agent': userAgent },
-                    redirect: "follow",
-                    cf: { insecureSkipVerify: true }
-                }));
+                    redirect: "follow"
+                }), { cf: { insecureSkipVerify: true } });
 
                 const timeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('请求超时')), SINGLE_SUB_TIMEOUT)

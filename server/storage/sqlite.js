@@ -95,17 +95,17 @@ class D1PreparedStatement {
         return this;
     }
 
-    first() {
+    async first() {
         const row = this.stmt.get(...this.params);
         return row || null;
     }
 
-    all() {
+    async all() {
         const rows = this.stmt.all(...this.params);
         return { results: rows };
     }
 
-    run() {
+    async run() {
         const info = this.stmt.run(...this.params);
         return {
             success: true,

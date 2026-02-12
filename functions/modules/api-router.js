@@ -330,12 +330,13 @@ async function handleExternalFetchRequest(request, env) {
                 'Cache-Control': 'no-cache'
             },
             redirect: "follow",
+            signal: controller.signal
+        }), {
             cf: {
                 insecureSkipVerify: true,
                 timeout: timeout / 1000 // Cloudflare timeout in seconds
-            },
-            signal: controller.signal
-        }));
+            }
+        });
 
         clearTimeout(timeoutId);
 

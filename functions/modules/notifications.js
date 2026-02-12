@@ -205,8 +205,13 @@ export async function handleCronTrigger(env) {
         try {
             // 并行请求流量和节点内容（使用更短的超时）
             const fetchWithTimeout = (url, options) => {
+                // 分离 cf 选项：cf 应传给 fetch() 而非 Request()
+                const { cf, ...requestInit } = options;
+                const fetchCall = cf
+                    ? fetch(new Request(url, requestInit), { cf })
+                    : fetch(new Request(url, requestInit));
                 return Promise.race([
-                    fetch(new Request(url, options)),
+                    fetchCall,
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), TIMEOUT))
                 ]);
             };

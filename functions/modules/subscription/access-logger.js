@@ -16,7 +16,10 @@ export function logAccessSuccess({
     domain
 }) {
     const stats = context?.generationStats || {};
-    const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+    const clientIp = request.headers.get('CF-Connecting-IP')
+        || request.headers.get('X-Real-IP')
+        || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+        || 'N/A';
     const country = request.headers.get('CF-IPCountry') || 'N/A';
 
     const payload = {
@@ -57,7 +60,10 @@ export function logAccessError({
     errorMessage
 }) {
     const stats = context?.generationStats || {};
-    const clientIp = request.headers.get('CF-Connecting-IP') || 'N/A';
+    const clientIp = request.headers.get('CF-Connecting-IP')
+        || request.headers.get('X-Real-IP')
+        || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+        || 'N/A';
     const country = request.headers.get('CF-IPCountry') || 'N/A';
 
     const payload = {

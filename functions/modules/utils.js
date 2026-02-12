@@ -248,10 +248,15 @@ export function createTimeoutFetch(input, init = {}, timeout = 10000) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    const fetchPromise = fetch(new Request(input, {
-        ...init,
+    // 分离 cf 选项：cf 是 Cloudflare Workers fetch 特有的选项，
+    // 不属于标准 RequestInit，不应传入 Request 构造器。
+    // 将其直接传给 fetch() 的第二参数，Cloudflare 环境正常生效，Node.js 环境安全忽略。
+    const { cf, ...requestInit } = init;
+    const request = new Request(input, {
+        ...requestInit,
         signal: controller.signal
-    }));
+    });
+    const fetchPromise = cf ? fetch(request, { cf }) : fetch(request);
 
     return fetchPromise.finally(() => {
         clearTimeout(timeoutId);

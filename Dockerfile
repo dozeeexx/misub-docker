@@ -23,6 +23,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libsqlite3-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# 创建非 root 用户
+RUN addgroup --system misub && adduser --system --ingroup misub misub
+RUN mkdir -p /app/data && chown -R misub:misub /app/data
+
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/functions ./functions
@@ -31,6 +35,15 @@ COPY --from=build /app/schema.sql ./schema.sql
 COPY --from=build /app/src/shared ./src/shared
 COPY --from=build /app/package.json ./package.json
 
-# 默认暴露端口
-EXPOSE 8080
+# 确保非 root 用户对数据目录有写权限
+RUN chown -R misub:misub /app
+
+USER misub
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://localhost:${PORT}/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+# 暴露端口（与 ARG PORT 同步）
+EXPOSE ${PORT}
 CMD ["node", "server/index.mjs"]
