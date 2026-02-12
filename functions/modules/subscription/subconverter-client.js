@@ -161,13 +161,23 @@ export async function fetchFromSubconverter(candidates, options) {
                 // Success! Prepare Response
                 let responseText = await response.text();
 
-                // [Sanitize Response] Fix YAML syntax errors from Subconverter (e.g. name: * ...)
-                // This happens when Subconverter preserves special chars/emojis corrupted as *
-                // We replace unsafe starting chars in 'name: ...' with safe variants
-                responseText = responseText.replace(/(\bname:\s*)([*])/g, '$1★')
-                    .replace(/(\bname:\s*)([&])/g, '$1＆')
-                    .replace(/(\bname:\s*)([!])/g, '$1！')
-                    .replace(/(\bname:\s*)([#])/g, '$1＃');
+                // [Sanitize Response] Fix YAML syntax errors from Subconverter
+                // Remove \b to be safer, match 'name:' followed by space and special char
+                let replaceCount = 0;
+                const unsafePattern = /(name:\s*)([*&!#])/g;
+                if (unsafePattern.test(responseText)) {
+                    responseText = responseText.replace(unsafePattern, (match, prefix, char) => {
+                        replaceCount++;
+                        const replacement = {
+                            '*': '★',
+                            '&': '＆',
+                            '!': '！',
+                            '#': '＃'
+                        }[char] || char;
+                        return prefix + replacement;
+                    });
+                }
+                console.log(`[MiSub Sanitize] Replaced ${replaceCount} unsafe chars in YAML.`);
 
                 // [Debug Logging Response - Forced STDERR]
                 console.log(`[SubConverter Response] Status: ${response.status}`);
