@@ -211,13 +211,17 @@ watch(() => props.settings.customLoginPath, (val) => {
           <!-- 自定义登录路径设置 -->
           <div class="pt-4 border-t border-gray-200/70 dark:border-white/10">
              <div class="max-w-md">
+                <!-- 隐藏的诱饵输入框，吸收浏览器自动填充 -->
+                <input type="text" name="fake_user_for_autofill" autocomplete="username" style="display:none" tabindex="-1" aria-hidden="true" />
+                <input type="password" name="fake_pass_for_autofill" autocomplete="current-password" style="display:none" tabindex="-1" aria-hidden="true" />
                 <Input 
                   label="自定义管理后台路径"
                   v-model="settings.customLoginPath"
                   placeholder="默认: login"
                   prefix="/"
-                  autocomplete="new-password"
+                  autocomplete="off"
                   name="custom_admin_path_setting_no_autofill"
+                  type="search"
                 />
              </div>
              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
