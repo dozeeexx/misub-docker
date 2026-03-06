@@ -104,7 +104,7 @@ const smartBase64Decode = (text) => {
  * 解析单个节点URL
  */
 const parseSingleUrl = (url) => {
-  const supportedProtocols = ['vmess', 'vless', 'trojan', 'ss', 'ssr', 'hysteria', 'hysteria2', 'tuic', 'socks5', 'http'];
+  const supportedProtocols = ['vmess', 'vless', 'trojan', 'ss', 'ssr', 'hysteria', 'hysteria2', 'tuic', 'socks5', 'http', 'wireguard'];
 
   // 基础URL格式检查
   if (!url.includes('://')) {

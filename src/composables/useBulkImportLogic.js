@@ -30,7 +30,7 @@ export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk 
 
             if (/^https?:\/\//.test(line)) {
                 validSubs.push({ ...baseItem, id: generateSubscriptionId() });
-            } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|socks):\/\//.test(line)) {
+            } else if (/^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|socks|wireguard):\/\//.test(line)) {
                 validNodes.push({ ...baseItem, id: generateNodeId() });
             }
         });

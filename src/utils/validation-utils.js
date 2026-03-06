@@ -28,12 +28,14 @@ export function isValidNodeUrl(nodeUrl) {
     if (!nodeUrl || typeof nodeUrl !== 'string') return false;
 
     // 检查是否为支持的协议
-    const supportedProtocols = [
-        'ss://', 'ssr://', 'vmess://', 'vless://',
-        'trojan://', 'hysteria2://', 'hysteria://',
-        'hy2://', 'hy://', 'tuic://', 'anytls://', 'socks5://', 'socks://',
-        'snell://', 'naive+https://', 'naive+quic://', 'naive+http://'
-    ];
+const supportedProtocols = [
+'ss://', 'ssr://', 'vmess://', 'vless://',
+'trojan://', 'hysteria2://', 'hysteria://',
+'hy2://', 'hy://', 'tuic://', 'anytls://',
+'socks5://', 'socks://', 'snell://',
+'naive+https://', 'naive+quic://', 'naive+http://',
+'wireguard://'
+];
 
     return supportedProtocols.some(protocol => nodeUrl.startsWith(protocol));
 }
