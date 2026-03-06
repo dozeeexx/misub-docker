@@ -4,7 +4,7 @@
  * 支持 dialer-proxy、reality-opts 等特殊参数
  */
 
-import { urlToClashProxy, urlsToClashProxies } from '../../utils/url-to-clash.js';
+import { urlsToClashProxies } from '../../utils/url-to-clash.js';
 import { clashFix } from '../../utils/format-utils.js';
 import yaml from 'js-yaml';
 
