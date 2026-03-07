@@ -22,7 +22,7 @@ export async function handleNodeCountRequest(request, env) {
     }
 
     try {
-        const { url: subUrl } = await request.json();
+        const { url: subUrl, fetchProxy } = await request.json();
         if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
             return createErrorResponse('Invalid or missing url', 400);
         }
@@ -31,6 +31,11 @@ export async function handleNodeCountRequest(request, env) {
         let trafficRequestSucceeded = false;
         let nodeCountRequestSucceeded = false;
         let fetchError = null;
+
+        let requestUrl = subUrl;
+        if (fetchProxy && typeof fetchProxy === 'string' && fetchProxy.trim()) {
+            requestUrl = fetchProxy.trim() + encodeURIComponent(subUrl);
+        }
 
         try {
             // 使用统一的User-Agent策略
@@ -45,8 +50,8 @@ export async function handleNodeCountRequest(request, env) {
 
             // cf 选项需传给 fetch() 而非 Request()：Cloudflare 环境生效，Node.js 安全忽略
             const cfOptions = { cf: { insecureSkipVerify: true } };
-            const trafficRequest = fetch(new Request(subUrl, trafficFetchOptions), cfOptions);
-            const nodeCountRequest = fetch(new Request(subUrl, fetchOptions), cfOptions);
+            const trafficRequest = fetch(new Request(requestUrl, trafficFetchOptions), cfOptions);
+            const nodeCountRequest = fetch(new Request(requestUrl, fetchOptions), cfOptions);
 
             // 使用 Promise.allSettled 替换 Promise.all
             const responses = await Promise.allSettled([trafficRequest, nodeCountRequest]);
@@ -252,8 +257,13 @@ export async function handleBatchUpdateNodesRequest(request, env) {
         // 并行获取所有订阅的节点（带超时）
         const updatePromises = targetSubscriptions.map(async (subscription) => {
             try {
+                let requestUrl = subscription.url;
+                if (subscription.fetchProxy && typeof subscription.fetchProxy === 'string' && subscription.fetchProxy.trim()) {
+                    requestUrl = subscription.fetchProxy.trim() + encodeURIComponent(subscription.url);
+                }
+
                 // 使用 Promise.race 实现超时
-                const fetchPromise = fetch(new Request(subscription.url, {
+                const fetchPromise = fetch(new Request(requestUrl, {
                     headers: { 'User-Agent': userAgent },
                     redirect: "follow"
                 }), { cf: { insecureSkipVerify: true } });
