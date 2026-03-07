@@ -570,7 +570,8 @@ export async function handleMisubRequest(context) {
         }
 
         // [Improved Fallback] 为不同客户端提供更友好的错误展示
-        if (targetFormat === 'clash' || targetFormat.startsWith('surge') || targetFormat === 'loon') {
+        // [Improved Fallback] 为不同客户端提供更友好的错误展示
+        if (targetFormat === 'clash') {
             const fallbackYaml = `
 proxies:
   - name: "❌ 生成失败: ${safeErrorMessage.slice(0, 50).replace(/:/g, ' ')}"
@@ -596,6 +597,28 @@ rules:
                     "Content-Type": "text/yaml; charset=utf-8",
                     'Cache-Control': 'no-store, no-cache',
                     'X-MiSub-Fallback': 'yaml',
+                    'X-MiSub-Error': safeErrorMessage.slice(0, 200)
+                },
+                status: 200
+            });
+        }
+
+        if (targetFormat.startsWith('surge') || targetFormat === 'loon') {
+            const fallbackIni = `
+[Proxy]
+❌ 生成失败 = trojan, 127.0.0.1, 443, password=error, skip-cert-verify=true
+
+[Proxy Group]
+⚠️ 错误节点 = select, ❌ 生成失败
+
+[Rule]
+MATCH,DIRECT
+`;
+            return new Response(fallbackIni.trim() + '\n', {
+                headers: {
+                    "Content-Type": "text/plain; charset=utf-8",
+                    'Cache-Control': 'no-store, no-cache',
+                    'X-MiSub-Fallback': 'ini',
                     'X-MiSub-Error': safeErrorMessage.slice(0, 200)
                 },
                 status: 200
