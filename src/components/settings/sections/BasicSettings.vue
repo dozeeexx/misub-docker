@@ -169,31 +169,6 @@ watch(() => props.settings.customLoginPath, (val) => {
           />
         </div>
       </div>
-
-      <!-- 自定义拉取代理设置 (单列全宽) -->
-      <div class="mt-4 pt-4 border-t border-gray-200/70 dark:border-white/10">
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">自定义订阅拉取代理 (Fetch Proxy)</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                解决 Cloudflare IP / 公共 CORS 代理被机场拦截导致获取超时的问题。
-              </p>
-            </div>
-          </div>
-          <Input 
-            v-model="settings.fetchProxy"
-            placeholder="例如: https://my-proxy.vercel.app/api?url="
-            class="misub-radius-lg font-mono text-sm"
-          />
-          <div class="bg-indigo-50/50 dark:bg-indigo-900/10 p-3 misub-radius-md text-xs text-indigo-700 dark:text-indigo-300">
-            <p><strong>💡 提示:</strong> 填入代理地址前缀后，所有订阅拉取将通过该代理中转。留空则表示走 CF 直连拉取。</p>
-            <p class="mt-1 text-[11px] opacity-80">
-              推荐使用 Vercel / Netlify 部署专属代理节点以获得最干净的反代 IP。
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
 
 

@@ -6,19 +6,22 @@ const props = defineProps({
   }
 });
 import Input from '../../ui/Input.vue';
-import { computed } from 'vue';
+import { ref, watch } from 'vue';
 
-const useFetchProxy = computed({
-  get() {
-    return !!props.editingSubscription.fetchProxy;
-  },
-  set(val) {
-    if (!val) {
-      props.editingSubscription.fetchProxy = '';
-    } else if (!props.editingSubscription.fetchProxy) {
-      // 开启时给个默认提示或空值，由 Input 绑定的 v-model 负责更新
-      props.editingSubscription.fetchProxy = '';
-    }
+// 使用独立的本地状态，防止用户清空输入框时开关自动跳回关闭状态
+const useFetchProxy = ref(false);
+
+// 当弹窗传入新订阅信息时，初始化开关状态
+watch(() => props.editingSubscription, (newSub) => {
+  if (newSub) {
+    useFetchProxy.value = !!newSub.fetchProxy;
+  }
+}, { immediate: true });
+
+// 当用户主动关闭开关时，清理绑定的代理地址
+watch(useFetchProxy, (val) => {
+  if (!val && props.editingSubscription) {
+    props.editingSubscription.fetchProxy = '';
   }
 });
 </script>
