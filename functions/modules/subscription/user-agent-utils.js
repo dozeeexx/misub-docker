@@ -59,12 +59,14 @@ export function determineTargetFormat(userAgent, searchParams) {
 
     // Mapping array to ensure priority order
     const uaMapping = [
-        // Mihomo/Meta Core Clients -> Clash
-        ['flyclash', 'clash'],
-        ['mihomo', 'clash'],
-        ['clash.meta', 'clash'],
-        ['clash-verge', 'clash'],
-        ['meta', 'clash'],
+        // Mihomo/Meta Core Clients -> Clash Meta
+        ['flclash', 'clash&meta=1'],
+        ['flyclash', 'clash&meta=1'],
+        ['butterfly', 'clash&meta=1'],
+        ['mihomo', 'clash&meta=1'],
+        ['clash.meta', 'clash&meta=1'],
+        ['clash-verge', 'clash&meta=1'],
+        ['meta', 'clash&meta=1'],
 
         // Other Clients
         ['stash', 'clash'],
