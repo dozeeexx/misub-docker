@@ -35,27 +35,22 @@ export function sanitizeConvertedSubscriptionContent(content) {
  * @returns {Headers}
  */
 export function buildClientResponseHeaders(backendHeaders, subName, targetFormat = '', cacheHeaders = {}) {
-    const responseHeaders = new Headers(backendHeaders);
-
-    // Node.js fetch 可能已自动解压，但仍保留 content-encoding，
-    // 会导致客户端二次解压报错（如 Clash 的 Filter error, bad data）。
-    responseHeaders.delete('content-encoding');
-    responseHeaders.delete('content-length');
-    responseHeaders.delete('transfer-encoding');
+    // [修正] 不再拷贝后端所有头信息，避免透传 subscription-userinfo 等头导致
+    // FlClash 等客户端解析崩溃（Dart RangeError）。
+    const responseHeaders = new Headers();
 
     responseHeaders.set('Content-Disposition', `attachment; filename*=utf-8''${encodeURIComponent(subName)}`);
     
     // 根据目标格式设置 Content-Type
     if (targetFormat.includes('clash')) {
         responseHeaders.set('Content-Type', 'text/yaml; charset=utf-8');
-    } else if (targetFormat.startsWith('surge') || targetFormat === 'loon') {
-        responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
     } else {
         responseHeaders.set('Content-Type', 'text/plain; charset=utf-8');
     }
 
     responseHeaders.set('Cache-Control', 'no-store, no-cache');
 
+    // 仅保留安全的、MiSub 自定义的缓存状态头
     Object.entries(cacheHeaders).forEach(([key, value]) => {
         responseHeaders.set(key, value);
     });
