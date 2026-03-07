@@ -151,11 +151,16 @@ function convertClashProxyToUrl(proxy) {
         if (type === 'hysteria2') {
             const params = [];
             const password = proxy.password || proxy.auth || '';
-            if (password) params.push(`obfs-password=${encodeURIComponent(password)}`);
-            if (proxy.sni) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
-            if (proxy.skipCertVerify) params.push('insecure=1');
 
-            return `hysteria2://${password}@${server}:${port}?${params.join('&')}#${encodeURIComponent(name)}`;
+            // 混淆参数：仅在配置了 obfs 时传递（与认证密码无关）
+            if (proxy.obfs) params.push(`obfs=${encodeURIComponent(proxy.obfs)}`);
+            if (proxy['obfs-password']) params.push(`obfs-password=${encodeURIComponent(proxy['obfs-password'])}`);
+
+            if (proxy.sni) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
+            if (proxy.skipCertVerify || proxy['skip-cert-verify']) params.push('insecure=1');
+
+            const query = params.length > 0 ? `?${params.join('&')}` : '';
+            return `hysteria2://${encodeURIComponent(password)}@${server}:${port}${query}#${encodeURIComponent(name)}`;
         }
 
         if (type === 'socks5') {
