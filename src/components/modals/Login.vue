@@ -72,11 +72,12 @@ const submitLogin = async () => {
               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
             </svg>
           </div>
-<input
+    <input
       v-model="password"
       @input="error = ''"
       :type="showPassword ? 'text' : 'password'"
       placeholder="管理员密码 / 访问凭证"
+      autocomplete="current-password"
       :disabled="isLoading"
       class="w-full bg-transparent border misub-radius-lg py-3.5 pl-11 pr-12 outline-none transition-all duration-300 disabled:opacity-50"
       :class="[
