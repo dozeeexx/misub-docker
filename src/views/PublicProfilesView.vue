@@ -293,19 +293,8 @@ onMounted(async () => {
                     </button>
                 </div>
 
-                <!-- Empty State -->
-                <div v-else-if="publicProfiles.length === 0" class="text-center py-32 bg-white/50 dark:bg-gray-800/50 misub-radius-lg border border-gray-100 dark:border-gray-700/50 backdrop-blur-sm">
-                    <div class="inline-flex items-center justify-center w-24 h-24 misub-radius-lg bg-gray-50 dark:bg-gray-700/50 mb-6 transform rotate-3">
-                        <BaseIcon :path="ICONS.empty" className="w-12 h-12 text-gray-400" />
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">暂无公开订阅</h3>
-                    <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                        管理员暂时没有分享任何公开订阅组，请稍后再来看看。
-                    </p>
-                </div>
-
                 <!-- Profile Grid -->
-                <div v-else class="animate-fade-in-up delay-300">
+                <div v-else-if="publicProfiles.length > 0" class="animate-fade-in-up delay-300">
                     <ProfileGrid :profiles="publicProfiles" :is-qr-expanded="isQRExpanded"
                         :profile-token="config.profileToken || 'profiles'" @quick-import="handleQuickImport"
                         @toggle-qr="toggleQRCode" @preview="handlePreview" @copy-link="copyLink" @download-qr="downloadQRCode"
