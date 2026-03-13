@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, defineAsyncComponent, nextTick, computed } from 'vue';
+import { ref, onMounted, onUnmounted, defineAsyncComponent, nextTick, computed } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import QRCode from 'qrcode';
 import { api } from '../lib/http.js';
@@ -36,6 +36,10 @@ const handleGuestbookTrigger = () => {
         return;
     }
     showGuestbookModal.value = true;
+};
+
+const handleGuestbookEvent = () => {
+    handleGuestbookTrigger();
 };
 
 const fetchPublicProfiles = async () => {
@@ -209,6 +213,15 @@ onMounted(async () => {
     fetchPublicProfiles();
     await fetchClients();
     fetchClientVersions();
+    if (typeof window !== 'undefined') {
+        window.addEventListener('open-guestbook', handleGuestbookEvent);
+    }
+});
+
+onUnmounted(() => {
+    if (typeof window !== 'undefined') {
+        window.removeEventListener('open-guestbook', handleGuestbookEvent);
+    }
 });
 </script>
 
@@ -249,14 +262,6 @@ onMounted(async () => {
             </div>
         </div>
 
-            <!-- Guestbook Trigger (Fixed) -->
-            <div class="fixed bottom-24 md:bottom-6 right-6 z-50">
-                <button @click="handleGuestbookTrigger"
-                    class="group flex items-center gap-2 px-5 py-3 bg-white dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full shadow-lg hover:shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1">
-                    <BaseIcon :path="ICONS.feedback" className="w-5 h-5 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
-                    <span class="font-medium">反馈建议</span>
-                </button>
-            </div>
 
         <!-- Content Section -->
         <div class="relative z-20 pb-24">
