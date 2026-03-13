@@ -334,9 +334,9 @@ onMounted(async () => {
                             
                             <div class="flex items-start gap-5">
                                 <div class="h-12 w-12 misub-radius-lg flex items-center justify-center text-3xl shadow-sm bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 group-hover:scale-105 transition-transform duration-300 shrink-0 overflow-hidden">
-                                    <img v-if="client.icon && client.icon.includes('/')" :src="client.icon"
-                                        :alt="client.name" class="w-full h-full object-contain" />
-                                    <span v-else>{{ client.icon }}</span>
+<img v-if="client.icon && (client.icon.includes('/') || client.icon.startsWith('data:'))" :src="client.icon"
+                        :alt="client.name" class="w-full h-full object-cover rounded-lg" />
+                    <span v-else>{{ client.icon }}</span>
                                 </div>
                                 
                                 <div class="flex-1 min-w-0 pt-1">
