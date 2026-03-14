@@ -1,12 +1,10 @@
 <script setup>
 import { computed } from 'vue';
 import { useUIStore } from '../../stores/ui.js';
-import { useSessionStore } from '../../stores/session.js';
 import BrandLogo from './BrandLogo.vue';
 import NavActionGroup from './NavActionGroup.vue';
 
 const uiStore = useUIStore();
-const sessionStore = useSessionStore();
 
 const shouldHideLoginButton = computed(() => {
   if (sessionStore.sessionState === 'loading') {
@@ -26,7 +24,7 @@ const shouldHideLoginButton = computed(() => {
   return true;
 });
 
-defineProps({
+const props = defineProps({
   isLoggedIn: Boolean
 });
 
@@ -46,6 +44,7 @@ const emit = defineEmits(['logout']);
 
           <NavActionGroup
             :is-logged-in="isLoggedIn"
+            :show-explore="false"
             :show-settings="true"
             :show-login-button="!shouldHideLoginButton"
             :with-focus-ring="true"
