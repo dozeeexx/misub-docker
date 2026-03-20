@@ -123,7 +123,7 @@ export async function handleApiRequest(request, env) {
         return await handleLogin(request, env);
     }
 
-    if (path === '/public_config') {
+    if (path === '/public_config' || path === '/config') {
         return await handlePublicConfig(env);
     }
 
