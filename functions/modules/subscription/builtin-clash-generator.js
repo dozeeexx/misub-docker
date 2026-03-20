@@ -79,8 +79,9 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         skipCertVerify = false
     } = options;
 
-    // 解析节点 URL 列表
-    const nodeUrls = nodeList
+    // 解析节点 URL 列表（先清理控制字符）
+    const cleanedNodeList = cleanControlChars(nodeList);
+    const nodeUrls = cleanedNodeList
         .split('\n')
         .map(line => line.trim())
         .filter(line => line && !line.startsWith('#'));
@@ -195,7 +196,8 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
  * @returns {string} 仅包含 proxies 部分的 YAML
  */
 export function generateProxiesOnly(nodeList) {
-    const nodeUrls = nodeList
+    const cleanedNodeList = cleanControlChars(nodeList);
+    const nodeUrls = cleanedNodeList
         .split('\n')
         .map(line => line.trim())
         .filter(line => line && !line.startsWith('#'));

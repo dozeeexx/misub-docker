@@ -126,10 +126,11 @@ function clashProxyToLoonResult(proxy) {
 
         if (proxy.tls || proxy.security === 'reality') {
             parts.push('tls=true');
-            if (proxy['reality-opts']) {
+            const realityOpts = proxy['reality-opts'] || proxy.realityOpts;
+            if (realityOpts) {
                 parts.push('reality=true');
-                if (proxy['reality-opts']['public-key']) parts.push(`public-key=${proxy['reality-opts']['public-key']}`);
-                if (proxy['reality-opts']['short-id']) parts.push(`short-id=${proxy['reality-opts']['short-id']}`);
+                if (realityOpts['public-key']) parts.push(`public-key=${realityOpts['public-key']}`);
+                if (realityOpts['short-id']) parts.push(`short-id=${realityOpts['short-id']}`);
             }
         }
         appendTlsParams(parts, proxy);
@@ -253,7 +254,7 @@ export function generateBuiltinLoonConfig(nodeList, options = {}) {
         const baseName = sanitizeNodeName(clashProxy.name);
         const count = (usedNames.get(baseName) || 0) + 1;
         usedNames.set(baseName, count);
-        const uniqueName = count === 1 ? baseName : `${baseName}-${count}`;
+        const uniqueName = count === 1 ? baseName : `${baseName}_${count - 1}`;
         clashProxy.name = uniqueName;
 
         const line = clashProxyToLoonResult(clashProxy);
