@@ -12,6 +12,13 @@ function getKV(env) {
     return null;
 }
 
+function isStorageUnavailableError(error) {
+    const message = String(error?.message || error || '').toLowerCase();
+    return message.includes('kv storage is paused')
+        || message.includes('storage is paused')
+        || message.includes('namespace is paused');
+}
+
 const LEGACY_CLIENT_ICONS = {
     'clash-verge-rev': '⚡️',
     'clash-party': '🎉',
@@ -260,24 +267,44 @@ export async function handleClientRequest(request, env) {
     try {
         if (request.method === 'GET') {
             if (!kv) {
-                return createJsonResponse({ success: true, data: [] });
+                return createJsonResponse({ success: true, data: DEFAULT_CLIENTS, storageUnavailable: true });
             }
-            const raw = await kv.get(KV_KEY_CLIENTS);
-            const data = raw ? JSON.parse(raw) : null;
-            if (Array.isArray(data) && data.length > 0) {
-                const migration = migrateClientIcons(data);
-                if (migration.updated) {
-                    await kv.put(KV_KEY_CLIENTS, JSON.stringify(migration.clients));
+            try {
+                const raw = await kv.get(KV_KEY_CLIENTS);
+                const data = raw ? JSON.parse(raw) : null;
+                if (Array.isArray(data) && data.length > 0) {
+                    const migration = migrateClientIcons(data);
+                    if (migration.updated) {
+                        try {
+                            await kv.put(KV_KEY_CLIENTS, JSON.stringify(migration.clients));
+                        } catch (writeError) {
+                            if (!isStorageUnavailableError(writeError)) {
+                                throw writeError;
+                            }
+                        }
+                        return createJsonResponse({
+                            success: true,
+                            data: migration.clients,
+                            storageUnavailable: false
+                        });
+                    }
+                }
+                return createJsonResponse({
+                    success: true,
+                    data: data || DEFAULT_CLIENTS,
+                    storageUnavailable: false
+                });
+            } catch (readError) {
+                if (isStorageUnavailableError(readError)) {
                     return createJsonResponse({
                         success: true,
-                        data: migration.clients
+                        data: DEFAULT_CLIENTS,
+                        storageUnavailable: true,
+                        message: 'KV 存储已暂停，客户端列表已回退为内置默认值。'
                     });
                 }
+                throw readError;
             }
-            return createJsonResponse({
-                success: true,
-                data: data || []
-            });
         }
 
         if (!kv) {
@@ -348,6 +375,9 @@ export async function handleClientRequest(request, env) {
         return createErrorResponse('Method Not Allowed', 405);
     } catch (e) {
         console.error('[Client Handler Error]', e);
+        if (isStorageUnavailableError(e)) {
+            return createErrorResponse('KV 存储已暂停，客户端配置当前无法保存。若为 EdgeOne 部署，请先恢复 KV；若为 Cloudflare 部署，可改用 D1。', 503);
+        }
         return createErrorResponse(`Operation failed: ${e.message}`, 500);
     }
 }

@@ -11,6 +11,13 @@ import { clearAllNodeCaches } from '../services/node-cache-service.js';
 
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from './config.js';
 
+function isStorageUnavailableError(error) {
+    const message = String(error?.message || error || '').toLowerCase();
+    return message.includes('kv storage is paused')
+        || message.includes('storage is paused')
+        || message.includes('namespace is paused');
+}
+
 /**
  * 获取存储适配器实例
  * @param {Object} env - Cloudflare环境对象
@@ -230,6 +237,13 @@ export async function handleSettingsGet(env) {
         const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
         return createJsonResponse({ ...defaultSettings, ...settings });
     } catch (e) {
+        if (isStorageUnavailableError(e)) {
+            return createJsonResponse({
+                ...defaultSettings,
+                storageType: 'kv',
+                storageUnavailable: true
+            });
+        }
         return createErrorResponse('读取设置失败', 500);
     }
 }
@@ -264,7 +278,17 @@ export async function handleSettingsSave(request, env) {
         const finalSettings = { ...oldSettings, ...newSettings };
 
         // 使用存储适配器保存设置
-        await storageAdapter.put(KV_KEY_SETTINGS, finalSettings);
+        try {
+            await storageAdapter.put(KV_KEY_SETTINGS, finalSettings);
+        } catch (storageError) {
+            if (isStorageUnavailableError(storageError)) {
+                return createJsonResponse({
+                    success: false,
+                    message: 'KV 存储已暂停，设置当前无法保存。若为 EdgeOne 部署，请先恢复 KV；若为 Cloudflare 部署，可配置 D1 后切换到 D1 存储。'
+                }, 503);
+            }
+            throw storageError;
+        }
         SettingsCache.clear();
 
         // 清除节点缓存（设置变更可能影响节点处理逻辑）
