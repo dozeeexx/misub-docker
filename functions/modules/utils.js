@@ -49,6 +49,28 @@ function getKV(env) {
 }
 
 /**
+ * 读取运行时环境变量（兼容 Cloudflare/EdgeOne）
+ * @param {Object} env
+ * @param {string} key
+ * @returns {string|undefined}
+ */
+function getRuntimeEnvValue(env, key) {
+    const envValue = env?.[key];
+    if (envValue !== undefined && envValue !== null && String(envValue).trim() !== '') {
+        return String(envValue);
+    }
+
+    try {
+        const globalValue = globalThis?.[key];
+        if (globalValue !== undefined && globalValue !== null && String(globalValue).trim() !== '') {
+            return String(globalValue);
+        }
+    } catch (_) {}
+
+    return undefined;
+}
+
+/**
  * 条件性写入KV存储，只在数据真正变更时写入
  * @param {Object} env - Cloudflare环境对象
  * @param {string} key - KV键名
@@ -86,6 +108,7 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
  */
 export async function getCookieSecret(env) {
     const kv = getKV(env);
+    const runtimeCookieSecret = getRuntimeEnvValue(env, 'COOKIE_SECRET');
 
     if (kv) {
         // 1. 尝试从 KV 读取
@@ -93,9 +116,9 @@ export async function getCookieSecret(env) {
         if (kvSecret) return kvSecret;
 
         // 2. 有环境变量则迁移到 KV
-        if (env?.COOKIE_SECRET) {
-            await kv.put('SYSTEM_COOKIE_SECRET', env.COOKIE_SECRET);
-            return env.COOKIE_SECRET;
+        if (runtimeCookieSecret) {
+            await kv.put('SYSTEM_COOKIE_SECRET', runtimeCookieSecret);
+            return runtimeCookieSecret;
         }
 
         // 3. 生成新密钥并持久化到 KV
@@ -105,24 +128,29 @@ export async function getCookieSecret(env) {
     }
 
     // 无 KV：直接使用环境变量，无则生成临时密钥（重启后失效）
-    if (env?.COOKIE_SECRET) return env.COOKIE_SECRET;
+    if (runtimeCookieSecret) return runtimeCookieSecret;
     return crypto.randomUUID();
 }
 
 /**
  * 获取管理员密码
- * 优先顺序：KV → 环境变量 ADMIN_PASSWORD → 默认值 'admin'
+ * 优先顺序：环境变量 ADMIN_PASSWORD → KV → 默认值 'admin'
  * @param {Object} env - 运行时环境对象（Cloudflare / EdgeOne）
  * @returns {Promise<string>} 密码
  */
 export async function getAdminPassword(env) {
+    const runtimeAdminPassword = getRuntimeEnvValue(env, 'ADMIN_PASSWORD');
+    if (runtimeAdminPassword) {
+        return runtimeAdminPassword;
+    }
+
     const kv = getKV(env);
     if (kv) {
         const kvPassword = await kv.get('SYSTEM_ADMIN_PASSWORD');
         if (kvPassword) return kvPassword;
     }
-    // 无 KV 或 KV 中无密码：使用环境变量，否则默认 'admin'
-    return env?.ADMIN_PASSWORD || 'admin';
+
+    return 'admin';
 }
 
 /**
