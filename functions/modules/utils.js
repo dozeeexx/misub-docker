@@ -397,6 +397,9 @@ export function migrateConfigSettings(config) {
     if (migratedConfig.hasOwnProperty('subConverterUdp')) {
         migratedConfig.subConverterUdp = toBoolean(migratedConfig.subConverterUdp);
     }
+    if (migratedConfig.hasOwnProperty('builtinLoonSkipCertVerify')) {
+        migratedConfig.builtinLoonSkipCertVerify = toBoolean(migratedConfig.builtinLoonSkipCertVerify);
+    }
 
     return migratedConfig;
 }

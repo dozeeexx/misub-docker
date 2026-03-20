@@ -5,6 +5,7 @@
  */
 
 import { urlsToClashProxies } from '../../utils/url-to-clash.js';
+import { getUniqueName } from './name-utils.js';
 import { clashFix } from '../../utils/format-utils.js';
 import yaml from 'js-yaml';
 
@@ -52,17 +53,9 @@ function deepCleanControlChars(obj) {
  * @param {Object[]} proxies - 代理对象数组
  */
 function deduplicateNames(proxies) {
-    const usedNames = new Set();
+    const usedNames = new Map();
     proxies.forEach(proxy => {
-        let name = proxy.name;
-        if (usedNames.has(name)) {
-            let i = 1;
-            while (usedNames.has(`${name}_${i}`)) {
-                i++;
-            }
-            proxy.name = `${name}_${i}`;
-        }
-        usedNames.add(proxy.name);
+        proxy.name = getUniqueName(proxy.name, usedNames);
     });
 }
 

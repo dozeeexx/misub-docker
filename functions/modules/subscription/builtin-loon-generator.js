@@ -11,6 +11,7 @@
  */
 
 import { urlToClashProxy } from '../../utils/url-to-clash.js';
+import { getUniqueName } from './name-utils.js';
 
 /**
  * 清理控制字符
@@ -106,6 +107,10 @@ function clashProxyToLoonResult(proxy) {
         parts.push(String(port));
         parts.push(proxy.uuid || '');
 
+        if (proxy.flow) {
+            parts.push(`flow=${proxy.flow}`);
+        }
+
         if (proxy.network) {
             parts.push(`transport=${proxy.network}`);
             
@@ -198,7 +203,7 @@ function appendTlsParams(parts, proxy) {
     if (proxy.sni || proxy.servername) {
         parts.push(`sni=${proxy.sni || proxy.servername}`);
     }
-    if (proxy['skip-cert-verify'] || proxy.skipCertVerify) {
+    if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) {
         parts.push('skip-cert-verify=true');
     }
     if (proxy.alpn) {
@@ -218,7 +223,7 @@ export function generateBuiltinLoonConfig(nodeList, options = {}) {
         fileName = 'MiSub',
         managedConfigUrl = '',
         interval = 86400,
-        skipCertVerify = false
+        skipCertVerify = null
     } = options;
 
     const cleanedNodeList = cleanControlChars(nodeList);
@@ -247,14 +252,12 @@ export function generateBuiltinLoonConfig(nodeList, options = {}) {
         const clashProxy = urlToClashProxy(url);
         if (!clashProxy) continue;
 
-        if (skipCertVerify) {
+        if (skipCertVerify === true) {
             clashProxy['skip-cert-verify'] = true;
         }
 
         const baseName = sanitizeNodeName(clashProxy.name);
-        const count = (usedNames.get(baseName) || 0) + 1;
-        usedNames.set(baseName, count);
-        const uniqueName = count === 1 ? baseName : `${baseName}_${count - 1}`;
+        const uniqueName = getUniqueName(baseName, usedNames);
         clashProxy.name = uniqueName;
 
         const line = clashProxyToLoonResult(clashProxy);
