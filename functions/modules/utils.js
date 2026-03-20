@@ -70,6 +70,40 @@ function getRuntimeEnvValue(env, key) {
     return undefined;
 }
 
+function isStorageUnavailableError(error) {
+    const message = String(error?.message || error || '').toLowerCase();
+    return message.includes('kv storage is paused')
+        || message.includes('storage is paused')
+        || message.includes('namespace is paused');
+}
+
+async function safeKvGet(kv, key) {
+    if (!kv) return null;
+    try {
+        return await kv.get(key);
+    } catch (error) {
+        if (isStorageUnavailableError(error)) {
+            console.warn(`[Auth Storage] KV get skipped for ${key}: ${error.message}`);
+            return null;
+        }
+        throw error;
+    }
+}
+
+async function safeKvPut(kv, key, value) {
+    if (!kv) return false;
+    try {
+        await kv.put(key, value);
+        return true;
+    } catch (error) {
+        if (isStorageUnavailableError(error)) {
+            console.warn(`[Auth Storage] KV put skipped for ${key}: ${error.message}`);
+            return false;
+        }
+        throw error;
+    }
+}
+
 /**
  * 条件性写入KV存储，只在数据真正变更时写入
  * @param {Object} env - Cloudflare环境对象
@@ -112,18 +146,18 @@ export async function getCookieSecret(env) {
 
     if (kv) {
         // 1. 尝试从 KV 读取
-        const kvSecret = await kv.get('SYSTEM_COOKIE_SECRET');
+        const kvSecret = await safeKvGet(kv, 'SYSTEM_COOKIE_SECRET');
         if (kvSecret) return kvSecret;
 
-        // 2. 有环境变量则迁移到 KV
+        // 2. 有环境变量则优先回退到环境变量，并尽力写回 KV
         if (runtimeCookieSecret) {
-            await kv.put('SYSTEM_COOKIE_SECRET', runtimeCookieSecret);
+            await safeKvPut(kv, 'SYSTEM_COOKIE_SECRET', runtimeCookieSecret);
             return runtimeCookieSecret;
         }
 
-        // 3. 生成新密钥并持久化到 KV
+        // 3. 生成新密钥并尽力持久化到 KV；若 KV 暂不可用则退化为本次运行临时密钥
         const newSecret = crypto.randomUUID();
-        await kv.put('SYSTEM_COOKIE_SECRET', newSecret);
+        await safeKvPut(kv, 'SYSTEM_COOKIE_SECRET', newSecret);
         return newSecret;
     }
 
@@ -146,7 +180,7 @@ export async function getAdminPassword(env) {
 
     const kv = getKV(env);
     if (kv) {
-        const kvPassword = await kv.get('SYSTEM_ADMIN_PASSWORD');
+        const kvPassword = await safeKvGet(kv, 'SYSTEM_ADMIN_PASSWORD');
         if (kvPassword) return String(kvPassword).trim();
     }
 
@@ -167,13 +201,8 @@ export async function getAuthDebugInfo(env) {
     let hasKvCookieSecret = false;
 
     if (kv) {
-        try {
-            hasKvAdminPassword = !!(await kv.get('SYSTEM_ADMIN_PASSWORD'));
-        } catch (_) {}
-
-        try {
-            hasKvCookieSecret = !!(await kv.get('SYSTEM_COOKIE_SECRET'));
-        } catch (_) {}
+        hasKvAdminPassword = !!(await safeKvGet(kv, 'SYSTEM_ADMIN_PASSWORD'));
+        hasKvCookieSecret = !!(await safeKvGet(kv, 'SYSTEM_COOKIE_SECRET'));
     }
 
     let adminPasswordSource = 'default';
