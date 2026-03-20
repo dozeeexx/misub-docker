@@ -62,11 +62,24 @@ function applyNoStoreToHtmlResponse(response) {
 }
 
 const INTERNAL_SPA_FETCH_HEADER = 'x-misub-internal-spa-fetch';
+const INTERNAL_ORIGIN_ASSET_FETCH_HEADER = 'x-misub-origin-asset-fetch';
 
 function normalizeLoginPath(customLoginPath) {
     if (typeof customLoginPath !== 'string') return '/login';
     const normalized = customLoginPath.trim().replace(/^\/+/g, '');
     return normalized ? `/${normalized}` : '/login';
+}
+
+async function fetchHostedAssetViaOrigin(request, assetPath) {
+    const assetUrl = new URL(assetPath, request.url);
+    const headers = new Headers(request.headers);
+    headers.delete(INTERNAL_SPA_FETCH_HEADER);
+    headers.set(INTERNAL_ORIGIN_ASSET_FETCH_HEADER, '1');
+
+    return fetch(new Request(assetUrl.toString(), {
+        method: ['GET', 'HEAD'].includes(request.method) ? request.method : 'GET',
+        headers
+    }));
 }
 
 async function fetchStaticAsset(request, env, next) {
@@ -78,7 +91,21 @@ async function fetchStaticAsset(request, env, next) {
         return env.ASSETS.fetch(request);
     }
 
-    throw new Error('Static asset handler unavailable');
+    if (request.headers.get(INTERNAL_ORIGIN_ASSET_FETCH_HEADER) === '1') {
+        return new Response('Not Found', { status: 404 });
+    }
+
+    const url = new URL(request.url);
+
+    if (url.pathname === '/') {
+        return fetchHostedAssetViaOrigin(request, '/index.html');
+    }
+
+    if (url.pathname === '/index.html' || /\.\w+$/.test(url.pathname)) {
+        return fetchHostedAssetViaOrigin(request, `${url.pathname}${url.search}`);
+    }
+
+    return new Response('Not Found', { status: 404 });
 }
 
 async function fetchSpaEntry(request, env, next) {
@@ -88,17 +115,21 @@ async function fetchSpaEntry(request, env, next) {
         return env.ASSETS.fetch(new Request(indexUrl, request));
     }
 
-    const headers = new Headers(request.headers);
-    headers.set(INTERNAL_SPA_FETCH_HEADER, '1');
+    if (typeof next === 'function') {
+        const headers = new Headers(request.headers);
+        headers.set(INTERNAL_SPA_FETCH_HEADER, '1');
 
-    if (typeof next === 'function' && new URL(request.url).pathname === '/') {
-        return applyNoStoreToHtmlResponse(await next());
+        if (new URL(request.url).pathname === '/') {
+            return applyNoStoreToHtmlResponse(await next());
+        }
+
+        return fetch(new Request(indexUrl.toString(), {
+            method: 'GET',
+            headers
+        }));
     }
 
-    return fetch(new Request(indexUrl.toString(), {
-        method: 'GET',
-        headers
-    }));
+    return fetchHostedAssetViaOrigin(request, '/index.html');
 }
 
 /**
