@@ -51,6 +51,10 @@ function applyNoStoreToHtmlResponse(response) {
         return response;
     }
     const headers = new Headers(response.headers);
+    headers.delete('Content-Encoding');
+    headers.delete('content-encoding');
+    headers.delete('Content-Length');
+    headers.delete('content-length');
     headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     headers.set('Pragma', 'no-cache');
     headers.set('Expires', '0');
