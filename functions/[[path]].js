@@ -61,6 +61,12 @@ function applyNoStoreToHtmlResponse(response) {
     });
 }
 
+function normalizeLoginPath(customLoginPath) {
+    if (typeof customLoginPath !== 'string') return '/login';
+    const normalized = customLoginPath.trim().replace(/^\/+/g, '');
+    return normalized ? `/${normalized}` : '/login';
+}
+
 /**
  * 主要的请求处理函数
  * @param {Object} context - Cloudflare上下文对象
@@ -136,7 +142,7 @@ export async function onRequest(context) {
                     settings = await SettingsCache.get(env) || {};
                 }
 
-                const customLoginPath = settings.customLoginPath ? '/' + settings.customLoginPath.replace(/^\//, '') : '/login';
+                const customLoginPath = normalizeLoginPath(settings?.customLoginPath);
                 const defaultLoginPath = '/login';
 
                 // SPA 路由白名单：这些请求应该交由前端路由处理，而不是作为订阅请求
