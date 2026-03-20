@@ -97,12 +97,20 @@ export async function authMiddleware(request, env) {
     try {
         const secret = await getCookieSecret(env);
         if (!secret) return false;
-        const cookie = request.headers.get('Cookie');
-        const sessionCookie = cookie?.split(';').find(c => c.trim().startsWith(`${COOKIE_NAME}=`));
-        if (!sessionCookie) return false;
-        const token = sessionCookie.split('=')[1];
+        const cookieHeader = request.headers.get('Cookie') || '';
+        const matchedCookies = cookieHeader
+            .split(';')
+            .map(c => c.trim())
+            .filter(c => c.startsWith(`${COOKIE_NAME}=`));
+
+        if (matchedCookies.length === 0) return false;
+
+        const rawToken = matchedCookies[matchedCookies.length - 1].slice(COOKIE_NAME.length + 1);
+        const token = decodeURIComponent(rawToken || '').replace(/^"|"$/g, '');
+        if (!token) return false;
+
         const verifiedData = await verifySignedToken(secret, token);
-        return verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
+        return !!verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
     } catch (e) {
         console.error('[Auth] 鉴权失败', { ...logMeta, error: e?.message });
         return false;

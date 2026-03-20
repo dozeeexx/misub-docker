@@ -189,10 +189,19 @@ export async function handleApiRequest(request, env) {
     if (path === '/auth_debug') {
         const debugInfo = await getAuthDebugInfo(env);
         const cookieHeader = request.headers.get('Cookie') || '';
+        const isAuthenticated = await authMiddleware(request, env);
+        const authSessionCookieCount = cookieHeader
+            .split(';')
+            .map(c => c.trim())
+            .filter(c => c.startsWith('auth_session='))
+            .length;
+
         return createJsonResponse({
             success: true,
             auth: {
+                isAuthenticated,
                 hasAuthCookie: cookieHeader.includes('auth_session='),
+                authSessionCookieCount,
                 cookieHeaderPresent: cookieHeader.length > 0
             },
             runtime: debugInfo
