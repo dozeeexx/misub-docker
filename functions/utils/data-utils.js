@@ -43,7 +43,7 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
     // 如果没有提供旧数据，先从KV读取
     if (oldData === null) {
         try {
-            oldData = await env.MISUB_KV.get(key, 'json');
+            oldData = await env.MISUB_KV.get(key).then(r => r ? JSON.parse(r) : null);
         } catch (error) {
             // 读取失败时，为安全起见执行写入
             await env.MISUB_KV.put(key, JSON.stringify(newData));

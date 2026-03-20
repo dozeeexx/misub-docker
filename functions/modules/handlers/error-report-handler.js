@@ -33,8 +33,9 @@ export async function handleErrorReportRequest(request, env) {
         return createErrorResponse('Method Not Allowed', 405);
     }
 
-    if (!env.MISUB_KV) {
-        return createErrorResponse('KV binding MISUB_KV is missing', 500);
+    // 无 KV 时静默成功（不阻塞前端）
+    if (!env?.MISUB_KV) {
+        return createJsonResponse({ success: true });
     }
 
     try {
@@ -54,7 +55,8 @@ export async function handleErrorReportRequest(request, env) {
                 || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim(), 100)
         };
 
-        let reports = await env.MISUB_KV.get(ERROR_REPORT_KV_KEY, 'json');
+        const raw = await env.MISUB_KV.get(ERROR_REPORT_KV_KEY);
+        let reports = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(reports)) reports = [];
 
         reports.unshift(report);

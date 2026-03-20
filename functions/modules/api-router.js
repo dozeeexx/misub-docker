@@ -92,8 +92,9 @@ export async function handleApiRequest(request, env) {
             return createJsonResponse({ error: 'Unauthorized' }, 401);
         }
         try {
-            const oldData = await env.MISUB_KV.get(OLD_KV_KEY, 'json');
-            const newDataExists = await env.MISUB_KV.get(KV_KEY_SUBS) !== null;
+            const oldData = await env.MISUB_KV.get(OLD_KV_KEY).then(r => r ? JSON.parse(r) : null);
+            const newDataRaw = await env.MISUB_KV.get(KV_KEY_SUBS);
+            const newDataExists = newDataRaw !== null;
 
             if (newDataExists) {
                 return createJsonResponse({ success: true, message: '无需迁移，数据已是最新结构。' }, 200);
@@ -159,9 +160,6 @@ export async function handleApiRequest(request, env) {
 
     // Special handling for /data to return 200 OK for unauthenticated requests
     if (path === '/data') {
-        if (!env?.MISUB_KV) {
-            return createErrorResponse('KV 绑定 MISUB_KV 缺失', 500);
-        }
         if (!await authMiddleware(request, env)) {
             return createJsonResponse({
                 authenticated: false,
@@ -333,12 +331,7 @@ async function handleExternalFetchRequest(request, env) {
             },
             redirect: "follow",
             signal: controller.signal
-        }), {
-            cf: {
-                insecureSkipVerify: true,
-                timeout: timeout / 1000 // Cloudflare timeout in seconds
-            }
-        });
+        }));
 
         clearTimeout(timeoutId);
 

@@ -25,9 +25,15 @@ class KVStorageAdapter {
         this.kv = kvNamespace;
     }
 
-    async get(key, type = 'json') {
+    async get(key) {
         try {
-            return await this.kv.get(key, type);
+            const raw = await this.kv.get(key);
+            if (raw === null || raw === undefined) return null;
+            try {
+                return JSON.parse(raw);
+            } catch {
+                return raw;
+            }
         } catch (error) {
             console.error(`[KV] Failed to get key ${key}:`, error);
             return null;
@@ -263,7 +269,8 @@ export class SettingsCache {
 
             if (!settings && env.MISUB_KV) {
                 try {
-                    settings = await env.MISUB_KV.get(DATA_KEYS.SETTINGS, 'json');
+                    const raw = await env.MISUB_KV.get(DATA_KEYS.SETTINGS);
+                    settings = raw ? JSON.parse(raw) : null;
                 } catch (kvError) {
                     console.warn('[Storage Cache] Failed to read from KV:', kvError.message);
                 }

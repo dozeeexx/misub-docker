@@ -56,7 +56,7 @@ export const LogService = {
 
         try {
             // 获取现有日志
-            let logs = await env.MISUB_KV.get(LOG_KV_KEY, 'json') || [];
+            let logs = await env.MISUB_KV.get(LOG_KV_KEY).then(r => r ? JSON.parse(r) : null) || [];
             if (!Array.isArray(logs)) logs = [];
 
             // 把新收集到的一批日志插入到头部 (倒序输入保证时间线不乱)
@@ -95,7 +95,8 @@ export const LogService = {
     async getLogs(env) {
         if (!env.MISUB_KV) return [];
         try {
-            const logs = await env.MISUB_KV.get(LOG_KV_KEY, 'json');
+            const raw = await env.MISUB_KV.get(LOG_KV_KEY);
+            const logs = raw ? JSON.parse(raw) : null;
             return Array.isArray(logs) ? logs : [];
         } catch (error) {
             console.error('[LogService] Failed to get logs:', error);
