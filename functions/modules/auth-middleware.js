@@ -4,8 +4,16 @@
  */
 
 import { COOKIE_NAME, SESSION_DURATION } from './config.js';
-import { getCookieSecret, getAdminPassword } from './utils.js';
+import { getCookieSecret, getAdminPassword, getAuthDebugInfo } from './utils.js';
 import { StorageFactory } from '../storage-adapter.js';
+
+function normalizeSecret(value) {
+    return String(value ?? '')
+        .replace(/\uFEFF/g, '')
+        .replace(/[\u200B-\u200D]/g, '')
+        .trim()
+        .replace(/^['"]|['"]$/g, '');
+}
 
 function buildRequestMeta(request, env) {
     return {
@@ -210,12 +218,6 @@ export async function handleLogin(request, env) {
     if (request.method !== 'POST') {
         return new Response('Method Not Allowed', { status: 405 });
     }
-
-    const normalizeSecret = (value) => String(value ?? '')
-        .replace(/\uFEFF/g, '')
-        .replace(/[\u200B-\u200D]/g, '')
-        .trim()
-        .replace(/^['"]|['"]$/g, '');
 
     const logMeta = buildRequestMeta(request, env);
     let payload;

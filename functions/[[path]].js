@@ -61,10 +61,28 @@ function applyNoStoreToHtmlResponse(response) {
     });
 }
 
+const INTERNAL_SPA_FETCH_HEADER = 'x-misub-internal-spa-fetch';
+
 function normalizeLoginPath(customLoginPath) {
     if (typeof customLoginPath !== 'string') return '/login';
     const normalized = customLoginPath.trim().replace(/^\/+/g, '');
     return normalized ? `/${normalized}` : '/login';
+}
+
+async function fetchSpaEntry(request, env) {
+    const indexUrl = new URL('/', request.url);
+
+    if (typeof env?.ASSETS?.fetch === 'function') {
+        return env.ASSETS.fetch(new Request(indexUrl, request));
+    }
+
+    const headers = new Headers(request.headers);
+    headers.set(INTERNAL_SPA_FETCH_HEADER, '1');
+
+    return fetch(new Request(indexUrl.toString(), {
+        method: 'GET',
+        headers
+    }));
 }
 
 /**
@@ -78,6 +96,10 @@ export async function onRequest(context) {
 
     try {
         const handleRequest = async () => {
+            if (request.headers.get(INTERNAL_SPA_FETCH_HEADER) === '1') {
+                return applyNoStoreToHtmlResponse(await next());
+            }
+
             // 路由分发
             if (url.pathname.startsWith('/api/')) {
                 // API 路由
@@ -123,8 +145,7 @@ export async function onRequest(context) {
                         && url.pathname !== '/cron';
 
                     if (localResponse.status === 404 && isLikelySpaPath) {
-                        const indexUrl = new URL('/', request.url);
-                        const indexResponse = await env.ASSETS.fetch(new Request(indexUrl, request));
+                        const indexResponse = await fetchSpaEntry(request, env);
                         if (indexResponse.status === 200) {
                             localResponse = indexResponse;
                         }
@@ -230,16 +251,11 @@ export async function onRequest(context) {
                 const isHtmlRequest = isNavigationRequest && acceptHeader.includes('text/html');
 
                 if (response.status === 404 && (isSpaRoute || isHtmlRequest)) {
-                    // Clone the request to fetch index.html
-                    const indexUrl = new URL('/', request.url);
-                    const indexResponse = await env.ASSETS.fetch(new Request(indexUrl, request));
+                    const indexResponse = await fetchSpaEntry(request, env);
 
-                    // If index.html exists (e.g. in production or after build), return it
                     if (indexResponse.status === 200) {
                         response = indexResponse;
-                    } else {
-                        // If index.html is missing (likely local dev serving 'public' dir), redirect to Vite dev server
-                        // This assumes standard Vite port 5173.
+                    } else if (isLocalhost) {
                         return new Response(`Redirecting to frontend dev server...`, {
                             status: 302,
                             headers: {
@@ -248,7 +264,6 @@ export async function onRequest(context) {
                             }
                         });
                     }
-
                 }
 
                 return applyNoStoreToHtmlResponse(response);
@@ -259,7 +274,7 @@ export async function onRequest(context) {
             origins: parseCorsOrigins(env, url),
             allowCredentials: true
         };
-        return corsMiddleware(request, () => securityHeadersMiddleware(request, handleRequest), corsOptions);
+        return await corsMiddleware(request, () => securityHeadersMiddleware(request, handleRequest), corsOptions);
     } catch (error) {
         // 全局错误处理
         console.error('[Main Handler Error]', error);

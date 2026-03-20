@@ -5,7 +5,7 @@
 
 import { StorageFactory, DataMigrator } from '../storage-adapter.js';
 import { createJsonResponse, createErrorResponse, getAuthDebugInfo } from './utils.js';
-import { authMiddleware, handleLogin, handleLogout, getAuthSessionDiagnostic } from './auth-middleware.js';
+import { authMiddleware, handleLogin, handleLogout, getAuthSessionDiagnostic, getLoginPasswordDiagnostic } from './auth-middleware.js';
 import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave, handlePublicProfilesRequest, handlePublicConfig, handleUpdatePassword } from './api-handler.js';
 import { handleCronTrigger } from './notifications.js';
 import {
@@ -195,6 +195,15 @@ export async function handleApiRequest(request, env) {
             auth: authDiagnostic,
             runtime: debugInfo
         });
+    }
+
+    // 登录密码调试端点（公开，不返回敏感值）
+    if (path === '/auth_check') {
+        if (request.method !== 'POST') {
+            return createJsonResponse({ error: 'Method Not Allowed' }, 405);
+        }
+        const diagnostic = await getLoginPasswordDiagnostic(request, env);
+        return createJsonResponse(diagnostic, diagnostic.success ? 200 : 400);
     }
 
     if (!await authMiddleware(request, env)) {
