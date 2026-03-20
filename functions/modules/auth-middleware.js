@@ -192,6 +192,56 @@ export async function getAuthSessionDiagnostic(request, env) {
 }
 
 /**
+ * 获取登录密码诊断信息（不返回明文密码）
+ * @param {Request} request
+ * @param {Object} env
+ * @returns {Promise<Object>}
+ */
+export async function getLoginPasswordDiagnostic(request, env) {
+    const debugInfo = await getAuthDebugInfo(env);
+    const result = {
+        success: false,
+        matched: false,
+        reason: 'unknown',
+        runtime: {
+            adminPasswordSource: debugInfo?.adminPassword?.source || 'unknown'
+        },
+        input: {
+            provided: false,
+            normalizedLength: 0
+        },
+        expected: {
+            normalizedLength: 0
+        }
+    };
+
+    let payload;
+    try {
+        payload = await request.json();
+    } catch (_) {
+        result.reason = 'invalid_json';
+        return result;
+    }
+
+    const inputPassword = normalizeSecret(payload?.password);
+    const currentPassword = normalizeSecret(await getAdminPassword(env));
+
+    result.input.provided = typeof payload?.password === 'string';
+    result.input.normalizedLength = inputPassword.length;
+    result.expected.normalizedLength = currentPassword.length;
+
+    if (!result.input.provided) {
+        result.reason = 'missing_password';
+        return result;
+    }
+
+    result.matched = inputPassword === currentPassword;
+    result.success = true;
+    result.reason = result.matched ? 'matched' : 'mismatch';
+    return result;
+}
+
+/**
  * 认证中间件 - 检查用户是否已登录
  * @param {Request} request - HTTP 请求对象
  * @param {Object} env - Cloudflare 环境对象
