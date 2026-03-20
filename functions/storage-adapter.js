@@ -43,11 +43,7 @@ class KVStorageAdapter {
     async put(key, value) {
         try {
             const data = typeof value === 'string' ? value : JSON.stringify(value);
-            const result = await this.kv.put(key, data);
-            console.log(`[KV] put key=${key} dataLen=${data.length} result=${JSON.stringify(result)}`);
-            // 立即回读验证写入是否生效
-            const verify = await this.kv.get(key);
-            console.log(`[KV] verify key=${key} readBack=${verify ? verify.substring(0, 50) : 'null'}`);
+            await this.kv.put(key, data);
             return true;
         } catch (error) {
             console.error(`[KV] Failed to put key ${key}:`, error);

@@ -204,7 +204,70 @@ export async function handleApiRequest(request, env) {
         return await handleTestSubconverterRequest(request, env);
     }
 
+    // KV 诊断端点：测试 KV 读写是否正常（需登录）
+    if (path === '/kv_test') {
+        try {
+            const kv = env?.MISUB_KV;
+            if (!kv) {
+                return createJsonResponse({ success: false, error: 'MISUB_KV 未绑定' });
+            }
+            const testKey = '__kv_test_' + Date.now();
+            const testValue = 'test_' + Math.random().toString(36).slice(2);
 
+            // 写入
+            let putError = null;
+            try {
+                await kv.put(testKey, testValue);
+            } catch (e) {
+                putError = e.message;
+            }
+
+            // 读回
+            let readBack = null;
+            let getError = null;
+            try {
+                readBack = await kv.get(testKey);
+            } catch (e) {
+                getError = e.message;
+            }
+
+            // 清理
+            try { await kv.delete(testKey); } catch (_) {}
+
+            // 读取实际数据键
+            let subsRaw = null;
+            let subsError = null;
+            try {
+                subsRaw = await kv.get('misub_subscriptions_v1');
+            } catch (e) {
+                subsError = e.message;
+            }
+
+            let settingsRaw = null;
+            try {
+                settingsRaw = await kv.get('worker_settings_v1');
+            } catch (_) {}
+
+            return createJsonResponse({
+                success: true,
+                kvBound: true,
+                writeTest: {
+                    wrote: testValue,
+                    readBack,
+                    match: readBack === testValue,
+                    putError,
+                    getError
+                },
+                actualData: {
+                    subscriptions: subsRaw ? `存在，长度=${subsRaw.length}` : 'null（空）',
+                    settings: settingsRaw ? `存在，长度=${settingsRaw.length}` : 'null（空）',
+                    subsError
+                }
+            });
+        } catch (e) {
+            return createJsonResponse({ success: false, error: e.message });
+        }
+    }
 
     switch (path) {
         case '/misubs':
