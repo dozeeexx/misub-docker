@@ -94,10 +94,6 @@ export async function verifySignedToken(key, token) {
 export async function authMiddleware(request, env) {
     const logMeta = buildRequestMeta(request, env);
     try {
-        if (!env?.MISUB_KV) {
-            console.error('[Auth] KV 绑定 MISUB_KV 缺失', logMeta);
-            return false;
-        }
         const secret = await getCookieSecret(env);
         if (!secret) return false;
         const cookie = request.headers.get('Cookie');
@@ -130,11 +126,6 @@ export async function handleLogin(request, env) {
     } catch (e) {
         console.error('[API Error /login] Request body parse failed', { ...logMeta, error: e?.message });
         return new Response(JSON.stringify({ error: '请求体解析失败' }), { status: 400 });
-    }
-
-    if (!env?.MISUB_KV) {
-        console.error('[API Error /login] KV 绑定 MISUB_KV 缺失', logMeta);
-        return new Response(JSON.stringify({ error: 'KV 绑定 MISUB_KV 缺失' }), { status: 500 });
     }
 
     try {

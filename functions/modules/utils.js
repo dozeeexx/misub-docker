@@ -62,54 +62,54 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
 
 /**
  * 获取或生成 Cookie 加密密钥
- * 优先从 KV 读取，不存在则生成新的并保存
- * @param {Object} env - Cloudflare环境对象
+ * 优先顺序：KV → 环境变量 COOKIE_SECRET → 随机生成（无 KV 时仅内存有效）
+ * @param {Object} env - 运行时环境对象（Cloudflare / EdgeOne）
  * @returns {Promise<string>} 密钥
  */
 export async function getCookieSecret(env) {
-    if (!env?.MISUB_KV) {
-        throw new Error('KV 绑定 MISUB_KV 缺失');
-    }
-    // 1. 尝试从 KV 读取
-    const kvSecret = await env.MISUB_KV.get('SYSTEM_COOKIE_SECRET');
-    if (kvSecret) {
-        return kvSecret;
+    const hasKV = !!env?.MISUB_KV;
+
+    if (hasKV) {
+        // 1. 尝试从 KV 读取
+        const kvSecret = await env.MISUB_KV.get('SYSTEM_COOKIE_SECRET');
+        if (kvSecret) return kvSecret;
+
+        // 2. 有环境变量则迁移到 KV
+        if (env.COOKIE_SECRET) {
+            await env.MISUB_KV.put('SYSTEM_COOKIE_SECRET', env.COOKIE_SECRET);
+            return env.COOKIE_SECRET;
+        }
+
+        // 3. 生成新密钥并持久化到 KV
+        const newSecret = crypto.randomUUID();
+        await env.MISUB_KV.put('SYSTEM_COOKIE_SECRET', newSecret);
+        return newSecret;
     }
 
-    // 2. 兼容旧版：尝试读取环境变量
-    if (env.COOKIE_SECRET) {
-        // 将环境变量迁移到 KV 以便后续统一管理
-        await env.MISUB_KV.put('SYSTEM_COOKIE_SECRET', env.COOKIE_SECRET);
-        return env.COOKIE_SECRET;
-    }
-
-    // 3. 生成新密钥并保存
-    const newSecret = crypto.randomUUID();
-    await env.MISUB_KV.put('SYSTEM_COOKIE_SECRET', newSecret);
-    return newSecret;
+    // 无 KV（EdgeOne 纯环境变量模式）：直接使用环境变量，无则生成临时密钥
+    // 注意：无 KV 时生成的临时密钥在 Worker 重启后失效，用户需要重新登录
+    if (env?.COOKIE_SECRET) return env.COOKIE_SECRET;
+    return crypto.randomUUID();
 }
 
 /**
  * 获取管理员密码
- * 优先从 KV 读取，不存在则使用环境变量
- * @param {Object} env - Cloudflare环境对象
+ * 优先顺序：KV → 环境变量 ADMIN_PASSWORD → 默认值 'admin'
+ * @param {Object} env - 运行时环境对象（Cloudflare / EdgeOne）
  * @returns {Promise<string>} 密码
  */
 export async function getAdminPassword(env) {
-    if (!env?.MISUB_KV) {
-        throw new Error('KV 绑定 MISUB_KV 缺失');
+    if (env?.MISUB_KV) {
+        const kvPassword = await env.MISUB_KV.get('SYSTEM_ADMIN_PASSWORD');
+        if (kvPassword) return kvPassword;
     }
-    const kvPassword = await env.MISUB_KV.get('SYSTEM_ADMIN_PASSWORD');
-    if (kvPassword) {
-        return kvPassword;
-    }
-    // Return env password if exists, otherwise default to 'admin'
-    return env.ADMIN_PASSWORD || 'admin';
+    // 无 KV 或 KV 中无密码：使用环境变量，否则默认 'admin'
+    return env?.ADMIN_PASSWORD || 'admin';
 }
 
 /**
  * 检查是否正在使用默认密码
- * @param {Object} env 
+ * @param {Object} env
  * @returns {Promise<boolean>}
  */
 export async function isUsingDefaultPassword(env) {
@@ -119,12 +119,13 @@ export async function isUsingDefaultPassword(env) {
 
 /**
  * 设置管理员密码
- * @param {Object} env - Cloudflare环境对象
+ * 有 KV 时持久化到 KV；无 KV 时（EdgeOne 纯环境变量模式）抛出提示
+ * @param {Object} env - 运行时环境对象
  * @param {string} newPassword - 新密码
  */
 export async function setAdminPassword(env, newPassword) {
     if (!env?.MISUB_KV) {
-        throw new Error('KV 绑定 MISUB_KV 缺失');
+        throw new Error('当前部署未绑定 KV，请在平台控制台通过环境变量 ADMIN_PASSWORD 修改密码');
     }
     await env.MISUB_KV.put('SYSTEM_ADMIN_PASSWORD', newPassword);
 }

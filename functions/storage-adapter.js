@@ -223,7 +223,17 @@ class D1StorageAdapter {
     }
 }
 
-// 全局设置缓存 (Isolate 级别)
+/**
+ * 无存储降级适配器（EdgeOne 纯环境变量模式，不读写持久数据）
+ */
+class NoopStorageAdapter {
+    async get() { return null; }
+    async put() { return true; }
+    async delete() { return true; }
+    async list() { return []; }
+}
+
+
 let _globalSettingsCache = {
     data: null,
     timestamp: 0
@@ -295,12 +305,20 @@ export class StorageFactory {
             case STORAGE_TYPES.D1:
                 if (!env.MISUB_DB) {
                     console.warn('[Storage] D1 database not available, falling back to KV');
+                    if (!env.MISUB_KV) {
+                        console.warn('[Storage] KV not available either, using noop adapter');
+                        return new NoopStorageAdapter();
+                    }
                     return new KVStorageAdapter(env.MISUB_KV);
                 }
                 return new D1StorageAdapter(env.MISUB_DB);
 
             case STORAGE_TYPES.KV:
             default:
+                if (!env.MISUB_KV) {
+                    console.warn('[Storage] KV binding MISUB_KV not available, using noop adapter');
+                    return new NoopStorageAdapter();
+                }
                 return new KVStorageAdapter(env.MISUB_KV);
         }
     }
