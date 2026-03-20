@@ -4,7 +4,7 @@
  */
 
 import { StorageFactory, DataMigrator } from '../storage-adapter.js';
-import { createJsonResponse, createErrorResponse } from './utils.js';
+import { createJsonResponse, createErrorResponse, getAuthDebugInfo } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout } from './auth-middleware.js';
 import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave, handlePublicProfilesRequest, handlePublicConfig, handleUpdatePassword } from './api-handler.js';
 import { handleCronTrigger } from './notifications.js';
@@ -183,6 +183,20 @@ export async function handleApiRequest(request, env) {
     // Logout 无需认证（cookie 过期时也需能正常登出）
     if (path === '/logout') {
         return await handleLogout(request);
+    }
+
+    // 认证调试端点（公开，不返回敏感值）
+    if (path === '/auth_debug') {
+        const debugInfo = await getAuthDebugInfo(env);
+        const cookieHeader = request.headers.get('Cookie') || '';
+        return createJsonResponse({
+            success: true,
+            auth: {
+                hasAuthCookie: cookieHeader.includes('auth_session='),
+                cookieHeaderPresent: cookieHeader.length > 0
+            },
+            runtime: debugInfo
+        });
     }
 
     if (!await authMiddleware(request, env)) {

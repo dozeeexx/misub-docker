@@ -141,16 +141,71 @@ export async function getCookieSecret(env) {
 export async function getAdminPassword(env) {
     const runtimeAdminPassword = getRuntimeEnvValue(env, 'ADMIN_PASSWORD');
     if (runtimeAdminPassword) {
-        return runtimeAdminPassword;
+        return runtimeAdminPassword.trim();
     }
 
     const kv = getKV(env);
     if (kv) {
         const kvPassword = await kv.get('SYSTEM_ADMIN_PASSWORD');
-        if (kvPassword) return kvPassword;
+        if (kvPassword) return String(kvPassword).trim();
     }
 
     return 'admin';
+}
+
+/**
+ * 获取认证相关调试信息（不返回任何敏感值）
+ * @param {Object} env
+ * @returns {Promise<Object>}
+ */
+export async function getAuthDebugInfo(env) {
+    const runtimeAdminPassword = getRuntimeEnvValue(env, 'ADMIN_PASSWORD');
+    const runtimeCookieSecret = getRuntimeEnvValue(env, 'COOKIE_SECRET');
+    const kv = getKV(env);
+
+    let hasKvAdminPassword = false;
+    let hasKvCookieSecret = false;
+
+    if (kv) {
+        try {
+            hasKvAdminPassword = !!(await kv.get('SYSTEM_ADMIN_PASSWORD'));
+        } catch (_) {}
+
+        try {
+            hasKvCookieSecret = !!(await kv.get('SYSTEM_COOKIE_SECRET'));
+        } catch (_) {}
+    }
+
+    let adminPasswordSource = 'default';
+    if (runtimeAdminPassword) {
+        adminPasswordSource = 'env';
+    } else if (hasKvAdminPassword) {
+        adminPasswordSource = 'kv';
+    }
+
+    let cookieSecretSource = 'generated';
+    if (runtimeCookieSecret) {
+        cookieSecretSource = 'env';
+    } else if (hasKvCookieSecret) {
+        cookieSecretSource = 'kv';
+    }
+
+    return {
+        hasKv: !!kv,
+        hasD1: !!env?.MISUB_DB,
+        adminPassword: {
+            source: adminPasswordSource,
+            hasRuntime: !!runtimeAdminPassword,
+            hasKvValue: hasKvAdminPassword,
+            isDefaultFallback: adminPasswordSource === 'default'
+        },
+        cookieSecret: {
+            source: cookieSecretSource,
+            hasRuntime: !!runtimeCookieSecret,
+            hasKvValue: hasKvCookieSecret,
+            mayRegenerateWithoutKv: !kv && !runtimeCookieSecret
+        }
+    };
 }
 
 /**

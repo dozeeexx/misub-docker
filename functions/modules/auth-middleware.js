@@ -131,8 +131,11 @@ export async function handleLogin(request, env) {
 
     try {
         const { password } = payload || {};
-        const currentPassword = await getAdminPassword(env);
-        if (password === currentPassword) {
+        const inputPassword = typeof password === 'string' ? password : String(password ?? '');
+        const currentPassword = String(await getAdminPassword(env) ?? '');
+        const isPasswordMatched = inputPassword === currentPassword || inputPassword.trim() === currentPassword.trim();
+
+        if (isPasswordMatched) {
             const secret = await getCookieSecret(env);
             const token = await createSignedToken(secret, String(Date.now()));
             const headers = new Headers({ 'Content-Type': 'application/json' });
