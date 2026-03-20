@@ -87,6 +87,103 @@ export async function verifySignedToken(key, token) {
 }
 
 /**
+ * 获取认证会话调试信息（不包含敏感值）
+ * @param {Request} request
+ * @param {Object} env
+ * @returns {Promise<Object>}
+ */
+export async function getAuthSessionDiagnostic(request, env) {
+    const result = {
+        isAuthenticated: false,
+        reason: 'unknown',
+        cookieHeaderPresent: false,
+        authSessionCookieCount: 0,
+        token: {
+            exists: false,
+            decodeMode: 'none',
+            length: 0,
+            partCount: 0
+        },
+        verify: {
+            success: false,
+            hasTimestamp: false,
+            isExpired: null
+        }
+    };
+
+    const secret = await getCookieSecret(env);
+    if (!secret) {
+        result.reason = 'no_secret';
+        return result;
+    }
+
+    const cookieHeader = request.headers.get('Cookie') || '';
+    result.cookieHeaderPresent = cookieHeader.length > 0;
+
+    const matchedCookies = cookieHeader
+        .split(';')
+        .map(c => c.trim())
+        .filter(c => c.startsWith(`${COOKIE_NAME}=`));
+
+    result.authSessionCookieCount = matchedCookies.length;
+    if (matchedCookies.length === 0) {
+        result.reason = 'no_cookie';
+        return result;
+    }
+
+    const rawToken = matchedCookies[matchedCookies.length - 1].slice(COOKIE_NAME.length + 1);
+    if (!rawToken) {
+        result.reason = 'empty_token';
+        return result;
+    }
+
+    let token = rawToken;
+    try {
+        token = decodeURIComponent(rawToken);
+        result.token.decodeMode = 'decodeURIComponent';
+    } catch (_) {
+        result.token.decodeMode = 'raw';
+    }
+
+    token = String(token || '').replace(/^"|"$/g, '');
+    result.token.exists = token.length > 0;
+    result.token.length = token.length;
+    result.token.partCount = token ? token.split('.').length : 0;
+
+    if (!token) {
+        result.reason = 'empty_token';
+        return result;
+    }
+
+    const verifiedData = await verifySignedToken(secret, token);
+    if (!verifiedData) {
+        result.reason = 'invalid_signature_or_secret';
+        return result;
+    }
+
+    result.verify.success = true;
+    const ts = parseInt(verifiedData, 10);
+    const hasTimestamp = Number.isFinite(ts);
+    result.verify.hasTimestamp = hasTimestamp;
+
+    if (!hasTimestamp) {
+        result.reason = 'invalid_timestamp';
+        return result;
+    }
+
+    const isExpired = (Date.now() - ts) >= SESSION_DURATION;
+    result.verify.isExpired = isExpired;
+    if (isExpired) {
+        result.reason = 'expired';
+        return result;
+    }
+
+    result.isAuthenticated = true;
+    result.reason = 'ok';
+    return result;
+}
+
+/**
  * 认证中间件 - 检查用户是否已登录
  * @param {Request} request - HTTP 请求对象
  * @param {Object} env - Cloudflare 环境对象
@@ -95,22 +192,8 @@ export async function verifySignedToken(key, token) {
 export async function authMiddleware(request, env) {
     const logMeta = buildRequestMeta(request, env);
     try {
-        const secret = await getCookieSecret(env);
-        if (!secret) return false;
-        const cookieHeader = request.headers.get('Cookie') || '';
-        const matchedCookies = cookieHeader
-            .split(';')
-            .map(c => c.trim())
-            .filter(c => c.startsWith(`${COOKIE_NAME}=`));
-
-        if (matchedCookies.length === 0) return false;
-
-        const rawToken = matchedCookies[matchedCookies.length - 1].slice(COOKIE_NAME.length + 1);
-        const token = decodeURIComponent(rawToken || '').replace(/^"|"$/g, '');
-        if (!token) return false;
-
-        const verifiedData = await verifySignedToken(secret, token);
-        return !!verifiedData && (Date.now() - parseInt(verifiedData, 10) < SESSION_DURATION);
+        const diagnostic = await getAuthSessionDiagnostic(request, env);
+        return diagnostic.isAuthenticated;
     } catch (e) {
         console.error('[Auth] 鉴权失败', { ...logMeta, error: e?.message });
         return false;
