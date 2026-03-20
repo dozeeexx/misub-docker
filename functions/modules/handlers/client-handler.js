@@ -6,6 +6,12 @@ import { createJsonResponse, createErrorResponse } from '../utils.js';
 const KV_KEY_CLIENTS = 'misub_clients_v1';
 const MAX_ICON_DATA_URL_BYTES = 200 * 1024;
 
+function getKV(env) {
+    if (env?.MISUB_KV) return env.MISUB_KV;
+    try { if (typeof MISUB_KV !== 'undefined' && MISUB_KV) return MISUB_KV; } catch (_) {} // eslint-disable-line no-undef
+    return null;
+}
+
 const LEGACY_CLIENT_ICONS = {
     'clash-verge-rev': '⚡️',
     'clash-party': '🎉',
@@ -249,7 +255,7 @@ function generateUUID() {
 export async function handleClientRequest(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
-    const kv = env?.MISUB_KV || null;
+    const kv = getKV(env);
 
     try {
         if (request.method === 'GET') {

@@ -92,8 +92,12 @@ export async function handleApiRequest(request, env) {
             return createJsonResponse({ error: 'Unauthorized' }, 401);
         }
         try {
-            const oldData = await env.MISUB_KV.get(OLD_KV_KEY).then(r => r ? JSON.parse(r) : null);
-            const newDataRaw = await env.MISUB_KV.get(KV_KEY_SUBS);
+            const kv = StorageFactory.resolveKV(env);
+            if (!kv) {
+                return createJsonResponse({ success: false, message: 'KV 未绑定' }, 400);
+            }
+            const oldData = await kv.get(OLD_KV_KEY).then(r => r ? JSON.parse(r) : null);
+            const newDataRaw = await kv.get(KV_KEY_SUBS);
             const newDataExists = newDataRaw !== null;
 
             if (newDataExists) {
@@ -103,10 +107,10 @@ export async function handleApiRequest(request, env) {
                 return createJsonResponse({ success: false, message: '未找到需要迁移的旧数据。' }, 404);
             }
 
-            await env.MISUB_KV.put(KV_KEY_SUBS, JSON.stringify(oldData));
-            await env.MISUB_KV.put(KV_KEY_PROFILES, JSON.stringify([]));
-            await env.MISUB_KV.put(OLD_KV_KEY + '_migrated_on_' + new Date().toISOString(), JSON.stringify(oldData));
-            await env.MISUB_KV.delete(OLD_KV_KEY);
+            await kv.put(KV_KEY_SUBS, JSON.stringify(oldData));
+            await kv.put(KV_KEY_PROFILES, JSON.stringify([]));
+            await kv.put(OLD_KV_KEY + '_migrated_on_' + new Date().toISOString(), JSON.stringify(oldData));
+            await kv.delete(OLD_KV_KEY);
 
             return createJsonResponse({ success: true, message: '数据迁移成功！' }, 200);
         } catch (e) {
@@ -209,7 +213,14 @@ export async function handleApiRequest(request, env) {
         try {
             const kv = StorageFactory.resolveKV(env);
             if (!kv) {
-                return createJsonResponse({ success: false, error: 'KV 未绑定（env 中未找到任何 KV namespace，请在控制台绑定并将变量名设为 MISUB_KV）' });
+                // 列出 env 中所有 key 及其类型，帮助诊断绑定情况
+                const envKeys = env ? Object.keys(env).map(k => {
+                    const v = env[k];
+                    const t = typeof v;
+                    const isKVLike = v && t === 'object' && typeof v.get === 'function';
+                    return `${k}(${t}${isKVLike ? ',KV-like' : ''})`;
+                }) : [];
+                return createJsonResponse({ success: false, error: 'KV 未绑定', envKeys });
             }
             const testKey = '__kv_test_' + Date.now();
             const testValue = 'test_' + Math.random().toString(36).slice(2);

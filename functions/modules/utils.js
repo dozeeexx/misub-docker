@@ -32,6 +32,23 @@ export function hasDataChanged(oldData, newData) {
 }
 
 /**
+ * 获取 KV namespace
+ * EdgeOne Pages: KV 作为全局变量注入（如 MISUB_KV），而非通过 env
+ * Cloudflare Pages: KV 通过 env.MISUB_KV 注入
+ * @param {Object} env
+ * @returns {Object|null}
+ */
+function getKV(env) {
+    // Cloudflare 方式
+    if (env?.MISUB_KV) return env.MISUB_KV;
+    // EdgeOne 方式：全局变量
+    try {
+        if (typeof MISUB_KV !== 'undefined' && MISUB_KV) return MISUB_KV; // eslint-disable-line no-undef
+    } catch (_) {}
+    return null;
+}
+
+/**
  * 条件性写入KV存储，只在数据真正变更时写入
  * @param {Object} env - Cloudflare环境对象
  * @param {string} key - KV键名
@@ -40,20 +57,21 @@ export function hasDataChanged(oldData, newData) {
  * @returns {Promise<boolean>} - 是否执行了写入操作
  */
 export async function conditionalKVPut(env, key, newData, oldData = null) {
+    const kv = getKV(env);
     // 如果没有提供旧数据，先从KV读取
     if (oldData === null) {
         try {
-            oldData = await env.MISUB_KV.get(key).then(r => r ? JSON.parse(r) : null);
+            oldData = await kv.get(key).then(r => r ? JSON.parse(r) : null);
         } catch (error) {
             // 读取失败时，为安全起见执行写入
-            await env.MISUB_KV.put(key, JSON.stringify(newData));
+            await kv.put(key, JSON.stringify(newData));
             return true;
         }
     }
 
     // 检测数据是否变更
     if (hasDataChanged(oldData, newData)) {
-        await env.MISUB_KV.put(key, JSON.stringify(newData));
+        await kv.put(key, JSON.stringify(newData));
         return true;
     } else {
         return false;
@@ -67,27 +85,26 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
  * @returns {Promise<string>} 密钥
  */
 export async function getCookieSecret(env) {
-    const hasKV = !!env?.MISUB_KV;
+    const kv = getKV(env);
 
-    if (hasKV) {
+    if (kv) {
         // 1. 尝试从 KV 读取
-        const kvSecret = await env.MISUB_KV.get('SYSTEM_COOKIE_SECRET');
+        const kvSecret = await kv.get('SYSTEM_COOKIE_SECRET');
         if (kvSecret) return kvSecret;
 
         // 2. 有环境变量则迁移到 KV
-        if (env.COOKIE_SECRET) {
-            await env.MISUB_KV.put('SYSTEM_COOKIE_SECRET', env.COOKIE_SECRET);
+        if (env?.COOKIE_SECRET) {
+            await kv.put('SYSTEM_COOKIE_SECRET', env.COOKIE_SECRET);
             return env.COOKIE_SECRET;
         }
 
         // 3. 生成新密钥并持久化到 KV
         const newSecret = crypto.randomUUID();
-        await env.MISUB_KV.put('SYSTEM_COOKIE_SECRET', newSecret);
+        await kv.put('SYSTEM_COOKIE_SECRET', newSecret);
         return newSecret;
     }
 
-    // 无 KV（EdgeOne 纯环境变量模式）：直接使用环境变量，无则生成临时密钥
-    // 注意：无 KV 时生成的临时密钥在 Worker 重启后失效，用户需要重新登录
+    // 无 KV：直接使用环境变量，无则生成临时密钥（重启后失效）
     if (env?.COOKIE_SECRET) return env.COOKIE_SECRET;
     return crypto.randomUUID();
 }
@@ -99,8 +116,9 @@ export async function getCookieSecret(env) {
  * @returns {Promise<string>} 密码
  */
 export async function getAdminPassword(env) {
-    if (env?.MISUB_KV) {
-        const kvPassword = await env.MISUB_KV.get('SYSTEM_ADMIN_PASSWORD');
+    const kv = getKV(env);
+    if (kv) {
+        const kvPassword = await kv.get('SYSTEM_ADMIN_PASSWORD');
         if (kvPassword) return kvPassword;
     }
     // 无 KV 或 KV 中无密码：使用环境变量，否则默认 'admin'
@@ -124,10 +142,11 @@ export async function isUsingDefaultPassword(env) {
  * @param {string} newPassword - 新密码
  */
 export async function setAdminPassword(env, newPassword) {
-    if (!env?.MISUB_KV) {
+    const kv = getKV(env);
+    if (!kv) {
         throw new Error('当前部署未绑定 KV，请在平台控制台通过环境变量 ADMIN_PASSWORD 修改密码');
     }
-    await env.MISUB_KV.put('SYSTEM_ADMIN_PASSWORD', newPassword);
+    await kv.put('SYSTEM_ADMIN_PASSWORD', newPassword);
 }
 
 export { formatBytes } from '../../src/shared/utils.js';

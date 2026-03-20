@@ -241,22 +241,54 @@ class NoopStorageAdapter {
 
 
 /**
- * 解析 KV 命名空间：优先 MISUB_KV，找不到则自动探测 env 中任意 KV 绑定
+ * 判断一个值是否像 KV namespace（有 get/put/delete 方法）
+ */
+function isKVNamespace(val) {
+    return val && typeof val === 'object' &&
+        typeof val.get === 'function' &&
+        typeof val.put === 'function' &&
+        typeof val.delete === 'function';
+}
+
+/**
+ * 解析 KV 命名空间
+ * EdgeOne Pages: KV 作为全局变量注入（globalThis.MISUB_KV），而非通过 env
+ * Cloudflare Pages: KV 通过 env.MISUB_KV 注入
+ * 同时支持自动探测，兼容任意绑定名
  * @param {Object} env
  * @returns {Object|null}
  */
 function resolveKV(env) {
-    if (env.MISUB_KV) return env.MISUB_KV;
-    for (const key of Object.keys(env)) {
-        const val = env[key];
-        if (val && typeof val === 'object' &&
-            typeof val.get === 'function' &&
-            typeof val.put === 'function' &&
-            typeof val.delete === 'function') {
-            console.log(`[Storage] Auto-detected KV binding: ${key}`);
-            return val;
+    // 1. Cloudflare Pages 方式：env.MISUB_KV
+    if (env && isKVNamespace(env.MISUB_KV)) return env.MISUB_KV;
+
+    // 2. EdgeOne Pages 方式：KV 作为全局变量注入
+    if (typeof MISUB_KV !== 'undefined' && isKVNamespace(MISUB_KV)) return MISUB_KV;  // eslint-disable-line no-undef
+
+    // 3. 自动探测 env 中其他 KV 绑定（仅允许变量名包含 KV，避免误识别）
+    if (env) {
+        for (const key of Object.keys(env)) {
+            if (!String(key).toUpperCase().includes('KV')) continue;
+            if (isKVNamespace(env[key])) {
+                console.log(`[Storage] Auto-detected KV in env: ${key}`);
+                return env[key];
+            }
         }
     }
+
+    // 4. 自动探测 globalThis 中其他 KV 绑定（仅允许变量名包含 KV，避免误识别）
+    for (const key of Object.keys(globalThis)) {
+        if (key.startsWith('_') || key === 'globalThis') continue;
+        if (!String(key).toUpperCase().includes('KV')) continue;
+        try {
+            const val = globalThis[key];
+            if (isKVNamespace(val)) {
+                console.log(`[Storage] Auto-detected KV in globalThis: ${key}`);
+                return val;
+            }
+        } catch (_) { /* 忽略访问器异常 */ }
+    }
+
     return null;
 }
 
@@ -386,7 +418,7 @@ export class StorageFactory {
      * @returns {boolean} 是否配置了双重存储
      */
     static hasDualStorage(env) {
-        return !!(env.MISUB_KV && env.MISUB_DB);
+        return !!(StorageFactory.resolveKV(env) && env.MISUB_DB);
     }
 }
 

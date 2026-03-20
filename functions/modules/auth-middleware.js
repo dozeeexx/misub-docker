@@ -5,6 +5,7 @@
 
 import { COOKIE_NAME, SESSION_DURATION } from './config.js';
 import { getCookieSecret, getAdminPassword } from './utils.js';
+import { StorageFactory } from '../storage-adapter.js';
 
 function buildRequestMeta(request, env) {
     return {
@@ -16,7 +17,7 @@ function buildRequestMeta(request, env) {
         origin: request?.headers?.get('Origin'),
         referer: request?.headers?.get('Referer'),
         cfRay: request?.headers?.get('CF-Ray'),
-        hasKv: !!env?.MISUB_KV,
+        hasKv: !!StorageFactory.resolveKV(env),
         hasD1: !!env?.MISUB_DB
     };
 }

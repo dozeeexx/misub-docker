@@ -33,7 +33,7 @@ export async function handleDataRequest(env) {
         if (storageType === 'd1' && !env.MISUB_DB) {
             console.error('[API Error /data] D1 binding missing while storageType=d1');
         }
-        if (storageType === 'kv' && !env.MISUB_KV) {
+        if (storageType === 'kv' && !StorageFactory.resolveKV(env)) {
             console.error('[API Error /data] KV binding missing while storageType=kv');
         }
         const storageAdapter = StorageFactory.createAdapter(env, storageType);
@@ -61,7 +61,7 @@ export async function handleDataRequest(env) {
         console.error('[API Error /data] Failed to read from storage', {
             error: e?.message,
             storageType,
-            hasKv: !!env?.MISUB_KV,
+            hasKv: !!StorageFactory.resolveKV(env),
             hasD1: !!env?.MISUB_DB
         });
         return createErrorResponse(e, 500);

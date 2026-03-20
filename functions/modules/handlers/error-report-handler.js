@@ -11,6 +11,12 @@ const MAX_MESSAGE_LENGTH = 500;
 const MAX_STACK_LENGTH = 2000;
 const MAX_ADDITIONAL_LENGTH = 2000;
 
+function getKV(env) {
+    if (env?.MISUB_KV) return env.MISUB_KV;
+    try { if (typeof MISUB_KV !== 'undefined' && MISUB_KV) return MISUB_KV; } catch (_) {} // eslint-disable-line no-undef
+    return null;
+}
+
 function safeString(value, limit) {
     if (value === undefined || value === null) return '';
     const text = String(value);
@@ -34,7 +40,8 @@ export async function handleErrorReportRequest(request, env) {
     }
 
     // 无 KV 时静默成功（不阻塞前端）
-    if (!env?.MISUB_KV) {
+    const kv = getKV(env);
+    if (!kv) {
         return createJsonResponse({ success: true });
     }
 
@@ -55,7 +62,7 @@ export async function handleErrorReportRequest(request, env) {
                 || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim(), 100)
         };
 
-        const raw = await env.MISUB_KV.get(ERROR_REPORT_KV_KEY);
+        const raw = await kv.get(ERROR_REPORT_KV_KEY);
         let reports = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(reports)) reports = [];
 
@@ -64,7 +71,7 @@ export async function handleErrorReportRequest(request, env) {
             reports = reports.slice(0, MAX_REPORT_ENTRIES);
         }
 
-        await env.MISUB_KV.put(ERROR_REPORT_KV_KEY, JSON.stringify(reports));
+        await kv.put(ERROR_REPORT_KV_KEY, JSON.stringify(reports));
 
         return createJsonResponse({ success: true });
     } catch (error) {
