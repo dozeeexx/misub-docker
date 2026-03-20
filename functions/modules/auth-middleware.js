@@ -128,6 +128,12 @@ export async function handleLogin(request, env) {
         return new Response('Method Not Allowed', { status: 405 });
     }
 
+    const normalizeSecret = (value) => String(value ?? '')
+        .replace(/\uFEFF/g, '')
+        .replace(/[\u200B-\u200D]/g, '')
+        .trim()
+        .replace(/^['"]|['"]$/g, '');
+
     const logMeta = buildRequestMeta(request, env);
     let payload;
     try {
@@ -139,9 +145,9 @@ export async function handleLogin(request, env) {
 
     try {
         const { password } = payload || {};
-        const inputPassword = typeof password === 'string' ? password : String(password ?? '');
-        const currentPassword = String(await getAdminPassword(env) ?? '');
-        const isPasswordMatched = inputPassword === currentPassword || inputPassword.trim() === currentPassword.trim();
+        const inputPassword = normalizeSecret(password);
+        const currentPassword = normalizeSecret(await getAdminPassword(env));
+        const isPasswordMatched = inputPassword === currentPassword;
 
         if (isPasswordMatched) {
             const secret = await getCookieSecret(env);
