@@ -207,9 +207,9 @@ export async function handleApiRequest(request, env) {
     // KV 诊断端点：测试 KV 读写是否正常（需登录）
     if (path === '/kv_test') {
         try {
-            const kv = env?.MISUB_KV;
+            const kv = StorageFactory.resolveKV(env);
             if (!kv) {
-                return createJsonResponse({ success: false, error: 'MISUB_KV 未绑定' });
+                return createJsonResponse({ success: false, error: 'KV 未绑定（env 中未找到任何 KV namespace，请在控制台绑定并将变量名设为 MISUB_KV）' });
             }
             const testKey = '__kv_test_' + Date.now();
             const testValue = 'test_' + Math.random().toString(36).slice(2);

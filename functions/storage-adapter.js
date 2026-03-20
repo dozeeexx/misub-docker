@@ -240,6 +240,26 @@ class NoopStorageAdapter {
 }
 
 
+/**
+ * 解析 KV 命名空间：优先 MISUB_KV，找不到则自动探测 env 中任意 KV 绑定
+ * @param {Object} env
+ * @returns {Object|null}
+ */
+function resolveKV(env) {
+    if (env.MISUB_KV) return env.MISUB_KV;
+    for (const key of Object.keys(env)) {
+        const val = env[key];
+        if (val && typeof val === 'object' &&
+            typeof val.get === 'function' &&
+            typeof val.put === 'function' &&
+            typeof val.delete === 'function') {
+            console.log(`[Storage] Auto-detected KV binding: ${key}`);
+            return val;
+        }
+    }
+    return null;
+}
+
 let _globalSettingsCache = {
     data: null,
     timestamp: 0
@@ -267,9 +287,10 @@ export class SettingsCache {
                 }
             }
 
-            if (!settings && env.MISUB_KV) {
+            const kvNs = resolveKV(env);
+            if (!settings && kvNs) {
                 try {
-                    const raw = await env.MISUB_KV.get(DATA_KEYS.SETTINGS);
+                    const raw = await kvNs.get(DATA_KEYS.SETTINGS);
                     settings = raw ? JSON.parse(raw) : null;
                 } catch (kvError) {
                     console.warn('[Storage Cache] Failed to read from KV:', kvError.message);
@@ -302,6 +323,13 @@ export class SettingsCache {
  */
 export class StorageFactory {
     /**
+     * 解析 KV 命名空间（委托顶层函数）
+     */
+    static resolveKV(env) {
+        return resolveKV(env);
+    }
+
+    /**
      * 创建存储适配器
      * @param {Object} env - Cloudflare 环境对象
      * @param {string} storageType - 存储类型 ('kv' | 'd1')
@@ -312,21 +340,24 @@ export class StorageFactory {
             case STORAGE_TYPES.D1:
                 if (!env.MISUB_DB) {
                     console.warn('[Storage] D1 database not available, falling back to KV');
-                    if (!env.MISUB_KV) {
+                    const kvFallback = StorageFactory.resolveKV(env);
+                    if (!kvFallback) {
                         console.warn('[Storage] KV not available either, using noop adapter');
                         return new NoopStorageAdapter();
                     }
-                    return new KVStorageAdapter(env.MISUB_KV);
+                    return new KVStorageAdapter(kvFallback);
                 }
                 return new D1StorageAdapter(env.MISUB_DB);
 
             case STORAGE_TYPES.KV:
-            default:
-                if (!env.MISUB_KV) {
-                    console.warn('[Storage] KV binding MISUB_KV not available, using noop adapter');
+            default: {
+                const kv = StorageFactory.resolveKV(env);
+                if (!kv) {
+                    console.warn('[Storage] No KV binding found, using noop adapter');
                     return new NoopStorageAdapter();
                 }
-                return new KVStorageAdapter(env.MISUB_KV);
+                return new KVStorageAdapter(kv);
+            }
         }
     }
 
@@ -370,7 +401,9 @@ export class DataMigrator {
      */
     static async migrateKVToD1(env) {
         try {
-            const kvAdapter = new KVStorageAdapter(env.MISUB_KV);
+            const kvNs = resolveKV(env);
+            if (!kvNs) throw new Error('No KV binding found');
+            const kvAdapter = new KVStorageAdapter(kvNs);
             const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
 
             const results = {
