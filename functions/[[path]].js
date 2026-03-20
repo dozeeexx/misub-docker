@@ -69,7 +69,19 @@ function normalizeLoginPath(customLoginPath) {
     return normalized ? `/${normalized}` : '/login';
 }
 
-async function fetchSpaEntry(request, env) {
+async function fetchStaticAsset(request, env, next) {
+    if (typeof next === 'function') {
+        return next();
+    }
+
+    if (typeof env?.ASSETS?.fetch === 'function') {
+        return env.ASSETS.fetch(request);
+    }
+
+    throw new Error('Static asset handler unavailable');
+}
+
+async function fetchSpaEntry(request, env, next) {
     const indexUrl = new URL('/', request.url);
 
     if (typeof env?.ASSETS?.fetch === 'function') {
@@ -78,6 +90,10 @@ async function fetchSpaEntry(request, env) {
 
     const headers = new Headers(request.headers);
     headers.set(INTERNAL_SPA_FETCH_HEADER, '1');
+
+    if (typeof next === 'function' && new URL(request.url).pathname === '/') {
+        return applyNoStoreToHtmlResponse(await next());
+    }
 
     return fetch(new Request(indexUrl.toString(), {
         method: 'GET',
@@ -97,7 +113,7 @@ export async function onRequest(context) {
     try {
         const handleRequest = async () => {
             if (request.headers.get(INTERNAL_SPA_FETCH_HEADER) === '1') {
-                return applyNoStoreToHtmlResponse(await next());
+                return applyNoStoreToHtmlResponse(await fetchStaticAsset(request, env, next));
             }
 
             // 路由分发
@@ -138,14 +154,14 @@ export async function onRequest(context) {
 
                 // 本地 wrangler pages dev 调试兜底：优先返回静态资源，避免函数逻辑影响 SPA 首屏
                 if (isLocalhost) {
-                    let localResponse = await next();
+                    let localResponse = await fetchStaticAsset(request, env, next);
                     const isLikelySpaPath = !/\.\w+$/.test(url.pathname)
                         && !url.pathname.startsWith('/api/')
                         && !url.pathname.startsWith('/sub/')
                         && url.pathname !== '/cron';
 
                     if (localResponse.status === 404 && isLikelySpaPath) {
-                        const indexResponse = await fetchSpaEntry(request, env);
+                        const indexResponse = await fetchSpaEntry(request, env, next);
                         if (indexResponse.status === 200) {
                             localResponse = indexResponse;
                         }
@@ -241,7 +257,7 @@ export async function onRequest(context) {
                 }
 
                 // Continue to static assets or root
-                let response = await next();
+                let response = await fetchStaticAsset(request, env, next);
 
                 // [Fix] SPA Fallback: If asset not found (404) and it's an SPA route OR it's an HTML request, serve index.html
                 const acceptHeader = request.headers.get('Accept') || '';
@@ -251,7 +267,7 @@ export async function onRequest(context) {
                 const isHtmlRequest = isNavigationRequest && acceptHeader.includes('text/html');
 
                 if (response.status === 404 && (isSpaRoute || isHtmlRequest)) {
-                    const indexResponse = await fetchSpaEntry(request, env);
+                    const indexResponse = await fetchSpaEntry(request, env, next);
 
                     if (indexResponse.status === 200) {
                         response = indexResponse;

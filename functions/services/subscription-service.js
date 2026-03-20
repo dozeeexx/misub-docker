@@ -173,7 +173,7 @@ return rawUrl; // Directly use the URL for expired node
 }
 
 // 修复手动SS节点中的URL编码问题（以及 Hysteria2 等其他协议）
-            let processedUrl = fixNodeUrlEncoding(rawUrl, { plusAsSpace: Boolean(sub?.plusAsSpace) });
+            let processedUrl = fixNodeUrlEncoding(rawUrl, { plusAsSpace: Boolean(node?.plusAsSpace) });
 if (typeof processedUrl !== 'string' || !processedUrl) {
 processedUrl = rawUrl;
 }
