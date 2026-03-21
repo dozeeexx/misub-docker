@@ -30,19 +30,11 @@ const submitLogin = async () => {
 </script>
 
 <template>
-  <div class="w-full max-w-[420px] relative z-10 px-6">
+  <div class="w-full max-w-[420px] md:max-w-[480px] lg:max-w-[520px] relative z-10 px-6">
     <div class="relative bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-white/50 dark:border-white/10 rounded-[2rem] p-10 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] dark:shadow-none overflow-hidden transition-all duration-500 hover:shadow-[0_20px_60px_-12px_rgba(0,0,0,0.15)]">
       
-      <div class="absolute inset-0 overflow-hidden pointer-events-none">
-        <div class="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl animate-blob"></div>
-        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-radial from-primary-500/10 to-transparent rounded-full animate-pulse-slow"></div>
-      </div>
-
       <div class="flex flex-col items-center relative z-10">
         <div class="w-24 h-24 mb-8 relative group cursor-default">
-          <div class="absolute inset-0 bg-indigo-500/30 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full animate-gradient-rotate opacity-20 blur-xl"></div>
           <div class="w-full h-full flex items-center justify-center relative z-10 animate-float-slow">
             <img width="96" height="96" src="/logo.png" alt="MiSub" class="drop-shadow-2xl" />
           </div>
