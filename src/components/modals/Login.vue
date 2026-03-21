@@ -43,11 +43,8 @@ const submitLogin = async () => {
         <div class="w-24 h-24 mb-8 relative group cursor-default">
           <div class="absolute inset-0 bg-indigo-500/30 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           <div class="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full animate-gradient-rotate opacity-20 blur-xl"></div>
-          <div class="w-full h-full rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-2xl shadow-indigo-500/40 relative z-10 animate-float-slow">
-            <svg width="60%" height="60%" viewBox="0 0 128 128" fill="currentColor">
-              <path d="M64 128a64 64 0 1 1 64-64a64.07 64.07 0 0 1-64 64Zm0-122a58 58 0 1 0 58 58A58.07 58.07 0 0 0 64 6Z"/>
-              <path d="M64 100a36 36 0 1 1 36-36a36 36 0 0 1-36 36Zm0-66a30 30 0 1 0 30 30a30 30 0 0 0-30-30Z"/>
-            </svg>
+          <div class="w-full h-full flex items-center justify-center relative z-10 animate-float-slow">
+            <img width="96" height="96" src="/logo.png" alt="MiSub" class="drop-shadow-2xl" />
           </div>
         </div>
 
