@@ -52,6 +52,9 @@ export function parseSurgeConfig(content) {
         } else if (lowerLine.startsWith('vless') || valuePrefix === 'vless') {
             const node = parseSurgeVless(line);
             if (node) nodes.push(node);
+        } else if (lowerLine.startsWith('anytls') || valuePrefix === 'anytls') {
+            const node = parseSurgeAnytls(line);
+            if (node) nodes.push(node);
         } else if (lowerLine.startsWith('wireguard') || valuePrefix === 'wireguard') {
             const node = parseSurgeWireGuard(line);
             if (node) nodes.push(node);
@@ -59,6 +62,53 @@ export function parseSurgeConfig(content) {
     }
 
     return nodes;
+}
+
+/**
+ * 解析Surge AnyTLS配置
+ */
+function parseSurgeAnytls(line) {
+    try {
+        const parts = line.match(/^([^=]+?)\s*=\s*(.+)$/);
+        if (!parts) return null;
+
+        const name = parts[1].trim();
+        const params = parts[2].split(',').map(p => p.trim());
+        const [protocol, server, port, ...options] = params;
+
+        if (!server || !port) return null;
+        
+        let password = '';
+        const urlParams = [];
+
+        options.forEach(opt => {
+            const match = opt.match(/^([\w-]+)\s*=\s*(.+)$/);
+            if (match) {
+                const [, key, value] = match;
+                const k = key.toLowerCase();
+                const v = value.replace(/^["']|["']$/g, '');
+                if (k === 'password') password = v;
+                else if (k === 'sni') urlParams.push(`sni=${encodeURIComponent(v)}`);
+                else if (k === 'alpn') urlParams.push(`alpn=${encodeURIComponent(v)}`);
+                else if (k === 'skip-cert-verify' && v === 'true') urlParams.push('insecure=1');
+            }
+        });
+
+        if (!password) password = options[0] || '';
+
+        const query = urlParams.length > 0 ? `?${urlParams.join('&')}` : '';
+
+        return {
+            id: generateNodeId(),
+            name: name.trim().replace(/"/g, ''),
+            url: `anytls://${encodeURIComponent(password)}@${server}:${port}${query}#${encodeURIComponent(name.trim().replace(/"/g, ''))}`,
+            enabled: true,
+            protocol: 'anytls',
+            source: 'surge'
+        };
+    } catch (e) {
+        return null;
+    }
 }
 
 /**
@@ -158,9 +208,9 @@ function parseSurgeSS(line) {
         if (!parts) return null;
 
         const params = parts[2].split(',').map(p => p.trim());
-        const [name, server, port, method, password] = params;
+        const [protocol, server, port, method, password] = params;
 
-        if (!name || !server || !port || !method || !password) return null;
+        if (!server || !port || !method || !password) return null;
 
         const userinfo = base64Encode(`${method}:${password}`);
         return {
@@ -185,9 +235,25 @@ function parseSurgeTrojan(line) {
         if (!parts) return null;
 
         const params = parts[2].split(',').map(p => p.trim());
-        const [name, server, port, password] = params;
+        const [protocol, server, port, ...options] = params;
 
-        if (!name || !server || !port || !password) return null;
+        if (!server || !port) return null;
+        let password = '';
+        
+        options.forEach(opt => {
+            const match = opt.match(/^([\w-]+)\s*=\s*(.+)$/);
+            if (match) {
+                const [, key, value] = match;
+                if (key.toLowerCase() === 'password') {
+                    password = value.replace(/^["']|["']$/g, '');
+                }
+            }
+        });
+        
+        if (!password) {
+            // as fallback
+            password = options[0];
+        }
 
         return {
             id: generateNodeId(),
@@ -211,17 +277,17 @@ function parseSurgeHTTP(line) {
         if (!parts) return null;
 
         const params = parts[2].split(',').map(p => p.trim());
-        const [name, server, port] = params;
+        const [protocol, server, port] = params;
 
-        if (!name || !server || !port) return null;
+        if (!server || !port) return null;
 
-        const isHTTPS = line.toLowerCase().startsWith('https-proxy');
-        const protocol = isHTTPS ? 'https' : 'http';
+        const isHTTPS = line.toLowerCase().startsWith('https-proxy') || protocol.toLowerCase() === 'https';
+        const urlProtocol = isHTTPS ? 'https' : 'http';
 
         return {
             id: generateNodeId(),
             name: name.trim().replace(/"/g, ''),
-            url: `${protocol}://${server}:${port}#${encodeURIComponent(name.trim().replace(/"/g, ''))}`,
+            url: `${urlProtocol}://${server}:${port}#${encodeURIComponent(name.trim().replace(/"/g, ''))}`,
             enabled: true,
             protocol: protocol,
             source: 'surge'
