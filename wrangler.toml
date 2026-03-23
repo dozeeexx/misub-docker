@@ -1,8 +1,0 @@
-name = "misub"
-pages_build_output_dir = "dist"
-
-[[d1_databases]]
-binding = "MISUB_DB"
-database_name = "misub"
-database_id = "88791031-8576-4646-805b-12cd88adca6f"
-preview_database_id = "88791031-8576-4646-805b-12cd88adca6f"
