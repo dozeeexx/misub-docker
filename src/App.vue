@@ -1,5 +1,6 @@
 <script setup>
 import { defineAsyncComponent, onMounted, watch, computed } from 'vue';
+import RouteErrorBoundary from './components/ui/RouteErrorBoundary.vue';
 import { useRoute } from 'vue-router';
 import { useThemeStore } from './stores/theme';
 import { useSessionStore } from './stores/session';
@@ -132,7 +133,9 @@ aria-live="polite"
 
         <router-view v-if="layoutMode === 'modern'" v-slot="{ Component }">
           <transition name="fade" mode="out-in">
-            <component :is="Component" />
+            <RouteErrorBoundary :reset-key="route.fullPath">
+              <component :is="Component" />
+            </RouteErrorBoundary>
           </transition>
         </router-view>
 
@@ -143,7 +146,9 @@ aria-live="polite"
       <template v-else-if="isPublicRoute">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
-            <component :is="Component" />
+            <RouteErrorBoundary :reset-key="route.fullPath">
+              <component :is="Component" />
+            </RouteErrorBoundary>
           </transition>
         </router-view>
       </template>
