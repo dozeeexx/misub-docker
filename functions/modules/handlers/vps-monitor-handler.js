@@ -1168,6 +1168,11 @@ export async function handleVpsReport(request, env) {
     const networkPayload = report.network || report.checks || null;
     const sanitizedChecks = sanitizeNetworkChecks(networkPayload);
 
+    console.log(`[DEBUG] Received report for node [${node.id}], sanitized checks: ${sanitizedChecks?.length || 0}`);
+    if (sanitizedChecks && sanitizedChecks.length > 0) {
+        console.log(`[DEBUG] First check type: ${sanitizedChecks[0].type}, target: ${sanitizedChecks[0].target}`);
+    }
+
     const normalizedReport = {
         id: crypto.randomUUID(),
         nodeId: node.id,
