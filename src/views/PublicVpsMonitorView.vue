@@ -54,6 +54,7 @@ const loadSnapshot = async () => {
 };
 
 const formatPercent = (val) => (val === null || val === undefined ? '--' : `${val}%`);
+const formatLoad = (val) => (val === null || val === undefined ? '--' : Number(val).toFixed(2));
 const formatTraffic = (traffic) => {
   if (!traffic) return '--';
   const rx = traffic.rx ?? traffic.download ?? traffic.in;
@@ -61,6 +62,40 @@ const formatTraffic = (traffic) => {
   const format = (value) => (value === null || value === undefined ? '--' : value);
   return `⬇ ${format(rx)} / ⬆ ${format(tx)}`;
 };
+
+const formatUptime = (seconds) => {
+  const total = Number(seconds);
+  if (!Number.isFinite(total)) return '--';
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const mins = Math.floor((total % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+};
+
+const averageMetric = (selector) => {
+  const values = nodes.value
+    .map(selector)
+    .filter((val) => Number.isFinite(Number(val)))
+    .map(Number);
+  if (!values.length) return null;
+  const sum = values.reduce((acc, val) => acc + val, 0);
+  return Math.round(sum / values.length);
+};
+
+const avgCpu = computed(() => averageMetric(node => node.latest?.cpu?.usage ?? node.latest?.cpuPercent));
+const avgMem = computed(() => averageMetric(node => node.latest?.mem?.usage ?? node.latest?.memPercent));
+const avgDisk = computed(() => averageMetric(node => node.latest?.disk?.usage ?? node.latest?.diskPercent));
+const avgLoad = computed(() => {
+  const values = nodes.value
+    .map(node => node.latest?.load1 ?? node.latest?.load?.load1)
+    .filter((val) => Number.isFinite(Number(val)))
+    .map(Number);
+  if (!values.length) return null;
+  const sum = values.reduce((acc, val) => acc + val, 0);
+  return (sum / values.length).toFixed(2);
+});
 
 onMounted(() => {
   loadSnapshot();
@@ -167,7 +202,9 @@ onMounted(() => {
                   <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
                   <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
                   <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
+                  <div>负载 {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}</div>
                   <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
+                  <div>运行 {{ formatUptime(node.latest?.uptimeSec) }}</div>
                 </div>
               </div>
             </div>
@@ -181,6 +218,20 @@ onMounted(() => {
               <VpsMetricChart title="内存" unit="%" :points="nodes.map(node => node.latest?.mem?.usage ?? node.latest?.memPercent ?? null)" color="#f97316" :height="80" />
               <VpsMetricChart title="磁盘" unit="%" :points="nodes.map(node => node.latest?.disk?.usage ?? node.latest?.diskPercent ?? null)" color="#22c55e" :height="80" />
               <VpsMetricChart title="流量" unit="" :points="nodes.map(node => node.latest?.traffic?.rx ?? node.latest?.traffic?.download ?? null)" color="#6366f1" :height="80" />
+            </div>
+            <div class="mt-6 grid grid-cols-2 gap-3 text-xs">
+              <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-3 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                平均 CPU <span class="font-semibold">{{ formatPercent(avgCpu) }}</span>
+              </div>
+              <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-3 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                平均内存 <span class="font-semibold">{{ formatPercent(avgMem) }}</span>
+              </div>
+              <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-3 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                平均磁盘 <span class="font-semibold">{{ formatPercent(avgDisk) }}</span>
+              </div>
+              <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-3 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                平均负载 <span class="font-semibold">{{ avgLoad || '--' }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -209,7 +260,9 @@ onMounted(() => {
                 <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
                 <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
                 <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
+                <div>负载 {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}</div>
                 <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
+                <div>运行 {{ formatUptime(node.latest?.uptimeSec) }}</div>
               </div>
             </div>
           </div>
