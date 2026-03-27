@@ -6,10 +6,7 @@
 import { StorageFactory, STORAGE_TYPES } from '../../storage-adapter.js';
 import { createJsonResponse, createErrorResponse, getPublicBaseUrl } from '../utils.js';
 import { sendTgNotification } from '../notifications.js';
-import {
-    KV_KEY_SETTINGS,
-    DEFAULT_SETTINGS
-} from '../config.js';
+import { KV_KEY_SETTINGS, DEFAULT_SETTINGS } from '../config.js';
 
 const REPORTS_MAX_KEEP = 5000;
 const ALERTS_MAX_KEEP = 1000;
@@ -339,7 +336,89 @@ async function fetchReportsForNode(db, nodeId, settings) {
 }
 
 function buildInstallScript(reportUrl, node) {
-    return `#!/usr/bin/env bash\n\nset -euo pipefail\n\nREPORT_URL="${reportUrl}"\nNODE_ID="${node.id}"\nNODE_SECRET="${node.secret}"\n\ncat > /usr/local/bin/misub-vps-probe.sh <<'EOF'\n#!/usr/bin/env bash\nset -euo pipefail\n\nREPORT_URL="${reportUrl}"\nNODE_ID="${node.id}"\nNODE_SECRET="${node.secret}"\n\nHOSTNAME="$(hostname)"\nOS="$(. /etc/os-release && echo \"$PRETTY_NAME\" || uname -s)"\nARCH="$(uname -m)"\nKERNEL="$(uname -r)"\nUPTIME_SEC="$(awk '{print int($1)}' /proc/uptime)"\n\nCPU_USAGE="$(top -bn1 | awk '/Cpu/ {print 100 - $8}')"\nMEM_USAGE="$(free | awk '/Mem/ {printf \\"%.0f\\", $3/$2*100}')"\nDISK_USAGE="$(df -P / | awk 'NR==2 {gsub(/%/,\"\"); print $5}')"\nLOAD1="$(awk '{print $1}' /proc/loadavg)"\n\nPAYLOAD=$(cat <<PAYLOAD_EOF\n{\n  \"hostname\": \"${HOSTNAME}\",\n  \"os\": \"${OS}\",\n  \"arch\": \"${ARCH}\",\n  \"kernel\": \"${KERNEL}\",\n  \"uptimeSec\": ${UPTIME_SEC},\n  \"cpu\": { \"usage\": ${CPU_USAGE} },\n  \"mem\": { \"usage\": ${MEM_USAGE} },\n  \"disk\": { \"usage\": ${DISK_USAGE} },\n  \"load\": { \"load1\": ${LOAD1} }\n}\nPAYLOAD_EOF\n)\n\ncurl -sS -X POST \"${reportUrl}\" \\\n+  -H \"Content-Type: application/json\" \\\n+  -H \"x-node-id: ${node.id}\" \\\n+  -H \"x-node-secret: ${node.secret}\" \\\n+  --data \"${PAYLOAD}\" >/dev/null\nEOF\n\nchmod +x /usr/local/bin/misub-vps-probe.sh\n\ncat > /etc/systemd/system/misub-vps-probe.service <<'EOF'\n[Unit]\nDescription=MiSub VPS Probe\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=oneshot\nExecStart=/usr/local/bin/misub-vps-probe.sh\nEOF\n\ncat > /etc/systemd/system/misub-vps-probe.timer <<'EOF'\n[Unit]\nDescription=MiSub VPS Probe Timer\n\n[Timer]\nOnBootSec=2min\nOnUnitActiveSec=60s\nUnit=misub-vps-probe.service\nPersistent=true\n\n[Install]\nWantedBy=timers.target\nEOF\n\nsystemctl daemon-reload\n\nsystemctl enable --now misub-vps-probe.timer\n\nsystemctl status misub-vps-probe.timer --no-pager`;
+    return [
+        '#!/usr/bin/env bash',
+        '',
+        'set -euo pipefail',
+        '',
+        `REPORT_URL="${reportUrl}"`,
+        `NODE_ID="${node.id}"`,
+        `NODE_SECRET="${node.secret}"`,
+        '',
+        "cat > /usr/local/bin/misub-vps-probe.sh <<'EOF'",
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        '',
+        `REPORT_URL="${reportUrl}"`,
+        `NODE_ID="${node.id}"`,
+        `NODE_SECRET="${node.secret}"`,
+        '',
+        'HOSTNAME="$(hostname)"',
+        'OS="$(. /etc/os-release && echo "$PRETTY_NAME" || uname -s)"',
+        'ARCH="$(uname -m)"',
+        'KERNEL="$(uname -r)"',
+        'UPTIME_SEC="$(awk "{print int($1)}" /proc/uptime)"',
+        '',
+        'CPU_USAGE="$(top -bn1 | awk "/Cpu/ {print 100 - $8}")"',
+        'MEM_USAGE="$(free | awk "/Mem/ {printf \\\"%.0f\\\", $3/$2*100}")"',
+        'DISK_USAGE="$(df -P / | awk "NR==2 {gsub(/%/,\"\"); print $5}")"',
+        'LOAD1="$(awk "{print $1}" /proc/loadavg)"',
+        '',
+        'PAYLOAD=$(cat <<PAYLOAD_EOF',
+        '{',
+        '  "hostname": "\${HOSTNAME}",',
+        '  "os": "\${OS}",',
+        '  "arch": "\${ARCH}",',
+        '  "kernel": "\${KERNEL}",',
+        '  "uptimeSec": \${UPTIME_SEC},',
+        '  "cpu": { "usage": \${CPU_USAGE} },',
+        '  "mem": { "usage": \${MEM_USAGE} },',
+        '  "disk": { "usage": \${DISK_USAGE} },',
+        '  "load": { "load1": \${LOAD1} }',
+        '}',
+        'PAYLOAD_EOF',
+        ')',
+        '',
+        `curl -sS -X POST "${reportUrl}" \\`,
+        '  -H "Content-Type: application/json" \\',
+        `  -H "x-node-id: ${node.id}" \\`,
+        `  -H "x-node-secret: ${node.secret}" \\`,
+        '  --data "${PAYLOAD}" >/dev/null',
+        'EOF',
+        '',
+        'chmod +x /usr/local/bin/misub-vps-probe.sh',
+        '',
+        "cat > /etc/systemd/system/misub-vps-probe.service <<'EOF'",
+        '[Unit]',
+        'Description=MiSub VPS Probe',
+        'After=network-online.target',
+        'Wants=network-online.target',
+        '',
+        '[Service]',
+        'Type=oneshot',
+        'ExecStart=/usr/local/bin/misub-vps-probe.sh',
+        'EOF',
+        '',
+        "cat > /etc/systemd/system/misub-vps-probe.timer <<'EOF'",
+        '[Unit]',
+        'Description=MiSub VPS Probe Timer',
+        '',
+        '[Timer]',
+        'OnBootSec=2min',
+        'OnUnitActiveSec=60s',
+        'Unit=misub-vps-probe.service',
+        'Persistent=true',
+        '',
+        '[Install]',
+        'WantedBy=timers.target',
+        'EOF',
+        '',
+        'systemctl daemon-reload',
+        '',
+        'systemctl enable --now misub-vps-probe.timer',
+        '',
+        'systemctl status misub-vps-probe.timer --no-pager'
+    ].join('\n');
 }
 
 function buildPublicGuide(env, request, node) {

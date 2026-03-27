@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, onActivated } from 'vue';
+import { ref, computed, onMounted, onActivated, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import MigrationModal from '../components/modals/MigrationModal.vue';
 import { useSettingsLogic } from '../composables/useSettingsLogic.js';
 import SettingsLayout from '../components/layout/SettingsLayout.vue';
@@ -31,6 +32,7 @@ const {
 
 // 仅新布局需要的状态
 const activeTab = ref('basic');
+const route = useRoute();
 
 const currentTabLabel = computed(() => {
   switch (activeTab.value) {
@@ -58,6 +60,13 @@ onMounted(() => {
 
 onActivated(() => {
   loadSettings();
+});
+
+watch(() => route.path, (path) => {
+  if (path === '/settings') {
+    activeTab.value = 'basic';
+    loadSettings();
+  }
 });
 </script>
 
