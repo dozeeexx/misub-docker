@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
-import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail, saveSettings, requestVpsNetworkCheck } from '../lib/api.js';
+import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail, saveSettings, requestVpsNetworkCheck, fetchSettings } from '../lib/api.js';
 import DataGrid from '../components/shared/DataGrid.vue';
 import Modal from '../components/forms/Modal.vue';
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
@@ -125,7 +125,11 @@ const openCreate = () => {
   showCreateModal.value = true;
 };
 
-const openSettings = () => {
+const openSettings = async () => {
+  const result = await fetchSettings();
+  if (result.success) {
+    updateConfig(result.data);
+  }
   showSettingsModal.value = true;
 };
 

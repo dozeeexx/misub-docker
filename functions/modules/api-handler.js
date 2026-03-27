@@ -57,10 +57,8 @@ export async function handleDataRequest(env) {
             );
         }
         const config = {
-            FileName: settings.FileName || 'MISUB',
-            mytoken: settings.mytoken || 'auto',
-
-            profileToken: settings.profileToken || 'profiles',
+            ...defaultSettings,
+            ...settings,
             isDefaultPassword: await isUsingDefaultPassword(env)
         };
         return createJsonResponse({ misubs, profiles, config });
