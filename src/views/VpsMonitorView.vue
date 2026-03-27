@@ -622,6 +622,10 @@ onMounted(loadData);
           <label class="block text-xs text-gray-500 mb-1">请求头</label>
           <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto">{{ JSON.stringify(guidePayload.headers, null, 2) }}</pre>
         </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">一键安装脚本</label>
+          <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto">{{ guidePayload.installScript }}</pre>
+        </div>
       </div>
       <div v-else class="text-sm text-gray-500">暂无安装信息</div>
     </template>

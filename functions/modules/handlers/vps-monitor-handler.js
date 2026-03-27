@@ -341,6 +341,7 @@ async function fetchReportsForNode(db, nodeId, settings) {
 function buildPublicGuide(env, request, node) {
     const baseUrl = getPublicBaseUrl(env, new URL(request.url));
     const reportUrl = `${baseUrl.origin}/api/vps/report`;
+    const installScript = `#!/usr/bin/env bash\n\nset -euo pipefail\n\nREPORT_URL="${reportUrl}"\nNODE_ID="${node.id}"\nNODE_SECRET="${node.secret}"\n\ncat > /usr/local/bin/misub-vps-probe.sh <<'EOF'\n#!/usr/bin/env bash\nset -euo pipefail\n\nREPORT_URL="${reportUrl}"\nNODE_ID="${node.id}"\nNODE_SECRET="${node.secret}"\n\nHOSTNAME="$(hostname)"\nOS="$(. /etc/os-release && echo \"$PRETTY_NAME\" || uname -s)"\nARCH="$(uname -m)"\nKERNEL="$(uname -r)"\nUPTIME_SEC="$(awk '{print int($1)}' /proc/uptime)"\n\nCPU_USAGE="$(top -bn1 | awk '/Cpu/ {print 100 - $8}')"\nMEM_USAGE="$(free | awk '/Mem/ {printf \\"%.0f\\", $3/$2*100}')"\nDISK_USAGE="$(df -P / | awk 'NR==2 {gsub(/%/,\"\"); print $5}')"\nLOAD1="$(awk '{print $1}' /proc/loadavg)"\n\nPAYLOAD=$(cat <<PAYLOAD_EOF\n{\n  \"hostname\": \"${HOSTNAME}\",\n  \"os\": \"${OS}\",\n  \"arch\": \"${ARCH}\",\n  \"kernel\": \"${KERNEL}\",\n  \"uptimeSec\": ${UPTIME_SEC},\n  \"cpu\": { \"usage\": ${CPU_USAGE} },\n  \"mem\": { \"usage\": ${MEM_USAGE} },\n  \"disk\": { \"usage\": ${DISK_USAGE} },\n  \"load\": { \"load1\": ${LOAD1} }\n}\nPAYLOAD_EOF\n)\n\ncurl -sS -X POST \"${REPORT_URL}\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"x-node-id: ${NODE_ID}\" \\\n  -H \"x-node-secret: ${NODE_SECRET}\" \\\n  --data \"${PAYLOAD}\" >/dev/null\nEOF\n\nchmod +x /usr/local/bin/misub-vps-probe.sh\n\ncat > /etc/systemd/system/misub-vps-probe.service <<'EOF'\n[Unit]\nDescription=MiSub VPS Probe\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=oneshot\nExecStart=/usr/local/bin/misub-vps-probe.sh\nEOF\n\ncat > /etc/systemd/system/misub-vps-probe.timer <<'EOF'\n[Unit]\nDescription=MiSub VPS Probe Timer\n\n[Timer]\nOnBootSec=2min\nOnUnitActiveSec=60s\nUnit=misub-vps-probe.service\nPersistent=true\n\n[Install]\nWantedBy=timers.target\nEOF\n\nsystemctl daemon-reload\n\nsystemctl enable --now misub-vps-probe.timer\n\nsystemctl status misub-vps-probe.timer --no-pager`;
     return {
         reportUrl,
         nodeId: node.id,
@@ -349,7 +350,8 @@ function buildPublicGuide(env, request, node) {
             'Content-Type': 'application/json',
             'x-node-id': node.id,
             'x-node-secret': node.secret
-        }
+        },
+        installScript
     };
 }
 
