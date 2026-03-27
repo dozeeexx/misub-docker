@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { fetchVpsPublicSnapshot } from '../lib/api.js';
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
@@ -32,6 +32,34 @@ const topNodes = computed(() => {
     .slice(0, 6);
 });
 
+const featuredIndex = ref(0);
+const featuredNodes = computed(() => {
+  return [...nodes.value]
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'online' ? -1 : 1;
+      return (a.name || '').localeCompare(b.name || '');
+    })
+    .slice(0, 8);
+});
+
+const activeFeatured = computed(() => {
+  if (!featuredNodes.value.length) return null;
+  const index = featuredIndex.value % featuredNodes.value.length;
+  return featuredNodes.value[index];
+});
+
+const anomalyNodes = computed(() => {
+  return nodes.value.filter((node) => {
+    const cpu = node.latest?.cpu?.usage ?? node.latest?.cpuPercent;
+    const mem = node.latest?.mem?.usage ?? node.latest?.memPercent;
+    const disk = node.latest?.disk?.usage ?? node.latest?.diskPercent;
+    return node.status === 'offline'
+      || (Number.isFinite(cpu) && cpu >= 85)
+      || (Number.isFinite(mem) && mem >= 90)
+      || (Number.isFinite(disk) && disk >= 90);
+  });
+});
+
 const sortedNodes = computed(() => {
   return [...nodes.value].sort((a, b) => {
     if (a.status !== b.status) return a.status === 'online' ? -1 : 1;
@@ -51,6 +79,21 @@ const loadSnapshot = async () => {
     error.value = result.error || '加载失败';
   }
   loading.value = false;
+};
+
+let rotateTimer = null;
+const startRotation = () => {
+  if (rotateTimer) return;
+  rotateTimer = setInterval(() => {
+    featuredIndex.value += 1;
+  }, 6000);
+};
+
+const stopRotation = () => {
+  if (rotateTimer) {
+    clearInterval(rotateTimer);
+    rotateTimer = null;
+  }
 };
 
 const formatPercent = (val) => (val === null || val === undefined ? '--' : `${val}%`);
@@ -97,8 +140,40 @@ const avgLoad = computed(() => {
   return (sum / values.length).toFixed(2);
 });
 
+const sparklinePoints = (values) => {
+  const data = values
+    .map((val) => (val === null || val === undefined ? null : Number(val)))
+    .filter((val) => Number.isFinite(val));
+  if (!data.length) return '';
+  const width = 120;
+  const height = 32;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const range = max - min || 1;
+  const step = data.length > 1 ? width / (data.length - 1) : width;
+  return data
+    .map((val, idx) => {
+      const x = Math.round(idx * step);
+      const y = Math.round(height - ((val - min) / range) * height);
+      return `${x},${y}`;
+    })
+    .join(' ');
+};
+
+const nodeSparkline = (node) => {
+  const cpu = node.latest?.cpu?.usage ?? node.latest?.cpuPercent ?? null;
+  const mem = node.latest?.mem?.usage ?? node.latest?.memPercent ?? null;
+  const disk = node.latest?.disk?.usage ?? node.latest?.diskPercent ?? null;
+  return sparklinePoints([cpu, mem, disk]);
+};
+
 onMounted(() => {
   loadSnapshot();
+  startRotation();
+});
+
+onUnmounted(() => {
+  stopRotation();
 });
 </script>
 
@@ -111,6 +186,7 @@ onMounted(() => {
         <div class="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-gradient-to-br from-[#f59e0b]/25 via-[#22c55e]/20 to-[#0ea5e9]/20 blur-3xl"></div>
         <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#f7f6f1] dark:from-[#0a0d14] to-transparent"></div>
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff60,transparent_55%)] dark:bg-[radial-gradient(circle_at_top,#1e293b66,transparent_55%)]"></div>
+        <div class="absolute inset-0 opacity-30 dark:opacity-40 bg-[linear-gradient(transparent_23px,rgba(15,23,42,0.06)_24px),linear-gradient(90deg,transparent_23px,rgba(15,23,42,0.06)_24px)] bg-[size:24px_24px]"></div>
       </div>
       <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12">
         <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
@@ -138,19 +214,31 @@ onMounted(() => {
           </div>
           <div class="grid grid-cols-2 gap-4 text-xs">
             <div class="rounded-2xl border border-[#ebe3d8] bg-white/80 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
-              <p class="text-[#8a7f70] dark:text-slate-400">节点总数</p>
+              <div class="flex items-center justify-between">
+                <p class="text-[#8a7f70] dark:text-slate-400">节点总数</p>
+                <span class="text-[10px] px-2 py-0.5 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">ALL</span>
+              </div>
               <p class="mt-2 text-2xl font-semibold text-[#1f1b17] dark:text-slate-100">{{ statusSummary.total }}</p>
             </div>
             <div class="rounded-2xl border border-[#d1fae5] bg-[#ecfdf3] p-4 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
-              <p class="text-[#087f5b] dark:text-emerald-300">在线节点</p>
+              <div class="flex items-center justify-between">
+                <p class="text-[#087f5b] dark:text-emerald-300">在线节点</p>
+                <span class="text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300">OK</span>
+              </div>
               <p class="mt-2 text-2xl font-semibold text-[#064e3b] dark:text-emerald-200">{{ statusSummary.online }}</p>
             </div>
             <div class="rounded-2xl border border-[#fee2e2] bg-[#fef2f2] p-4 shadow-sm dark:border-rose-500/30 dark:bg-rose-500/10">
-              <p class="text-[#b91c1c] dark:text-rose-300">离线节点</p>
+              <div class="flex items-center justify-between">
+                <p class="text-[#b91c1c] dark:text-rose-300">离线节点</p>
+                <span class="text-[10px] px-2 py-0.5 rounded-full border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300">DOWN</span>
+              </div>
               <p class="mt-2 text-2xl font-semibold text-[#7f1d1d] dark:text-rose-200">{{ statusSummary.offline }}</p>
             </div>
             <div class="rounded-2xl border border-[#e0e7ff] bg-[#eef2ff] p-4 shadow-sm dark:border-sky-500/30 dark:bg-sky-500/10">
-              <p class="text-[#3730a3] dark:text-sky-300">在线率</p>
+              <div class="flex items-center justify-between">
+                <p class="text-[#3730a3] dark:text-sky-300">在线率</p>
+                <span class="text-[10px] px-2 py-0.5 rounded-full border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300">SLA</span>
+              </div>
               <p class="mt-2 text-2xl font-semibold text-[#312e81] dark:text-sky-200">{{ onlineRate }}%</p>
             </div>
           </div>
@@ -185,10 +273,33 @@ onMounted(() => {
             </div>
             <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div v-for="node in topNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
+                <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
+                  <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
+                    <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                    <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                    <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                    <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                  </div>
+                  <div
+                    class="h-1 rounded-full bg-gradient-to-r"
+                    :class="node.status === 'online'
+                      ? 'from-emerald-500 via-sky-400 to-amber-400'
+                      : 'from-rose-500 via-orange-400 to-amber-300'"
+                    :style="{ width: node.status === 'online' ? '100%' : '45%' }"
+                  ></div>
+                </div>
                 <div class="flex items-start justify-between">
                   <div>
                     <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
                     <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
+                    <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                      <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                        🌍 {{ node.region || '未知地区' }}
+                      </span>
+                      <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                        ⚡ {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}
+                      </span>
+                    </div>
                   </div>
                   <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
                     :class="node.status === 'online'
@@ -197,6 +308,12 @@ onMounted(() => {
                   >
                     {{ node.status === 'online' ? '在线' : '离线' }}
                   </span>
+                </div>
+                <div class="mt-3 flex items-center justify-between">
+                  <svg viewBox="0 0 120 32" class="h-8 w-28">
+                    <polyline :points="nodeSparkline(node)" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                  <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">CPU/MEM/DISK</span>
                 </div>
                 <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
                   <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
@@ -238,15 +355,110 @@ onMounted(() => {
 
         <div class="rounded-[30px] border border-[#e7e1d6] bg-white/90 p-6 shadow-xl shadow-[#d8cab8]/30 dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-black/40">
           <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-[#1f1b17] dark:text-slate-100">重点轮播</h2>
+            <span class="text-xs text-[#8a7f70] dark:text-slate-400">每 6 秒切换</span>
+          </div>
+          <div class="mt-5 grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-4">
+            <div class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ activeFeatured?.name || activeFeatured?.id || '--' }}</p>
+                  <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ activeFeatured?.tag || '--' }} · {{ activeFeatured?.region || '未知地区' }}</p>
+                </div>
+                <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
+                  :class="activeFeatured?.status === 'online'
+                    ? 'border-[#bbf7d0] bg-[#ecfdf3] text-[#0f766e] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300'
+                    : 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300'"
+                >
+                  {{ activeFeatured?.status === 'online' ? '在线' : '离线' }}
+                </span>
+              </div>
+              <div class="mt-4 grid grid-cols-3 gap-3 text-[11px] text-[#6a5f54] dark:text-slate-400">
+                <div>CPU {{ formatPercent(activeFeatured?.latest?.cpu?.usage ?? activeFeatured?.latest?.cpuPercent) }}</div>
+                <div>内存 {{ formatPercent(activeFeatured?.latest?.mem?.usage ?? activeFeatured?.latest?.memPercent) }}</div>
+                <div>磁盘 {{ formatPercent(activeFeatured?.latest?.disk?.usage ?? activeFeatured?.latest?.diskPercent) }}</div>
+                <div>负载 {{ formatLoad(activeFeatured?.latest?.load1 ?? activeFeatured?.latest?.load?.load1) }}</div>
+                <div>运行 {{ formatUptime(activeFeatured?.latest?.uptimeSec) }}</div>
+                <div>流量 {{ formatTraffic(activeFeatured?.latest?.traffic) }}</div>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
+              <h3 class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">异常提示</h3>
+              <p class="mt-1 text-xs text-[#8a7f70] dark:text-slate-400">高负载或离线节点</p>
+              <div v-if="anomalyNodes.length" class="mt-3 space-y-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
+                <div v-for="node in anomalyNodes.slice(0,5)" :key="node.id" class="flex items-center justify-between">
+                  <span>{{ node.name || node.id }}</span>
+                  <span class="px-2 py-0.5 rounded-full border"
+                    :class="node.status === 'offline'
+                      ? 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300'
+                      : 'border-[#fde68a] bg-[#fffbeb] text-[#b45309] dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300'"
+                  >
+                    {{ node.status === 'offline' ? '离线' : '高负载' }}
+                  </span>
+                </div>
+              </div>
+              <div v-else class="mt-3 text-[11px] text-[#8a7f70] dark:text-slate-400">暂无异常节点</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-[30px] border border-[#e7e1d6] bg-white/90 p-6 shadow-xl shadow-[#d8cab8]/30 dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-black/40">
+          <div class="flex items-center justify-between">
             <h2 class="text-lg font-semibold text-[#1f1b17] dark:text-slate-100">节点全览</h2>
             <span class="text-xs text-[#8a7f70] dark:text-slate-400">共 {{ statusSummary.total }} 个节点</span>
           </div>
+          <div v-if="anomalyNodes.length" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div
+              v-for="node in anomalyNodes.slice(0, 4)"
+              :key="node.id"
+              class="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-xs text-rose-900 shadow-sm dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold">{{ node.name || node.id }}</p>
+                  <p class="text-[11px] opacity-80">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-full border border-rose-200 bg-white/70 text-[10px] dark:border-rose-500/40 dark:bg-rose-500/20">
+                  {{ node.status === 'offline' ? '离线' : '高负载' }}
+                </span>
+              </div>
+              <div class="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
+                <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
+                <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
+                <div>负载 {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}</div>
+              </div>
+            </div>
+          </div>
           <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <div v-for="node in sortedNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
+              <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
+                <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
+                  <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                  <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                  <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                  <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                </div>
+                <div
+                  class="h-1 rounded-full bg-gradient-to-r"
+                  :class="node.status === 'online'
+                    ? 'from-emerald-500 via-sky-400 to-amber-400'
+                    : 'from-rose-500 via-orange-400 to-amber-300'"
+                  :style="{ width: node.status === 'online' ? '100%' : '45%' }"
+                ></div>
+              </div>
               <div class="flex items-start justify-between">
                 <div>
                   <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
                   <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
+                  <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                    <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                      🛰 {{ node.latest?.ip || node.latest?.publicIp || '--' }}
+                    </span>
+                    <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                      ⏱ {{ formatUptime(node.latest?.uptimeSec) }}
+                    </span>
+                  </div>
                 </div>
                 <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
                   :class="node.status === 'online'
@@ -255,6 +467,12 @@ onMounted(() => {
                 >
                   {{ node.status === 'online' ? '在线' : '离线' }}
                 </span>
+              </div>
+              <div class="mt-3 flex items-center justify-between">
+                <svg viewBox="0 0 120 32" class="h-8 w-28">
+                  <polyline :points="nodeSparkline(node)" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">CPU/MEM/DISK</span>
               </div>
               <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
                 <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
@@ -267,6 +485,41 @@ onMounted(() => {
             </div>
           </div>
         </div>
+
+        <details class="rounded-[30px] border border-[#e7e1d6] bg-white/90 p-6 shadow-xl shadow-[#d8cab8]/30 dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-black/40">
+          <summary class="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#1f1b17] dark:text-slate-100">
+            <span>节点明细表</span>
+            <span class="text-xs text-[#8a7f70] dark:text-slate-400">点击展开</span>
+          </summary>
+          <div class="mt-4 overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead class="text-[#8a7f70] dark:text-slate-400">
+                <tr class="text-left">
+                  <th class="py-2">节点</th>
+                  <th class="py-2">地区</th>
+                  <th class="py-2">状态</th>
+                  <th class="py-2">CPU</th>
+                  <th class="py-2">内存</th>
+                  <th class="py-2">磁盘</th>
+                  <th class="py-2">负载</th>
+                  <th class="py-2">运行</th>
+                </tr>
+              </thead>
+              <tbody class="text-[#1f1b17] dark:text-slate-200">
+                <tr v-for="node in sortedNodes" :key="node.id" class="border-t border-[#efe6db] dark:border-slate-800">
+                  <td class="py-2">{{ node.name || node.id }}</td>
+                  <td class="py-2">{{ node.region || '--' }}</td>
+                  <td class="py-2">{{ node.status === 'online' ? '在线' : '离线' }}</td>
+                  <td class="py-2">{{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</td>
+                  <td class="py-2">{{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</td>
+                  <td class="py-2">{{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</td>
+                  <td class="py-2">{{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}</td>
+                  <td class="py-2">{{ formatUptime(node.latest?.uptimeSec) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
       </div>
     </div>
   </div>
