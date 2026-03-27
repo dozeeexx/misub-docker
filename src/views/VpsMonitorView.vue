@@ -1012,16 +1012,6 @@ onMounted(() => {
         </div>
 
         <div v-if="detailSection === 'network'" class="space-y-4">
-        <VpsNetworkTargets
-          v-if="detailPayload"
-          :node-id="detailPayload.id"
-          :targets="detailTargets"
-          :limit="config?.vpsMonitor?.networkTargetsLimit || 3"
-          :checking-targets="checkingTargets"
-          @refresh="refreshTargets"
-          @check="handleNetworkCheck"
-        />
-
           <div v-if="latestNetwork.length" class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-5 border border-gray-100/80 dark:border-white/10">
             <h4 class="text-sm font-semibold text-gray-900 dark:text-white">最近一次网络检测</h4>
             <div class="mt-3 space-y-2">

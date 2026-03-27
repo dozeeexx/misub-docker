@@ -83,7 +83,6 @@ const handleSave = () => {
               :targets="globalTargets"
               :limit="settings?.vpsMonitor?.networkTargetsLimit || 3"
               @refresh="loadGlobalTargets"
-              @create="handleGlobalTargetSave"
             />
           </div>
         </div>
