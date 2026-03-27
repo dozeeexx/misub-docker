@@ -244,9 +244,9 @@ function computeOverload(report, settings) {
     const memThreshold = clampNumber(settings?.vpsMonitor?.memWarnPercent, 1, 100, 90);
     const diskThreshold = clampNumber(settings?.vpsMonitor?.diskWarnPercent, 1, 100, 90);
 
-    const cpu = clampNumber(report.cpu?.usage, 0, 100, null);
-    const mem = clampNumber(report.mem?.usage, 0, 100, null);
-    const disk = clampNumber(report.disk?.usage, 0, 100, null);
+    const cpu = clampNumber(report.cpu?.usage ?? report.cpuPercent, 0, 100, null);
+    const mem = clampNumber(report.mem?.usage ?? report.memPercent, 0, 100, null);
+    const disk = clampNumber(report.disk?.usage ?? report.diskPercent, 0, 100, null);
 
     const overload = {
         cpu: cpu !== null && cpu >= cpuThreshold,
