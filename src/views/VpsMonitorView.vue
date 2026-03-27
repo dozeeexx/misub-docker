@@ -398,7 +398,13 @@ const formatTraffic = (traffic) => {
   if (!traffic) return '-';
   const rx = traffic.rx ?? traffic.download ?? traffic.in;
   const tx = traffic.tx ?? traffic.upload ?? traffic.out;
-  const format = (val) => (val === null || val === undefined ? '-' : `${val}`);
+  const format = (val) => {
+    if (val === null || val === undefined) return '-';
+    const num = Number(val);
+    if (isNaN(num)) return '-';
+    const gb = num / (1024 * 1024 * 1024);
+    return `${gb.toFixed(2)} GB`;
+  };
   return `⬇ ${format(rx)} / ⬆ ${format(tx)}`;
 };
 
