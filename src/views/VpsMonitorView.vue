@@ -135,13 +135,11 @@ const handleSettingsSave = async () => {
   const payload = config.value || config;
   const result = await saveSettings(payload);
   if (result?.success === false) {
-    showToast(result.error || '保存设置失败', 'error');
+    showToast(result.error || result.message || '保存设置失败', 'error');
     isSavingSettings.value = false;
     return;
   }
-  if (result?.data) {
-    updateConfig(result.data);
-  }
+  updateConfig(result?.data?.data || payload);
   showToast('设置已保存', 'success');
   showSettingsModal.value = false;
   isSavingSettings.value = false;

@@ -159,6 +159,7 @@ function summarizeNode(node, latestReport, settings) {
         region: node.region,
         description: node.description,
         enabled: node.enabled !== false,
+        useGlobalTargets: node.useGlobalTargets === true,
         status: online ? 'online' : 'offline',
         lastSeenAt: node.lastSeenAt,
         updatedAt: node.updatedAt,
