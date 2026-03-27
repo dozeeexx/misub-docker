@@ -168,6 +168,16 @@ function resolveSettings(config) {
     return { ...DEFAULT_SETTINGS, ...(config || {}) };
 }
 
+async function loadVpsSettings(env) {
+    const storageAdapter = await getStorageAdapter(env);
+    let rawSettings = await storageAdapter.get(KV_KEY_SETTINGS);
+    if (!rawSettings) {
+        const kvAdapter = StorageFactory.createAdapter(env, STORAGE_TYPES.KV);
+        rawSettings = await kvAdapter.get(KV_KEY_SETTINGS);
+    }
+    return resolveSettings(rawSettings);
+}
+
 function shouldTriggerAlerts(settings) {
     return settings?.vpsMonitor?.alertsEnabled !== false;
 }
@@ -950,8 +960,7 @@ export async function handleVpsInstallScript(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
 
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const settings = await loadVpsSettings(env);
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
 
@@ -989,8 +998,7 @@ export async function handleVpsConfig(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
 
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const settings = await loadVpsSettings(env);
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
 
@@ -1077,8 +1085,7 @@ export async function handleVpsReport(request, env) {
         return createErrorResponse('Missing node id', 401);
     }
 
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const settings = await loadVpsSettings(env);
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
 
@@ -1184,8 +1191,7 @@ export async function handleVpsReport(request, env) {
 export async function handleVpsNodesRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const settings = await loadVpsSettings(env);
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
@@ -1229,8 +1235,7 @@ export async function handleVpsNodesRequest(request, env) {
 export async function handleVpsPublicSnapshotRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const settings = await loadVpsSettings(env);
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
 
@@ -1256,8 +1261,7 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
 export async function handleVpsNodeDetailRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const settings = await loadVpsSettings(env);
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
@@ -1321,8 +1325,7 @@ export async function handleVpsNodeDetailRequest(request, env) {
 export async function handleVpsAlertsRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const settings = await loadVpsSettings(env);
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
@@ -1350,8 +1353,7 @@ export async function handleVpsAlertsRequest(request, env) {
 export async function handleVpsNetworkTargetsRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const settings = await loadVpsSettings(env);
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
@@ -1426,8 +1428,7 @@ export async function handleVpsNetworkCheck(request, env) {
     }
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const settings = await loadVpsSettings(env);
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
