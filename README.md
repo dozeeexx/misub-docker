@@ -77,6 +77,13 @@
   - 到期时间提醒,颜色高亮
   - 自动更新节点数和流量信息
 
+- **🛰️ VPS 探针**
+  - 节点状态与资源曲线监控
+  - 告警与通知联动
+  - 需要绑定 D1 数据库 (MISUB_DB)
+  - 需要在设置中切换存储模式为 D1
+  - 支持 ICMP/TCP/HTTP 网络监测（需执行最新 schema.sql）
+
 ### 💾 双重存储支持
 
 - **Cloudflare KV 存储**
@@ -176,6 +183,10 @@ wrangler d1 execute misub --file=schema.sql --remote
 ```
 
 > 💡 若无法初始化,可在 Cloudflare 控制台手动执行 `schema.sql`
+
+> ⚠️ VPS 探针功能必须绑定 D1 数据库 (MISUB_DB)，并在设置中切换存储模式为 D1，未满足将无法使用探针相关功能。
+> ⚠️ 若启用网络监测（ICMP/TCP/HTTP），需执行最新的 `schema.sql` 创建 vps_network_targets / vps_network_samples 表。
+> ⚠️ 已在使用 D1 的用户升级后也需要在 D1 控制台执行最新 `schema.sql`（用于新增 vps_network_targets / vps_network_samples）。
 
 ### 3. 设置环境变量
 
