@@ -11,6 +11,15 @@ if (typeof window !== 'undefined') {
   console.debug('[MiSub] Error Handler Loaded (v2026-01-11-fix-link-error)');
   // 处理未捕获的Promise拒绝
   window.addEventListener('unhandledrejection', (event) => {
+    const message = event.reason?.message || '';
+    if (message.includes('Failed to fetch dynamically imported module')
+      || message.includes('error loading dynamically imported module')) {
+      const reloadKey = 'misub:chunk-reload';
+      if (sessionStorage.getItem(reloadKey) !== '1') {
+        sessionStorage.setItem(reloadKey, '1');
+        window.location.reload();
+      }
+    }
     handleError(event.reason, 'Unhandled Promise Rejection', {
       type: 'promise_rejection'
     });

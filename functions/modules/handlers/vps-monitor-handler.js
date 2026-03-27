@@ -385,23 +385,45 @@ async function insertNetworkTarget(db, nodeId, payload) {
         createdAt: nowIso(),
         updatedAt: nowIso()
     };
-    await db.prepare(
-        `INSERT INTO vps_network_targets
-         (id, node_id, type, target, scheme, port, path, enabled, force_check_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-        target.id,
-        target.nodeId,
-        target.type,
-        target.target,
-        target.scheme,
-        target.port,
-        target.path,
-        target.enabled ? 1 : 0,
-        null,
-        target.createdAt,
-        target.updatedAt
-    ).run();
+    try {
+        await db.prepare(
+            `INSERT INTO vps_network_targets
+             (id, node_id, type, target, scheme, port, path, enabled, force_check_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+            target.id,
+            target.nodeId,
+            target.type,
+            target.target,
+            target.scheme,
+            target.port,
+            target.path,
+            target.enabled ? 1 : 0,
+            null,
+            target.createdAt,
+            target.updatedAt
+        ).run();
+    } catch (error) {
+        const message = error?.message || '';
+        if (!message.includes('no column named scheme') && !message.includes('no column named force_check_at')) {
+            throw error;
+        }
+        await db.prepare(
+            `INSERT INTO vps_network_targets
+             (id, node_id, type, target, port, path, enabled, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+            target.id,
+            target.nodeId,
+            target.type,
+            target.target,
+            target.port,
+            target.path,
+            target.enabled ? 1 : 0,
+            target.createdAt,
+            target.updatedAt
+        ).run();
+    }
     return target;
 }
 
@@ -420,21 +442,41 @@ async function updateNetworkTarget(db, targetId, payload) {
         forceCheckAt: payload.forceCheckAt !== undefined ? payload.forceCheckAt : existing.force_check_at,
         updatedAt: nowIso()
     };
-    await db.prepare(
-        `UPDATE vps_network_targets
-         SET type = ?, target = ?, scheme = ?, port = ?, path = ?, enabled = ?, force_check_at = ?, updated_at = ?
-         WHERE id = ?`
-    ).bind(
-        updated.type,
-        updated.target,
-        updated.scheme,
-        updated.port,
-        updated.path,
-        updated.enabled ? 1 : 0,
-        updated.forceCheckAt,
-        updated.updatedAt,
-        updated.id
-    ).run();
+    try {
+        await db.prepare(
+            `UPDATE vps_network_targets
+             SET type = ?, target = ?, scheme = ?, port = ?, path = ?, enabled = ?, force_check_at = ?, updated_at = ?
+             WHERE id = ?`
+        ).bind(
+            updated.type,
+            updated.target,
+            updated.scheme,
+            updated.port,
+            updated.path,
+            updated.enabled ? 1 : 0,
+            updated.forceCheckAt,
+            updated.updatedAt,
+            updated.id
+        ).run();
+    } catch (error) {
+        const message = error?.message || '';
+        if (!message.includes('no column named scheme') && !message.includes('no column named force_check_at')) {
+            throw error;
+        }
+        await db.prepare(
+            `UPDATE vps_network_targets
+             SET type = ?, target = ?, port = ?, path = ?, enabled = ?, updated_at = ?
+             WHERE id = ?`
+        ).bind(
+            updated.type,
+            updated.target,
+            updated.port,
+            updated.path,
+            updated.enabled ? 1 : 0,
+            updated.updatedAt,
+            updated.id
+        ).run();
+    }
     return updated;
 }
 
@@ -1104,7 +1146,14 @@ export async function handleVpsNetworkCheck(request, env) {
     }
 
     const now = nowIso();
-    await db.prepare('UPDATE vps_network_targets SET force_check_at = ?, updated_at = ? WHERE id = ?').bind(now, now, targetRow.id).run();
+    try {
+        await db.prepare('UPDATE vps_network_targets SET force_check_at = ?, updated_at = ? WHERE id = ?').bind(now, now, targetRow.id).run();
+    } catch (error) {
+        const message = error?.message || '';
+        if (!message.includes('no column named force_check_at')) {
+            throw error;
+        }
+    }
 
     const target = {
         id: targetRow.id,
