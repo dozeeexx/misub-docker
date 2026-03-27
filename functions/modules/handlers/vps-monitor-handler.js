@@ -173,6 +173,7 @@ function resolveSettings(config) {
 }
 
 async function loadVpsSettings(env) {
+    await StorageFactory.ensureD1Settings(env);
     const storageAdapter = await getStorageAdapter(env);
     let rawSettings = await storageAdapter.get(KV_KEY_SETTINGS);
     if (!rawSettings) {

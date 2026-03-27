@@ -497,6 +497,31 @@ export class StorageFactory {
     }
 
     /**
+     * 将 KV Settings 同步到 D1（当 D1 为空时）
+     */
+    static async ensureD1Settings(env) {
+        if (!env?.MISUB_DB) return false;
+        try {
+            const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
+            const existing = await d1Adapter.get(DATA_KEYS.SETTINGS);
+            if (existing) return true;
+            const kvNs = resolveKV(env);
+            if (!kvNs) return false;
+            const raw = await kvNs.get(DATA_KEYS.SETTINGS);
+            if (!raw) return false;
+            const settings = JSON.parse(raw);
+            if (settings?.storageType !== STORAGE_TYPES.D1) {
+                settings.storageType = STORAGE_TYPES.D1;
+            }
+            await d1Adapter.put(DATA_KEYS.SETTINGS, settings);
+            return true;
+        } catch (error) {
+            console.warn('[Storage] ensureD1Settings failed:', error?.message || error);
+            return false;
+        }
+    }
+
+    /**
      * 检查是否配置了双重存储
      * @param {Object} env - Cloudflare环境对象
      * @returns {boolean} 是否配置了双重存储

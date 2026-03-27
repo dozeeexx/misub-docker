@@ -288,7 +288,7 @@ onUnmounted(() => {
                     :style="{ width: node.status === 'online' ? '100%' : '45%' }"
                   ></div>
                 </div>
-                <div class="flex items-start justify-between">
+                <div class="flex items-start justify-between mt-2">
                   <div>
                     <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
                     <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
@@ -360,7 +360,7 @@ onUnmounted(() => {
           </div>
           <div class="mt-5 grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-4">
             <div class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
-              <div class="flex items-start justify-between">
+              <div class="flex items-start justify-between mt-2">
                 <div>
                   <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ activeFeatured?.name || activeFeatured?.id || '--' }}</p>
                   <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ activeFeatured?.tag || '--' }} · {{ activeFeatured?.region || '未知地区' }}</p>
