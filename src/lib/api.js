@@ -198,3 +198,67 @@ export async function testSubscription(url, userAgent) {
         return handleApiError(error, 'testSubscription');
     }
 }
+
+// VPS Monitor APIs
+export async function fetchVpsNodes() {
+    try {
+        const data = await api.get('/api/vps/nodes');
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'fetchVpsNodes');
+    }
+}
+
+export async function createVpsNode(payload) {
+    try {
+        const data = await api.post('/api/vps/nodes', payload);
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'createVpsNode');
+    }
+}
+
+export async function updateVpsNode(nodeId, payload) {
+    try {
+        const data = await api.patch(`/api/vps/nodes/${nodeId}`, payload);
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'updateVpsNode');
+    }
+}
+
+export async function deleteVpsNode(nodeId) {
+    try {
+        const data = await api.del(`/api/vps/nodes/${nodeId}`);
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'deleteVpsNode');
+    }
+}
+
+export async function fetchVpsAlerts() {
+    try {
+        const data = await api.get('/api/vps/alerts');
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'fetchVpsAlerts');
+    }
+}
+
+export async function fetchVpsNodeDetail(nodeId) {
+    try {
+        const data = await api.get(`/api/vps/nodes/${nodeId}`);
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'fetchVpsNodeDetail');
+    }
+}
+
+export async function clearVpsAlerts() {
+    try {
+        const data = await api.del('/api/vps/alerts');
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'clearVpsAlerts');
+    }
+}

@@ -8,6 +8,9 @@ export const KV_KEY_SUBS = 'misub_subscriptions_v1';
 export const KV_KEY_PROFILES = 'misub_profiles_v1';
 export const KV_KEY_GUESTBOOK = 'misub_guestbook_v1';
 export const KV_KEY_SETTINGS = 'worker_settings_v1';
+export const KV_KEY_VPS_NODES = 'misub_vps_nodes_v1';
+export const KV_KEY_VPS_REPORTS = 'misub_vps_reports_v1';
+export const KV_KEY_VPS_ALERTS = 'misub_vps_alerts_v1';
 
 // Auth
 export const COOKIE_NAME = 'auth_session';
@@ -77,6 +80,21 @@ export const DEFAULT_SETTINGS = {
     guestbook: {
         enabled: false,           // 总开关
         allowAnonymous: true      // 是否允许匿名
+    },
+    vpsMonitor: {
+        enabled: true,
+        requireSecret: true,
+        offlineThresholdMinutes: 10,
+        cpuWarnPercent: 90,
+        memWarnPercent: 90,
+        diskWarnPercent: 90,
+        alertCooldownMinutes: 15,
+        alertsEnabled: true,
+        notifyOffline: true,
+        notifyRecovery: true,
+        notifyOverload: true,
+        reportRetentionDays: 30,
+        cooldownIgnoreRecovery: true
     }
 };
 

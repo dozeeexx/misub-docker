@@ -37,6 +37,12 @@ import {
 } from './handlers/guestbook-handler.js';
 import { handleGithubReleaseRequest } from './handlers/github-proxy-handler.js'; // [NEW] Import handler
 import { handleParseSubscription } from './parse-subscription-handler.js';
+import {
+    handleVpsReport,
+    handleVpsNodesRequest,
+    handleVpsNodeDetailRequest,
+    handleVpsAlertsRequest
+} from './handlers/vps-monitor-handler.js';
 
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
@@ -157,6 +163,11 @@ export async function handleApiRequest(request, env) {
         return await handleErrorReportRequest(request, env);
     }
 
+    // VPS monitor public report endpoint
+    if (path === '/vps/report') {
+        return await handleVpsReport(request, env);
+    }
+
     // Public GET access for clients
     if (path.startsWith('/clients') && request.method === 'GET') {
         return await handleClientRequest(request, env);
@@ -213,6 +224,14 @@ export async function handleApiRequest(request, env) {
     // Auth-only route for client management (POST, DELETE, etc.)
     if (path.startsWith('/clients')) {
         return await handleClientRequest(request, env);
+    }
+
+    if (path === '/vps/nodes') {
+        return await handleVpsNodesRequest(request, env);
+    }
+
+    if (path.startsWith('/vps/nodes/')) {
+        return await handleVpsNodeDetailRequest(request, env);
     }
 
     if (path === '/test_notification') {
@@ -355,6 +374,9 @@ export async function handleApiRequest(request, env) {
                 return createJsonResponse({ success: true });
             }
             return createErrorResponse('Method Not Allowed', 405);
+
+        case '/vps/alerts':
+            return await handleVpsAlertsRequest(request, env);
 
         case '/settings':
             if (request.method === 'GET') {

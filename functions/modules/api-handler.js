@@ -262,7 +262,8 @@ export async function handleSettingsSave(request, env) {
         if (newSettings.customLoginPath) {
         const reservedPaths = [
             'settings', 'login', 'groups', 'nodes', 'subscriptions', 'dashboard',
-            'api', 'explore', 'sub', 'cron', 'assets', '@vite', 'public', 'profile', 'offline'
+            'api', 'explore', 'sub', 'cron', 'assets', '@vite', 'public', 'profile', 'offline',
+            'vps'
         ];
             const pathSegment = newSettings.customLoginPath.replace(/^\/+/, '').split('/')[0].toLowerCase();
             if (reservedPaths.includes(pathSegment)) {

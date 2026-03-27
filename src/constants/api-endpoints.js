@@ -20,6 +20,11 @@ export const API_ENDPOINTS = {
     BATCH_UPDATE: '/api/batch_update_nodes',
     DEBUG_SUB: '/api/debug_subscription',
 
+    // VPS Monitor
+    VPS_REPORT: '/api/vps/report',
+    VPS_NODES: '/api/vps/nodes',
+    VPS_ALERTS: '/api/vps/alerts',
+
     // 迁移相关
     MIGRATE: '/api/migrate',
     MIGRATE_TO_D1: '/api/migrate_to_d1',

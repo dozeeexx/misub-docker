@@ -224,6 +224,7 @@ export async function onRequest(context) {
                 const isSpaRoute = [
                     '/groups',
                     '/nodes',
+                    '/vps',
                     '/subscriptions',
                     '/settings',
                     '/login', // 默认 login 仍然需要保留，以便前端处理 "入口" 逻辑

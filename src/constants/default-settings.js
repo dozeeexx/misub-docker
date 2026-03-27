@@ -67,6 +67,21 @@ prependGroupName: false
     guestbook: {
         enabled: false,
         allowAnonymous: true
+    },
+    vpsMonitor: {
+        enabled: true,
+        requireSecret: true,
+        offlineThresholdMinutes: 10,
+        cpuWarnPercent: 90,
+        memWarnPercent: 90,
+        diskWarnPercent: 90,
+        alertCooldownMinutes: 15,
+        alertsEnabled: true,
+        notifyOffline: true,
+        notifyRecovery: true,
+        notifyOverload: true,
+        reportRetentionDays: 30,
+        cooldownIgnoreRecovery: true
     }
 };
 
