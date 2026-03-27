@@ -74,10 +74,6 @@ const loadSnapshot = async () => {
   const result = await fetchVpsPublicSnapshot(token);
   if (result.success) {
     nodes.value = result.data?.data || [];
-    console.log('[DEBUG] VPS Nodes loaded:', nodes.value);
-    if (nodes.value.length > 0) {
-      console.log('[DEBUG] First node latest data:', JSON.stringify(nodes.value[0].latest, null, 2));
-    }
     lastUpdatedAt.value = new Date().toLocaleString();
   } else {
     error.value = result.error || '加载失败';
@@ -424,12 +420,7 @@ onUnmounted(() => {
                     <div v-else class="flex flex-col items-center justify-center h-[140px] text-center">
                       <span class="text-2xl mb-2 opacity-30">📡</span>
                     <p class="text-xs text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
-                    <p class="text-[9px] text-[#8a7f70]/50 mt-1">
-                      最新快照: {{ node.latest?.at ? new Date(node.latest.at).toLocaleTimeString() : '无数据' }}
-                    </p>
-                    <p class="text-[9px] text-[#8a7f70]/50">
-                      网络字段类型: {{ typeof node.latest?.network }} ({{ node.latest?.network?.length || 0 }} 项)
-                    </p>
+                    <p class="text-[10px] text-[#8a7f70]/60 dark:text-slate-500 mt-1">请检查探针端配置</p>
                     </div>
                   </div>
                 </div>
@@ -632,12 +623,7 @@ onUnmounted(() => {
                   <div v-else class="flex flex-col items-center justify-center h-[140px] text-center">
                     <span class="text-2xl mb-2 opacity-30">📡</span>
                     <p class="text-xs text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
-                    <p class="text-[9px] text-[#8a7f70]/50 mt-1">
-                      最新快照: {{ node.latest?.at ? new Date(node.latest.at).toLocaleTimeString() : '无数据' }}
-                    </p>
-                    <p class="text-[9px] text-[#8a7f70]/50">
-                      网络字段类型: {{ typeof node.latest?.network }} ({{ node.latest?.network?.length || 0 }} 项)
-                    </p>
+                    <p class="text-[10px] text-[#8a7f70]/60 dark:text-slate-500 mt-1">请检查探针端配置</p>
                   </div>
                 </div>
               </div>
