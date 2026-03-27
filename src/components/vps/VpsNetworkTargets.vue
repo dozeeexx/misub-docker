@@ -12,6 +12,10 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  checkingTargets: {
+    type: Object,
+    default: () => ({})
+  },
   limit: {
     type: Number,
     default: 3
@@ -29,7 +33,39 @@ const formState = ref({
   scheme: 'https'
 });
 
+const sortKey = ref('type');
+const sortDir = ref('asc');
+const filterType = ref('all');
+const filterQuery = ref('');
+
 const canAddMore = computed(() => props.targets.length < props.limit);
+
+const filteredTargets = computed(() => {
+  const keyword = filterQuery.value.trim().toLowerCase();
+  return props.targets.filter((item) => {
+    if (filterType.value !== 'all' && item.type !== filterType.value) return false;
+    if (!keyword) return true;
+    const text = `${item.type} ${item.target} ${item.path || ''} ${item.port || ''}`.toLowerCase();
+    return text.includes(keyword);
+  });
+});
+
+const sortedTargets = computed(() => {
+  const list = [...filteredTargets.value];
+  const dir = sortDir.value === 'asc' ? 1 : -1;
+  list.sort((a, b) => {
+    if (sortKey.value === 'status') {
+      const av = a.enabled ? 1 : 0;
+      const bv = b.enabled ? 1 : 0;
+      return (av - bv) * dir;
+    }
+    if (sortKey.value === 'target') {
+      return (a.target || '').localeCompare(b.target || '') * dir;
+    }
+    return (a.type || '').localeCompare(b.type || '') * dir;
+  });
+  return list;
+});
 
 const resetForm = () => {
   formState.value = { type: 'icmp', target: '', port: '', path: '/', scheme: 'https' };
@@ -79,6 +115,8 @@ const handleDelete = async (target) => {
 const handleCheck = (target) => {
   emit('check', target);
 };
+
+const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
 </script>
 
 <template>
@@ -91,9 +129,31 @@ const handleCheck = (target) => {
       <span class="text-xs text-gray-400">{{ targets.length }}/{{ limit }}</span>
     </div>
 
-    <div class="space-y-2" v-if="targets.length">
+    <div class="flex flex-wrap items-center gap-2 text-xs" v-if="targets.length">
+      <select v-model="filterType" class="px-2.5 py-1.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg">
+        <option value="all">全部类型</option>
+        <option value="icmp">ICMP</option>
+        <option value="tcp">TCP</option>
+        <option value="http">HTTP</option>
+      </select>
+      <input v-model="filterQuery" placeholder="搜索目标" class="px-2.5 py-1.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
+      <select v-model="sortKey" class="px-2.5 py-1.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg">
+        <option value="type">按类型</option>
+        <option value="target">按目标</option>
+        <option value="status">按状态</option>
+      </select>
+      <button
+        type="button"
+        class="px-2.5 py-1.5 border border-gray-200 dark:border-white/10 rounded-lg"
+        @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
+      >
+        {{ sortDir === 'asc' ? '升序' : '降序' }}
+      </button>
+    </div>
+
+    <div class="space-y-2" v-if="sortedTargets.length">
       <div
-        v-for="item in targets"
+        v-for="item in sortedTargets"
         :key="item.id"
         class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200/70 dark:border-white/10 bg-white/70 dark:bg-gray-900/60"
       >
@@ -109,8 +169,9 @@ const handleCheck = (target) => {
           <button
             class="px-2.5 py-1.5 text-xs border border-gray-200 dark:border-white/10 rounded-lg"
             @click="handleCheck(item)"
+            :disabled="isChecking(item)"
           >
-            立即检测
+            {{ isChecking(item) ? '检测中...' : '立即检测' }}
           </button>
           <button
             class="px-2.5 py-1.5 text-xs border border-gray-200 dark:border-white/10 rounded-lg"

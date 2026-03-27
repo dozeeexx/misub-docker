@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS vps_nodes (
     enabled INTEGER DEFAULT 1,
     last_seen_at DATETIME,
     last_report_json TEXT,
+    overload_state_json TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

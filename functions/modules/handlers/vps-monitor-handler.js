@@ -37,13 +37,33 @@ function nowIso() {
     return new Date().toISOString();
 }
 
+function isoFromMs(ms) {
+    return new Date(ms).toISOString();
+}
+
 function normalizeString(value) {
     if (value === null || value === undefined) return '';
     return String(value).trim();
 }
 
+function normalizeJsonString(value) {
+    const raw = normalizeString(value);
+    if (!raw) return '';
+    try {
+        return JSON.stringify(JSON.parse(raw));
+    } catch {
+        return raw;
+    }
+}
+
 function clampNumber(value, min, max, fallback = null) {
     const num = Number(value);
+    if (!Number.isFinite(num)) return fallback;
+    return Math.min(max, Math.max(min, num));
+}
+
+function clampPositiveInt(value, min, max, fallback) {
+    const num = Math.floor(Number(value));
     if (!Number.isFinite(num)) return fallback;
     return Math.min(max, Math.max(min, num));
 }
@@ -53,6 +73,47 @@ function getClientIp(request) {
         || request.headers.get('X-Forwarded-For')
         || request.headers.get('X-Real-IP')
         || '';
+}
+
+function safeJsonStringify(value) {
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return '';
+    }
+}
+
+async function computeSignature(secret, nodeId, timestamp, payloadCanonical) {
+    const data = `${nodeId}.${timestamp}.${payloadCanonical}`;
+    const key = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+    );
+    const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+    return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function normalizeReportTimestamp(rawValue, fallbackIso) {
+    if (rawValue === null || rawValue === undefined) return fallbackIso;
+    if (typeof rawValue === 'number') {
+        const ts = rawValue > 1e12 ? rawValue : rawValue * 1000;
+        return isoFromMs(ts);
+    }
+    if (typeof rawValue === 'string') {
+        const trimmed = rawValue.trim();
+        if (!trimmed) return fallbackIso;
+        if (/^\d+$/.test(trimmed)) {
+            const num = Number(trimmed);
+            const ts = num > 1e12 ? num : num * 1000;
+            return isoFromMs(ts);
+        }
+        const parsed = new Date(trimmed).getTime();
+        if (Number.isFinite(parsed)) return isoFromMs(parsed);
+    }
+    return fallbackIso;
 }
 
 function isNodeOnline(lastSeenAt, thresholdMinutes) {
@@ -77,7 +138,8 @@ function buildSnapshot(report, node) {
         load1: clampNumber(report.load?.load1, 0, 1000, null),
         uptimeSec: clampNumber(report.uptimeSec, 0, 10 ** 9, null),
         traffic: report.traffic || null,
-        ip: normalizeString(report.publicIp || report.ip || report.meta?.publicIp)
+        ip: normalizeString(report.publicIp || report.ip || report.meta?.publicIp),
+        receivedAt: report.receivedAt || report.createdAt || null
     };
 }
 
@@ -177,6 +239,88 @@ function computeOverload(report, settings) {
     return { overload, thresholds: { cpuThreshold, memThreshold, diskThreshold }, values: { cpu, mem, disk } };
 }
 
+function clampPayloadUsage(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return null;
+    return Math.min(100, Math.max(0, num));
+}
+
+function clampPayloadLoad(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return null;
+    return Math.max(0, Math.min(1000, num));
+}
+
+function clampPayloadUptime(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num) || num < 0) return null;
+    return Math.min(10 ** 9, num);
+}
+
+function sanitizeNetworkChecks(checks) {
+    if (!Array.isArray(checks)) return [];
+    return checks.map((item) => {
+        const type = normalizeString(item?.type).toLowerCase();
+        if (!['icmp', 'tcp', 'http'].includes(type)) return null;
+        const target = normalizeString(item?.target);
+        if (!target) return null;
+        const status = normalizeString(item?.status) || 'unknown';
+        const latencyMs = clampNumber(item?.latencyMs, 0, 60 * 1000, null);
+        const lossPercent = clampNumber(item?.lossPercent, 0, 100, null);
+        const httpCode = clampNumber(item?.httpCode, 0, 999, null);
+        const scheme = normalizeString(item?.scheme || 'https');
+        const port = item?.port !== undefined && item?.port !== null ? Number(item.port) : null;
+        const path = normalizeString(item?.path || '/');
+        const dnsMs = clampNumber(item?.dnsMs, 0, 60 * 1000, null);
+        const connectMs = clampNumber(item?.connectMs, 0, 60 * 1000, null);
+        const tlsMs = clampNumber(item?.tlsMs, 0, 60 * 1000, null);
+        const checkedAt = normalizeReportTimestamp(item?.checkedAt, null);
+        return {
+            type,
+            target,
+            status,
+            latencyMs,
+            lossPercent,
+            httpCode,
+            scheme,
+            port: Number.isFinite(port) ? port : null,
+            path,
+            dnsMs,
+            connectMs,
+            tlsMs,
+            checkedAt
+        };
+    }).filter(Boolean);
+}
+
+function computeOverloadState(previous, overloadInfo) {
+    const state = {
+        count: clampPositiveInt(previous?.count, 0, 10000, 0),
+        lastAt: normalizeString(previous?.lastAt || ''),
+        lastSignature: normalizeString(previous?.lastSignature || '')
+    };
+    if (overloadInfo?.overload?.any) {
+        state.count += 1;
+        state.lastAt = nowIso();
+    } else {
+        state.count = 0;
+    }
+    const signature = `${overloadInfo?.values?.cpu ?? ''}|${overloadInfo?.values?.mem ?? ''}|${overloadInfo?.values?.disk ?? ''}`;
+    state.lastSignature = signature;
+    return state;
+}
+
+function shouldTriggerOverload(settings, state, overloadInfo) {
+    if (!overloadInfo?.overload?.any) return false;
+    const threshold = clampPositiveInt(settings?.vpsMonitor?.overloadConfirmCount, 1, 10, 2);
+    if (state.count < threshold) return false;
+    const signature = `${overloadInfo?.values?.cpu ?? ''}|${overloadInfo?.values?.mem ?? ''}|${overloadInfo?.values?.disk ?? ''}`;
+    if (signature && signature === state.lastSignature && state.count > threshold) {
+        return false;
+    }
+    return true;
+}
+
 async function updateNodeStatus(db, settings, node, report) {
     const threshold = clampNumber(settings?.vpsMonitor?.offlineThresholdMinutes, 1, 1440, 10);
     const wasOnline = node.status === 'online';
@@ -215,7 +359,9 @@ async function updateNodeStatus(db, settings, node, report) {
     }
 
     const overloadInfo = computeOverload(report, settings);
-    if (overloadInfo.overload.any && settings?.vpsMonitor?.notifyOverload !== false) {
+    const overloadState = computeOverloadState(node.overloadState, overloadInfo);
+    node.overloadState = overloadState;
+    if (shouldTriggerOverload(settings, overloadState, overloadInfo) && settings?.vpsMonitor?.notifyOverload !== false) {
         const flags = [];
         if (overloadInfo.overload.cpu) flags.push(`CPU ${overloadInfo.values.cpu}%`);
         if (overloadInfo.overload.mem) flags.push(`内存 ${overloadInfo.values.mem}%`);
@@ -254,7 +400,8 @@ function mapNodeRow(row) {
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         lastSeenAt: row.last_seen_at,
-        lastReport: row.last_report_json ? JSON.parse(row.last_report_json) : null
+        lastReport: row.last_report_json ? JSON.parse(row.last_report_json) : null,
+        overloadState: row.overload_state_json ? JSON.parse(row.overload_state_json) : null
     };
 }
 
@@ -269,45 +416,97 @@ async function fetchNode(db, nodeId) {
 }
 
 async function insertNode(db, node) {
-    await db.prepare(
-        `INSERT INTO vps_nodes
-         (id, name, tag, region, description, secret, status, enabled, created_at, updated_at, last_seen_at, last_report_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-        node.id,
-        node.name,
-        node.tag,
-        node.region,
-        node.description,
-        node.secret,
-        node.status,
-        node.enabled ? 1 : 0,
-        node.createdAt,
-        node.updatedAt,
-        node.lastSeenAt,
-        node.lastReport ? JSON.stringify(node.lastReport) : null
-    ).run();
+    try {
+        await db.prepare(
+            `INSERT INTO vps_nodes
+             (id, name, tag, region, description, secret, status, enabled, created_at, updated_at, last_seen_at, last_report_json, overload_state_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+            node.id,
+            node.name,
+            node.tag,
+            node.region,
+            node.description,
+            node.secret,
+            node.status,
+            node.enabled ? 1 : 0,
+            node.createdAt,
+            node.updatedAt,
+            node.lastSeenAt,
+            node.lastReport ? JSON.stringify(node.lastReport) : null,
+            node.overloadState ? JSON.stringify(node.overloadState) : null
+        ).run();
+    } catch (error) {
+        const message = error?.message || '';
+        if (!message.includes('no column named overload_state_json')) {
+            throw error;
+        }
+        await db.prepare(
+            `INSERT INTO vps_nodes
+             (id, name, tag, region, description, secret, status, enabled, created_at, updated_at, last_seen_at, last_report_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+            node.id,
+            node.name,
+            node.tag,
+            node.region,
+            node.description,
+            node.secret,
+            node.status,
+            node.enabled ? 1 : 0,
+            node.createdAt,
+            node.updatedAt,
+            node.lastSeenAt,
+            node.lastReport ? JSON.stringify(node.lastReport) : null
+        ).run();
+    }
 }
 
 async function updateNode(db, node) {
-    await db.prepare(
-        `UPDATE vps_nodes
-         SET name = ?, tag = ?, region = ?, description = ?, secret = ?, status = ?, enabled = ?,
-             updated_at = ?, last_seen_at = ?, last_report_json = ?
-         WHERE id = ?`
-    ).bind(
-        node.name,
-        node.tag,
-        node.region,
-        node.description,
-        node.secret,
-        node.status,
-        node.enabled ? 1 : 0,
-        node.updatedAt,
-        node.lastSeenAt,
-        node.lastReport ? JSON.stringify(node.lastReport) : null,
-        node.id
-    ).run();
+    try {
+        await db.prepare(
+            `UPDATE vps_nodes
+             SET name = ?, tag = ?, region = ?, description = ?, secret = ?, status = ?, enabled = ?,
+                 updated_at = ?, last_seen_at = ?, last_report_json = ?, overload_state_json = ?
+             WHERE id = ?`
+        ).bind(
+            node.name,
+            node.tag,
+            node.region,
+            node.description,
+            node.secret,
+            node.status,
+            node.enabled ? 1 : 0,
+            node.updatedAt,
+            node.lastSeenAt,
+            node.lastReport ? JSON.stringify(node.lastReport) : null,
+            node.overloadState ? JSON.stringify(node.overloadState) : null,
+            node.id
+        ).run();
+    } catch (error) {
+        const message = error?.message || '';
+        if (!message.includes('no column named overload_state_json')) {
+            throw error;
+        }
+        await db.prepare(
+            `UPDATE vps_nodes
+             SET name = ?, tag = ?, region = ?, description = ?, secret = ?, status = ?, enabled = ?,
+                 updated_at = ?, last_seen_at = ?, last_report_json = ?
+             WHERE id = ?`
+        ).bind(
+            node.name,
+            node.tag,
+            node.region,
+            node.description,
+            node.secret,
+            node.status,
+            node.enabled ? 1 : 0,
+            node.updatedAt,
+            node.lastSeenAt,
+            node.lastReport ? JSON.stringify(node.lastReport) : null,
+            node.id
+        ).run();
+    }
 }
 
 async function deleteNode(db, nodeId) {
@@ -534,6 +733,11 @@ function buildInstallScript(reportUrl, node) {
         '  fi',
         'done',
         '',
+        'HAS_SOCKETS=1',
+        'if [ ! -e /dev/tcp/127.0.0.1/80 ] 2>/dev/null; then',
+        '  HAS_SOCKETS=0',
+        'fi',
+        '',
         `REPORT_URL="${reportUrl}"`,
         `NODE_ID="${node.id}"`,
         `NODE_SECRET="${node.secret}"`,
@@ -567,11 +771,15 @@ function buildInstallScript(reportUrl, node) {
         "DISK_USAGE=\"$(df -P / | awk 'NR==2 {gsub(/%/,\"\"); print \$5}')\"",
         "LOAD1=\"$(awk '{print \$1}' /proc/loadavg)\"",
         '',
+        'REPORT_INTERVAL=60',
+        'REPORT_STORE_INTERVAL=60',
         'NETWORK_INTERVAL=300',
         'TARGETS=()',
         'if CONFIG_ENV=$(curl -fsSL "$CONFIG_URL" 2>/dev/null); then',
         '  while IFS= read -r line; do',
         '    case "$line" in',
+        '      REPORT_INTERVAL=*) REPORT_INTERVAL=$((${line#*=} * 60)) ;;',
+        '      REPORT_STORE_INTERVAL=*) REPORT_STORE_INTERVAL=$((${line#*=} * 60)) ;;',
         '      NETWORK_INTERVAL=*) NETWORK_INTERVAL=$((${line#*=} * 60)) ;;',
         '      TARGET=*) TARGETS+=("${line#*=}") ;;',
         '    esac',
@@ -579,6 +787,8 @@ function buildInstallScript(reportUrl, node) {
         'fi',
         '',
         'NETWORK_STATE="/var/tmp/misub-vps-network.ts"',
+        'REPORT_STATE="/var/tmp/misub-vps-report.ts"',
+        'REPORT_STORE_STATE="/var/tmp/misub-vps-report-store.ts"',
         'NETWORK_JSON="null"',
         'now_ts=$(date +%s)',
         'last_ts=0',
@@ -597,7 +807,7 @@ function buildInstallScript(reportUrl, node) {
         '      checks+=("{\\\"type\\\":\\\"icmp\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${avg:-null},\\\"lossPercent\\\":${loss:-null},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
         '    elif [ "$ttype" = "tcp" ]; then',
         '      start=$(date +%s%3N)',
-        '      if timeout 3 bash -c "cat < /dev/null > /dev/tcp/$ttarget/$tport" 2>/dev/null; then',
+        '      if [ "$HAS_SOCKETS" = "1" ] && timeout 3 bash -c "cat < /dev/null > /dev/tcp/$ttarget/$tport" 2>/dev/null; then',
         '        end=$(date +%s%3N); latency=$((end-start)); status="up"',
         '      else',
         '        latency=null; status="down"',
@@ -608,23 +818,41 @@ function buildInstallScript(reportUrl, node) {
         '      url="$scheme://$ttarget"',
         '      if [ -n "$tport" ]; then url="$url:$tport"; fi',
         '      if [ -n "$tpath" ]; then url="$url$tpath"; fi',
-        '      result=$(curl -o /dev/null -s -w "%{time_total} %{http_code}" --max-time 5 "$url" || true)',
+        '      result=$(curl -o /dev/null -s -w "%{time_total} %{http_code} %{time_namelookup} %{time_connect} %{time_appconnect}" --max-time 5 "$url" || true)',
         '      time_total=$(echo "$result" | awk "{print \$1}")',
         '      http_code=$(echo "$result" | awk "{print \$2}")',
+        '      t_dns=$(echo "$result" | awk "{print \$3}")',
+        '      t_connect=$(echo "$result" | awk "{print \$4}")',
+        '      t_tls=$(echo "$result" | awk "{print \$5}")',
         '      if [ -n "$time_total" ] && [ "$http_code" != "000" ]; then',
         '        latency=$(awk -v t="$time_total" "BEGIN{printf \"%.0f\", t*1000}")',
+        '        dns=$(awk -v t="$t_dns" "BEGIN{printf \"%.0f\", t*1000}")',
+        '        connect=$(awk -v t="$t_connect" "BEGIN{printf \"%.0f\", t*1000}")',
+        '        tls=$(awk -v t="$t_tls" "BEGIN{printf \"%.0f\", t*1000}")',
         '        status="up"',
         '      else',
-        '        latency=null; http_code="000"; status="down"',
+        '        latency=null; http_code="000"; dns=null; connect=null; tls=null; status="down"',
         '      fi',
-        '      checks+=("{\\\"type\\\":\\\"http\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"scheme\\\":\\\"${scheme}\\\",\\\"port\\\":${tport:-null},\\\"path\\\":\\\"${tpath:-/}\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"httpCode\\\":$http_code,\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
+        '      checks+=("{\\\"type\\\":\\\"http\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"scheme\\\":\\\"${scheme}\\\",\\\"port\\\":${tport:-null},\\\"path\\\":\\\"${tpath:-/}\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"httpCode\\\":$http_code,\\\"dnsMs\\\":${dns},\\\"connectMs\\\":${connect},\\\"tlsMs\\\":${tls},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
         '    fi',
         '  done',
         '  NETWORK_JSON="["$(IFS=,; echo "${checks[*]}")"]"',
         '  echo "$now_ts" > "$NETWORK_STATE"',
         'fi',
         '',
-        'PAYLOAD=$(cat <<PAYLOAD_EOF',
+        'SHOULD_SEND=0',
+        'if [ ! -f "$REPORT_STATE" ]; then SHOULD_SEND=1; else',
+        '  last_report=$(cat "$REPORT_STATE" || echo 0)',
+        '  if [ $((now_ts-last_report)) -ge "$REPORT_INTERVAL" ]; then SHOULD_SEND=1; fi',
+        'fi',
+        'SHOULD_STORE=0',
+        'if [ ! -f "$REPORT_STORE_STATE" ]; then SHOULD_STORE=1; else',
+        '  last_store=$(cat "$REPORT_STORE_STATE" || echo 0)',
+        '  if [ $((now_ts-last_store)) -ge "$REPORT_STORE_INTERVAL" ]; then SHOULD_STORE=1; fi',
+        'fi',
+        'if [ "$SHOULD_SEND" = "1" ]; then',
+        '  if [ "$SHOULD_STORE" = "1" ]; then echo "$now_ts" > "$REPORT_STORE_STATE"; fi',
+        '  PAYLOAD=$(cat <<PAYLOAD_EOF',
         '{',
         '  "hostname": "\${HOSTNAME}",',
         '  "os": "\${OS}",',
@@ -640,11 +868,24 @@ function buildInstallScript(reportUrl, node) {
         'PAYLOAD_EOF',
         ')',
         '',
+        '  TS_MS=$(date +%s%3N 2>/dev/null || true)',
+        '  if [ -z "$TS_MS" ]; then TS_MS=$(($(date +%s) * 1000)); fi',
+        '  SIG=""',
+        '  if command -v openssl >/dev/null 2>&1; then',
+        '    SIG=$(printf "%s" "${NODE_ID}.${TS_MS}.${PAYLOAD}" | openssl dgst -sha256 -hmac "${NODE_SECRET}" -hex | awk "{print \$2}")',
+        '  else',
+        '    echo "[misub-probe] openssl missing, signature disabled" >&2',
+        '  fi',
+        '',
         `curl -sS -X POST "${reportUrl}" \\`,
         '  -H "Content-Type: application/json" \\',
         `  -H "x-node-id: ${node.id}" \\`,
         `  -H "x-node-secret: ${node.secret}" \\`,
+        '  -H "x-node-timestamp: ${TS_MS}" \\',
+        '  -H "x-node-signature: ${SIG}" \\',
         '  --data "${PAYLOAD}" >/dev/null',
+        '  echo "$now_ts" > "$REPORT_STATE"',
+        'fi',
         'EOF',
         '',
         'chmod +x /usr/local/bin/misub-vps-probe.sh',
@@ -768,10 +1009,16 @@ export async function handleVpsConfig(request, env) {
 
     const targets = await fetchNetworkTargets(db, nodeId);
     const interval = clampNumber(settings?.vpsMonitor?.networkSampleIntervalMinutes, 1, 60, 5);
+    const reportInterval = clampNumber(settings?.vpsMonitor?.reportIntervalMinutes, 1, 60, 1);
+    const reportStoreInterval = clampNumber(settings?.vpsMonitor?.reportStoreIntervalMinutes, 1, 60, 1);
 
     if (format === 'env') {
         const now = new Date();
-        const lines = [`NETWORK_INTERVAL=${interval}`];
+        const lines = [
+            `NETWORK_INTERVAL=${interval}`,
+            `REPORT_INTERVAL=${reportInterval}`,
+            `REPORT_STORE_INTERVAL=${reportStoreInterval}`
+        ];
         const pending = [];
         targets.forEach(target => {
             const line = `TARGET=${target.type}|${target.target}|${target.scheme || 'https'}|${target.port || ''}|${target.path || ''}|${target.enabled ? 1 : 0}|${target.forceCheckAt || ''}`;
@@ -812,14 +1059,18 @@ export async function handleVpsReport(request, env) {
     }
 
     let payload;
+    let rawBody = '';
     try {
-        payload = await request.json();
+        rawBody = await request.text();
+        payload = rawBody ? JSON.parse(rawBody) : null;
     } catch (error) {
         return createErrorResponse('Invalid JSON', 400);
     }
 
     const nodeId = normalizeString(request.headers.get('x-node-id') || payload?.nodeId);
     const nodeSecret = normalizeString(request.headers.get('x-node-secret') || payload?.secret);
+    const signature = normalizeString(request.headers.get('x-node-signature') || payload?.signature);
+    const signatureTs = normalizeString(request.headers.get('x-node-timestamp') || payload?.timestamp);
 
     if (!nodeId) {
         return createErrorResponse('Missing node id', 401);
@@ -852,14 +1103,37 @@ export async function handleVpsReport(request, env) {
         }
     }
 
+    if (settings?.vpsMonitor?.requireSignature === true) {
+        if (!signature || !signatureTs) {
+            return createErrorResponse('Missing signature', 401);
+        }
+        const tsNumber = Number(signatureTs);
+        if (!Number.isFinite(tsNumber)) {
+            return createErrorResponse('Invalid timestamp', 400);
+        }
+        const skewMinutes = clampNumber(settings?.vpsMonitor?.signatureClockSkewMinutes, 1, 60, 5);
+        const nowMs = Date.now();
+        const skewMs = skewMinutes * 60 * 1000;
+        if (Math.abs(nowMs - tsNumber) > skewMs) {
+            return createErrorResponse('Signature expired', 401);
+        }
+        const bodyToSign = normalizeString(rawBody || safeJsonStringify(payload?.report || payload));
+        const expected = await computeSignature(node.secret, node.id, String(tsNumber), bodyToSign);
+        if (expected !== signature) {
+            return createErrorResponse('Invalid signature', 401);
+        }
+    }
+
     const report = payload?.report || payload;
-    const reportedAt = normalizeString(report.reportedAt || report.at || '') || nowIso();
+    const receivedAt = nowIso();
+    const reportedAt = normalizeReportTimestamp(report.reportedAt || report.at || report.timestamp || report.ts, receivedAt);
 
     const normalizedReport = {
         id: crypto.randomUUID(),
         nodeId: node.id,
         reportedAt,
         createdAt: nowIso(),
+        receivedAt,
         meta: {
             hostname: normalizeString(report.hostname || report.host),
             os: normalizeString(report.os || report.platform),
@@ -868,29 +1142,34 @@ export async function handleVpsReport(request, env) {
             version: normalizeString(report.version),
             publicIp: normalizeString(report.publicIp || report.ip || getClientIp(request))
         },
-        cpu: report.cpu || {},
-        mem: report.mem || {},
-        disk: report.disk || {},
-        load: report.load || {},
-        uptimeSec: clampNumber(report.uptimeSec || report.uptime || 0, 0, 10 ** 9, 0),
+        cpu: { usage: clampPayloadUsage(report.cpu?.usage) },
+        mem: { usage: clampPayloadUsage(report.mem?.usage) },
+        disk: { usage: clampPayloadUsage(report.disk?.usage) },
+        load: { load1: clampPayloadLoad(report.load?.load1) },
+        uptimeSec: clampPayloadUptime(report.uptimeSec ?? report.uptime) ?? 0,
         traffic: report.traffic || null
     };
 
     const networkPayload = report.network || report.checks || null;
-    if (Array.isArray(networkPayload) && networkPayload.length) {
+    const sanitizedChecks = sanitizeNetworkChecks(networkPayload);
+    if (sanitizedChecks.length) {
         const networkSample = {
             id: crypto.randomUUID(),
             nodeId: node.id,
             reportedAt,
             createdAt: nowIso(),
-            checks: networkPayload
+            checks: sanitizedChecks
         };
         await insertNetworkSample(db, networkSample);
         await pruneNetworkSamples(db, settings);
     }
 
-    await insertReport(db, normalizedReport);
-    await pruneReports(db, settings);
+    const reportInterval = clampNumber(settings?.vpsMonitor?.reportStoreIntervalMinutes, 1, 60, 1);
+    const lastSeenTs = node.lastSeenAt ? new Date(node.lastSeenAt).getTime() : NaN;
+    if (reportInterval <= 1 || !Number.isFinite(lastSeenTs) || (Date.now() - lastSeenTs) >= reportInterval * 60 * 1000) {
+        await insertReport(db, normalizedReport);
+        await pruneReports(db, settings);
+    }
 
     node.lastSeenAt = normalizedReport.reportedAt;
     await updateNodeStatus(db, settings, node, normalizedReport);
@@ -935,7 +1214,8 @@ export async function handleVpsNodesRequest(request, env) {
             createdAt: nowIso(),
             updatedAt: nowIso(),
             lastSeenAt: null,
-            lastReport: null
+            lastReport: null,
+            overloadState: null
         };
         await insertNode(db, node);
 
@@ -1060,7 +1340,7 @@ export async function handleVpsNetworkTargetsRequest(request, env) {
     }
 
     if (request.method === 'POST') {
-        const payload = await request.json();
+    const payload = await request.json();
         const error = validateNetworkTarget(payload);
         if (error) {
             return createErrorResponse(error, 400);
@@ -1080,14 +1360,15 @@ export async function handleVpsNetworkTargetsRequest(request, env) {
         if (!targetId) {
             return createErrorResponse('Target id required', 400);
         }
-        const error = payload.type || payload.target || payload.port || payload.path
-            ? validateNetworkTarget({
-                type: payload.type || 'icmp',
-                target: payload.target || '1.1.1.1',
-                port: payload.port,
-                path: payload.path
-            })
-            : null;
+    const error = payload.type || payload.target || payload.port || payload.path || payload.scheme
+        ? validateNetworkTarget({
+            type: payload.type || 'icmp',
+            target: payload.target || '1.1.1.1',
+            port: payload.port,
+            path: payload.path,
+            scheme: payload.scheme
+        })
+        : null;
         if (error) {
             return createErrorResponse(error, 400);
         }

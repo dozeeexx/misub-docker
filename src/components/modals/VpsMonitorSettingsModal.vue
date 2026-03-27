@@ -10,6 +10,10 @@ const props = defineProps({
   settings: {
     type: Object,
     required: true
+  },
+  saving: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -25,7 +29,7 @@ const handleSave = () => {
 </script>
 
 <template>
-  <Modal :show="show" @update:show="handleClose" @confirm="handleSave" confirm-text="保存" cancel-text="关闭" size="4xl">
+  <Modal :show="show" @update:show="handleClose" @confirm="handleSave" confirm-text="保存" cancel-text="关闭" size="4xl" :confirm-disabled="saving">
     <template #title>
       <div class="flex items-center gap-2">
         <span class="text-lg font-bold text-gray-900 dark:text-white">VPS 探针设置</span>

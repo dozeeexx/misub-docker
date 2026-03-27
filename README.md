@@ -190,12 +190,16 @@ wrangler d1 execute misub --file=schema.sql --remote
 > ⚠️ VPS 探针功能必须绑定 D1 数据库 (MISUB_DB)，并在设置中切换存储模式为 D1，未满足将无法使用探针相关功能。
 > ⚠️ 若启用网络监测（ICMP/TCP/HTTP），需执行最新的 `schema.sql` 创建 vps_network_targets / vps_network_samples 表。
 > ⚠️ 已在使用 D1 的用户升级后也需要在 D1 控制台执行最新 `schema.sql`（新增 vps_network_targets / vps_network_samples 字段和表）。
+> ⚠️ VPS 探针新增了 `overload_state_json` 字段，升级后请执行最新 `schema.sql`。
 
 > ⚠️ PWA/Service Worker 已移除，升级后建议清理浏览器缓存与旧的 Service Worker。
 
 若已绑定 D1 并出现如下错误：
 `D1_ERROR: table vps_network_targets has no column named scheme`
 说明 D1 表结构未更新，请在 D1 控制台执行最新 `schema.sql`。
+
+> 💡 现在支持上报签名校验（HMAC），可在设置中开启，探针脚本会自动携带签名。
+> 💡 新增上报间隔与记录间隔配置，用于控制上报频率与历史写入密度。
 
 ### 3. 设置环境变量
 
