@@ -1165,6 +1165,9 @@ export async function handleVpsReport(request, env) {
     const receivedAt = nowIso();
     const reportedAt = normalizeReportTimestamp(report.reportedAt || report.at || report.timestamp || report.ts, receivedAt);
 
+    const networkPayload = report.network || report.checks || null;
+    const sanitizedChecks = sanitizeNetworkChecks(networkPayload);
+
     const normalizedReport = {
         id: crypto.randomUUID(),
         nodeId: node.id,
@@ -1188,8 +1191,6 @@ export async function handleVpsReport(request, env) {
         network: sanitizedChecks.length ? sanitizedChecks : null
     };
 
-    const networkPayload = report.network || report.checks || null;
-    const sanitizedChecks = sanitizeNetworkChecks(networkPayload);
     if (sanitizedChecks.length) {
         const networkSample = {
             id: crypto.randomUUID(),
