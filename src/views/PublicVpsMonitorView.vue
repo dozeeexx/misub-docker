@@ -181,12 +181,12 @@ onUnmounted(() => {
   <div class="min-h-screen bg-[#f7f6f1] dark:bg-[#0a0d14]">
     <div class="relative overflow-hidden">
       <div class="absolute inset-0">
-        <div class="absolute -top-24 left-10 h-72 w-72 rounded-full bg-gradient-to-br from-[#0ea5e9]/35 via-[#2dd4bf]/20 to-[#f97316]/25 blur-3xl"></div>
-        <div class="absolute top-24 right-10 h-64 w-64 rounded-full bg-gradient-to-br from-[#f97316]/30 via-[#22c55e]/20 to-[#38bdf8]/25 blur-3xl"></div>
-        <div class="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-gradient-to-br from-[#f59e0b]/25 via-[#22c55e]/20 to-[#0ea5e9]/20 blur-3xl"></div>
-        <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#f7f6f1] dark:from-[#0a0d14] to-transparent"></div>
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff60,transparent_55%)] dark:bg-[radial-gradient(circle_at_top,#1e293b66,transparent_55%)]"></div>
-        <div class="absolute inset-0 opacity-30 dark:opacity-40 bg-[linear-gradient(transparent_23px,rgba(15,23,42,0.06)_24px),linear-gradient(90deg,transparent_23px,rgba(15,23,42,0.06)_24px)] bg-[size:24px_24px]"></div>
+        <div class="absolute -top-24 left-10 h-72 w-72 rounded-full bg-gradient-to-br from-[#0ea5e9]/25 via-[#2dd4bf]/15 to-[#f97316]/20 blur-3xl"></div>
+        <div class="absolute top-24 right-10 h-64 w-64 rounded-full bg-gradient-to-br from-[#f97316]/20 via-[#22c55e]/15 to-[#38bdf8]/20 blur-3xl"></div>
+        <div class="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-gradient-to-br from-[#f59e0b]/18 via-[#22c55e]/12 to-[#0ea5e9]/16 blur-3xl"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff52,transparent_60%)] dark:bg-[radial-gradient(circle_at_top,#1e293b4d,transparent_60%)]"></div>
+        <div class="absolute inset-0 opacity-20 dark:opacity-25 bg-[linear-gradient(transparent_23px,rgba(148,163,184,0.22)_24px),linear-gradient(90deg,transparent_23px,rgba(148,163,184,0.22)_24px)] bg-[size:24px_24px]"></div>
+        <div class="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/80 dark:from-[#0a0d14] dark:via-[#0a0d14]/70 to-transparent"></div>
       </div>
       <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12">
         <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
@@ -213,28 +213,28 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="grid grid-cols-2 gap-4 text-xs">
-            <div class="rounded-2xl border border-[#ebe3d8] bg-white/80 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+            <div class="rounded-2xl border border-[#e9e2d6] bg-white/70 backdrop-blur-xl p-4 shadow-[0_14px_30px_-22px_rgba(31,27,23,0.35)] dark:border-slate-800/70 dark:bg-slate-900/60">
               <div class="flex items-center justify-between">
                 <p class="text-[#8a7f70] dark:text-slate-400">节点总数</p>
                 <span class="text-[10px] px-2 py-0.5 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">ALL</span>
               </div>
               <p class="mt-2 text-2xl font-semibold text-[#1f1b17] dark:text-slate-100">{{ statusSummary.total }}</p>
             </div>
-            <div class="rounded-2xl border border-[#d1fae5] bg-[#ecfdf3] p-4 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
+            <div class="rounded-2xl border border-[#d1fae5]/80 bg-[#ecfdf3]/80 p-4 shadow-[0_14px_30px_-22px_rgba(5,150,105,0.2)] dark:border-emerald-500/30 dark:bg-emerald-500/10">
               <div class="flex items-center justify-between">
                 <p class="text-[#087f5b] dark:text-emerald-300">在线节点</p>
                 <span class="text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300">OK</span>
               </div>
               <p class="mt-2 text-2xl font-semibold text-[#064e3b] dark:text-emerald-200">{{ statusSummary.online }}</p>
             </div>
-            <div class="rounded-2xl border border-[#fee2e2] bg-[#fef2f2] p-4 shadow-sm dark:border-rose-500/30 dark:bg-rose-500/10">
+            <div class="rounded-2xl border border-[#fee2e2]/80 bg-[#fef2f2]/80 p-4 shadow-[0_14px_30px_-22px_rgba(244,63,94,0.22)] dark:border-rose-500/30 dark:bg-rose-500/10">
               <div class="flex items-center justify-between">
                 <p class="text-[#b91c1c] dark:text-rose-300">离线节点</p>
                 <span class="text-[10px] px-2 py-0.5 rounded-full border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300">DOWN</span>
               </div>
               <p class="mt-2 text-2xl font-semibold text-[#7f1d1d] dark:text-rose-200">{{ statusSummary.offline }}</p>
             </div>
-            <div class="rounded-2xl border border-[#e0e7ff] bg-[#eef2ff] p-4 shadow-sm dark:border-sky-500/30 dark:bg-sky-500/10">
+            <div class="rounded-2xl border border-[#e0e7ff]/80 bg-[#eef2ff]/80 p-4 shadow-[0_14px_30px_-22px_rgba(59,130,246,0.22)] dark:border-sky-500/30 dark:bg-sky-500/10">
               <div class="flex items-center justify-between">
                 <p class="text-[#3730a3] dark:text-sky-300">在线率</p>
                 <span class="text-[10px] px-2 py-0.5 rounded-full border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300">SLA</span>
@@ -243,7 +243,7 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        <div class="mt-8 rounded-[24px] border border-[#ebe3d8] bg-white/80 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+        <div class="mt-8 rounded-[24px] border border-[#e9e2d6] bg-white/70 backdrop-blur-xl p-4 shadow-[0_12px_30px_-20px_rgba(31,27,23,0.35)] dark:border-slate-800/70 dark:bg-slate-900/60">
           <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
               <div class="h-2 w-24 rounded-full bg-[#efe6db] dark:bg-slate-800">
@@ -266,13 +266,13 @@ onUnmounted(() => {
       <div v-else-if="error" class="py-16 text-center text-sm text-rose-600 dark:text-rose-300">{{ error }}</div>
       <div v-else class="space-y-10">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="rounded-[28px] border border-[#ebe3d8] bg-white/90 p-6 shadow-xl shadow-[#d8cab8]/30 lg:col-span-2 dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-black/40">
+          <div class="rounded-[28px] border border-[#e9e2d6] bg-white/80 backdrop-blur-2xl p-6 shadow-[0_20px_60px_-40px_rgba(31,27,23,0.45)] lg:col-span-2 dark:border-slate-800/70 dark:bg-slate-900/60 dark:shadow-black/50">
             <div class="flex items-center justify-between">
               <h2 class="text-lg font-semibold text-[#1f1b17] dark:text-slate-100">重点节点</h2>
               <span class="text-xs text-[#8a7f70] dark:text-slate-400">按在线优先展示</span>
             </div>
             <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div v-for="node in topNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
+              <div v-for="node in topNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55">
                 <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
                   <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
                     <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
@@ -327,7 +327,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="rounded-[28px] border border-[#e6e0d6] bg-gradient-to-br from-white via-[#fdfaf6] to-[#f4efe7] p-6 shadow-xl shadow-[#d8cab8]/30 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-800/60 dark:shadow-black/40">
+          <div class="rounded-[28px] border border-[#e6e0d6] bg-gradient-to-br from-white/90 via-[#fdfaf6]/80 to-[#f4efe7]/80 p-6 shadow-[0_20px_60px_-40px_rgba(31,27,23,0.45)] dark:border-slate-800/70 dark:bg-gradient-to-br dark:from-slate-900/70 dark:via-slate-900/55 dark:to-slate-800/55 dark:shadow-black/50">
             <h2 class="text-lg font-semibold text-[#1f1b17] dark:text-slate-100">资源脉冲</h2>
             <p class="mt-1 text-xs text-[#8a7f70] dark:text-slate-400">汇总最近一次上报的资源占用</p>
             <div class="mt-5 grid grid-cols-2 gap-4">
@@ -353,7 +353,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="rounded-[30px] border border-[#e7e1d6] bg-white/90 p-6 shadow-xl shadow-[#d8cab8]/30 dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-black/40">
+        <div class="rounded-[30px] border border-[#e7e1d6] bg-white/80 backdrop-blur-2xl p-6 shadow-[0_20px_60px_-40px_rgba(31,27,23,0.45)] dark:border-slate-800/70 dark:bg-slate-900/60 dark:shadow-black/50">
           <div class="flex items-center justify-between">
             <h2 class="text-lg font-semibold text-[#1f1b17] dark:text-slate-100">重点轮播</h2>
             <span class="text-xs text-[#8a7f70] dark:text-slate-400">每 6 秒切换</span>
@@ -431,7 +431,7 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <div v-for="node in sortedNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <div v-for="node in sortedNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55">
               <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
                 <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
                   <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
@@ -486,7 +486,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <details class="rounded-[30px] border border-[#e7e1d6] bg-white/90 p-6 shadow-xl shadow-[#d8cab8]/30 dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-black/40">
+        <details class="rounded-[30px] border border-[#e7e1d6] bg-white/80 backdrop-blur-2xl p-6 shadow-[0_20px_60px_-40px_rgba(31,27,23,0.45)] dark:border-slate-800/70 dark:bg-slate-900/60 dark:shadow-black/50">
           <summary class="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#1f1b17] dark:text-slate-100">
             <span>节点明细表</span>
             <span class="text-xs text-[#8a7f70] dark:text-slate-400">点击展开</span>
