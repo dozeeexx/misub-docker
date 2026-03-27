@@ -22,7 +22,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['refresh', 'check']);
+const emit = defineEmits(['refresh', 'check', 'create']);
 const { showToast } = useToastStore();
 
 const formState = ref({
@@ -88,6 +88,7 @@ const handleCreate = async () => {
     showToast('目标已添加', 'success');
     resetForm();
     emit('refresh');
+    emit('create', payload);
   } else {
     showToast(result.error || '添加失败', 'error');
   }

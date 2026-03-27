@@ -413,6 +413,7 @@ function mapNodeRow(row) {
         secret: row.secret,
         status: row.status,
         enabled: row.enabled === 1,
+        useGlobalTargets: row.use_global_targets === 1,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         lastSeenAt: row.last_seen_at,
@@ -435,8 +436,8 @@ async function insertNode(db, node) {
     try {
         await db.prepare(
             `INSERT INTO vps_nodes
-             (id, name, tag, region, description, secret, status, enabled, created_at, updated_at, last_seen_at, last_report_json, overload_state_json)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             (id, name, tag, region, description, secret, status, enabled, use_global_targets, created_at, updated_at, last_seen_at, last_report_json, overload_state_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             node.id,
             node.name,
@@ -446,6 +447,7 @@ async function insertNode(db, node) {
             node.secret,
             node.status,
             node.enabled ? 1 : 0,
+            node.useGlobalTargets ? 1 : 0,
             node.createdAt,
             node.updatedAt,
             node.lastSeenAt,
@@ -454,7 +456,7 @@ async function insertNode(db, node) {
         ).run();
     } catch (error) {
         const message = error?.message || '';
-        if (!message.includes('no column named overload_state_json')) {
+        if (!message.includes('no column named overload_state_json') && !message.includes('no column named use_global_targets')) {
             throw error;
         }
         await db.prepare(
@@ -483,7 +485,7 @@ async function updateNode(db, node) {
         await db.prepare(
             `UPDATE vps_nodes
              SET name = ?, tag = ?, region = ?, description = ?, secret = ?, status = ?, enabled = ?,
-                 updated_at = ?, last_seen_at = ?, last_report_json = ?, overload_state_json = ?
+                 use_global_targets = ?, updated_at = ?, last_seen_at = ?, last_report_json = ?, overload_state_json = ?
              WHERE id = ?`
         ).bind(
             node.name,
@@ -493,6 +495,7 @@ async function updateNode(db, node) {
             node.secret,
             node.status,
             node.enabled ? 1 : 0,
+            node.useGlobalTargets ? 1 : 0,
             node.updatedAt,
             node.lastSeenAt,
             node.lastReport ? JSON.stringify(node.lastReport) : null,
@@ -501,7 +504,7 @@ async function updateNode(db, node) {
         ).run();
     } catch (error) {
         const message = error?.message || '';
-        if (!message.includes('no column named overload_state_json')) {
+        if (!message.includes('no column named overload_state_json') && !message.includes('no column named use_global_targets')) {
             throw error;
         }
         await db.prepare(
@@ -571,6 +574,23 @@ async function pruneNetworkSamples(db, settings) {
 
 async function fetchNetworkTargets(db, nodeId) {
     const result = await db.prepare('SELECT * FROM vps_network_targets WHERE node_id = ? ORDER BY created_at DESC').bind(nodeId).all();
+    return (result.results || []).map(row => ({
+        id: row.id,
+        nodeId: row.node_id,
+        type: row.type,
+        target: row.target,
+        scheme: row.scheme || 'https',
+        port: row.port,
+        path: row.path,
+        forceCheckAt: row.force_check_at,
+        enabled: row.enabled === 1,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+    }));
+}
+
+async function fetchGlobalNetworkTargets(db) {
+    const result = await db.prepare('SELECT * FROM vps_network_targets WHERE node_id = ? ORDER BY created_at DESC').bind('global').all();
     return (result.results || []).map(row => ({
         id: row.id,
         nodeId: row.node_id,
@@ -1021,7 +1041,9 @@ export async function handleVpsConfig(request, env) {
         return createErrorResponse('Unauthorized', 401);
     }
 
-    const targets = await fetchNetworkTargets(db, nodeId);
+    const nodeTargets = await fetchNetworkTargets(db, nodeId);
+    const globalTargets = node?.useGlobalTargets ? await fetchGlobalNetworkTargets(db) : [];
+    const targets = node?.useGlobalTargets ? globalTargets : nodeTargets;
     const interval = clampNumber(settings?.vpsMonitor?.networkSampleIntervalMinutes, 1, 60, 5);
     const reportInterval = clampNumber(settings?.vpsMonitor?.reportIntervalMinutes, 1, 60, 1);
     const reportStoreInterval = clampNumber(settings?.vpsMonitor?.reportStoreIntervalMinutes, 1, 60, 1);
@@ -1223,6 +1245,7 @@ export async function handleVpsNodesRequest(request, env) {
             secret: normalizeString(body.secret) || crypto.randomUUID(),
             status: 'offline',
             enabled: body.enabled !== false,
+            useGlobalTargets: body.useGlobalTargets === true,
             createdAt: nowIso(),
             updatedAt: nowIso(),
             lastSeenAt: null,
@@ -1288,7 +1311,9 @@ export async function handleVpsNodeDetailRequest(request, env) {
     if (request.method === 'GET') {
         const latestReport = node.lastReport || null;
         const reports = await fetchReportsForNode(db, nodeId, settings);
-        const targets = await fetchNetworkTargets(db, nodeId);
+    const nodeTargets = await fetchNetworkTargets(db, nodeId);
+    const globalTargets = node?.useGlobalTargets ? await fetchGlobalNetworkTargets(db) : [];
+    const targets = node?.useGlobalTargets ? globalTargets : nodeTargets;
         const networkSamples = await fetchNetworkSamples(db, nodeId, settings);
         return createJsonResponse({
             success: true,
@@ -1308,6 +1333,9 @@ export async function handleVpsNodeDetailRequest(request, env) {
                 node[field] = normalizeString(body[field]);
             }
         });
+        if (typeof body.useGlobalTargets === 'boolean') {
+            node.useGlobalTargets = body.useGlobalTargets;
+        }
         if (typeof body.enabled === 'boolean') {
             node.enabled = body.enabled;
         }
@@ -1365,22 +1393,23 @@ export async function handleVpsNetworkTargetsRequest(request, env) {
 
     const url = new URL(request.url);
     const nodeId = normalizeString(url.searchParams.get('nodeId'));
+    const isGlobal = nodeId === 'global';
     if (!nodeId) {
         return createErrorResponse('Node id required', 400);
     }
 
     if (request.method === 'GET') {
-        const targets = await fetchNetworkTargets(db, nodeId);
+        const targets = isGlobal ? await fetchGlobalNetworkTargets(db) : await fetchNetworkTargets(db, nodeId);
         return createJsonResponse({ success: true, data: targets });
     }
 
     if (request.method === 'POST') {
-    const payload = await request.json();
+        const payload = await request.json();
         const error = validateNetworkTarget(payload);
         if (error) {
             return createErrorResponse(error, 400);
         }
-        const current = await fetchNetworkTargets(db, nodeId);
+        const current = isGlobal ? await fetchGlobalNetworkTargets(db) : await fetchNetworkTargets(db, nodeId);
         const limit = clampNumber(settings?.vpsMonitor?.networkTargetsLimit, 1, 10, 3);
         if (current.length >= limit) {
             return createErrorResponse(`目标数量超过上限（${limit}）`, 400);

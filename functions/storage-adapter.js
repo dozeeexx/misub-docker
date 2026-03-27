@@ -48,6 +48,7 @@ const D1_SCHEMA_STATEMENTS = [
         secret TEXT NOT NULL,
         status TEXT NOT NULL,
         enabled INTEGER DEFAULT 1,
+        use_global_targets INTEGER DEFAULT 0,
         last_seen_at DATETIME,
         last_report_json TEXT,
         overload_state_json TEXT,

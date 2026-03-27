@@ -7,6 +7,7 @@ import Modal from '../components/forms/Modal.vue';
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
 import VpsNetworkTargets from '../components/vps/VpsNetworkTargets.vue';
 import VpsMonitorSettingsModal from '../components/modals/VpsMonitorSettingsModal.vue';
+import Switch from '../components/ui/Switch.vue';
 import { useSettingsStore } from '../stores/settings.js';
 
 const { showToast } = useToastStore();
@@ -53,7 +54,8 @@ const formState = ref({
   region: '',
   description: '',
   enabled: true,
-  secret: ''
+  secret: '',
+  useGlobalTargets: false
 });
 
 const statusBadge = (status) => {
@@ -113,7 +115,8 @@ const resetForm = () => {
     region: '',
     description: '',
     enabled: true,
-    secret: ''
+    secret: '',
+    useGlobalTargets: false
   };
 };
 
@@ -152,7 +155,8 @@ const openEdit = (node) => {
     region: node.region || '',
     description: node.description || '',
     enabled: node.enabled !== false,
-    secret: ''
+    secret: '',
+    useGlobalTargets: node.useGlobalTargets === true
   };
   showEditModal.value = true;
 };
@@ -264,7 +268,8 @@ const handleCreate = async () => {
     region: formState.value.region,
     description: formState.value.description,
     enabled: formState.value.enabled,
-    secret: formState.value.secret
+    secret: formState.value.secret,
+    useGlobalTargets: formState.value.useGlobalTargets
   });
   if (result.success) {
     showToast('节点已创建', 'success');
@@ -287,7 +292,8 @@ const handleUpdate = async () => {
     tag: formState.value.tag,
     region: formState.value.region,
     description: formState.value.description,
-    enabled: formState.value.enabled
+    enabled: formState.value.enabled,
+    useGlobalTargets: formState.value.useGlobalTargets
   };
   if (formState.value.secret && formState.value.secret.trim()) {
     payload.secret = formState.value.secret;
@@ -768,6 +774,13 @@ onMounted(() => {
           <input type="checkbox" v-model="formState.enabled" class="rounded border-gray-300" />
           启用节点
         </div>
+        <div class="flex items-center justify-between rounded-lg border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-gray-900/60 px-3 py-2">
+          <div>
+            <div class="text-sm text-gray-700 dark:text-gray-200">应用全局监测目标</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">使用探针设置中的全局网络监测目标</div>
+          </div>
+          <Switch v-model="formState.useGlobalTargets" />
+        </div>
       </div>
     </template>
   </Modal>
@@ -799,6 +812,13 @@ onMounted(() => {
         <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
           <input type="checkbox" v-model="formState.enabled" class="rounded border-gray-300" />
           启用节点
+        </div>
+        <div class="flex items-center justify-between rounded-lg border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-gray-900/60 px-3 py-2">
+          <div>
+            <div class="text-sm text-gray-700 dark:text-gray-200">应用全局监测目标</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">使用探针设置中的全局网络监测目标</div>
+          </div>
+          <Switch v-model="formState.useGlobalTargets" />
         </div>
         <div class="pt-2 border-t border-gray-200/80 dark:border-white/10">
           <button
