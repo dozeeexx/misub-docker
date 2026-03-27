@@ -618,7 +618,7 @@ onMounted(() => {
     </div>
   </div>
 
-  <Modal v-model:show="showCreateModal" @confirm="handleCreate" confirm-text="创建" cancel-text="取消">
+  <Modal v-model:show="showCreateModal" @confirm="handleCreate" confirm-text="创建" cancel-text="取消" size="lg">
     <template #title>
       <h3 class="text-lg font-bold text-gray-900 dark:text-white">新增 VPS 节点</h3>
     </template>
@@ -654,7 +654,7 @@ onMounted(() => {
     </template>
   </Modal>
 
-  <Modal v-model:show="showEditModal" @confirm="handleUpdate" confirm-text="保存" cancel-text="取消">
+  <Modal v-model:show="showEditModal" @confirm="handleUpdate" confirm-text="保存" cancel-text="取消" size="lg">
     <template #title>
       <h3 class="text-lg font-bold text-gray-900 dark:text-white">编辑 VPS 节点</h3>
     </template>
@@ -738,9 +738,9 @@ onMounted(() => {
           <label class="block text-xs text-gray-500 mb-1">请求头</label>
           <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto">{{ JSON.stringify(guidePayload.headers, null, 2) }}</pre>
         </div>
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">一键安装脚本</label>
-          <div class="flex items-center gap-2">
+        <details class="text-xs text-gray-500">
+          <summary class="cursor-pointer">查看一键安装脚本</summary>
+          <div class="mt-2 flex items-center gap-2">
             <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto flex-1">{{ guidePayload.installScript }}</pre>
             <button
               type="button"
@@ -750,7 +750,7 @@ onMounted(() => {
               复制
             </button>
           </div>
-        </div>
+        </details>
       </div>
       <div v-else class="text-sm text-gray-500">暂无安装信息</div>
     </template>
