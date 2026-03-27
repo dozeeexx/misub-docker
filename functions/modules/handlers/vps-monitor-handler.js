@@ -275,6 +275,27 @@ function clampPayloadUptime(value) {
     return Math.min(10 ** 9, num);
 }
 
+function rehydrateCheckNames(checks, targets) {
+    if (!Array.isArray(checks) || !Array.isArray(targets)) return checks;
+    // Create map for faster lookup: key is target address, value is name
+    const targetMap = new Map();
+    targets.forEach(t => {
+        if (t.target && t.name) {
+            targetMap.set(t.target.toLowerCase(), t.name);
+        }
+    });
+
+    return checks.map(check => {
+        if (!check.name && check.target) {
+            const name = targetMap.get(check.target.toLowerCase());
+            if (name) {
+                return { ...check, name };
+            }
+        }
+        return check;
+    });
+}
+
 function sanitizeNetworkChecks(checks) {
     if (!Array.isArray(checks)) return [];
     return checks.map((item) => {
@@ -1299,12 +1320,29 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
     const nodeIds = nodes.map(n => n.id);
     const latestSamples = await fetchLatestNetworkSamplesBatch(db, nodeIds);
     const samplesMap = new Map(latestSamples.map(s => [s.nodeId, s.checks]));
+    const placeholders = nodeIds.map(() => '?').join(',');
+
+    // Fetch ALL relevant targets in one go
+    const allTargetsResult = await db.prepare('SELECT * FROM vps_network_targets WHERE node_id IN (' + placeholders + ') OR node_id = ?').bind(...nodeIds, 'global').all();
+    const allTargetsMap = new Map(); // node_id -> targets[]
+    (allTargetsResult.results || []).forEach(row => {
+        const tid = row.node_id;
+        if (!allTargetsMap.has(tid)) allTargetsMap.set(tid, []);
+        allTargetsMap.get(tid).push({ target: row.target, name: row.name });
+    });
 
     const data = nodes.map(node => {
         const summary = summarizeNode(node, node.lastReport || null, settings);
         // Sync/Override with fresh samples from the samples table
-        const latestNetwork = samplesMap.get(node.id);
+        let latestNetwork = samplesMap.get(node.id);
+        
+        // Re-hydrate names
+        const nodeSpecificTargets = allTargetsMap.get(node.id) || [];
+        const globalTargets = allTargetsMap.get('global') || [];
+        const targets = node.useGlobalTargets ? globalTargets : nodeSpecificTargets;
+        
         if (latestNetwork && latestNetwork.length > 0) {
+            latestNetwork = rehydrateCheckNames(latestNetwork, targets);
             if (!summary.latest) summary.latest = { at: nowIso() };
             summary.latest.network = latestNetwork;
         }
@@ -1357,11 +1395,22 @@ export async function handleVpsNodeDetailRequest(request, env) {
 
     if (request.method === 'GET') {
         const latestReport = node.lastReport || null;
-        const reports = await fetchReportsForNode(db, nodeId, settings);
-    const nodeTargets = await fetchNetworkTargets(db, nodeId);
-    const globalTargets = node?.useGlobalTargets ? await fetchGlobalNetworkTargets(db) : [];
-    const targets = node?.useGlobalTargets ? globalTargets : nodeTargets;
-        const networkSamples = await fetchNetworkSamples(db, nodeId, settings);
+        let reports = await fetchReportsForNode(db, nodeId, settings);
+        const nodeTargets = await fetchNetworkTargets(db, nodeId);
+        const globalTargets = node?.useGlobalTargets ? await fetchGlobalNetworkTargets(db) : [];
+        const targets = node?.useGlobalTargets ? globalTargets : nodeTargets;
+        let networkSamples = await fetchNetworkSamples(db, nodeId, settings);
+
+        // Re-hydrate names in reports and samples
+        reports = reports.map(r => {
+            if (r.network) r.network = rehydrateCheckNames(r.network, targets);
+            return r;
+        });
+        networkSamples = networkSamples.map(s => {
+            if (s.checks) s.checks = rehydrateCheckNames(s.checks, targets);
+            return s;
+        });
+
         return createJsonResponse({
             success: true,
             data: summarizeNode(node, latestReport, settings),

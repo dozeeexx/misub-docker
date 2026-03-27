@@ -1027,7 +1027,8 @@ onMounted(() => {
                 {{ item.status }}
               </span>
               <span class="font-medium">{{ item.type.toUpperCase() }}</span>
-              <span>{{ item.target }}<span v-if="item.port">:{{ item.port }}</span>{{ item.path || '' }}</span>
+              <span class="font-medium truncate max-w-[120px]" v-if="item.name">{{ item.name }}</span>
+              <span :class="{ 'text-gray-400': item.name }">{{ item.target }}<span v-if="item.port">:{{ item.port }}</span>{{ item.path || '' }}</span>
             </div>
             <div class="flex flex-wrap items-center gap-2 text-[11px]">
               <span v-if="item.latencyMs">{{ item.latencyMs }}ms</span>
