@@ -143,6 +143,7 @@ function buildSnapshot(report, node) {
         load1: clampNumber(report.load?.load1, 0, 1000, null),
         uptimeSec: clampNumber(report.uptimeSec, 0, 10 ** 9, null),
         traffic: report.traffic || null,
+        network: report.network || null,
         ip: normalizeString(report.publicIp || report.ip || report.meta?.publicIp),
         receivedAt: report.receivedAt || report.createdAt || null
     };
@@ -1183,7 +1184,8 @@ export async function handleVpsReport(request, env) {
         disk: { usage: clampPayloadUsage(report.disk?.usage) },
         load: { load1: clampPayloadLoad(report.load?.load1) },
         uptimeSec: clampPayloadUptime(report.uptimeSec ?? report.uptime) ?? 0,
-        traffic: report.traffic || null
+        traffic: report.traffic || null,
+        network: sanitizedChecks.length ? sanitizedChecks : null
     };
 
     const networkPayload = report.network || report.checks || null;

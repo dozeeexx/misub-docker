@@ -167,6 +167,30 @@ const nodeSparkline = (node) => {
   return sparklinePoints([cpu, mem, disk]);
 };
 
+const flippedNodes = ref(new Set());
+const toggleFlip = (nodeId) => {
+  if (flippedNodes.value.has(nodeId)) {
+    flippedNodes.value.delete(nodeId);
+  } else {
+    flippedNodes.value.add(nodeId);
+  }
+};
+
+const getLatencyColor = (ms) => {
+  if (ms === null || ms === undefined) return 'text-[#8a7f70]';
+  if (ms < 100) return 'text-emerald-500';
+  if (ms < 300) return 'text-sky-500';
+  if (ms < 500) return 'text-amber-500';
+  return 'text-rose-500';
+};
+
+const getLossColor = (loss) => {
+  if (loss === null || loss === undefined) return 'text-[#8a7f70]';
+  if (loss === 0) return 'text-emerald-500';
+  if (loss < 10) return 'text-amber-500';
+  return 'text-rose-500';
+};
+
 onMounted(() => {
   loadSnapshot();
   startRotation();
@@ -176,6 +200,39 @@ onUnmounted(() => {
   stopRotation();
 });
 </script>
+
+<style scoped>
+.vps-card-container {
+  perspective: 1200px;
+  min-height: 220px;
+}
+
+.vps-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  cursor: pointer;
+}
+
+.vps-card-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.vps-card-front,
+.vps-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.vps-card-back {
+  transform: rotateY(180deg);
+}
+</style>
 
 <template>
   <div class="min-h-screen bg-[#f7f6f1] dark:bg-[#0a0d14]">
@@ -272,56 +329,100 @@ onUnmounted(() => {
               <span class="text-xs text-[#8a7f70] dark:text-slate-400">按在线优先展示</span>
             </div>
             <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div v-for="node in topNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55">
-                <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
-                  <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
-                    <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
-                    <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
-                    <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
-                    <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
-                  </div>
-                  <div
-                    class="h-1 rounded-full bg-gradient-to-r"
-                    :class="node.status === 'online'
-                      ? 'from-emerald-500 via-sky-400 to-amber-400'
-                      : 'from-rose-500 via-orange-400 to-amber-300'"
-                    :style="{ width: node.status === 'online' ? '100%' : '45%' }"
-                  ></div>
-                </div>
-                <div class="flex items-start justify-between mt-2">
-                  <div>
-                    <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
-                    <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
-                    <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
-                      <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                        🌍 {{ node.region || '未知地区' }}
-                      </span>
-                      <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                        ⚡ {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}
+              <div v-for="node in topNodes" :key="node.id" class="vps-card-container">
+                <div class="vps-card-inner" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)">
+                  <!-- Front Side -->
+                  <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55">
+                    <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
+                      <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
+                        <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                        <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                        <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                        <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                      </div>
+                      <div
+                        class="h-1 rounded-full bg-gradient-to-r"
+                        :class="node.status === 'online'
+                          ? 'from-emerald-500 via-sky-400 to-amber-400'
+                          : 'from-rose-500 via-orange-400 to-amber-300'"
+                        :style="{ width: node.status === 'online' ? '100%' : '45%' }"
+                      ></div>
+                    </div>
+                    <div class="flex items-start justify-between mt-2">
+                      <div>
+                        <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
+                        <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
+                        <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                          <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                            🌍 {{ node.region || '未知地区' }}
+                          </span>
+                          <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                            ⚡ {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}
+                          </span>
+                        </div>
+                      </div>
+                      <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
+                        :class="node.status === 'online'
+                          ? 'border-[#bbf7d0] bg-[#ecfdf3] text-[#0f766e] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300'
+                          : 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300'"
+                      >
+                        {{ node.status === 'online' ? '在线' : '离线' }}
                       </span>
                     </div>
+                    <div class="mt-3 flex items-center justify-between">
+                      <svg viewBox="0 0 120 32" class="h-8 w-28">
+                        <polyline :points="nodeSparkline(node)" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" />
+                      </svg>
+                      <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">CPU/MEM/DISK</span>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
+                      <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
+                      <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
+                      <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
+                      <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
+                    </div>
                   </div>
-                  <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
-                    :class="node.status === 'online'
-                      ? 'border-[#bbf7d0] bg-[#ecfdf3] text-[#0f766e] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300'
-                      : 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300'"
-                  >
-                    {{ node.status === 'online' ? '在线' : '离线' }}
-                  </span>
-                </div>
-                <div class="mt-3 flex items-center justify-between">
-                  <svg viewBox="0 0 120 32" class="h-8 w-28">
-                    <polyline :points="nodeSparkline(node)" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" />
-                  </svg>
-                  <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">CPU/MEM/DISK</span>
-                </div>
-                <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
-                  <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
-                  <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
-                  <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
-                  <div>负载 {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}</div>
-                  <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
-                  <div>运行 {{ formatUptime(node.latest?.uptimeSec) }}</div>
+
+                  <!-- Back Side: Network Metrics -->
+                  <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/95 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/65">
+                    <div class="flex items-center justify-between mb-3 border-b border-[#efe6db] pb-2 dark:border-slate-800">
+                      <h4 class="text-xs font-semibold text-[#1f1b17] dark:text-slate-100 flex items-center gap-1">
+                        <span class="text-blue-500">🌐</span> 网络延时与丢包
+                      </h4>
+                      <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">点击返回</span>
+                    </div>
+                    <div v-if="node.latest?.network && node.latest.network.length" class="space-y-2.5 max-h-[160px] overflow-y-auto pr-1">
+                      <div v-for="(check, idx) in node.latest.network" :key="idx" class="flex flex-col gap-1 p-2 rounded-lg bg-white/50 dark:bg-slate-800/40 border border-black/5">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[10px] font-medium text-[#1f1b17] dark:text-slate-200 truncate max-w-[120px]" :title="check.target">
+                            {{ check.target }}
+                          </span>
+                          <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 uppercase">
+                            {{ check.type }}
+                          </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-[9px] text-[#8a7f70]">延时:</span>
+                            <span class="text-xs font-semibold" :class="getLatencyColor(check.latencyMs)">
+                              {{ check.latencyMs !== null ? check.latencyMs + 'ms' : '--' }}
+                            </span>
+                          </div>
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-[9px] text-[#8a7f70]">丢包:</span>
+                            <span class="text-xs font-semibold" :class="getLossColor(check.lossPercent)">
+                              {{ check.lossPercent !== null ? check.lossPercent + '%' : '--' }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="flex flex-col items-center justify-center h-[140px] text-center">
+                      <span class="text-2xl mb-2 opacity-30">📡</span>
+                      <p class="text-xs text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
+                      <p class="text-[10px] text-[#8a7f70]/60 dark:text-slate-500 mt-1">请检查探针端配置</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -431,56 +532,100 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <div v-for="node in sortedNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55">
-              <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
-                <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
-                  <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
-                  <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
-                  <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
-                  <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
-                </div>
-                <div
-                  class="h-1 rounded-full bg-gradient-to-r"
-                  :class="node.status === 'online'
-                    ? 'from-emerald-500 via-sky-400 to-amber-400'
-                    : 'from-rose-500 via-orange-400 to-amber-300'"
-                  :style="{ width: node.status === 'online' ? '100%' : '45%' }"
-                ></div>
-              </div>
-              <div class="flex items-start justify-between mt-2">
-                <div>
-                  <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
-                  <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
-                  <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
-                    <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                      🛰 {{ node.latest?.ip || node.latest?.publicIp || '--' }}
-                    </span>
-                    <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                      ⏱ {{ formatUptime(node.latest?.uptimeSec) }}
+            <div v-for="node in sortedNodes" :key="node.id" class="vps-card-container">
+              <div class="vps-card-inner" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)">
+                <!-- Front Side -->
+                <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55">
+                  <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
+                    <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
+                      <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                      <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                      <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                      <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
+                    </div>
+                    <div
+                      class="h-1 rounded-full bg-gradient-to-r"
+                      :class="node.status === 'online'
+                        ? 'from-emerald-500 via-sky-400 to-amber-400'
+                        : 'from-rose-500 via-orange-400 to-amber-300'"
+                      :style="{ width: node.status === 'online' ? '100%' : '45%' }"
+                    ></div>
+                  </div>
+                  <div class="flex items-start justify-between mt-2">
+                    <div>
+                      <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
+                      <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
+                      <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                        <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                          🛰 {{ node.latest?.ip || node.latest?.publicIp || '--' }}
+                        </span>
+                        <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                          ⏱ {{ formatUptime(node.latest?.uptimeSec) }}
+                        </span>
+                      </div>
+                    </div>
+                    <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
+                      :class="node.status === 'online'
+                        ? 'border-[#bbf7d0] bg-[#ecfdf3] text-[#0f766e] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300'
+                        : 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300'"
+                    >
+                      {{ node.status === 'online' ? '在线' : '离线' }}
                     </span>
                   </div>
+                  <div class="mt-3 flex items-center justify-between">
+                    <svg viewBox="0 0 120 32" class="h-8 w-28">
+                      <polyline :points="nodeSparkline(node)" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">CPU/MEM/DISK</span>
+                  </div>
+                  <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
+                    <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
+                    <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
+                    <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
+                    <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
+                  </div>
                 </div>
-                <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
-                  :class="node.status === 'online'
-                    ? 'border-[#bbf7d0] bg-[#ecfdf3] text-[#0f766e] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300'
-                    : 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300'"
-                >
-                  {{ node.status === 'online' ? '在线' : '离线' }}
-                </span>
-              </div>
-              <div class="mt-3 flex items-center justify-between">
-                <svg viewBox="0 0 120 32" class="h-8 w-28">
-                  <polyline :points="nodeSparkline(node)" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" />
-                </svg>
-                <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">CPU/MEM/DISK</span>
-              </div>
-              <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
-                <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
-                <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
-                <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
-                <div>负载 {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}</div>
-                <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
-                <div>运行 {{ formatUptime(node.latest?.uptimeSec) }}</div>
+
+                <!-- Back Side: Network Metrics -->
+                <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/95 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/65">
+                  <div class="flex items-center justify-between mb-3 border-b border-[#efe6db] pb-2 dark:border-slate-800">
+                    <h4 class="text-xs font-semibold text-[#1f1b17] dark:text-slate-100 flex items-center gap-1">
+                      <span class="text-blue-500">🌐</span> 网络延时与丢包
+                    </h4>
+                    <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">点击返回</span>
+                  </div>
+                  <div v-if="node.latest?.network && node.latest.network.length" class="space-y-2.5 max-h-[160px] overflow-y-auto pr-1">
+                    <div v-for="(check, idx) in node.latest.network" :key="idx" class="flex flex-col gap-1 p-2 rounded-lg bg-white/50 dark:bg-slate-800/40 border border-black/5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-medium text-[#1f1b17] dark:text-slate-200 truncate max-w-[120px]" :title="check.target">
+                          {{ check.target }}
+                        </span>
+                        <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 uppercase">
+                          {{ check.type }}
+                        </span>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2 mt-1">
+                        <div class="flex items-center gap-1.5">
+                          <span class="text-[9px] text-[#8a7f70]">延时:</span>
+                          <span class="text-xs font-semibold" :class="getLatencyColor(check.latencyMs)">
+                            {{ check.latencyMs !== null ? check.latencyMs + 'ms' : '--' }}
+                          </span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                          <span class="text-[9px] text-[#8a7f70]">丢包:</span>
+                          <span class="text-xs font-semibold" :class="getLossColor(check.lossPercent)">
+                            {{ check.lossPercent !== null ? check.lossPercent + '%' : '--' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="flex flex-col items-center justify-center h-[140px] text-center">
+                    <span class="text-2xl mb-2 opacity-30">📡</span>
+                    <p class="text-xs text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
+                    <p class="text-[10px] text-[#8a7f70]/60 dark:text-slate-500 mt-1">请检查探针端配置</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
