@@ -2,7 +2,6 @@
 import SubConverterCard from './ServiceSettings/SubConverterCard.vue';
 import TelegramCard from './ServiceSettings/TelegramCard.vue';
 import CronCard from './ServiceSettings/CronCard.vue';
-import VpsMonitorCard from './ServiceSettings/VpsMonitorCard.vue';
 
 defineProps({
   settings: {
@@ -17,6 +16,5 @@ defineProps({
     <SubConverterCard :settings="settings" />
     <TelegramCard :settings="settings" />
     <CronCard :settings="settings" />
-    <VpsMonitorCard :settings="settings" />
   </div>
 </template>

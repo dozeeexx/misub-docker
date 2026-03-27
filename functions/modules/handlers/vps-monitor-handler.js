@@ -338,10 +338,15 @@ async function fetchReportsForNode(db, nodeId, settings) {
     return (result.results || []).map(row => JSON.parse(row.data));
 }
 
+function buildInstallScript(reportUrl, node) {
+    return `#!/usr/bin/env bash\n\nset -euo pipefail\n\nREPORT_URL="${reportUrl}"\nNODE_ID="${node.id}"\nNODE_SECRET="${node.secret}"\n\ncat > /usr/local/bin/misub-vps-probe.sh <<'EOF'\n#!/usr/bin/env bash\nset -euo pipefail\n\nREPORT_URL="${reportUrl}"\nNODE_ID="${node.id}"\nNODE_SECRET="${node.secret}"\n\nHOSTNAME="$(hostname)"\nOS="$(. /etc/os-release && echo \"$PRETTY_NAME\" || uname -s)"\nARCH="$(uname -m)"\nKERNEL="$(uname -r)"\nUPTIME_SEC="$(awk '{print int($1)}' /proc/uptime)"\n\nCPU_USAGE="$(top -bn1 | awk '/Cpu/ {print 100 - $8}')"\nMEM_USAGE="$(free | awk '/Mem/ {printf \\"%.0f\\", $3/$2*100}')"\nDISK_USAGE="$(df -P / | awk 'NR==2 {gsub(/%/,\"\"); print $5}')"\nLOAD1="$(awk '{print $1}' /proc/loadavg)"\n\nPAYLOAD=$(cat <<PAYLOAD_EOF\n{\n  \"hostname\": \"${HOSTNAME}\",\n  \"os\": \"${OS}\",\n  \"arch\": \"${ARCH}\",\n  \"kernel\": \"${KERNEL}\",\n  \"uptimeSec\": ${UPTIME_SEC},\n  \"cpu\": { \"usage\": ${CPU_USAGE} },\n  \"mem\": { \"usage\": ${MEM_USAGE} },\n  \"disk\": { \"usage\": ${DISK_USAGE} },\n  \"load\": { \"load1\": ${LOAD1} }\n}\nPAYLOAD_EOF\n)\n\ncurl -sS -X POST \"${reportUrl}\" \\\n+  -H \"Content-Type: application/json\" \\\n+  -H \"x-node-id: ${node.id}\" \\\n+  -H \"x-node-secret: ${node.secret}\" \\\n+  --data \"${PAYLOAD}\" >/dev/null\nEOF\n\nchmod +x /usr/local/bin/misub-vps-probe.sh\n\ncat > /etc/systemd/system/misub-vps-probe.service <<'EOF'\n[Unit]\nDescription=MiSub VPS Probe\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=oneshot\nExecStart=/usr/local/bin/misub-vps-probe.sh\nEOF\n\ncat > /etc/systemd/system/misub-vps-probe.timer <<'EOF'\n[Unit]\nDescription=MiSub VPS Probe Timer\n\n[Timer]\nOnBootSec=2min\nOnUnitActiveSec=60s\nUnit=misub-vps-probe.service\nPersistent=true\n\n[Install]\nWantedBy=timers.target\nEOF\n\nsystemctl daemon-reload\n\nsystemctl enable --now misub-vps-probe.timer\n\nsystemctl status misub-vps-probe.timer --no-pager`;
+}
+
 function buildPublicGuide(env, request, node) {
     const baseUrl = getPublicBaseUrl(env, new URL(request.url));
     const reportUrl = `${baseUrl.origin}/api/vps/report`;
-    const installScript = `#!/usr/bin/env bash\n\nset -euo pipefail\n\nREPORT_URL="${reportUrl}"\nNODE_ID="${node.id}"\nNODE_SECRET="${node.secret}"\n\ncat > /usr/local/bin/misub-vps-probe.sh <<'EOF'\n#!/usr/bin/env bash\nset -euo pipefail\n\nREPORT_URL="${reportUrl}"\nNODE_ID="${node.id}"\nNODE_SECRET="${node.secret}"\n\nHOSTNAME="$(hostname)"\nOS="$(. /etc/os-release && echo \"$PRETTY_NAME\" || uname -s)"\nARCH="$(uname -m)"\nKERNEL="$(uname -r)"\nUPTIME_SEC="$(awk '{print int($1)}' /proc/uptime)"\n\nCPU_USAGE="$(top -bn1 | awk '/Cpu/ {print 100 - $8}')"\nMEM_USAGE="$(free | awk '/Mem/ {printf \\"%.0f\\", $3/$2*100}')"\nDISK_USAGE="$(df -P / | awk 'NR==2 {gsub(/%/,\"\"); print $5}')"\nLOAD1="$(awk '{print $1}' /proc/loadavg)"\n\nPAYLOAD=$(cat <<PAYLOAD_EOF\n{\n  \"hostname\": \"${HOSTNAME}\",\n  \"os\": \"${OS}\",\n  \"arch\": \"${ARCH}\",\n  \"kernel\": \"${KERNEL}\",\n  \"uptimeSec\": ${UPTIME_SEC},\n  \"cpu\": { \"usage\": ${CPU_USAGE} },\n  \"mem\": { \"usage\": ${MEM_USAGE} },\n  \"disk\": { \"usage\": ${DISK_USAGE} },\n  \"load\": { \"load1\": ${LOAD1} }\n}\nPAYLOAD_EOF\n)\n\ncurl -sS -X POST \"${REPORT_URL}\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"x-node-id: ${NODE_ID}\" \\\n  -H \"x-node-secret: ${NODE_SECRET}\" \\\n  --data \"${PAYLOAD}\" >/dev/null\nEOF\n\nchmod +x /usr/local/bin/misub-vps-probe.sh\n\ncat > /etc/systemd/system/misub-vps-probe.service <<'EOF'\n[Unit]\nDescription=MiSub VPS Probe\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=oneshot\nExecStart=/usr/local/bin/misub-vps-probe.sh\nEOF\n\ncat > /etc/systemd/system/misub-vps-probe.timer <<'EOF'\n[Unit]\nDescription=MiSub VPS Probe Timer\n\n[Timer]\nOnBootSec=2min\nOnUnitActiveSec=60s\nUnit=misub-vps-probe.service\nPersistent=true\n\n[Install]\nWantedBy=timers.target\nEOF\n\nsystemctl daemon-reload\n\nsystemctl enable --now misub-vps-probe.timer\n\nsystemctl status misub-vps-probe.timer --no-pager`;
+    const installScript = buildInstallScript(reportUrl, node);
+    const installCommand = `curl -fsSL "${baseUrl.origin}/api/vps/install?nodeId=${node.id}&secret=${node.secret}" | bash`;
     return {
         reportUrl,
         nodeId: node.id,
@@ -351,221 +356,48 @@ function buildPublicGuide(env, request, node) {
             'x-node-id': node.id,
             'x-node-secret': node.secret
         },
-        installScript
+        installScript,
+        installCommand
     };
 }
 
-export async function handleVpsReport(request, env) {
-    const d1Check = ensureD1Available(env);
-    if (d1Check) return d1Check;
-    if (request.method !== 'POST') {
+export async function handleVpsInstallScript(request, env) {
+    if (request.method !== 'GET') {
         return createErrorResponse('Method Not Allowed', 405);
     }
-
-    let payload;
-    try {
-        payload = await request.json();
-    } catch (error) {
-        return createErrorResponse('Invalid JSON', 400);
-    }
-
-    const nodeId = normalizeString(request.headers.get('x-node-id') || payload?.nodeId);
-    const nodeSecret = normalizeString(request.headers.get('x-node-secret') || payload?.secret);
-
-    if (!nodeId) {
-        return createErrorResponse('Missing node id', 401);
-    }
-
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
-    const storageModeCheck = ensureD1StorageMode(settings);
-    if (storageModeCheck) return storageModeCheck;
-
-    const db = getD1(env);
-
-    if (settings?.vpsMonitor?.enabled === false) {
-        return createErrorResponse('VPS monitor disabled', 403);
-    }
-
-    const node = await fetchNode(db, nodeId);
-    if (!node) {
-        return createErrorResponse('Node not found', 404);
-    }
-    if (node.enabled === false) {
-        return createErrorResponse('Node disabled', 403);
-    }
-    if (settings?.vpsMonitor?.requireSecret !== false) {
-        if (!nodeSecret) {
-            return createErrorResponse('Missing node secret', 401);
-        }
-        if (node.secret !== nodeSecret) {
-            return createErrorResponse('Unauthorized', 401);
-        }
-    }
-
-    const report = payload?.report || payload;
-    const reportedAt = normalizeString(report.reportedAt || report.at || '') || nowIso();
-
-    const normalizedReport = {
-        id: crypto.randomUUID(),
-        nodeId: node.id,
-        reportedAt,
-        createdAt: nowIso(),
-        meta: {
-            hostname: normalizeString(report.hostname || report.host),
-            os: normalizeString(report.os || report.platform),
-            arch: normalizeString(report.arch),
-            kernel: normalizeString(report.kernel),
-            version: normalizeString(report.version),
-            publicIp: normalizeString(report.publicIp || report.ip || getClientIp(request))
-        },
-        cpu: report.cpu || {},
-        mem: report.mem || {},
-        disk: report.disk || {},
-        load: report.load || {},
-        uptimeSec: clampNumber(report.uptimeSec || report.uptime || 0, 0, 10 ** 9, 0),
-        traffic: report.traffic || null
-    };
-
-    await insertReport(db, normalizedReport);
-    await pruneReports(db, settings);
-
-    node.lastSeenAt = normalizedReport.reportedAt;
-    await updateNodeStatus(db, settings, node, normalizedReport);
-    node.lastReport = buildSnapshot(normalizedReport, node);
-    node.updatedAt = nowIso();
-    await updateNode(db, node);
-
-    return createJsonResponse({ success: true });
-}
-
-export async function handleVpsNodesRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
+
     const storageAdapter = await getStorageAdapter(env);
     const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
     const storageModeCheck = ensureD1StorageMode(settings);
     if (storageModeCheck) return storageModeCheck;
-    const db = getD1(env);
-    const nodes = await fetchNodes(db);
-
-    if (request.method === 'GET') {
-        const data = nodes.map(node => summarizeNode(node, node.lastReport || null, settings));
-        return createJsonResponse({ success: true, data });
-    }
-
-    if (request.method === 'POST') {
-        const body = await request.json();
-        const name = normalizeString(body.name);
-        if (!name) {
-            return createErrorResponse('Name is required', 400);
-        }
-
-        const node = {
-            id: crypto.randomUUID(),
-            name,
-            tag: normalizeString(body.tag),
-            region: normalizeString(body.region),
-            description: normalizeString(body.description),
-            secret: normalizeString(body.secret) || crypto.randomUUID(),
-            status: 'offline',
-            enabled: body.enabled !== false,
-            createdAt: nowIso(),
-            updatedAt: nowIso(),
-            lastSeenAt: null,
-            lastReport: null
-        };
-        await insertNode(db, node);
-
-        return createJsonResponse({ success: true, data: node, guide: buildPublicGuide(env, request, node) });
-    }
-
-    return createErrorResponse('Method Not Allowed', 405);
-}
-
-export async function handleVpsNodeDetailRequest(request, env) {
-    const d1Check = ensureD1Available(env);
-    if (d1Check) return d1Check;
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
-    const storageModeCheck = ensureD1StorageMode(settings);
-    if (storageModeCheck) return storageModeCheck;
-    const db = getD1(env);
 
     const url = new URL(request.url);
-    let nodeId = normalizeString(url.pathname.split('/').pop());
-    if (nodeId === 'nodes') {
-        nodeId = normalizeString(url.searchParams.get('id'));
+    const nodeId = normalizeString(url.searchParams.get('nodeId'));
+    const nodeSecret = normalizeString(url.searchParams.get('secret'));
+    if (!nodeId || !nodeSecret) {
+        return createErrorResponse('Missing node credentials', 401);
     }
-    if (!nodeId) {
-        return createErrorResponse('Node id required', 400);
-    }
+
+    const db = getD1(env);
     const node = await fetchNode(db, nodeId);
     if (!node) {
         return createErrorResponse('Node not found', 404);
     }
-
-    if (request.method === 'GET') {
-        const latestReport = node.lastReport || null;
-        const reports = await fetchReportsForNode(db, nodeId, settings);
-        return createJsonResponse({
-            success: true,
-            data: summarizeNode(node, latestReport, settings),
-            reports
-        });
+    if (node.secret !== nodeSecret) {
+        return createErrorResponse('Unauthorized', 401);
     }
 
-    if (request.method === 'PATCH') {
-        const body = await request.json();
-        const fields = ['name', 'tag', 'region', 'description'];
-        fields.forEach(field => {
-            if (body[field] !== undefined) {
-                node[field] = normalizeString(body[field]);
-            }
-        });
-        if (typeof body.enabled === 'boolean') {
-            node.enabled = body.enabled;
+    const baseUrl = getPublicBaseUrl(env, new URL(request.url));
+    const reportUrl = `${baseUrl.origin}/api/vps/report`;
+    const script = buildInstallScript(reportUrl, node);
+    return new Response(script, {
+        status: 200,
+        headers: {
+            'Content-Type': 'text/plain; charset=utf-8'
         }
-        if (body.resetSecret) {
-            node.secret = crypto.randomUUID();
-        }
-        node.updatedAt = nowIso();
-        await updateNode(db, node);
-        return createJsonResponse({ success: true, data: node, guide: buildPublicGuide(env, request, node) });
-    }
-
-    if (request.method === 'DELETE') {
-        await deleteNode(db, nodeId);
-        return createJsonResponse({ success: true, data: node });
-    }
-
-    return createErrorResponse('Method Not Allowed', 405);
+    });
 }
 
-export async function handleVpsAlertsRequest(request, env) {
-    const d1Check = ensureD1Available(env);
-    if (d1Check) return d1Check;
-    const storageAdapter = await getStorageAdapter(env);
-    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
-    const storageModeCheck = ensureD1StorageMode(settings);
-    if (storageModeCheck) return storageModeCheck;
-    const db = getD1(env);
-    if (request.method === 'GET') {
-        const result = await db.prepare('SELECT * FROM vps_alerts ORDER BY created_at DESC').all();
-        const alerts = (result.results || []).map(row => ({
-            id: row.id,
-            nodeId: row.node_id,
-            type: row.type,
-            message: row.message,
-            createdAt: row.created_at
-        }));
-        return createJsonResponse({ success: true, data: alerts });
-    }
-
-    if (request.method === 'DELETE') {
-        await db.prepare('DELETE FROM vps_alerts').run();
-        return createJsonResponse({ success: true });
-    }
-
-    return createErrorResponse('Method Not Allowed', 405);
-}
+export { buildPublicGuide };

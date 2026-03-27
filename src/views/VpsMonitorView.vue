@@ -5,8 +5,11 @@ import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAle
 import DataGrid from '../components/shared/DataGrid.vue';
 import Modal from '../components/forms/Modal.vue';
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
+import VpsMonitorSettingsModal from '../components/modals/VpsMonitorSettingsModal.vue';
+import { useSettingsStore } from '../stores/settings.js';
 
 const { showToast } = useToastStore();
+const { settings } = useSettingsStore();
 
 const isLoading = ref(false);
 const nodes = ref([]);
@@ -19,6 +22,7 @@ const showEditModal = ref(false);
 const showGuideModal = ref(false);
 const showDeleteModal = ref(false);
 const showDetailModal = ref(false);
+const showSettingsModal = ref(false);
 
 const editingNode = ref(null);
 const guidePayload = ref(null);
@@ -97,6 +101,10 @@ const resetForm = () => {
 const openCreate = () => {
   resetForm();
   showCreateModal.value = true;
+};
+
+const openSettings = () => {
+  showSettingsModal.value = true;
 };
 
 const openEdit = (node) => {
@@ -366,6 +374,12 @@ onMounted(loadData);
           刷新
         </button>
         <button
+          @click="openSettings"
+          class="px-4 py-2 text-sm font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm"
+        >
+          探针设置
+        </button>
+        <button
           @click="openCreate"
           class="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 misub-radius-lg transition-colors shadow-sm shadow-primary-500/20"
         >
@@ -626,6 +640,10 @@ onMounted(loadData);
           <label class="block text-xs text-gray-500 mb-1">一键安装脚本</label>
           <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto">{{ guidePayload.installScript }}</pre>
         </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">一行安装命令</label>
+          <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto">{{ guidePayload.installCommand }}</pre>
+        </div>
       </div>
       <div v-else class="text-sm text-gray-500">暂无安装信息</div>
     </template>
@@ -717,4 +735,6 @@ onMounted(loadData);
       <div v-else class="text-sm text-gray-500">正在加载...</div>
     </template>
   </Modal>
+
+  <VpsMonitorSettingsModal v-model:show="showSettingsModal" :settings="settings" />
 </template>

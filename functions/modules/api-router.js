@@ -41,7 +41,8 @@ import {
     handleVpsReport,
     handleVpsNodesRequest,
     handleVpsNodeDetailRequest,
-    handleVpsAlertsRequest
+    handleVpsAlertsRequest,
+    handleVpsInstallScript
 } from './handlers/vps-monitor-handler.js';
 
 // 常量定义
@@ -166,6 +167,11 @@ export async function handleApiRequest(request, env) {
     // VPS monitor public report endpoint
     if (path === '/vps/report') {
         return await handleVpsReport(request, env);
+    }
+
+    // VPS monitor install script endpoint (public)
+    if (path === '/vps/install') {
+        return await handleVpsInstallScript(request, env);
     }
 
     // Public GET access for clients
