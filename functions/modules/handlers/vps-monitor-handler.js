@@ -837,6 +837,7 @@ function buildInstallScript(reportUrl, node) {
         "MEM_USAGE=\"$(free | awk '/Mem/ {printf \"%.0f\", $3/$2*100}')\"",
         "DISK_USAGE=\"$(df -P / | awk 'NR==2 {gsub(/%/,\"\"); print $5}')\"",
         "LOAD1=\"$(awk '{print $1}' /proc/loadavg)\"",
+        "TRAFFIC_JSON=\"$(cat /proc/net/dev | awk 'NR>2 && $1 != \"lo:\" {rx += $2; tx += $10} END {printf \"{\\\"rx\\\": %d, \\\"tx\\\": %d}\", rx, tx}')\"",
         '',
         'REPORT_INTERVAL=60',
         'REPORT_STORE_INTERVAL=60',
@@ -930,6 +931,7 @@ function buildInstallScript(reportUrl, node) {
         '  "mem": { "usage": \${MEM_USAGE} },',
         '  "disk": { "usage": \${DISK_USAGE} },',
         '  "load": { "load1": \${LOAD1} },',
+        '  "traffic": \${TRAFFIC_JSON},',
         '  "network": ${NETWORK_JSON}',
         '}',
         'PAYLOAD_EOF',
@@ -1346,6 +1348,13 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
             if (!summary.latest) summary.latest = { at: nowIso() };
             summary.latest.network = latestNetwork;
         }
+
+        // Security: Remove sensitive IP information from public snapshot
+        if (summary.latest) {
+            if (summary.latest.publicIp) delete summary.latest.publicIp;
+            if (summary.latest.ip) delete summary.latest.ip;
+        }
+
         return summary;
     });
 

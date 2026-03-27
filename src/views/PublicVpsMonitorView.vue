@@ -551,9 +551,6 @@ onUnmounted(() => {
                       <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
                       <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
                         <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                          🛰 {{ node.latest?.ip || node.latest?.publicIp || '--' }}
-                        </span>
-                        <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                           ⏱ {{ formatUptime(node.latest?.uptimeSec) }}
                         </span>
                       </div>
