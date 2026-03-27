@@ -401,3 +401,220 @@ export async function handleVpsInstallScript(request, env) {
 }
 
 export { buildPublicGuide };
+
+export async function handleVpsReport(request, env) {
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+    if (request.method !== 'POST') {
+        return createErrorResponse('Method Not Allowed', 405);
+    }
+
+    let payload;
+    try {
+        payload = await request.json();
+    } catch (error) {
+        return createErrorResponse('Invalid JSON', 400);
+    }
+
+    const nodeId = normalizeString(request.headers.get('x-node-id') || payload?.nodeId);
+    const nodeSecret = normalizeString(request.headers.get('x-node-secret') || payload?.secret);
+
+    if (!nodeId) {
+        return createErrorResponse('Missing node id', 401);
+    }
+
+    const storageAdapter = await getStorageAdapter(env);
+    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const storageModeCheck = ensureD1StorageMode(settings);
+    if (storageModeCheck) return storageModeCheck;
+
+    const db = getD1(env);
+
+    if (settings?.vpsMonitor?.enabled === false) {
+        return createErrorResponse('VPS monitor disabled', 403);
+    }
+
+    const node = await fetchNode(db, nodeId);
+    if (!node) {
+        return createErrorResponse('Node not found', 404);
+    }
+    if (node.enabled === false) {
+        return createErrorResponse('Node disabled', 403);
+    }
+    if (settings?.vpsMonitor?.requireSecret !== false) {
+        if (!nodeSecret) {
+            return createErrorResponse('Missing node secret', 401);
+        }
+        if (node.secret !== nodeSecret) {
+            return createErrorResponse('Unauthorized', 401);
+        }
+    }
+
+    const report = payload?.report || payload;
+    const reportedAt = normalizeString(report.reportedAt || report.at || '') || nowIso();
+
+    const normalizedReport = {
+        id: crypto.randomUUID(),
+        nodeId: node.id,
+        reportedAt,
+        createdAt: nowIso(),
+        meta: {
+            hostname: normalizeString(report.hostname || report.host),
+            os: normalizeString(report.os || report.platform),
+            arch: normalizeString(report.arch),
+            kernel: normalizeString(report.kernel),
+            version: normalizeString(report.version),
+            publicIp: normalizeString(report.publicIp || report.ip || getClientIp(request))
+        },
+        cpu: report.cpu || {},
+        mem: report.mem || {},
+        disk: report.disk || {},
+        load: report.load || {},
+        uptimeSec: clampNumber(report.uptimeSec || report.uptime || 0, 0, 10 ** 9, 0),
+        traffic: report.traffic || null
+    };
+
+    await insertReport(db, normalizedReport);
+    await pruneReports(db, settings);
+
+    node.lastSeenAt = normalizedReport.reportedAt;
+    await updateNodeStatus(db, settings, node, normalizedReport);
+    node.lastReport = buildSnapshot(normalizedReport, node);
+    node.updatedAt = nowIso();
+    await updateNode(db, node);
+
+    return createJsonResponse({ success: true });
+}
+
+export async function handleVpsNodesRequest(request, env) {
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+    const storageAdapter = await getStorageAdapter(env);
+    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const storageModeCheck = ensureD1StorageMode(settings);
+    if (storageModeCheck) return storageModeCheck;
+    const db = getD1(env);
+    const nodes = await fetchNodes(db);
+
+    if (request.method === 'GET') {
+        const data = nodes.map(node => summarizeNode(node, node.lastReport || null, settings));
+        return createJsonResponse({ success: true, data });
+    }
+
+    if (request.method === 'POST') {
+        const body = await request.json();
+        const name = normalizeString(body.name);
+        if (!name) {
+            return createErrorResponse('Name is required', 400);
+        }
+
+        const node = {
+            id: crypto.randomUUID(),
+            name,
+            tag: normalizeString(body.tag),
+            region: normalizeString(body.region),
+            description: normalizeString(body.description),
+            secret: normalizeString(body.secret) || crypto.randomUUID(),
+            status: 'offline',
+            enabled: body.enabled !== false,
+            createdAt: nowIso(),
+            updatedAt: nowIso(),
+            lastSeenAt: null,
+            lastReport: null
+        };
+        await insertNode(db, node);
+
+        return createJsonResponse({ success: true, data: node, guide: buildPublicGuide(env, request, node) });
+    }
+
+    return createErrorResponse('Method Not Allowed', 405);
+}
+
+export async function handleVpsNodeDetailRequest(request, env) {
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+    const storageAdapter = await getStorageAdapter(env);
+    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const storageModeCheck = ensureD1StorageMode(settings);
+    if (storageModeCheck) return storageModeCheck;
+    const db = getD1(env);
+
+    const url = new URL(request.url);
+    let nodeId = normalizeString(url.pathname.split('/').pop());
+    if (nodeId === 'nodes') {
+        nodeId = normalizeString(url.searchParams.get('id'));
+    }
+    if (!nodeId) {
+        return createErrorResponse('Node id required', 400);
+    }
+
+    const node = await fetchNode(db, nodeId);
+    if (!node) {
+        return createErrorResponse('Node not found', 404);
+    }
+
+    if (request.method === 'GET') {
+        const latestReport = node.lastReport || null;
+        const reports = await fetchReportsForNode(db, nodeId, settings);
+        return createJsonResponse({
+            success: true,
+            data: summarizeNode(node, latestReport, settings),
+            reports
+        });
+    }
+
+    if (request.method === 'PATCH') {
+        const body = await request.json();
+        const fields = ['name', 'tag', 'region', 'description'];
+        fields.forEach(field => {
+            if (body[field] !== undefined) {
+                node[field] = normalizeString(body[field]);
+            }
+        });
+        if (typeof body.enabled === 'boolean') {
+            node.enabled = body.enabled;
+        }
+        if (body.resetSecret) {
+            node.secret = crypto.randomUUID();
+        }
+        node.updatedAt = nowIso();
+        await updateNode(db, node);
+        return createJsonResponse({ success: true, data: node, guide: buildPublicGuide(env, request, node) });
+    }
+
+    if (request.method === 'DELETE') {
+        await deleteNode(db, nodeId);
+        return createJsonResponse({ success: true, data: node });
+    }
+
+    return createErrorResponse('Method Not Allowed', 405);
+}
+
+export async function handleVpsAlertsRequest(request, env) {
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+    const storageAdapter = await getStorageAdapter(env);
+    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const storageModeCheck = ensureD1StorageMode(settings);
+    if (storageModeCheck) return storageModeCheck;
+    const db = getD1(env);
+
+    if (request.method === 'GET') {
+        const result = await db.prepare('SELECT * FROM vps_alerts ORDER BY created_at DESC').all();
+        const alerts = (result.results || []).map(row => ({
+            id: row.id,
+            nodeId: row.node_id,
+            type: row.type,
+            message: row.message,
+            createdAt: row.created_at
+        }));
+        return createJsonResponse({ success: true, data: alerts });
+    }
+
+    if (request.method === 'DELETE') {
+        await db.prepare('DELETE FROM vps_alerts').run();
+        return createJsonResponse({ success: true });
+    }
+
+    return createErrorResponse('Method Not Allowed', 405);
+}
