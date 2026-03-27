@@ -335,6 +335,127 @@ async function fetchReportsForNode(db, nodeId, settings) {
     return (result.results || []).map(row => JSON.parse(row.data));
 }
 
+async function fetchNetworkSamples(db, nodeId, settings) {
+    const cutoff = new Date(getReportRetentionCutoff(settings)).toISOString();
+    const result = await db.prepare(
+        'SELECT data FROM vps_network_samples WHERE node_id = ? AND reported_at >= ? ORDER BY reported_at ASC LIMIT ?'
+    ).bind(nodeId, cutoff, REPORTS_MAX_KEEP).all();
+    return (result.results || []).map(row => JSON.parse(row.data));
+}
+
+async function insertNetworkSample(db, sample) {
+    await db.prepare(
+        'INSERT INTO vps_network_samples (id, node_id, reported_at, created_at, data) VALUES (?, ?, ?, ?, ?)'
+    ).bind(sample.id, sample.nodeId, sample.reportedAt, sample.createdAt, JSON.stringify(sample)).run();
+}
+
+async function pruneNetworkSamples(db, settings) {
+    const cutoff = new Date(getReportRetentionCutoff(settings)).toISOString();
+    await db.prepare('DELETE FROM vps_network_samples WHERE reported_at < ?').bind(cutoff).run();
+}
+
+async function fetchNetworkTargets(db, nodeId) {
+    const result = await db.prepare('SELECT * FROM vps_network_targets WHERE node_id = ? ORDER BY created_at DESC').bind(nodeId).all();
+    return (result.results || []).map(row => ({
+        id: row.id,
+        nodeId: row.node_id,
+        type: row.type,
+        target: row.target,
+        port: row.port,
+        path: row.path,
+        enabled: row.enabled === 1,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+    }));
+}
+
+async function insertNetworkTarget(db, nodeId, payload) {
+    const target = {
+        id: crypto.randomUUID(),
+        nodeId,
+        type: normalizeString(payload.type).toLowerCase(),
+        target: normalizeString(payload.target),
+        port: payload.port ? Number(payload.port) : null,
+        path: normalizeString(payload.path),
+        enabled: payload.enabled !== false,
+        createdAt: nowIso(),
+        updatedAt: nowIso()
+    };
+    await db.prepare(
+        `INSERT INTO vps_network_targets
+         (id, node_id, type, target, port, path, enabled, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+        target.id,
+        target.nodeId,
+        target.type,
+        target.target,
+        target.port,
+        target.path,
+        target.enabled ? 1 : 0,
+        target.createdAt,
+        target.updatedAt
+    ).run();
+    return target;
+}
+
+async function updateNetworkTarget(db, targetId, payload) {
+    const existing = await db.prepare('SELECT * FROM vps_network_targets WHERE id = ?').bind(targetId).first();
+    if (!existing) return null;
+    const updated = {
+        id: existing.id,
+        nodeId: existing.node_id,
+        type: payload.type !== undefined ? normalizeString(payload.type).toLowerCase() : existing.type,
+        target: payload.target !== undefined ? normalizeString(payload.target) : existing.target,
+        port: payload.port !== undefined ? Number(payload.port) : existing.port,
+        path: payload.path !== undefined ? normalizeString(payload.path) : existing.path,
+        enabled: typeof payload.enabled === 'boolean' ? payload.enabled : existing.enabled === 1,
+        updatedAt: nowIso()
+    };
+    await db.prepare(
+        `UPDATE vps_network_targets
+         SET type = ?, target = ?, port = ?, path = ?, enabled = ?, updated_at = ?
+         WHERE id = ?`
+    ).bind(
+        updated.type,
+        updated.target,
+        updated.port,
+        updated.path,
+        updated.enabled ? 1 : 0,
+        updated.updatedAt,
+        updated.id
+    ).run();
+    return updated;
+}
+
+async function deleteNetworkTarget(db, targetId) {
+    await db.prepare('DELETE FROM vps_network_targets WHERE id = ?').bind(targetId).run();
+}
+
+function validateNetworkTarget(payload) {
+    const type = normalizeString(payload.type).toLowerCase();
+    const target = normalizeString(payload.target);
+    if (!['icmp', 'tcp', 'http'].includes(type)) {
+        return '类型仅支持 icmp/tcp/http';
+    }
+    if (!target) {
+        return '目标不能为空';
+    }
+    if (type === 'tcp') {
+        const port = Number(payload.port);
+        if (!Number.isFinite(port) || port <= 0 || port > 65535) {
+            return 'TCP 端口无效';
+        }
+    }
+    if (type === 'http') {
+        const path = normalizeString(payload.path || '/');
+        if (!path.startsWith('/')) {
+            return 'HTTP 路径必须以 / 开头';
+        }
+    }
+    return null;
+}
+
 function buildInstallScript(reportUrl, node) {
     return [
         '#!/usr/bin/env bash',
@@ -344,25 +465,104 @@ function buildInstallScript(reportUrl, node) {
         `REPORT_URL="${reportUrl}"`,
         `NODE_ID="${node.id}"`,
         `NODE_SECRET="${node.secret}"`,
+        `CONFIG_URL="${reportUrl.replace('/api/vps/report', '/api/vps/config')}?nodeId=${node.id}&secret=${node.secret}&format=env"`,
         '',
         "cat > /usr/local/bin/misub-vps-probe.sh <<'EOF'",
         '#!/usr/bin/env bash',
         'set -euo pipefail',
         '',
+        'for cmd in curl awk free df top hostname uname ping timeout; do',
+        '  if ! command -v "$cmd" >/dev/null 2>&1; then',
+        '    echo "[misub-probe] missing command: $cmd" >&2',
+        '    exit 1',
+        '  fi',
+        'done',
+        '',
         `REPORT_URL="${reportUrl}"`,
         `NODE_ID="${node.id}"`,
         `NODE_SECRET="${node.secret}"`,
+        `CONFIG_URL="${reportUrl.replace('/api/vps/report', '/api/vps/config')}?nodeId=${node.id}&secret=${node.secret}&format=env"`,
         '',
         'HOSTNAME="$(hostname)"',
         'OS="$(. /etc/os-release && echo "$PRETTY_NAME" || uname -s)"',
         'ARCH="$(uname -m)"',
         'KERNEL="$(uname -r)"',
-        'UPTIME_SEC="$(awk "{print int($1)}" /proc/uptime)"',
+        "UPTIME_SEC=\"$(awk '{print int($1)}' /proc/uptime)\"",
         '',
-        'CPU_USAGE="$(top -bn1 | awk "/Cpu/ {print 100 - $8}")"',
-        'MEM_USAGE="$(free | awk "/Mem/ {printf \\\"%.0f\\\", $3/$2*100}")"',
-        'DISK_USAGE="$(df -P / | awk "NR==2 {gsub(/%/,\"\"); print $5}")"',
-        'LOAD1="$(awk "{print $1}" /proc/loadavg)"',
+        'cpu_usage() {',
+        '  local cpu1 cpu2 idle1 idle2 total1 total2',
+        '  read -r cpu1 idle1 total1 <<<"$(awk "/^cpu /{idle=$5; total=0; for(i=2;i<=8;i++) total+=$i; print $1, idle, total}" /proc/stat)"',
+        '  sleep 1',
+        '  read -r cpu2 idle2 total2 <<<"$(awk "/^cpu /{idle=$5; total=0; for(i=2;i<=8;i++) total+=$i; print $1, idle, total}" /proc/stat)"',
+        '  local total_diff=$((total2-total1))',
+        '  local idle_diff=$((idle2-idle1))',
+        '  if [ "$total_diff" -le 0 ]; then',
+        '    echo 0',
+        '  else',
+        '    echo $(( (100*(total_diff-idle_diff))/total_diff ))',
+        '  fi',
+        '}',
+        'CPU_USAGE="$(cpu_usage)"',
+        "MEM_USAGE=\"$(free | awk '/Mem/ {printf \"%.0f\", $3/$2*100}')\"",
+        "DISK_USAGE=\"$(df -P / | awk 'NR==2 {gsub(/%/,\"\"); print $5}')\"",
+        "LOAD1=\"$(awk '{print $1}' /proc/loadavg)\"",
+        '',
+        'NETWORK_INTERVAL=300',
+        'TARGETS=()',
+        'if CONFIG_ENV=$(curl -fsSL "$CONFIG_URL" 2>/dev/null); then',
+        '  while IFS= read -r line; do',
+        '    case "$line" in',
+        '      NETWORK_INTERVAL=*) NETWORK_INTERVAL=$((${line#*=} * 60)) ;;',
+        '      TARGET=*) TARGETS+=("${line#*=}") ;;',
+        '    esac',
+        '  done <<< "$CONFIG_ENV"',
+        'fi',
+        '',
+        'NETWORK_STATE="/var/tmp/misub-vps-network.ts"',
+        'NETWORK_JSON="null"',
+        'now_ts=$(date +%s)',
+        'last_ts=0',
+        'if [ -f "$NETWORK_STATE" ]; then last_ts=$(cat "$NETWORK_STATE" || echo 0); fi',
+        'if [ $((now_ts-last_ts)) -ge "$NETWORK_INTERVAL" ]; then',
+        '  checks=()',
+        '  for item in "${TARGETS[@]}"; do',
+        '    IFS="|" read -r ttype ttarget tport tpath tenabled <<< "$item"',
+        '    if [ "${tenabled:-1}" = "0" ]; then continue; fi',
+        '    checked_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+        '    if [ "$ttype" = "icmp" ]; then',
+        '      ping_out=$(ping -c 3 -w 4 "$ttarget" 2>/dev/null || true)',
+        '      loss=$(echo "$ping_out" | awk -F", " "/packet loss/ {print $3}" | awk "{gsub(/%/,\"\"); print $1}")',
+        '      avg=$(echo "$ping_out" | awk -F"/" "/rtt/ {print $5}")',
+        '      if [ -z "$avg" ]; then status="down"; avg=null; else status="up"; fi',
+        '      checks+=("{\\\"type\\\":\\\"icmp\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${avg:-null},\\\"lossPercent\\\":${loss:-null},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
+        '    elif [ "$ttype" = "tcp" ]; then',
+        '      start=$(date +%s%3N)',
+        '      if timeout 3 bash -c "cat < /dev/null > /dev/tcp/$ttarget/$tport" 2>/dev/null; then',
+        '        end=$(date +%s%3N); latency=$((end-start)); status="up"',
+        '      else',
+        '        latency=null; status="down"',
+        '      fi',
+        '      checks+=("{\\\"type\\\":\\\"tcp\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"port\\\":$tport,\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
+        '    elif [ "$ttype" = "http" ]; then',
+        '      scheme="https"',
+        '      url="$scheme://$ttarget"',
+        '      if [ -n "$tport" ]; then url="$url:$tport"; fi',
+        '      if [ -n "$tpath" ]; then url="$url$tpath"; fi',
+        '      result=$(curl -o /dev/null -s -w "%{time_total} %{http_code}" --max-time 5 "$url" || true)',
+        '      time_total=$(echo "$result" | awk "{print $1}")',
+        '      http_code=$(echo "$result" | awk "{print $2}")',
+        '      if [ -n "$time_total" ] && [ "$http_code" != "000" ]; then',
+        '        latency=$(awk -v t="$time_total" "BEGIN{printf \\\"%.0f\\\", t*1000}")',
+        '        status="up"',
+        '      else',
+        '        latency=null; http_code="000"; status="down"',
+        '      fi',
+        '      checks+=("{\\\"type\\\":\\\"http\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"port\\\":${tport:-null},\\\"path\\\":\\\"${tpath:-/}\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"httpCode\\\":$http_code,\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
+        '    fi',
+        '  done',
+        '  NETWORK_JSON="["$(IFS=,; echo "${checks[*]}")"]"',
+        '  echo "$now_ts" > "$NETWORK_STATE"',
+        'fi',
         '',
         'PAYLOAD=$(cat <<PAYLOAD_EOF',
         '{',
@@ -374,7 +574,8 @@ function buildInstallScript(reportUrl, node) {
         '  "cpu": { "usage": \${CPU_USAGE} },',
         '  "mem": { "usage": \${MEM_USAGE} },',
         '  "disk": { "usage": \${DISK_USAGE} },',
-        '  "load": { "load1": \${LOAD1} }',
+        '  "load": { "load1": \${LOAD1} },',
+        '  "network": '${NETWORK_JSON}'',
         '}',
         'PAYLOAD_EOF',
         ')',
@@ -479,6 +680,58 @@ export async function handleVpsInstallScript(request, env) {
     });
 }
 
+export async function handleVpsConfig(request, env) {
+    if (request.method !== 'GET') {
+        return createErrorResponse('Method Not Allowed', 405);
+    }
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+
+    const storageAdapter = await getStorageAdapter(env);
+    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const storageModeCheck = ensureD1StorageMode(settings);
+    if (storageModeCheck) return storageModeCheck;
+
+    const url = new URL(request.url);
+    const nodeId = normalizeString(url.searchParams.get('nodeId'));
+    const nodeSecret = normalizeString(url.searchParams.get('secret'));
+    const format = normalizeString(url.searchParams.get('format')) || 'json';
+    if (!nodeId || !nodeSecret) {
+        return createErrorResponse('Missing node credentials', 401);
+    }
+
+    const db = getD1(env);
+    const node = await fetchNode(db, nodeId);
+    if (!node || node.secret !== nodeSecret) {
+        return createErrorResponse('Unauthorized', 401);
+    }
+
+    const targets = await fetchNetworkTargets(db, nodeId);
+    const interval = clampNumber(settings?.vpsMonitor?.networkSampleIntervalMinutes, 1, 60, 5);
+
+    if (format === 'env') {
+        const lines = [`NETWORK_INTERVAL=${interval}`];
+        targets.forEach(target => {
+            const line = `TARGET=${target.type}|${target.target}|${target.port || ''}|${target.path || ''}|${target.enabled ? 1 : 0}`;
+            lines.push(line);
+        });
+        return new Response(lines.join('\n'), {
+            status: 200,
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8'
+            }
+        });
+    }
+
+    return createJsonResponse({
+        success: true,
+        data: {
+            intervalMinutes: interval,
+            targets
+        }
+    });
+}
+
 export { buildPublicGuide };
 
 export async function handleVpsReport(request, env) {
@@ -552,6 +805,19 @@ export async function handleVpsReport(request, env) {
         uptimeSec: clampNumber(report.uptimeSec || report.uptime || 0, 0, 10 ** 9, 0),
         traffic: report.traffic || null
     };
+
+    const networkPayload = report.network || report.checks || null;
+    if (Array.isArray(networkPayload) && networkPayload.length) {
+        const networkSample = {
+            id: crypto.randomUUID(),
+            nodeId: node.id,
+            reportedAt,
+            createdAt: nowIso(),
+            checks: networkPayload
+        };
+        await insertNetworkSample(db, networkSample);
+        await pruneNetworkSamples(db, settings);
+    }
 
     await insertReport(db, normalizedReport);
     await pruneReports(db, settings);
@@ -635,10 +901,15 @@ export async function handleVpsNodeDetailRequest(request, env) {
     if (request.method === 'GET') {
         const latestReport = node.lastReport || null;
         const reports = await fetchReportsForNode(db, nodeId, settings);
+        const targets = await fetchNetworkTargets(db, nodeId);
+        const networkSamples = await fetchNetworkSamples(db, nodeId, settings);
         return createJsonResponse({
             success: true,
             data: summarizeNode(node, latestReport, settings),
-            reports
+            reports,
+            targets,
+            networkSamples,
+            guide: buildPublicGuide(env, request, node)
         });
     }
 
@@ -696,4 +967,121 @@ export async function handleVpsAlertsRequest(request, env) {
     }
 
     return createErrorResponse('Method Not Allowed', 405);
+}
+
+export async function handleVpsNetworkTargetsRequest(request, env) {
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+    const storageAdapter = await getStorageAdapter(env);
+    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const storageModeCheck = ensureD1StorageMode(settings);
+    if (storageModeCheck) return storageModeCheck;
+    const db = getD1(env);
+
+    const url = new URL(request.url);
+    const nodeId = normalizeString(url.searchParams.get('nodeId'));
+    if (!nodeId) {
+        return createErrorResponse('Node id required', 400);
+    }
+
+    if (request.method === 'GET') {
+        const targets = await fetchNetworkTargets(db, nodeId);
+        return createJsonResponse({ success: true, data: targets });
+    }
+
+    if (request.method === 'POST') {
+        const payload = await request.json();
+        const error = validateNetworkTarget(payload);
+        if (error) {
+            return createErrorResponse(error, 400);
+        }
+        const current = await fetchNetworkTargets(db, nodeId);
+        const limit = clampNumber(settings?.vpsMonitor?.networkTargetsLimit, 1, 10, 3);
+        if (current.length >= limit) {
+            return createErrorResponse(`目标数量超过上限（${limit}）`, 400);
+        }
+        const target = await insertNetworkTarget(db, nodeId, payload);
+        return createJsonResponse({ success: true, data: target });
+    }
+
+    if (request.method === 'PATCH') {
+        const payload = await request.json();
+        const targetId = normalizeString(payload.id);
+        if (!targetId) {
+            return createErrorResponse('Target id required', 400);
+        }
+        const error = payload.type || payload.target || payload.port || payload.path
+            ? validateNetworkTarget({
+                type: payload.type || 'icmp',
+                target: payload.target || '1.1.1.1',
+                port: payload.port,
+                path: payload.path
+            })
+            : null;
+        if (error) {
+            return createErrorResponse(error, 400);
+        }
+        const updated = await updateNetworkTarget(db, targetId, payload);
+        if (!updated) {
+            return createErrorResponse('Target not found', 404);
+        }
+        return createJsonResponse({ success: true, data: updated });
+    }
+
+    if (request.method === 'DELETE') {
+        const payload = await request.json();
+        const targetId = normalizeString(payload.id);
+        if (!targetId) {
+            return createErrorResponse('Target id required', 400);
+        }
+        await deleteNetworkTarget(db, targetId);
+        return createJsonResponse({ success: true });
+    }
+
+    return createErrorResponse('Method Not Allowed', 405);
+}
+
+export async function handleVpsNetworkCheck(request, env) {
+    if (request.method !== 'POST') {
+        return createErrorResponse('Method Not Allowed', 405);
+    }
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+    const storageAdapter = await getStorageAdapter(env);
+    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const storageModeCheck = ensureD1StorageMode(settings);
+    if (storageModeCheck) return storageModeCheck;
+    const db = getD1(env);
+
+    let payload;
+    try {
+        payload = await request.json();
+    } catch (error) {
+        return createErrorResponse('Invalid JSON', 400);
+    }
+
+    const nodeId = normalizeString(payload.nodeId);
+    if (!nodeId) {
+        return createErrorResponse('Node id required', 400);
+    }
+
+    const targetId = normalizeString(payload.targetId);
+    if (!targetId) {
+        return createErrorResponse('Target id required', 400);
+    }
+
+    const targetRow = await db.prepare('SELECT * FROM vps_network_targets WHERE id = ? AND node_id = ?').bind(targetId, nodeId).first();
+    if (!targetRow) {
+        return createErrorResponse('Target not found', 404);
+    }
+
+    const target = {
+        id: targetRow.id,
+        type: targetRow.type,
+        target: targetRow.target,
+        port: targetRow.port,
+        path: targetRow.path
+    };
+
+    return createJsonResponse({ success: true, data: target, message: 'Probe should run check on next report' });
 }

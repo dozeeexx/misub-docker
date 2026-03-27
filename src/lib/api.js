@@ -254,6 +254,51 @@ export async function fetchVpsNodeDetail(nodeId) {
     }
 }
 
+export async function fetchVpsNetworkTargets(nodeId) {
+    try {
+        const data = await api.get(`/api/vps/network_targets?nodeId=${encodeURIComponent(nodeId)}`);
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'fetchVpsNetworkTargets');
+    }
+}
+
+export async function createVpsNetworkTarget(nodeId, payload) {
+    try {
+        const data = await api.post('/api/vps/network_targets?nodeId=' + encodeURIComponent(nodeId), payload);
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'createVpsNetworkTarget');
+    }
+}
+
+export async function updateVpsNetworkTarget(nodeId, payload) {
+    try {
+        const data = await api.patch('/api/vps/network_targets?nodeId=' + encodeURIComponent(nodeId), payload);
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'updateVpsNetworkTarget');
+    }
+}
+
+export async function deleteVpsNetworkTarget(nodeId, targetId) {
+    try {
+        const data = await api.del('/api/vps/network_targets?nodeId=' + encodeURIComponent(nodeId), { body: JSON.stringify({ id: targetId }) });
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'deleteVpsNetworkTarget');
+    }
+}
+
+export async function requestVpsNetworkCheck(nodeId, targetId) {
+    try {
+        const data = await api.post('/api/vps/network_check', { nodeId, targetId });
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'requestVpsNetworkCheck');
+    }
+}
+
 export async function clearVpsAlerts() {
     try {
         const data = await api.del('/api/vps/alerts');

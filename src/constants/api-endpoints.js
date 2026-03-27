@@ -24,6 +24,9 @@ export const API_ENDPOINTS = {
     VPS_REPORT: '/api/vps/report',
     VPS_NODES: '/api/vps/nodes',
     VPS_ALERTS: '/api/vps/alerts',
+    VPS_NETWORK_TARGETS: '/api/vps/network_targets',
+    VPS_NETWORK_CHECK: '/api/vps/network_check',
+    VPS_CONFIG: '/api/vps/config',
 
     // 迁移相关
     MIGRATE: '/api/migrate',

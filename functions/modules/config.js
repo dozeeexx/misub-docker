@@ -89,6 +89,8 @@ export const DEFAULT_SETTINGS = {
         memWarnPercent: 90,
         diskWarnPercent: 90,
         alertCooldownMinutes: 15,
+        networkSampleIntervalMinutes: 5,
+        networkTargetsLimit: 3,
         alertsEnabled: true,
         notifyOffline: true,
         notifyRecovery: true,

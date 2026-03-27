@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
-import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail, saveSettings, fetchSettings } from '../lib/api.js';
+import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail, saveSettings, requestVpsNetworkCheck } from '../lib/api.js';
 import DataGrid from '../components/shared/DataGrid.vue';
 import Modal from '../components/forms/Modal.vue';
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
+import VpsNetworkTargets from '../components/vps/VpsNetworkTargets.vue';
 import VpsMonitorSettingsModal from '../components/modals/VpsMonitorSettingsModal.vue';
 import { useSettingsStore } from '../stores/settings.js';
 
@@ -28,6 +29,8 @@ const editingNode = ref(null);
 const guidePayload = ref(null);
 const detailPayload = ref(null);
 const detailReports = ref([]);
+const detailNetworkSamples = ref([]);
+const detailTargets = ref([]);
 const detailRange = ref('24h');
 const detailAggregation = ref('avg');
 
@@ -87,15 +90,6 @@ const loadData = async () => {
   }
 };
 
-const loadSettingsConfig = async () => {
-  const result = await fetchSettings();
-  if (result.success) {
-    updateConfig(result.data);
-  } else {
-    showToast(result.error || '加载设置失败', 'error');
-  }
-};
-
 const resetForm = () => {
   formState.value = {
     name: '',
@@ -143,13 +137,19 @@ const openEdit = (node) => {
   showEditModal.value = true;
 };
 
-const openGuide = (node, guide) => {
+const openGuide = async (node, guide) => {
+  editingNode.value = node;
   if (!guide) {
-    showToast('请先重置密钥以生成安装信息', 'info');
+    const result = await fetchVpsNodeDetail(node.id);
+    if (result.success) {
+      guidePayload.value = result.data?.guide || null;
+      showGuideModal.value = true;
+      return;
+    }
+    showToast(result.error || '加载安装信息失败', 'error');
     return;
   }
   guidePayload.value = guide;
-  editingNode.value = node;
   showGuideModal.value = true;
 };
 
@@ -162,6 +162,8 @@ const openDetail = async (node) => {
   editingNode.value = node;
   detailPayload.value = null;
   detailReports.value = [];
+  detailNetworkSamples.value = [];
+  detailTargets.value = [];
   detailRange.value = '24h';
   detailAggregation.value = 'avg';
   showDetailModal.value = true;
@@ -169,9 +171,60 @@ const openDetail = async (node) => {
   if (result.success) {
     detailPayload.value = result.data.data || null;
     detailReports.value = result.data.reports || [];
+    detailNetworkSamples.value = result.data.networkSamples || [];
+    detailTargets.value = result.data.targets || [];
   } else {
     showToast(result.error || '加载详情失败', 'error');
   }
+};
+
+const refreshTargets = async () => {
+  if (!editingNode.value) return;
+  const result = await fetchVpsNodeDetail(editingNode.value.id);
+  if (result.success) {
+    detailTargets.value = result.data.targets || [];
+    detailNetworkSamples.value = result.data.networkSamples || [];
+  }
+};
+
+const handleNetworkCheck = async (target) => {
+  if (!editingNode.value) return;
+  const result = await requestVpsNetworkCheck(editingNode.value.id, target.id);
+  if (result.success) {
+    showToast('已下发检测请求，等待下一次上报', 'success');
+  } else {
+    showToast(result.error || '检测请求失败', 'error');
+  }
+};
+
+const latestNetwork = computed(() => {
+  const samples = detailNetworkSamples.value;
+  if (!samples.length) return [];
+  return samples[samples.length - 1].checks || [];
+});
+
+const buildNetworkSeries = (mode) => {
+  const samples = detailNetworkSamples.value.slice(-24);
+  return samples.map((sample) => {
+    const checks = sample?.checks || [];
+    if (!checks.length) return null;
+    if (mode === 'latency') {
+      const values = checks
+        .map(item => Number(item.latencyMs))
+        .filter(val => Number.isFinite(val));
+      if (!values.length) return null;
+      return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+    }
+    if (mode === 'loss') {
+      const values = checks
+        .filter(item => item.type === 'icmp')
+        .map(item => Number(item.lossPercent))
+        .filter(val => Number.isFinite(val));
+      if (!values.length) return null;
+      return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+    }
+    return null;
+  });
 };
 
 const handleCreate = async () => {
@@ -237,6 +290,16 @@ const handleResetSecret = async () => {
     }
   } else {
     showToast(result.error || '重置失败', 'error');
+  }
+};
+
+const copyText = async (text) => {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('已复制到剪贴板', 'success');
+  } catch (error) {
+    showToast('复制失败', 'error');
   }
 };
 
@@ -377,7 +440,6 @@ const rangeHint = computed(() => {
 
 onMounted(() => {
   loadData();
-  loadSettingsConfig();
 });
 </script>
 
@@ -640,6 +702,19 @@ onMounted(() => {
     <template #body>
       <div v-if="guidePayload" class="space-y-4 text-sm text-gray-600 dark:text-gray-300">
         <div>
+          <label class="block text-xs text-gray-500 mb-1">一行安装命令</label>
+          <div class="flex items-center gap-2">
+            <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto flex-1">{{ guidePayload.installCommand }}</pre>
+            <button
+              type="button"
+              class="px-2.5 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5"
+              @click="copyText(guidePayload.installCommand)"
+            >
+              复制
+            </button>
+          </div>
+        </div>
+        <div>
           <label class="block text-xs text-gray-500 mb-1">上报地址</label>
           <div class="font-mono text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2">
             {{ guidePayload.reportUrl }}
@@ -665,11 +740,16 @@ onMounted(() => {
         </div>
         <div>
           <label class="block text-xs text-gray-500 mb-1">一键安装脚本</label>
-          <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto">{{ guidePayload.installScript }}</pre>
-        </div>
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">一行安装命令</label>
-          <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto">{{ guidePayload.installCommand }}</pre>
+          <div class="flex items-center gap-2">
+            <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto flex-1">{{ guidePayload.installScript }}</pre>
+            <button
+              type="button"
+              class="px-2.5 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5"
+              @click="copyText(guidePayload.installScript)"
+            >
+              复制
+            </button>
+          </div>
         </div>
       </div>
       <div v-else class="text-sm text-gray-500">暂无安装信息</div>
@@ -757,6 +837,34 @@ onMounted(() => {
           <VpsMetricChart title="内存" unit="%" :points="pickSeries('mem')" color="#3b82f6" />
           <VpsMetricChart title="磁盘" unit="%" :points="pickSeries('disk')" color="#22c55e" />
           <VpsMetricChart title="Load1" unit="" :max="5" :points="pickScalarSeries(item => item?.load?.load1 ?? null)" color="#6366f1" />
+          <VpsMetricChart title="网络延迟" unit="ms" :max="500" :points="buildNetworkSeries('latency')" color="#ec4899" />
+          <VpsMetricChart title="丢包率" unit="%" :max="100" :points="buildNetworkSeries('loss')" color="#f59e0b" />
+        </div>
+
+        <VpsNetworkTargets
+          v-if="detailPayload"
+          :node-id="detailPayload.id"
+          :targets="detailTargets"
+          :limit="config?.vpsMonitor?.networkTargetsLimit || 3"
+          @refresh="refreshTargets"
+          @check="handleNetworkCheck"
+        />
+
+        <div v-if="latestNetwork.length" class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-5 border border-gray-100/80 dark:border-white/10">
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-white">最近一次网络检测</h4>
+          <div class="mt-3 space-y-2">
+            <div v-for="item in latestNetwork" :key="item.target + (item.port || '') + (item.path || '')" class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
+              <div>
+                <span class="font-medium">{{ item.type.toUpperCase() }}</span>
+                <span class="ml-1">{{ item.target }}<span v-if="item.port">:{{ item.port }}</span>{{ item.path || '' }}</span>
+              </div>
+              <div>
+                <span :class="item.status === 'up' ? 'text-emerald-600' : 'text-rose-600'">{{ item.status }}</span>
+                <span v-if="item.latencyMs"> · {{ item.latencyMs }}ms</span>
+                <span v-if="item.lossPercent !== undefined && item.lossPercent !== null"> · loss {{ item.lossPercent }}%</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div v-else class="text-sm text-gray-500">正在加载...</div>

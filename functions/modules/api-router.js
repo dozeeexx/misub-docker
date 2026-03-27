@@ -42,7 +42,10 @@ import {
     handleVpsNodesRequest,
     handleVpsNodeDetailRequest,
     handleVpsAlertsRequest,
-    handleVpsInstallScript
+    handleVpsInstallScript,
+    handleVpsNetworkTargetsRequest,
+    handleVpsNetworkCheck,
+    handleVpsConfig
 } from './handlers/vps-monitor-handler.js';
 
 // 常量定义
@@ -174,6 +177,10 @@ export async function handleApiRequest(request, env) {
         return await handleVpsInstallScript(request, env);
     }
 
+    if (path === '/vps/config') {
+        return await handleVpsConfig(request, env);
+    }
+
     // Public GET access for clients
     if (path.startsWith('/clients') && request.method === 'GET') {
         return await handleClientRequest(request, env);
@@ -238,6 +245,14 @@ export async function handleApiRequest(request, env) {
 
     if (path.startsWith('/vps/nodes/')) {
         return await handleVpsNodeDetailRequest(request, env);
+    }
+
+    if (path === '/vps/network_targets') {
+        return await handleVpsNetworkTargetsRequest(request, env);
+    }
+
+    if (path === '/vps/network_check') {
+        return await handleVpsNetworkCheck(request, env);
     }
 
     if (path === '/test_notification') {

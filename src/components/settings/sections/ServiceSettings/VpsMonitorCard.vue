@@ -24,7 +24,9 @@ const vpsMonitorConfig = computed({
       notifyRecovery: true,
       notifyOverload: true,
       reportRetentionDays: 30,
-      cooldownIgnoreRecovery: true
+      cooldownIgnoreRecovery: true,
+      networkSampleIntervalMinutes: 5,
+      networkTargetsLimit: 3
     };
   },
   set(value) {
@@ -87,6 +89,17 @@ const updateField = (key, value) => {
         />
       </div>
       <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">网络采样间隔（分钟）</label>
+        <input
+          type="number"
+          min="1"
+          max="60"
+          :value="vpsMonitorConfig.networkSampleIntervalMinutes"
+          @input="updateField('networkSampleIntervalMinutes', Number($event.target.value))"
+          class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+        />
+      </div>
+      <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">告警冷却（分钟）</label>
         <input
           type="number"
@@ -141,6 +154,17 @@ const updateField = (key, value) => {
           </div>
           <Switch v-model="vpsMonitorConfig.cooldownIgnoreRecovery" />
         </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">网络目标上限</label>
+        <input
+          type="number"
+          min="1"
+          max="10"
+          :value="vpsMonitorConfig.networkTargetsLimit"
+          @input="updateField('networkTargetsLimit', Number($event.target.value))"
+          class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+        />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">历史保留（天）</label>
