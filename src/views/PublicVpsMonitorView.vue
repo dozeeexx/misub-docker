@@ -447,7 +447,7 @@ onUnmounted(() => {
                   :style="{ width: node.status === 'online' ? '100%' : '45%' }"
                 ></div>
               </div>
-              <div class="flex items-start justify-between">
+              <div class="flex items-start justify-between mt-2">
                 <div>
                   <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
                   <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
