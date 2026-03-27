@@ -393,20 +393,20 @@ onUnmounted(() => {
                     </div>
                     
                     <div v-if="node.latest?.network && node.latest.network.length" class="flex-1 overflow-y-auto pr-1">
-                      <div class="grid grid-cols-[1fr_55px_40px] gap-2 px-1 mb-1 text-[9px] font-bold text-[#8a7f70] dark:text-slate-500 uppercase tracking-wider">
+                      <div class="grid grid-cols-[1fr_65px_45px] gap-2 px-1 mb-1.5 text-[10px] font-bold text-[#8a7f70] dark:text-slate-500 uppercase tracking-wider border-b border-[#efe6db]/50 dark:border-slate-800/50 pb-0.5">
                         <span>监测点</span>
                         <span class="text-right">延迟</span>
                         <span class="text-right">丢包</span>
                       </div>
-                      <div class="divide-y divide-[#efe6db] dark:divide-slate-800">
-                        <div v-for="(check, idx) in node.latest.network" :key="idx" class="grid grid-cols-[1fr_55px_40px] gap-2 py-1.5 items-baseline">
-                          <span class="text-[10px] text-[#2c2721] dark:text-slate-200 truncate" :title="check.name || check.target">
+                      <div class="divide-y divide-[#efe6db]/60 dark:divide-slate-800/60">
+                        <div v-for="(check, idx) in node.latest.network" :key="idx" class="grid grid-cols-[1fr_65px_45px] gap-2 py-2 items-baseline hover:bg-black/5 dark:hover:bg-white/5 rounded-sm px-1 transition-colors">
+                          <span class="text-[11px] font-medium text-[#2c2721] dark:text-slate-200 truncate" :title="check.name || check.target">
                             {{ check.name || check.target.replace(/^http(s)?:\/\//, '') }}
                           </span>
-                          <span class="text-[10px] font-bold text-right tabular-nums" :class="getLatencyColor(check.latencyMs)">
+                          <span class="text-[11px] font-bold text-right tabular-nums" :class="getLatencyColor(check.latencyMs)">
                             {{ check.latencyMs !== null ? Math.round(check.latencyMs) + 'ms' : '--' }}
                           </span>
-                          <span class="text-[10px] font-bold text-right tabular-nums" :class="getLossColor(check.lossPercent)">
+                          <span class="text-[11px] font-bold text-right tabular-nums" :class="getLossColor(check.lossPercent)">
                             {{ check.lossPercent !== null ? check.lossPercent + '%' : '--' }}
                           </span>
                         </div>
