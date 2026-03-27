@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onActivated } from 'vue';
 import MigrationModal from '../components/modals/MigrationModal.vue';
 import { useSettingsLogic } from '../composables/useSettingsLogic.js';
 import SettingsLayout from '../components/layout/SettingsLayout.vue';
@@ -53,6 +53,10 @@ const handleOpenMigrationModal = () => {
 // 备份函数已由 composable 提供
 
 onMounted(() => {
+  loadSettings();
+});
+
+onActivated(() => {
   loadSettings();
 });
 </script>

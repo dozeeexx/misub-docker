@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
-import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail } from '../lib/api.js';
+import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail, saveSettings, fetchSettings } from '../lib/api.js';
 import DataGrid from '../components/shared/DataGrid.vue';
 import Modal from '../components/forms/Modal.vue';
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
@@ -9,7 +9,7 @@ import VpsMonitorSettingsModal from '../components/modals/VpsMonitorSettingsModa
 import { useSettingsStore } from '../stores/settings.js';
 
 const { showToast } = useToastStore();
-const { settings } = useSettingsStore();
+const { config, updateConfig } = useSettingsStore();
 
 const isLoading = ref(false);
 const nodes = ref([]);
@@ -87,6 +87,15 @@ const loadData = async () => {
   }
 };
 
+const loadSettingsConfig = async () => {
+  const result = await fetchSettings();
+  if (result.success) {
+    updateConfig(result.data);
+  } else {
+    showToast(result.error || '加载设置失败', 'error');
+  }
+};
+
 const resetForm = () => {
   formState.value = {
     name: '',
@@ -105,6 +114,20 @@ const openCreate = () => {
 
 const openSettings = () => {
   showSettingsModal.value = true;
+};
+
+const handleSettingsSave = async () => {
+  const payload = config.value || config;
+  const result = await saveSettings(payload);
+  if (result?.success === false) {
+    showToast(result.error || '保存设置失败', 'error');
+    return;
+  }
+  if (result?.data) {
+    updateConfig(result.data);
+  }
+  showToast('设置已保存', 'success');
+  showSettingsModal.value = false;
 };
 
 const openEdit = (node) => {
@@ -206,6 +229,7 @@ const handleResetSecret = async () => {
   const result = await updateVpsNode(editingNode.value.id, { resetSecret: true });
   if (result.success) {
     showToast('密钥已重置', 'success');
+    guidePayload.value = result.data?.guide || null;
     await loadData();
     showEditModal.value = false;
     if (result.data?.guide) {
@@ -351,7 +375,10 @@ const rangeHint = computed(() => {
   return '采样粒度：约 1 天';
 });
 
-onMounted(loadData);
+onMounted(() => {
+  loadData();
+  loadSettingsConfig();
+});
 </script>
 
 <template>
@@ -736,5 +763,5 @@ onMounted(loadData);
     </template>
   </Modal>
 
-  <VpsMonitorSettingsModal v-model:show="showSettingsModal" :settings="settings" />
+  <VpsMonitorSettingsModal v-model:show="showSettingsModal" :settings="config" @save="handleSettingsSave" />
 </template>
