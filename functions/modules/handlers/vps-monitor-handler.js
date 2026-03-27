@@ -361,8 +361,10 @@ async function fetchNetworkTargets(db, nodeId) {
         nodeId: row.node_id,
         type: row.type,
         target: row.target,
+        scheme: row.scheme || 'https',
         port: row.port,
         path: row.path,
+        forceCheckAt: row.force_check_at,
         enabled: row.enabled === 1,
         createdAt: row.created_at,
         updatedAt: row.updated_at
@@ -375,24 +377,28 @@ async function insertNetworkTarget(db, nodeId, payload) {
         nodeId,
         type: normalizeString(payload.type).toLowerCase(),
         target: normalizeString(payload.target),
+        scheme: normalizeString(payload.scheme || 'https'),
         port: payload.port ? Number(payload.port) : null,
         path: normalizeString(payload.path),
         enabled: payload.enabled !== false,
+        forceCheckAt: null,
         createdAt: nowIso(),
         updatedAt: nowIso()
     };
     await db.prepare(
         `INSERT INTO vps_network_targets
-         (id, node_id, type, target, port, path, enabled, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         (id, node_id, type, target, scheme, port, path, enabled, force_check_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
         target.id,
         target.nodeId,
         target.type,
         target.target,
+        target.scheme,
         target.port,
         target.path,
         target.enabled ? 1 : 0,
+        null,
         target.createdAt,
         target.updatedAt
     ).run();
@@ -407,21 +413,25 @@ async function updateNetworkTarget(db, targetId, payload) {
         nodeId: existing.node_id,
         type: payload.type !== undefined ? normalizeString(payload.type).toLowerCase() : existing.type,
         target: payload.target !== undefined ? normalizeString(payload.target) : existing.target,
+        scheme: payload.scheme !== undefined ? normalizeString(payload.scheme || 'https') : existing.scheme || 'https',
         port: payload.port !== undefined ? Number(payload.port) : existing.port,
         path: payload.path !== undefined ? normalizeString(payload.path) : existing.path,
         enabled: typeof payload.enabled === 'boolean' ? payload.enabled : existing.enabled === 1,
+        forceCheckAt: payload.forceCheckAt !== undefined ? payload.forceCheckAt : existing.force_check_at,
         updatedAt: nowIso()
     };
     await db.prepare(
         `UPDATE vps_network_targets
-         SET type = ?, target = ?, port = ?, path = ?, enabled = ?, updated_at = ?
+         SET type = ?, target = ?, scheme = ?, port = ?, path = ?, enabled = ?, force_check_at = ?, updated_at = ?
          WHERE id = ?`
     ).bind(
         updated.type,
         updated.target,
+        updated.scheme,
         updated.port,
         updated.path,
         updated.enabled ? 1 : 0,
+        updated.forceCheckAt,
         updated.updatedAt,
         updated.id
     ).run();
@@ -451,6 +461,10 @@ function validateNetworkTarget(payload) {
         const path = normalizeString(payload.path || '/');
         if (!path.startsWith('/')) {
             return 'HTTP 路径必须以 / 开头';
+        }
+        const scheme = normalizeString(payload.scheme || 'https');
+        if (!['http', 'https'].includes(scheme)) {
+            return 'HTTP 协议仅支持 http/https';
         }
     }
     return null;
@@ -491,13 +505,13 @@ function buildInstallScript(reportUrl, node) {
         '',
         'cpu_usage() {',
         '  if command -v mpstat >/dev/null 2>&1; then',
-        '    mpstat 1 1 | awk "/Average/ {printf \\\"%.0f\\\", 100-$NF}"',
+        '    mpstat 1 2 | awk "/Average/ {printf \\\"%.0f\\\", 100-$NF}"',
         '    return',
         '  fi',
         '  local idle1 total1 idle2 total2',
-        '  read -r idle1 total1 <<<"$(awk "/^cpu /{idle=$5; total=0; for(i=2;i<=8;i++) total+=$i; print idle, total}" /proc/stat)"',
-        '  sleep 1',
-        '  read -r idle2 total2 <<<"$(awk "/^cpu /{idle=$5; total=0; for(i=2;i<=8;i++) total+=$i; print idle, total}" /proc/stat)"',
+        '  read -r idle1 total1 <<<"$(awk "/^cpu /{idle=$5; total=0; for(i=2;i<=11;i++) total+=$i; print idle, total}" /proc/stat)"',
+        '  sleep 2',
+        '  read -r idle2 total2 <<<"$(awk "/^cpu /{idle=$5; total=0; for(i=2;i<=11;i++) total+=$i; print idle, total}" /proc/stat)"',
         '  local total_diff=$((total2-total1))',
         '  local idle_diff=$((idle2-idle1))',
         '  if [ "$total_diff" -le 0 ]; then',
@@ -530,7 +544,7 @@ function buildInstallScript(reportUrl, node) {
         'if [ $((now_ts-last_ts)) -ge "$NETWORK_INTERVAL" ]; then',
         '  checks=()',
         '  for item in "${TARGETS[@]}"; do',
-        '    IFS="|" read -r ttype ttarget tport tpath tenabled <<< "$item"',
+        '    IFS="|" read -r ttype ttarget tscheme tport tpath tenabled tforce <<< "$item"',
         '    if [ "${tenabled:-1}" = "0" ]; then continue; fi',
         '    checked_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)',
         '    if [ "$ttype" = "icmp" ]; then',
@@ -548,7 +562,7 @@ function buildInstallScript(reportUrl, node) {
         '      fi',
         '      checks+=("{\\\"type\\\":\\\"tcp\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"port\\\":$tport,\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
         '    elif [ "$ttype" = "http" ]; then',
-        '      scheme="https"',
+        '      scheme="${tscheme:-https}"',
         '      url="$scheme://$ttarget"',
         '      if [ -n "$tport" ]; then url="$url:$tport"; fi',
         '      if [ -n "$tpath" ]; then url="$url$tpath"; fi',
@@ -561,7 +575,7 @@ function buildInstallScript(reportUrl, node) {
         '      else',
         '        latency=null; http_code="000"; status="down"',
         '      fi',
-        '      checks+=("{\\\"type\\\":\\\"http\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"port\\\":${tport:-null},\\\"path\\\":\\\"${tpath:-/}\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"httpCode\\\":$http_code,\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
+        '      checks+=("{\\\"type\\\":\\\"http\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"scheme\\\":\\\"${scheme}\\\",\\\"port\\\":${tport:-null},\\\"path\\\":\\\"${tpath:-/}\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"httpCode\\\":$http_code,\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
         '    fi',
         '  done',
         '  NETWORK_JSON="["$(IFS=,; echo "${checks[*]}")"]"',
@@ -714,11 +728,21 @@ export async function handleVpsConfig(request, env) {
     const interval = clampNumber(settings?.vpsMonitor?.networkSampleIntervalMinutes, 1, 60, 5);
 
     if (format === 'env') {
+        const now = new Date();
         const lines = [`NETWORK_INTERVAL=${interval}`];
+        const pending = [];
         targets.forEach(target => {
-            const line = `TARGET=${target.type}|${target.target}|${target.port || ''}|${target.path || ''}|${target.enabled ? 1 : 0}`;
+            const line = `TARGET=${target.type}|${target.target}|${target.scheme || 'https'}|${target.port || ''}|${target.path || ''}|${target.enabled ? 1 : 0}|${target.forceCheckAt || ''}`;
             lines.push(line);
+            if (target.forceCheckAt) {
+                pending.push(target.id);
+            }
         });
+        if (pending.length) {
+            db.prepare(`UPDATE vps_network_targets SET force_check_at = NULL, updated_at = ? WHERE id IN (${pending.map(() => '?').join(',')})`)
+                .bind(nowIso(), ...pending)
+                .run();
+        }
         return new Response(lines.join('\n'), {
             status: 200,
             headers: {
@@ -1079,13 +1103,18 @@ export async function handleVpsNetworkCheck(request, env) {
         return createErrorResponse('Target not found', 404);
     }
 
+    const now = nowIso();
+    await db.prepare('UPDATE vps_network_targets SET force_check_at = ?, updated_at = ? WHERE id = ?').bind(now, now, targetRow.id).run();
+
     const target = {
         id: targetRow.id,
         type: targetRow.type,
         target: targetRow.target,
+        scheme: targetRow.scheme || 'https',
         port: targetRow.port,
-        path: targetRow.path
+        path: targetRow.path,
+        forceCheckAt: now
     };
 
-    return createJsonResponse({ success: true, data: target, message: 'Probe should run check on next report' });
+    return createJsonResponse({ success: true, data: target, message: 'Probe will run check on next report' });
 }

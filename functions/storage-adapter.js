@@ -75,9 +75,11 @@ const D1_SCHEMA_STATEMENTS = [
         node_id TEXT NOT NULL,
         type TEXT NOT NULL,
         target TEXT NOT NULL,
+        scheme TEXT,
         port INTEGER,
         path TEXT,
         enabled INTEGER DEFAULT 1,
+        force_check_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );`,

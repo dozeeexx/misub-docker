@@ -25,13 +25,14 @@ const formState = ref({
   type: 'icmp',
   target: '',
   port: '',
-  path: '/'
+  path: '/',
+  scheme: 'https'
 });
 
 const canAddMore = computed(() => props.targets.length < props.limit);
 
 const resetForm = () => {
-  formState.value = { type: 'icmp', target: '', port: '', path: '/' };
+  formState.value = { type: 'icmp', target: '', port: '', path: '/', scheme: 'https' };
 };
 
 const handleCreate = async () => {
@@ -43,7 +44,8 @@ const handleCreate = async () => {
     type: formState.value.type,
     target: formState.value.target,
     port: formState.value.type === 'tcp' ? Number(formState.value.port) : undefined,
-    path: formState.value.type === 'http' ? formState.value.path || '/' : undefined
+    path: formState.value.type === 'http' ? formState.value.path || '/' : undefined,
+    scheme: formState.value.type === 'http' ? formState.value.scheme || 'https' : undefined
   };
   const result = await createVpsNetworkTarget(props.nodeId, payload);
   if (result.success) {
@@ -97,7 +99,7 @@ const handleCheck = (target) => {
       >
         <div>
           <div class="text-sm font-medium text-gray-900 dark:text-white">
-            {{ item.type.toUpperCase() }} · {{ item.target }}
+            {{ item.type.toUpperCase() }} · {{ item.scheme ? item.scheme + '://' : '' }}{{ item.target }}
             <span v-if="item.port">:{{ item.port }}</span>
             <span v-if="item.path">{{ item.path }}</span>
           </div>
@@ -135,7 +137,13 @@ const handleCheck = (target) => {
         </select>
         <input v-model="formState.target" placeholder="IP 或域名" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
         <input v-if="formState.type === 'tcp'" v-model="formState.port" placeholder="端口" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
-        <input v-if="formState.type === 'http'" v-model="formState.path" placeholder="路径" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
+        <div v-if="formState.type === 'http'" class="grid grid-cols-2 gap-2">
+          <select v-model="formState.scheme" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg">
+            <option value="https">https</option>
+            <option value="http">http</option>
+          </select>
+          <input v-model="formState.path" placeholder="路径" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
+        </div>
         <button
           class="px-3 py-2 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
           @click="handleCreate"

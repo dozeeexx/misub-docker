@@ -186,7 +186,7 @@ wrangler d1 execute misub --file=schema.sql --remote
 
 > ⚠️ VPS 探针功能必须绑定 D1 数据库 (MISUB_DB)，并在设置中切换存储模式为 D1，未满足将无法使用探针相关功能。
 > ⚠️ 若启用网络监测（ICMP/TCP/HTTP），需执行最新的 `schema.sql` 创建 vps_network_targets / vps_network_samples 表。
-> ⚠️ 已在使用 D1 的用户升级后也需要在 D1 控制台执行最新 `schema.sql`（用于新增 vps_network_targets / vps_network_samples）。
+> ⚠️ 已在使用 D1 的用户升级后也需要在 D1 控制台执行最新 `schema.sql`（新增 vps_network_targets / vps_network_samples 字段和表）。
 
 ### 3. 设置环境变量
 
