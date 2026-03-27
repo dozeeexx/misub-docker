@@ -1225,6 +1225,33 @@ export async function handleVpsNodesRequest(request, env) {
     return createErrorResponse('Method Not Allowed', 405);
 }
 
+export async function handleVpsPublicSnapshotRequest(request, env) {
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+    const storageAdapter = await getStorageAdapter(env);
+    const settings = resolveSettings(await storageAdapter.get(KV_KEY_SETTINGS));
+    const storageModeCheck = ensureD1StorageMode(settings);
+    if (storageModeCheck) return storageModeCheck;
+
+    if (settings?.vpsMonitor?.publicPageEnabled !== true) {
+        return createErrorResponse('Public access disabled', 403);
+    }
+
+    const token = normalizeString(settings?.vpsMonitor?.publicPageToken);
+    if (token) {
+        const url = new URL(request.url);
+        const provided = normalizeString(url.searchParams.get('token'));
+        if (!provided || provided !== token) {
+            return createErrorResponse('Unauthorized', 401);
+        }
+    }
+
+    const db = getD1(env);
+    const nodes = await fetchNodes(db);
+    const data = nodes.map(node => summarizeNode(node, node.lastReport || null, settings));
+    return createJsonResponse({ success: true, data });
+}
+
 export async function handleVpsNodeDetailRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;

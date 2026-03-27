@@ -245,6 +245,16 @@ export async function fetchVpsAlerts() {
     }
 }
 
+export async function fetchVpsPublicSnapshot(token = '') {
+    try {
+        const query = token ? `?token=${encodeURIComponent(token)}` : '';
+        const data = await api.get(`/api/vps/public${query}`);
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'fetchVpsPublicSnapshot');
+    }
+}
+
 export async function fetchVpsNodeDetail(nodeId) {
     try {
         const data = await api.get(`/api/vps/nodes/${nodeId}`);

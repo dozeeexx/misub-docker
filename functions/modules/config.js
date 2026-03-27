@@ -96,6 +96,8 @@ export const DEFAULT_SETTINGS = {
         reportIntervalMinutes: 1,
         reportStoreIntervalMinutes: 1,
         networkTargetsLimit: 3,
+        publicPageEnabled: false,
+        publicPageToken: '',
         alertsEnabled: true,
         notifyOffline: true,
         notifyRecovery: true,

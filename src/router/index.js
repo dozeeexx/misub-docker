@@ -7,6 +7,7 @@ const ManualNodesView = () => import('../views/ManualNodesView.vue');
 const MySubscriptionsView = () => import('../views/MySubscriptionsView.vue');
 const SettingsView = () => import('../views/SettingsView.vue');
 const VpsMonitorView = () => import('../views/VpsMonitorView.vue');
+const PublicVpsMonitorView = () => import('../views/PublicVpsMonitorView.vue');
 
 const HomeView = () => import('../views/HomeView.vue'); // [NEW] Wrapper View
 
@@ -50,6 +51,12 @@ const routes = [
         name: 'VpsMonitor',
         component: VpsMonitorView,
         meta: { title: 'VPS探针' }
+    },
+    {
+        path: '/vps/public',
+        name: 'PublicVpsMonitor',
+        component: PublicVpsMonitorView,
+        meta: { title: 'VPS探针公开页', isPublic: true }
     },
     {
         path: '/settings',

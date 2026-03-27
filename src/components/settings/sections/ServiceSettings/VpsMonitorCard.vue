@@ -31,7 +31,9 @@ const vpsMonitorConfig = computed({
       networkSampleIntervalMinutes: 5,
       reportIntervalMinutes: 1,
       reportStoreIntervalMinutes: 1,
-      networkTargetsLimit: 3
+      networkTargetsLimit: 3,
+      publicPageEnabled: false,
+      publicPageToken: ''
     };
   },
   set(value) {
@@ -78,6 +80,13 @@ const updateField = (key, value) => {
           <div class="text-xs text-gray-500 dark:text-gray-400">发送离线/负载等提醒</div>
         </div>
         <Switch v-model="vpsMonitorConfig.alertsEnabled" />
+      </div>
+      <div class="flex items-center justify-between p-3 bg-white/70 dark:bg-gray-900/50 border border-gray-200/60 dark:border-white/10 misub-radius-lg">
+        <div>
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-200">公开展示页</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">用于对外展示探针数据</div>
+        </div>
+        <Switch v-model="vpsMonitorConfig.publicPageEnabled" />
       </div>
       <div class="flex items-center justify-between p-3 bg-white/70 dark:bg-gray-900/50 border border-gray-200/60 dark:border-white/10 misub-radius-lg">
         <div>
@@ -130,6 +139,16 @@ const updateField = (key, value) => {
           max="60"
           :value="vpsMonitorConfig.networkSampleIntervalMinutes"
           @input="updateField('networkSampleIntervalMinutes', Number($event.target.value))"
+          class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">公开页 Token（可选）</label>
+        <input
+          type="text"
+          :value="vpsMonitorConfig.publicPageToken"
+          @input="updateField('publicPageToken', $event.target.value)"
+          placeholder="留空则公开访问"
           class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
         />
       </div>
