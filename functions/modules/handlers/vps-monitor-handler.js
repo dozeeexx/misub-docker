@@ -23,7 +23,8 @@ function ensureD1Available(env) {
 }
 
 function ensureD1StorageMode(settings) {
-    if (settings?.storageType !== STORAGE_TYPES.D1) {
+    const rawType = normalizeString(settings?.storageType).toLowerCase();
+    if (rawType && rawType !== STORAGE_TYPES.D1) {
         return createErrorResponse('VPS monitor requires storageType=d1', 400);
     }
     return null;
