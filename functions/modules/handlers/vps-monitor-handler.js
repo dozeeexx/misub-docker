@@ -575,7 +575,7 @@ function buildInstallScript(reportUrl, node) {
         '  "mem": { "usage": \${MEM_USAGE} },',
         '  "disk": { "usage": \${DISK_USAGE} },',
         '  "load": { "load1": \${LOAD1} },',
-        '  "network": '${NETWORK_JSON}'',
+        '  "network": ${NETWORK_JSON}',
         '}',
         'PAYLOAD_EOF',
         ')',
