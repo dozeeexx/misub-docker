@@ -18,6 +18,11 @@ const statusSummary = computed(() => {
   return { total, online, offline };
 });
 
+const onlineRate = computed(() => {
+  if (!statusSummary.value.total) return 0;
+  return Math.round((statusSummary.value.online / statusSummary.value.total) * 100);
+});
+
 const topNodes = computed(() => {
   return [...nodes.value]
     .sort((a, b) => {
@@ -25,6 +30,13 @@ const topNodes = computed(() => {
       return (a.name || '').localeCompare(b.name || '');
     })
     .slice(0, 6);
+});
+
+const sortedNodes = computed(() => {
+  return [...nodes.value].sort((a, b) => {
+    if (a.status !== b.status) return a.status === 'online' ? -1 : 1;
+    return (a.name || '').localeCompare(b.name || '');
+  });
 });
 
 const loadSnapshot = async () => {
@@ -56,112 +68,127 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f4f6fb] dark:bg-[#05070f]">
+  <div class="min-h-screen bg-[#f7f6f1] dark:bg-[#05060a]">
     <div class="relative overflow-hidden">
       <div class="absolute inset-0">
-        <div class="absolute -top-32 -left-24 w-[420px] h-[420px] rounded-full bg-gradient-to-br from-amber-400/40 via-sky-400/20 to-emerald-400/20 blur-3xl"></div>
-        <div class="absolute -bottom-32 -right-24 w-[420px] h-[420px] rounded-full bg-gradient-to-br from-rose-400/30 via-indigo-400/20 to-cyan-400/20 blur-3xl"></div>
+        <div class="absolute -top-24 left-10 h-72 w-72 rounded-full bg-gradient-to-br from-[#0ea5e9]/35 via-[#2dd4bf]/20 to-[#f97316]/25 blur-3xl"></div>
+        <div class="absolute top-24 right-10 h-64 w-64 rounded-full bg-gradient-to-br from-[#f97316]/30 via-[#22c55e]/20 to-[#38bdf8]/25 blur-3xl"></div>
+        <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#f7f6f1] dark:from-[#05060a] to-transparent"></div>
       </div>
-      <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-10">
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p class="text-xs font-semibold tracking-[0.3em] text-slate-500">VPS STATUS</p>
-            <h1 class="mt-3 text-3xl md:text-4xl font-semibold text-slate-900 dark:text-white">
-              探针总览 · 实时守护
+      <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12">
+        <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div class="max-w-2xl">
+            <div class="inline-flex items-center gap-2 rounded-full border border-[#e7e1d6] bg-white/80 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-[#8a7f70]">
+              Status Observatory
+            </div>
+            <h1 class="mt-4 text-4xl md:text-5xl font-semibold text-[#1f1b17] dark:text-white">
+              VPS 探针公开视图
             </h1>
-            <p class="mt-2 text-sm text-slate-600 dark:text-slate-400 max-w-xl">
-              公开展示 VPS 节点状态、资源负载与网络质量，便于对外展示稳定性与可用性。
+            <p class="mt-3 text-sm md:text-base text-[#6a5f54] dark:text-slate-400">
+              对外展示节点健康、资源负载与在线率。所有关键指标以清晰、可信的方式汇总呈现。
             </p>
+            <div class="mt-6 flex flex-wrap items-center gap-3 text-xs text-[#6a5f54] dark:text-slate-400">
+              <span class="inline-flex items-center gap-2 rounded-full border border-[#e7e1d6] bg-white/80 px-3 py-1">
+                更新时间 {{ lastUpdatedAt || '--' }}
+              </span>
+              <button
+                class="inline-flex items-center gap-2 rounded-full border border-[#d9cdbd] bg-[#1f1b17] px-4 py-1 text-white shadow-lg shadow-[#1f1b17]/20 hover:shadow-xl"
+                @click="loadSnapshot"
+              >
+                刷新数据
+              </button>
+            </div>
           </div>
-          <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-            <span class="px-3 py-1 rounded-full bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-white/10">
-              更新时间 {{ lastUpdatedAt || '--' }}
-            </span>
-            <button
-              class="px-3 py-1 rounded-full border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-slate-900/70 text-slate-600 dark:text-slate-300"
-              @click="loadSnapshot"
-            >
-              刷新
-            </button>
-          </div>
-        </div>
-
-        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="rounded-2xl p-5 border border-white/70 dark:border-white/10 bg-white/80 dark:bg-slate-900/70 shadow-lg shadow-slate-200/40 dark:shadow-black/40">
-            <p class="text-xs text-slate-500">节点总数</p>
-            <p class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{{ statusSummary.total }}</p>
-          </div>
-          <div class="rounded-2xl p-5 border border-emerald-200/70 dark:border-emerald-500/20 bg-emerald-50/80 dark:bg-emerald-500/10 shadow-lg shadow-emerald-200/40">
-            <p class="text-xs text-emerald-700">在线节点</p>
-            <p class="mt-2 text-2xl font-semibold text-emerald-900 dark:text-emerald-200">{{ statusSummary.online }}</p>
-          </div>
-          <div class="rounded-2xl p-5 border border-rose-200/70 dark:border-rose-500/20 bg-rose-50/80 dark:bg-rose-500/10 shadow-lg shadow-rose-200/40">
-            <p class="text-xs text-rose-700">离线节点</p>
-            <p class="mt-2 text-2xl font-semibold text-rose-900 dark:text-rose-200">{{ statusSummary.offline }}</p>
+          <div class="grid grid-cols-2 gap-4 text-xs">
+            <div class="rounded-2xl border border-[#ebe3d8] bg-white/80 p-4 shadow-sm">
+              <p class="text-[#8a7f70]">节点总数</p>
+              <p class="mt-2 text-2xl font-semibold text-[#1f1b17]">{{ statusSummary.total }}</p>
+            </div>
+            <div class="rounded-2xl border border-[#d1fae5] bg-[#ecfdf3] p-4 shadow-sm">
+              <p class="text-[#087f5b]">在线节点</p>
+              <p class="mt-2 text-2xl font-semibold text-[#064e3b]">{{ statusSummary.online }}</p>
+            </div>
+            <div class="rounded-2xl border border-[#fee2e2] bg-[#fef2f2] p-4 shadow-sm">
+              <p class="text-[#b91c1c]">离线节点</p>
+              <p class="mt-2 text-2xl font-semibold text-[#7f1d1d]">{{ statusSummary.offline }}</p>
+            </div>
+            <div class="rounded-2xl border border-[#e0e7ff] bg-[#eef2ff] p-4 shadow-sm">
+              <p class="text-[#3730a3]">在线率</p>
+              <p class="mt-2 text-2xl font-semibold text-[#312e81]">{{ onlineRate }}%</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <div class="max-w-6xl mx-auto px-6 pb-16">
-      <div v-if="loading" class="py-16 text-center text-sm text-slate-500">正在加载探针数据...</div>
-      <div v-else-if="error" class="py-16 text-center text-sm text-rose-500">{{ error }}</div>
-      <div v-else class="space-y-6">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="rounded-3xl border border-white/70 dark:border-white/10 bg-white/80 dark:bg-slate-900/70 p-6 shadow-xl shadow-slate-200/40">
+      <div v-if="loading" class="py-16 text-center text-sm text-[#8a7f70]">正在加载探针数据...</div>
+      <div v-else-if="error" class="py-16 text-center text-sm text-rose-600">{{ error }}</div>
+      <div v-else class="space-y-10">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="rounded-[28px] border border-[#ebe3d8] bg-white/90 p-6 shadow-xl shadow-[#d8cab8]/30 lg:col-span-2">
             <div class="flex items-center justify-between">
-              <h2 class="text-lg font-semibold text-slate-900 dark:text-white">在线节点</h2>
-              <span class="text-xs text-slate-500">展示前 6 个节点</span>
+              <h2 class="text-lg font-semibold text-[#1f1b17]">重点节点</h2>
+              <span class="text-xs text-[#8a7f70]">按在线优先展示</span>
             </div>
-            <div class="mt-4 space-y-3">
-              <div v-for="node in topNodes" :key="node.id" class="flex items-center justify-between rounded-2xl border border-slate-100 dark:border-white/10 bg-white/70 dark:bg-slate-900/60 p-4">
-                <div>
-                  <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ node.name || node.id }}</p>
-                  <p class="text-xs text-slate-500">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
-                </div>
-                <div class="text-right text-xs">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full border"
+            <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-for="node in topNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-[#1f1b17]">{{ node.name || node.id }}</p>
+                    <p class="text-xs text-[#8a7f70]">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
+                  </div>
+                  <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
                     :class="node.status === 'online'
-                      ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
-                      : 'border-rose-200 text-rose-700 bg-rose-50'"
+                      ? 'border-[#bbf7d0] bg-[#ecfdf3] text-[#0f766e]'
+                      : 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c]'"
                   >
                     {{ node.status === 'online' ? '在线' : '离线' }}
                   </span>
-                  <p class="mt-2 text-slate-500">CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</p>
-                  <p class="text-slate-500">内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</p>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54]">
+                  <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
+                  <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
+                  <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
+                  <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="rounded-3xl border border-white/70 dark:border-white/10 bg-gradient-to-br from-white/90 via-white/80 to-slate-50/80 dark:from-slate-900/80 dark:via-slate-900/70 dark:to-slate-800/70 p-6 shadow-xl shadow-slate-200/40">
-            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">最新资源快照</h2>
+
+          <div class="rounded-[28px] border border-[#e6e0d6] bg-gradient-to-br from-white via-[#fdfaf6] to-[#f4efe7] p-6 shadow-xl shadow-[#d8cab8]/30">
+            <h2 class="text-lg font-semibold text-[#1f1b17]">资源脉冲</h2>
+            <p class="mt-1 text-xs text-[#8a7f70]">汇总最近一次上报的资源占用</p>
             <div class="mt-5 grid grid-cols-2 gap-4">
-              <VpsMetricChart title="CPU" unit="%" :points="nodes.map(node => node.latest?.cpu?.usage ?? node.latest?.cpuPercent ?? null)" color="#0ea5e9" :height="70" />
-              <VpsMetricChart title="内存" unit="%" :points="nodes.map(node => node.latest?.mem?.usage ?? node.latest?.memPercent ?? null)" color="#f59e0b" :height="70" />
-              <VpsMetricChart title="磁盘" unit="%" :points="nodes.map(node => node.latest?.disk?.usage ?? node.latest?.diskPercent ?? null)" color="#22c55e" :height="70" />
-              <VpsMetricChart title="流量" unit="" :points="nodes.map(node => node.latest?.traffic?.rx ?? node.latest?.traffic?.download ?? null)" color="#6366f1" :height="70" />
+              <VpsMetricChart title="CPU" unit="%" :points="nodes.map(node => node.latest?.cpu?.usage ?? node.latest?.cpuPercent ?? null)" color="#0ea5e9" :height="80" />
+              <VpsMetricChart title="内存" unit="%" :points="nodes.map(node => node.latest?.mem?.usage ?? node.latest?.memPercent ?? null)" color="#f97316" :height="80" />
+              <VpsMetricChart title="磁盘" unit="%" :points="nodes.map(node => node.latest?.disk?.usage ?? node.latest?.diskPercent ?? null)" color="#22c55e" :height="80" />
+              <VpsMetricChart title="流量" unit="" :points="nodes.map(node => node.latest?.traffic?.rx ?? node.latest?.traffic?.download ?? null)" color="#6366f1" :height="80" />
             </div>
           </div>
         </div>
 
-        <div class="rounded-3xl border border-white/70 dark:border-white/10 bg-white/80 dark:bg-slate-900/70 p-6 shadow-xl shadow-slate-200/40">
-          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">节点列表</h2>
-          <div class="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <div v-for="node in nodes" :key="node.id" class="rounded-2xl border border-slate-100 dark:border-white/10 bg-white/70 dark:bg-slate-900/60 p-4">
-              <div class="flex items-center justify-between">
+        <div class="rounded-[30px] border border-[#e7e1d6] bg-white/90 p-6 shadow-xl shadow-[#d8cab8]/30">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-[#1f1b17]">节点全览</h2>
+            <span class="text-xs text-[#8a7f70]">共 {{ statusSummary.total }} 个节点</span>
+          </div>
+          <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div v-for="node in sortedNodes" :key="node.id" class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4">
+              <div class="flex items-start justify-between">
                 <div>
-                  <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ node.name || node.id }}</p>
-                  <p class="text-xs text-slate-500">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
+                  <p class="text-sm font-semibold text-[#1f1b17]">{{ node.name || node.id }}</p>
+                  <p class="text-xs text-[#8a7f70]">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
                 </div>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full border"
+                <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
                   :class="node.status === 'online'
-                    ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
-                    : 'border-rose-200 text-rose-700 bg-rose-50'"
+                    ? 'border-[#bbf7d0] bg-[#ecfdf3] text-[#0f766e]'
+                    : 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c]'"
                 >
                   {{ node.status === 'online' ? '在线' : '离线' }}
                 </span>
               </div>
-              <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+              <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54]">
                 <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
                 <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
                 <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>

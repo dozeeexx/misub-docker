@@ -22,9 +22,13 @@ function ensureD1Available(env) {
     return null;
 }
 
-function ensureD1StorageMode(settings) {
+function ensureD1StorageMode(settings, env) {
     const rawType = normalizeString(settings?.storageType).toLowerCase();
     if (rawType && rawType !== STORAGE_TYPES.D1) {
+        if (env?.MISUB_DB) {
+            console.warn('[VPS Monitor] storageType is not d1, but D1 is available. Allowing access.');
+            return null;
+        }
         return createErrorResponse('VPS monitor requires storageType=d1', 400);
     }
     return null;
@@ -961,7 +965,7 @@ export async function handleVpsInstallScript(request, env) {
     if (d1Check) return d1Check;
 
     const settings = await loadVpsSettings(env);
-    const storageModeCheck = ensureD1StorageMode(settings);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
     if (storageModeCheck) return storageModeCheck;
 
     const url = new URL(request.url);
@@ -999,7 +1003,7 @@ export async function handleVpsConfig(request, env) {
     if (d1Check) return d1Check;
 
     const settings = await loadVpsSettings(env);
-    const storageModeCheck = ensureD1StorageMode(settings);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
     if (storageModeCheck) return storageModeCheck;
 
     const url = new URL(request.url);
@@ -1086,7 +1090,7 @@ export async function handleVpsReport(request, env) {
     }
 
     const settings = await loadVpsSettings(env);
-    const storageModeCheck = ensureD1StorageMode(settings);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
     if (storageModeCheck) return storageModeCheck;
 
     const db = getD1(env);
@@ -1192,7 +1196,7 @@ export async function handleVpsNodesRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
     const settings = await loadVpsSettings(env);
-    const storageModeCheck = ensureD1StorageMode(settings);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
     const nodes = await fetchNodes(db);
@@ -1236,7 +1240,7 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
     const settings = await loadVpsSettings(env);
-    const storageModeCheck = ensureD1StorageMode(settings);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
     if (storageModeCheck) return storageModeCheck;
 
     if (settings?.vpsMonitor?.publicPageEnabled !== true) {
@@ -1262,7 +1266,7 @@ export async function handleVpsNodeDetailRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
     const settings = await loadVpsSettings(env);
-    const storageModeCheck = ensureD1StorageMode(settings);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
 
@@ -1326,7 +1330,7 @@ export async function handleVpsAlertsRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
     const settings = await loadVpsSettings(env);
-    const storageModeCheck = ensureD1StorageMode(settings);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
 
@@ -1354,7 +1358,7 @@ export async function handleVpsNetworkTargetsRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
     const settings = await loadVpsSettings(env);
-    const storageModeCheck = ensureD1StorageMode(settings);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
 
@@ -1429,7 +1433,7 @@ export async function handleVpsNetworkCheck(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
     const settings = await loadVpsSettings(env);
-    const storageModeCheck = ensureD1StorageMode(settings);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
     if (storageModeCheck) return storageModeCheck;
     const db = getD1(env);
 
