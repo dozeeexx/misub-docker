@@ -384,43 +384,37 @@ onUnmounted(() => {
                   </div>
 
                   <!-- Back Side: Network Metrics -->
-                  <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/95 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/65">
-                    <div class="flex items-center justify-between mb-3 border-b border-[#efe6db] pb-2 dark:border-slate-800">
+                  <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/95 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/65 flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-2 border-b border-[#efe6db] pb-1.5 dark:border-slate-800">
                       <h4 class="text-xs font-semibold text-[#1f1b17] dark:text-slate-100 flex items-center gap-1">
-                        <span class="text-blue-500">🌐</span> 网络延时与丢包
+                        <span class="text-blue-500 text-[10px]">🌐</span> 网络状态
                       </h4>
-                      <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">点击返回</span>
+                      <span class="text-[9px] text-[#8a7f70] dark:text-slate-400 opacity-70">点击返回</span>
                     </div>
-                    <div v-if="node.latest?.network && node.latest.network.length" class="space-y-2.5 max-h-[160px] overflow-y-auto pr-1">
-                      <div v-for="(check, idx) in node.latest.network" :key="idx" class="flex flex-col gap-1 p-2 rounded-lg bg-white/50 dark:bg-slate-800/40 border border-black/5">
-                        <div class="flex items-center justify-between">
-                          <span class="text-[10px] font-medium text-[#1f1b17] dark:text-slate-200 truncate max-w-[120px]" :title="check.target">
-                            {{ check.target }}
+                    
+                    <div v-if="node.latest?.network && node.latest.network.length" class="flex-1 overflow-y-auto pr-1">
+                      <div class="grid grid-cols-[1fr_55px_40px] gap-2 px-1 mb-1 text-[9px] font-bold text-[#8a7f70] dark:text-slate-500 uppercase tracking-wider">
+                        <span>监测点</span>
+                        <span class="text-right">延迟</span>
+                        <span class="text-right">丢包</span>
+                      </div>
+                      <div class="divide-y divide-[#efe6db] dark:divide-slate-800">
+                        <div v-for="(check, idx) in node.latest.network" :key="idx" class="grid grid-cols-[1fr_55px_40px] gap-2 py-1.5 items-baseline">
+                          <span class="text-[10px] text-[#2c2721] dark:text-slate-200 truncate" :title="check.name || check.target">
+                            {{ check.name || check.target.replace(/^http(s)?:\/\//, '') }}
                           </span>
-                          <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 uppercase">
-                            {{ check.type }}
+                          <span class="text-[10px] font-bold text-right tabular-nums" :class="getLatencyColor(check.latencyMs)">
+                            {{ check.latencyMs !== null ? Math.round(check.latencyMs) + 'ms' : '--' }}
                           </span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 mt-1">
-                          <div class="flex items-center gap-1.5">
-                            <span class="text-[9px] text-[#8a7f70]">延时:</span>
-                            <span class="text-xs font-semibold" :class="getLatencyColor(check.latencyMs)">
-                              {{ check.latencyMs !== null ? check.latencyMs + 'ms' : '--' }}
-                            </span>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <span class="text-[9px] text-[#8a7f70]">丢包:</span>
-                            <span class="text-xs font-semibold" :class="getLossColor(check.lossPercent)">
-                              {{ check.lossPercent !== null ? check.lossPercent + '%' : '--' }}
-                            </span>
-                          </div>
+                          <span class="text-[10px] font-bold text-right tabular-nums" :class="getLossColor(check.lossPercent)">
+                            {{ check.lossPercent !== null ? check.lossPercent + '%' : '--' }}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <div v-else class="flex flex-col items-center justify-center h-[140px] text-center">
-                      <span class="text-2xl mb-2 opacity-30">📡</span>
-                    <p class="text-xs text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
-                    <p class="text-[10px] text-[#8a7f70]/60 dark:text-slate-500 mt-1">请检查探针端配置</p>
+                    <div v-else class="flex flex-col items-center justify-center flex-1 text-center opacity-60">
+                      <span class="text-xl mb-1">📡</span>
+                      <p class="text-[10px] text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
                     </div>
                   </div>
                 </div>
@@ -587,43 +581,37 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Back Side: Network Metrics -->
-                <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/95 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/65">
-                  <div class="flex items-center justify-between mb-3 border-b border-[#efe6db] pb-2 dark:border-slate-800">
+                <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/95 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/65 flex flex-col h-full">
+                  <div class="flex items-center justify-between mb-2 border-b border-[#efe6db] pb-1.5 dark:border-slate-800">
                     <h4 class="text-xs font-semibold text-[#1f1b17] dark:text-slate-100 flex items-center gap-1">
-                      <span class="text-blue-500">🌐</span> 网络延时与丢包
+                      <span class="text-blue-500 text-[10px]">🌐</span> 网络状态
                     </h4>
-                    <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">点击返回</span>
+                    <span class="text-[9px] text-[#8a7f70] dark:text-slate-400 opacity-70">点击返回</span>
                   </div>
-                  <div v-if="node.latest?.network && node.latest.network.length" class="space-y-2.5 max-h-[160px] overflow-y-auto pr-1">
-                    <div v-for="(check, idx) in node.latest.network" :key="idx" class="flex flex-col gap-1 p-2 rounded-lg bg-white/50 dark:bg-slate-800/40 border border-black/5">
-                      <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-medium text-[#1f1b17] dark:text-slate-200 truncate max-w-[120px]" :title="check.target">
-                          {{ check.target }}
+                  
+                  <div v-if="node.latest?.network && node.latest.network.length" class="flex-1 overflow-y-auto pr-1">
+                    <div class="grid grid-cols-[1fr_55px_40px] gap-2 px-1 mb-1 text-[9px] font-bold text-[#8a7f70] dark:text-slate-500 uppercase tracking-wider">
+                      <span>监测点</span>
+                      <span class="text-right">延迟</span>
+                      <span class="text-right">丢包</span>
+                    </div>
+                    <div class="divide-y divide-[#efe6db] dark:divide-slate-800">
+                      <div v-for="(check, idx) in node.latest.network" :key="idx" class="grid grid-cols-[1fr_55px_40px] gap-2 py-1.5 items-baseline">
+                        <span class="text-[10px] text-[#2c2721] dark:text-slate-200 truncate" :title="check.name || check.target">
+                          {{ check.name || check.target.replace(/^http(s)?:\/\//, '') }}
                         </span>
-                        <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 uppercase">
-                          {{ check.type }}
+                        <span class="text-[10px] font-bold text-right tabular-nums" :class="getLatencyColor(check.latencyMs)">
+                          {{ check.latencyMs !== null ? Math.round(check.latencyMs) + 'ms' : '--' }}
                         </span>
-                      </div>
-                      <div class="grid grid-cols-2 gap-2 mt-1">
-                        <div class="flex items-center gap-1.5">
-                          <span class="text-[9px] text-[#8a7f70]">延时:</span>
-                          <span class="text-xs font-semibold" :class="getLatencyColor(check.latencyMs)">
-                            {{ check.latencyMs !== null ? check.latencyMs + 'ms' : '--' }}
-                          </span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                          <span class="text-[9px] text-[#8a7f70]">丢包:</span>
-                          <span class="text-xs font-semibold" :class="getLossColor(check.lossPercent)">
-                            {{ check.lossPercent !== null ? check.lossPercent + '%' : '--' }}
-                          </span>
-                        </div>
+                        <span class="text-[10px] font-bold text-right tabular-nums" :class="getLossColor(check.lossPercent)">
+                          {{ check.lossPercent !== null ? check.lossPercent + '%' : '--' }}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  <div v-else class="flex flex-col items-center justify-center h-[140px] text-center">
-                    <span class="text-2xl mb-2 opacity-30">📡</span>
-                    <p class="text-xs text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
-                    <p class="text-[10px] text-[#8a7f70]/60 dark:text-slate-500 mt-1">请检查探针端配置</p>
+                  <div v-else class="flex flex-col items-center justify-center flex-1 text-center opacity-60">
+                    <span class="text-xl mb-1">📡</span>
+                    <p class="text-[10px] text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
                   </div>
                 </div>
               </div>

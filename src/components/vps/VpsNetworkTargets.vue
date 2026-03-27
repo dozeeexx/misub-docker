@@ -26,6 +26,7 @@ const emit = defineEmits(['refresh', 'check']);
 const { showToast } = useToastStore();
 
 const formState = ref({
+  name: '',
   type: 'icmp',
   target: '',
   port: '',
@@ -68,7 +69,7 @@ const sortedTargets = computed(() => {
 });
 
 const resetForm = () => {
-  formState.value = { type: 'icmp', target: '', port: '', path: '/', scheme: 'https' };
+  formState.value = { name: '', type: 'icmp', target: '', port: '', path: '/', scheme: 'https' };
 };
 
 const handleCreate = async () => {
@@ -77,6 +78,7 @@ const handleCreate = async () => {
     return;
   }
   const payload = {
+    name: formState.value.name,
     type: formState.value.type,
     target: formState.value.target,
     port: formState.value.type === 'tcp' ? Number(formState.value.port) : undefined,
@@ -159,11 +161,13 @@ const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
       >
         <div>
           <div class="text-sm font-medium text-gray-900 dark:text-white">
-            {{ item.type.toUpperCase() }} · {{ item.scheme ? item.scheme + '://' : '' }}{{ item.target }}
-            <span v-if="item.port">:{{ item.port }}</span>
-            <span v-if="item.path">{{ item.path }}</span>
+            <span v-if="item.name" class="mr-1.5 px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold">{{ item.name }}</span>
+            <span class="opacity-60 text-xs font-normal mr-1">[{{ item.type.toUpperCase() }}]</span>
+            <span :class="{'text-xs opacity-70': item.name}">{{ item.target }}</span>
+            <span v-if="item.port" class="text-xs opacity-70">:{{ item.port }}</span>
+            <span v-if="item.path" class="text-xs opacity-70">{{ item.path }}</span>
           </div>
-          <div class="text-xs text-gray-500">{{ item.enabled ? '启用' : '停用' }}</div>
+          <div class="text-[10px] text-gray-400 mt-0.5">{{ item.enabled ? '已启用监控' : '已停用' }}</div>
         </div>
         <div class="flex items-center gap-2">
           <button
@@ -190,11 +194,12 @@ const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
     </div>
 
     <div class="space-y-2" v-if="canAddMore">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+        <input v-model="formState.name" placeholder="名称 (如: 电信核心)" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
         <select v-model="formState.type" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg">
-          <option value="icmp">ICMP</option>
-          <option value="tcp">TCP</option>
-          <option value="http">HTTP</option>
+          <option value="icmp">ICMP (Ping)</option>
+          <option value="tcp">TCP (Port)</option>
+          <option value="http">HTTP (Web)</option>
         </select>
         <input v-model="formState.target" placeholder="IP 或域名" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
         <input v-if="formState.type === 'tcp'" v-model="formState.port" placeholder="端口" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
@@ -206,7 +211,7 @@ const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
           <input v-model="formState.path" placeholder="路径" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
         </div>
         <button
-          class="px-3 py-2 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+          class="px-3 py-2 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium"
           @click="handleCreate"
         >
           添加目标

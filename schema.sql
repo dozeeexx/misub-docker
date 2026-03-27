@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS vps_network_targets (
     node_id TEXT NOT NULL,
     type TEXT NOT NULL,
     target TEXT NOT NULL,
+    name TEXT,
     scheme TEXT,
     port INTEGER,
     path TEXT,

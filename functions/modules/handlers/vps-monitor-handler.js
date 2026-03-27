@@ -282,6 +282,7 @@ function sanitizeNetworkChecks(checks) {
         if (!['icmp', 'tcp', 'http'].includes(type)) return null;
         const target = normalizeString(item?.target);
         if (!target) return null;
+        const name = normalizeString(item?.name || '');
         const status = normalizeString(item?.status) || 'unknown';
         const latencyMs = clampNumber(item?.latencyMs, 0, 60 * 1000, null);
         const lossPercent = clampNumber(item?.lossPercent, 0, 100, null);
@@ -296,6 +297,7 @@ function sanitizeNetworkChecks(checks) {
         return {
             type,
             target,
+            name,
             status,
             latencyMs,
             lossPercent,
@@ -581,6 +583,7 @@ async function fetchNetworkTargets(db, nodeId) {
         nodeId: row.node_id,
         type: row.type,
         target: row.target,
+        name: row.name || '',
         scheme: row.scheme || 'https',
         port: row.port,
         path: row.path,
@@ -598,6 +601,7 @@ async function fetchGlobalNetworkTargets(db) {
         nodeId: row.node_id,
         type: row.type,
         target: row.target,
+        name: row.name || '',
         scheme: row.scheme || 'https',
         port: row.port,
         path: row.path,
@@ -614,6 +618,7 @@ async function insertNetworkTarget(db, nodeId, payload) {
         nodeId,
         type: normalizeString(payload.type).toLowerCase(),
         target: normalizeString(payload.target),
+        name: normalizeString(payload.name || ''),
         scheme: normalizeString(payload.scheme || 'https'),
         port: payload.port ? Number(payload.port) : null,
         path: normalizeString(payload.path),
@@ -625,13 +630,14 @@ async function insertNetworkTarget(db, nodeId, payload) {
     try {
         await db.prepare(
             `INSERT INTO vps_network_targets
-             (id, node_id, type, target, scheme, port, path, enabled, force_check_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             (id, node_id, type, target, name, scheme, port, path, enabled, force_check_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             target.id,
             target.nodeId,
             target.type,
             target.target,
+            target.name,
             target.scheme,
             target.port,
             target.path,
@@ -642,7 +648,7 @@ async function insertNetworkTarget(db, nodeId, payload) {
         ).run();
     } catch (error) {
         const message = error?.message || '';
-        if (!message.includes('no column named scheme') && !message.includes('no column named force_check_at')) {
+        if (!message.includes('no column named scheme') && !message.includes('no column named force_check_at') && !message.includes('no column named name')) {
             throw error;
         }
         await db.prepare(
@@ -672,6 +678,7 @@ async function updateNetworkTarget(db, targetId, payload) {
         nodeId: existing.node_id,
         type: payload.type !== undefined ? normalizeString(payload.type).toLowerCase() : existing.type,
         target: payload.target !== undefined ? normalizeString(payload.target) : existing.target,
+        name: payload.name !== undefined ? normalizeString(payload.name) : (existing.name || ''),
         scheme: payload.scheme !== undefined ? normalizeString(payload.scheme || 'https') : existing.scheme || 'https',
         port: payload.port !== undefined ? Number(payload.port) : existing.port,
         path: payload.path !== undefined ? normalizeString(payload.path) : existing.path,
@@ -682,11 +689,12 @@ async function updateNetworkTarget(db, targetId, payload) {
     try {
         await db.prepare(
             `UPDATE vps_network_targets
-             SET type = ?, target = ?, scheme = ?, port = ?, path = ?, enabled = ?, force_check_at = ?, updated_at = ?
+             SET type = ?, target = ?, name = ?, scheme = ?, port = ?, path = ?, enabled = ?, force_check_at = ?, updated_at = ?
              WHERE id = ?`
         ).bind(
             updated.type,
             updated.target,
+            updated.name,
             updated.scheme,
             updated.port,
             updated.path,
@@ -697,7 +705,7 @@ async function updateNetworkTarget(db, targetId, payload) {
         ).run();
     } catch (error) {
         const message = error?.message || '';
-        if (!message.includes('no column named scheme') && !message.includes('no column named force_check_at')) {
+        if (!message.includes('no column named scheme') && !message.includes('no column named force_check_at') && !message.includes('no column named name')) {
             throw error;
         }
         await db.prepare(
@@ -834,7 +842,7 @@ function buildInstallScript(reportUrl, node) {
         'if [ $((now_ts-last_ts)) -ge "$NETWORK_INTERVAL" ]; then',
         '  checks=()',
         '  for item in "${TARGETS[@]}"; do',
-        '    IFS="|" read -r ttype ttarget tscheme tport tpath tenabled tforce <<< "$item"',
+        '    IFS="|" read -r ttype ttarget tscheme tport tpath tenabled tforce tname <<< "$item"',
         '    if [ "${tenabled:-1}" = "0" ]; then continue; fi',
         '    checked_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)',
         '    if [ "$ttype" = "icmp" ]; then',
@@ -842,7 +850,7 @@ function buildInstallScript(reportUrl, node) {
         '      loss=$(echo "$ping_out" | awk -F", " \'/packet loss/ {print $3}\' | awk \'{gsub(/%/," "); print $1}\')',
         '      avg=$(echo "$ping_out" | awk -F"/" \'/rtt/ {print $5}\')',
         '      if [ -z "$avg" ]; then status="down"; avg=null; else status="up"; fi',
-        '      checks+=("{\\\"type\\\":\\\"icmp\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${avg:-null},\\\"lossPercent\\\":${loss:-null},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
+        '      checks+=("{\\\"type\\\":\\\"icmp\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"name\\\":\\\"$tname\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${avg:-null},\\\"lossPercent\\\":${loss:-null},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
         '    elif [ "$ttype" = "tcp" ]; then',
         '      start=$(date +%s%3N)',
         '      if [ "$HAS_SOCKETS" = "1" ] && timeout 3 bash -c "cat < /dev/null > /dev/tcp/$ttarget/$tport" 2>/dev/null; then',
@@ -850,7 +858,7 @@ function buildInstallScript(reportUrl, node) {
         '      else',
         '        latency=null; status="down"',
         '      fi',
-        '      checks+=("{\\\"type\\\":\\\"tcp\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"port\\\":$tport,\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
+        '      checks+=("{\\\"type\\\":\\\"tcp\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"name\\\":\\\"$tname\\\",\\\"port\\\":$tport,\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
         '    elif [ "$ttype" = "http" ]; then',
         '      scheme="${tscheme:-https}"',
         '      url="$scheme://$ttarget"',
@@ -871,7 +879,7 @@ function buildInstallScript(reportUrl, node) {
         '      else',
         '        latency=null; http_code="000"; dns=null; connect=null; tls=null; status="down"',
         '      fi',
-        '      checks+=("{\\\"type\\\":\\\"http\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"scheme\\\":\\\"${scheme}\\\",\\\"port\\\":${tport:-null},\\\"path\\\":\\\"${tpath:-/}\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"httpCode\\\":$http_code,\\\"dnsMs\\\":${dns},\\\"connectMs\\\":${connect},\\\"tlsMs\\\":${tls},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
+        '      checks+=("{\\\"type\\\":\\\"http\\\",\\\"target\\\":\\\"$ttarget\\\",\\\"name\\\":\\\"$tname\\\",\\\"scheme\\\":\\\"${scheme}\\\",\\\"port\\\":${tport:-null},\\\"path\\\":\\\"${tpath:-/}\\\",\\\"status\\\":\\\"$status\\\",\\\"latencyMs\\\":${latency},\\\"httpCode\\\":$http_code,\\\"dnsMs\\\":${dns},\\\"connectMs\\\":${connect},\\\"tlsMs\\\":${tls},\\\"checkedAt\\\":\\\"$checked_at\\\"}")',
         '    fi',
         '  done',
         '  NETWORK_JSON="["$(IFS=,; echo "${checks[*]}")"]"',
@@ -1059,7 +1067,7 @@ export async function handleVpsConfig(request, env) {
         ];
         const pending = [];
         targets.forEach(target => {
-            const line = `TARGET=${target.type}|${target.target}|${target.scheme || 'https'}|${target.port || ''}|${target.path || ''}|${target.enabled ? 1 : 0}|${target.forceCheckAt || ''}`;
+            const line = `TARGET=${target.type}|${target.target}|${target.scheme || 'https'}|${target.port || ''}|${target.path || ''}|${target.enabled ? 1 : 0}|${target.forceCheckAt || ''}|${target.name || ''}`;
             lines.push(line);
             if (target.forceCheckAt) {
                 pending.push(target.id);
