@@ -1286,8 +1286,43 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
 
     const db = getD1(env);
     const nodes = await fetchNodes(db);
-    const data = nodes.map(node => summarizeNode(node, node.lastReport || null, settings));
+    
+    // Fetch latest network samples for all nodes to ensure they are visible
+    const nodeIds = nodes.map(n => n.id);
+    const latestSamples = await fetchLatestNetworkSamplesBatch(db, nodeIds);
+    const samplesMap = new Map(latestSamples.map(s => [s.nodeId, s.checks]));
+
+    const data = nodes.map(node => {
+        const summary = summarizeNode(node, node.lastReport || null, settings);
+        // Sync/Override with fresh samples from the samples table
+        const latestNetwork = samplesMap.get(node.id);
+        if (latestNetwork && latestNetwork.length > 0) {
+            if (!summary.latest) summary.latest = { at: nowIso() };
+            summary.latest.network = latestNetwork;
+        }
+        return summary;
+    });
+
     return createJsonResponse({ success: true, data });
+}
+
+async function fetchLatestNetworkSamplesBatch(db, nodeIds) {
+    if (!nodeIds.length) return [];
+    const placeholders = nodeIds.map(() => '?').join(',');
+    const sql = `SELECT nodeId, data, reportedAt FROM vps_network_samples WHERE nodeId IN (${placeholders}) ORDER BY reportedAt DESC`;
+    const { results } = await db.prepare(sql).bind(...nodeIds).all();
+    
+    const latestMap = new Map();
+    for (const row of results) {
+        if (!latestMap.has(row.nodeId)) {
+            latestMap.set(row.nodeId, {
+                nodeId: row.nodeId,
+                checks: row.data ? JSON.parse(row.data).checks : [],
+                reportedAt: row.reportedAt
+            });
+        }
+    }
+    return Array.from(latestMap.values());
 }
 
 export async function handleVpsNodeDetailRequest(request, env) {
