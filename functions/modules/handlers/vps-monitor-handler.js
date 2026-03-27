@@ -1317,16 +1317,16 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
 async function fetchLatestNetworkSamplesBatch(db, nodeIds) {
     if (!nodeIds.length) return [];
     const placeholders = nodeIds.map(() => '?').join(',');
-    const sql = `SELECT nodeId, data, reportedAt FROM vps_network_samples WHERE nodeId IN (${placeholders}) ORDER BY reportedAt DESC`;
+    const sql = `SELECT node_id, data, reported_at FROM vps_network_samples WHERE node_id IN (${placeholders}) ORDER BY reported_at DESC`;
     const { results } = await db.prepare(sql).bind(...nodeIds).all();
     
     const latestMap = new Map();
     for (const row of results) {
-        if (!latestMap.has(row.nodeId)) {
-            latestMap.set(row.nodeId, {
-                nodeId: row.nodeId,
+        if (!latestMap.has(row.node_id)) {
+            latestMap.set(row.node_id, {
+                nodeId: row.node_id,
                 checks: row.data ? JSON.parse(row.data).checks : [],
-                reportedAt: row.reportedAt
+                reportedAt: row.reported_at
             });
         }
     }
