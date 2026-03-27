@@ -695,7 +695,7 @@ onMounted(() => {
     </template>
   </Modal>
 
-  <Modal v-model:show="showGuideModal" :confirm-disabled="true" cancel-text="关闭">
+  <Modal v-model:show="showGuideModal" :confirm-disabled="true" cancel-text="关闭" size="4xl">
     <template #title>
       <h3 class="text-lg font-bold text-gray-900 dark:text-white">探针安装信息</h3>
     </template>
