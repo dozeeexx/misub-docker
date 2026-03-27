@@ -88,6 +88,19 @@ const router = createRouter({
     }
 });
 
+// 自动恢复动态 chunk 加载失败导致的白屏
+router.onError((error) => {
+    const message = error?.message || '';
+    if (message.includes('Failed to fetch dynamically imported module')
+        || message.includes('error loading dynamically imported module')) {
+        const reloadKey = 'misub:chunk-reload';
+        if (sessionStorage.getItem(reloadKey) !== '1') {
+            sessionStorage.setItem(reloadKey, '1');
+            window.location.reload();
+        }
+    }
+});
+
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
     // Update title
