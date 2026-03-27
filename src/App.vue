@@ -14,8 +14,6 @@ const Login = defineAsyncComponent(() => import('./components/modals/Login.vue')
 const NotFound = defineAsyncComponent(() => import('./views/NotFound.vue'));
 const Toast = defineAsyncComponent(() => import('./components/ui/Toast.vue'));
 const Footer = defineAsyncComponent(() => import('./components/layout/Footer.vue'));
-const PWAUpdatePrompt = defineAsyncComponent(() => import('./components/features/PWAUpdatePrompt.vue'));
-const PWADevTools = defineAsyncComponent(() => import('./components/features/PWADevTools.vue'));
 const Dashboard = defineAsyncComponent(() => import('./components/features/Dashboard/Dashboard.vue'));
 const Header = defineAsyncComponent(() => import('./components/layout/Header.vue'));
 const SavePrompt = defineAsyncComponent(() => import('./components/ui/SavePrompt.vue'));
@@ -158,8 +156,6 @@ aria-live="polite"
     </main>
 
 <Toast />
-<PWAUpdatePrompt />
-<PWADevTools />
 <Footer />
 <ScrollToTop v-if="isLoggedIn || isPublicRoute" />
 </div>
