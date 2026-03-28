@@ -10,6 +10,20 @@ const loading = ref(true);
 const error = ref('');
 const nodes = ref([]);
 const lastUpdatedAt = ref('');
+const selectedGroup = ref('全部');
+
+const groups = computed(() => {
+  const g = new Set(['全部']);
+  nodes.value.forEach(n => {
+    if (n.groupTag) g.add(n.groupTag);
+  });
+  return Array.from(g);
+});
+
+const filteredNodes = computed(() => {
+  if (selectedGroup.value === '全部') return nodes.value;
+  return nodes.value.filter(n => n.groupTag === selectedGroup.value);
+});
 
 const statusSummary = computed(() => {
   const total = nodes.value.length;
@@ -61,7 +75,7 @@ const anomalyNodes = computed(() => {
 });
 
 const sortedNodes = computed(() => {
-  return [...nodes.value].sort((a, b) => {
+  return [...filteredNodes.value].sort((a, b) => {
     if (a.status !== b.status) return a.status === 'online' ? -1 : 1;
     return (a.name || '').localeCompare(b.name || '');
   });
@@ -110,6 +124,16 @@ const formatTraffic = (traffic) => {
     return `${gb.toFixed(2)} GB`;
   };
   return `⬇ ${format(rx)} / ⬆ ${format(tx)}`;
+};
+
+const formatTotalTraffic = (bytes) => {
+  if (!bytes) return '0 GB';
+  const gb = Number(bytes) / (1024 * 1024 * 1024);
+  if (gb < 1) {
+    const mb = Number(bytes) / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  }
+  return `${gb.toFixed(2)} GB`;
 };
 
 const formatUptime = (seconds) => {
@@ -356,7 +380,10 @@ onUnmounted(() => {
                     </div>
                     <div class="flex items-start justify-between mt-2">
                       <div>
-                        <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
+                        <div class="flex items-center gap-2">
+                          <img v-if="node.countryCode" :src="`https://flagcdn.com/w20/${node.countryCode.toLowerCase()}.png`" class="h-3 rounded-sm opacity-90" :alt="node.countryCode" />
+                          <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
+                        </div>
                         <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
                         <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
                           <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
@@ -386,6 +413,19 @@ onUnmounted(() => {
                       <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
                       <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
                       <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
+                    </div>
+                    <!-- Traffic Progress Bar -->
+                    <div v-if="node.trafficLimitGb > 0" class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
+                      <div class="flex justify-between items-center text-[10px] mb-1">
+                        <span class="text-[#8a7f70] dark:text-slate-400">本月流量: {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
+                        <span class="font-medium text-[#6a5f54] dark:text-slate-300">{{ node.trafficLimitGb }} GB</span>
+                      </div>
+                      <div class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div 
+                          class="h-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500" 
+                          :style="{ width: Math.min(100, ((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100)) + '%' }"
+                        ></div>
+                      </div>
                     </div>
                   </div>
 
@@ -435,7 +475,10 @@ onUnmounted(() => {
               <VpsMetricChart title="CPU" unit="%" :points="nodes.map(node => node.latest?.cpu?.usage ?? node.latest?.cpuPercent ?? null)" color="#0ea5e9" :height="80" />
               <VpsMetricChart title="内存" unit="%" :points="nodes.map(node => node.latest?.mem?.usage ?? node.latest?.memPercent ?? null)" color="#f97316" :height="80" />
               <VpsMetricChart title="磁盘" unit="%" :points="nodes.map(node => node.latest?.disk?.usage ?? node.latest?.diskPercent ?? null)" color="#22c55e" :height="80" />
-              <VpsMetricChart title="流量" unit="" :points="nodes.map(node => node.latest?.traffic?.rx ?? node.latest?.traffic?.download ?? null)" color="#6366f1" :height="80" />
+              <VpsMetricChart title="流量" unit="GB" :points="nodes.map(node => {
+                const b = node.latest?.traffic?.rx ?? node.latest?.traffic?.download ?? null;
+                return b !== null ? Number((b / (1024 * 1024 * 1024)).toFixed(2)) : null;
+              })" color="#6366f1" :height="80" :max="10" />
             </div>
             <div class="mt-6 grid grid-cols-2 gap-3 text-xs">
               <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-3 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
@@ -454,6 +497,7 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- Featured Carousel -->
         <div class="rounded-[30px] border border-[#e7e1d6] bg-white/80 backdrop-blur-2xl p-6 shadow-[0_20px_60px_-40px_rgba(31,27,23,0.45)] dark:border-slate-800/70 dark:bg-slate-900/60 dark:shadow-black/50">
           <div class="flex items-center justify-between">
             <h2 class="text-lg font-semibold text-[#1f1b17] dark:text-slate-100">重点轮播</h2>
@@ -463,7 +507,10 @@ onUnmounted(() => {
             <div class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
               <div class="flex items-start justify-between mt-3">
                 <div>
-                  <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ activeFeatured?.name || activeFeatured?.id || '--' }}</p>
+                  <div class="flex items-center gap-2">
+                    <img v-if="activeFeatured?.countryCode" :src="`https://flagcdn.com/w20/${activeFeatured.countryCode.toLowerCase()}.png`" class="h-3 rounded-sm opacity-90" :alt="activeFeatured.countryCode" />
+                    <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ activeFeatured?.name || activeFeatured?.id || '--' }}</p>
+                  </div>
                   <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ activeFeatured?.tag || '--' }} · {{ activeFeatured?.region || '未知地区' }}</p>
                 </div>
                 <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
@@ -474,18 +521,17 @@ onUnmounted(() => {
                   {{ activeFeatured?.status === 'online' ? '在线' : '离线' }}
                 </span>
               </div>
-              <div class="mt-4 grid grid-cols-3 gap-3 text-[11px] text-[#6a5f54] dark:text-slate-400">
-                <div>CPU {{ formatPercent(activeFeatured?.latest?.cpu?.usage ?? activeFeatured?.latest?.cpuPercent) }}</div>
-                <div>内存 {{ formatPercent(activeFeatured?.latest?.mem?.usage ?? activeFeatured?.latest?.memPercent) }}</div>
-                <div>磁盘 {{ formatPercent(activeFeatured?.latest?.disk?.usage ?? activeFeatured?.latest?.diskPercent) }}</div>
-                <div>负载 {{ formatLoad(activeFeatured?.latest?.load1 ?? activeFeatured?.latest?.load?.load1) }}</div>
-                <div>运行 {{ formatUptime(activeFeatured?.latest?.uptimeSec) }}</div>
-                <div>流量 {{ formatTraffic(activeFeatured?.latest?.traffic) }}</div>
+              <div class="mt-4 grid grid-cols-2 gap-4 text-[11px] text-[#6a5f54] dark:text-slate-400">
+                <div class="flex justify-between"><span>CPU</span> <span class="font-medium">{{ formatPercent(activeFeatured?.latest?.cpu?.usage ?? activeFeatured?.latest?.cpuPercent) }}</span></div>
+                <div class="flex justify-between"><span>内存</span> <span class="font-medium">{{ formatPercent(activeFeatured?.latest?.mem?.usage ?? activeFeatured?.latest?.memPercent) }}</span></div>
+                <div class="flex justify-between"><span>磁盘</span> <span class="font-medium">{{ formatPercent(activeFeatured?.latest?.disk?.usage ?? activeFeatured?.latest?.diskPercent) }}</span></div>
+                <div class="flex justify-between"><span>运行</span> <span class="font-medium">{{ formatUptime(activeFeatured?.latest?.uptimeSec) }}</span></div>
               </div>
             </div>
+            
             <div class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
-              <h3 class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">异常提示</h3>
-              <p class="mt-1 text-xs text-[#8a7f70] dark:text-slate-400">高负载或离线节点</p>
+              <h3 class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">运行概览</h3>
+              <p class="mt-1 text-xs text-[#8a7f70] dark:text-slate-400">健康状况自检</p>
               <div v-if="anomalyNodes.length" class="mt-3 space-y-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
                 <div v-for="node in anomalyNodes.slice(0,5)" :key="node.id" class="flex items-center justify-between">
                   <span>{{ node.name || node.id }}</span>
@@ -494,19 +540,34 @@ onUnmounted(() => {
                       ? 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300'
                       : 'border-[#fde68a] bg-[#fffbeb] text-[#b45309] dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300'"
                   >
-                    {{ node.status === 'offline' ? '离线' : '高负载' }}
+                    {{ node.status === 'offline' ? '离线' : '重负载' }}
                   </span>
                 </div>
               </div>
-              <div v-else class="mt-3 text-[11px] text-[#8a7f70] dark:text-slate-400">暂无异常节点</div>
+              <div v-else class="mt-3 text-[11px] text-[#8a7f70] dark:text-slate-400">所有节点运行良好</div>
             </div>
           </div>
         </div>
 
+        <!-- All Nodes -->
         <div class="rounded-[30px] border border-[#e7e1d6] bg-white/90 p-6 shadow-xl shadow-[#d8cab8]/30 dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-black/40">
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-[#1f1b17] dark:text-slate-100">节点全览</h2>
-            <span class="text-xs text-[#8a7f70] dark:text-slate-400">共 {{ statusSummary.total }} 个节点</span>
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <h2 class="text-lg font-semibold text-[#1f1b17] dark:text-slate-100">全部节点</h2>
+            <!-- Group Tabs -->
+            <div v-if="groups.length > 1" class="flex items-center gap-1 overflow-x-auto p-1 bg-[#efe6db]/50 dark:bg-slate-800/50 rounded-xl no-scrollbar">
+              <button 
+                v-for="group in groups" 
+                :key="group"
+                @click="selectedGroup = group"
+                class="whitespace-nowrap px-4 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                :class="selectedGroup === group 
+                  ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400' 
+                  : 'text-[#8a7f70] hover:text-[#1f1b17] dark:text-slate-400 dark:hover:text-slate-200'"
+              >
+                {{ group }}
+              </button>
+            </div>
+            <span class="text-xs text-[#8a7f70] dark:text-slate-400">共 {{ filteredNodes.length }} 个节点</span>
           </div>
           <div v-if="anomalyNodes.length" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
             <div
@@ -553,7 +614,10 @@ onUnmounted(() => {
                   </div>
                   <div class="flex items-start justify-between mt-2">
                     <div>
-                      <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
+                      <div class="flex items-center gap-2">
+                        <img v-if="node.countryCode" :src="`https://flagcdn.com/w20/${node.countryCode.toLowerCase()}.png`" class="h-3 rounded-sm opacity-90" :alt="node.countryCode" />
+                        <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
+                      </div>
                       <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
                       <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
                         <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
@@ -580,6 +644,19 @@ onUnmounted(() => {
                     <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
                     <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
                     <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
+                  </div>
+                  <!-- Traffic Progress Bar -->
+                  <div v-if="node.trafficLimitGb > 0" class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
+                    <div class="flex justify-between items-center text-[10px] mb-1">
+                      <span class="text-[#8a7f70] dark:text-slate-400">本月流量: {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
+                      <span class="font-medium text-[#6a5f54] dark:text-slate-300">{{ node.trafficLimitGb }} GB</span>
+                    </div>
+                    <div class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        class="h-full bg-gradient-to-r from-emerald-400 to-sky-500 transition-all duration-500" 
+                        :style="{ width: Math.min(100, ((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100)) + '%' }"
+                      ></div>
+                    </div>
                   </div>
                 </div>
 
