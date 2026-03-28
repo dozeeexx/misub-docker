@@ -483,13 +483,14 @@ onUnmounted(() => {
                           />
                           <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
                         </div>
-                        <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
+                        <p class="text-xs text-[#8a7f70] dark:text-slate-400">
+                          <span v-if="node.tag" class="mr-1">{{ node.tag }} ·</span>
+                          {{ node.region || '未知地区' }}
+                          <span class="ml-1 opacity-70">| 📊 {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
+                        </p>
                         <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
                           <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                            🌍 {{ node.region || '未知地区' }}
-                          </span>
-                          <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                            ⚡ {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}
+                            ⚡ 负载: {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}
                           </span>
                         </div>
                       </div>
@@ -513,13 +514,12 @@ onUnmounted(() => {
                       <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
                       <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
                     </div>
-                    <!-- Traffic Display -->
-                    <div class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
-                      <div class="flex justify-between items-center text-[10px]" :class="{ 'mb-1': node.trafficLimitGb > 0 }">
-                        <span class="text-[#8a7f70] dark:text-slate-400">本月流量: {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
-                        <span v-if="node.trafficLimitGb > 0" class="font-medium text-[#6a5f54] dark:text-slate-300">{{ node.trafficLimitGb }} GB</span>
+                    <!-- Traffic Limit Progress -->
+                    <div v-if="node.trafficLimitGb > 0" class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
+                      <div class="flex justify-end items-center text-[10px] mb-1 text-emerald-600 dark:text-emerald-400">
+                        <span class="font-medium text-[#6a5f54] dark:text-slate-300">限额: {{ node.trafficLimitGb }} GB</span>
                       </div>
-                      <div v-if="node.trafficLimitGb > 0" class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden mt-1">
+                      <div class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden mt-1">
                         <div 
                           class="h-full transition-all duration-500" 
                           :class="((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100) > 95
@@ -732,7 +732,11 @@ onUnmounted(() => {
                         />
                         <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
                       </div>
-                      <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
+                      <p class="text-xs text-[#8a7f70] dark:text-slate-400">
+                        <span v-if="node.tag" class="mr-1">{{ node.tag }} ·</span>
+                        {{ node.region || '未知地区' }}
+                        <span class="ml-1 opacity-70">| 📊 {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
+                      </p>
                       <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
                         <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                           ⏱ {{ formatUptime(node.latest?.uptimeSec) }}
@@ -759,13 +763,12 @@ onUnmounted(() => {
                     <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
                     <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
                   </div>
-                  <!-- Traffic Display -->
-                  <div class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
-                    <div class="flex justify-between items-center text-[10px]" :class="{ 'mb-1': node.trafficLimitGb > 0 }">
-                      <span class="text-[#8a7f70] dark:text-slate-400">本月流量: {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
-                      <span v-if="node.trafficLimitGb > 0" class="font-medium text-[#6a5f54] dark:text-slate-300">{{ node.trafficLimitGb }} GB</span>
+                  <!-- Traffic Limit Progress -->
+                  <div v-if="node.trafficLimitGb > 0" class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
+                    <div class="flex justify-end items-center text-[10px] mb-1 text-emerald-600 dark:text-emerald-400">
+                      <span class="font-medium text-[#6a5f54] dark:text-slate-300">限额: {{ node.trafficLimitGb }} GB</span>
                     </div>
-                    <div v-if="node.trafficLimitGb > 0" class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden mt-1">
+                    <div class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden mt-1">
                       <div 
                         class="h-full transition-all duration-500" 
                         :class="((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100) > 95
