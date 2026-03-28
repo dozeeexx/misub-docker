@@ -652,7 +652,14 @@ onMounted(() => {
         >
           <template #column-name="{ row }">
             <div class="flex items-center gap-2">
-              <img v-if="row.countryCode" :src="`https://flagcdn.com/w20/${row.countryCode.toLowerCase()}.png`" class="h-3 rounded-sm opacity-80" :alt="row.countryCode" />
+              <img 
+                v-if="row.countryCode" 
+                :src="`https://flagcdn.com/w20/${row.countryCode.toLowerCase()}.png`" 
+                class="h-3.5 w-auto rounded-sm opacity-80" 
+                alt=""
+                :title="row.countryCode"
+                @error="(e) => e.target.style.display = 'none'"
+              />
               <div class="flex flex-col min-w-0">
                 <span class="font-medium text-slate-900 dark:text-white truncate cursor-pointer hover:text-blue-500" @click="openDetail(row)">
                   {{ row.name }}

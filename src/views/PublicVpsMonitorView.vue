@@ -12,6 +12,41 @@ const nodes = ref([]);
 const lastUpdatedAt = ref('');
 const selectedGroup = ref('全部');
 
+// v2.1 Interactive Effects
+const mouseX = ref(0);
+const mouseY = ref(0);
+const updateMouse = (e) => {
+  mouseX.value = e.clientX;
+  mouseY.value = e.clientY;
+};
+
+const displayMetrics = ref({
+  total: 0,
+  online: 0,
+  offline: 0,
+  sla: 0
+});
+
+const animateValues = (target) => {
+  const duration = 1000;
+  const start = Date.now();
+  const initial = { ...displayMetrics.value };
+  
+  const step = () => {
+    const elapsed = Date.now() - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+    
+    displayMetrics.value.total = Math.floor(initial.total + (target.total - initial.total) * ease);
+    displayMetrics.value.online = Math.floor(initial.online + (target.online - initial.online) * ease);
+    displayMetrics.value.offline = Math.floor(initial.offline + (target.offline - initial.offline) * ease);
+    displayMetrics.value.sla = Math.floor(initial.sla + (target.sla - initial.sla) * ease);
+    
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+};
+
 const groups = computed(() => {
   const g = new Set(['全部']);
   nodes.value.forEach(n => {
@@ -89,6 +124,14 @@ const loadSnapshot = async () => {
   if (result.success) {
     nodes.value = result.data?.data || [];
     lastUpdatedAt.value = new Date().toLocaleString();
+    
+    // Trigger animation
+    animateValues({
+      total: statusSummary.value.total,
+      online: statusSummary.value.online,
+      offline: statusSummary.value.offline,
+      sla: onlineRate.value
+    });
   } else {
     error.value = result.error || '加载失败';
   }
@@ -127,13 +170,12 @@ const formatTraffic = (traffic) => {
 };
 
 const formatTotalTraffic = (bytes) => {
-  if (!bytes) return '0 GB';
-  const gb = Number(bytes) / (1024 * 1024 * 1024);
-  if (gb < 1) {
-    const mb = Number(bytes) / (1024 * 1024);
-    return `${mb.toFixed(1)} MB`;
-  }
-  return `${gb.toFixed(2)} GB`;
+  if (bytes === null || bytes === undefined || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  if (bytes < k) return bytes + ' B';
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 const formatUptime = (seconds) => {
@@ -224,10 +266,12 @@ const getLossColor = (loss) => {
 onMounted(() => {
   loadSnapshot();
   startRotation();
+  window.addEventListener('mousemove', updateMouse);
 });
 
 onUnmounted(() => {
   stopRotation();
+  window.removeEventListener('mousemove', updateMouse);
 });
 </script>
 
@@ -262,12 +306,52 @@ onUnmounted(() => {
 .vps-card-back {
   transform: rotateY(180deg);
 }
+
+/* v2.1 Enhanced Visuals */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.glass-premium {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+.dark .glass-premium {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.status-glow-online {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+  animation: pulse-glow 3s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.1); }
+  50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+}
+
+.bg-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
 </style>
 
 <template>
   <div class="min-h-screen bg-[#f7f6f1] dark:bg-[#0a0d14]">
     <div class="relative overflow-hidden">
       <div class="absolute inset-0">
+        <!-- Interactive Glow -->
+        <div 
+          class="pointer-events-none absolute h-96 w-96 rounded-full bg-primary-500/10 blur-[100px] transition-transform duration-300 ease-out"
+          :style="{ transform: `translate(${mouseX - 192}px, ${mouseY - 192}px)` }"
+        ></div>
         <div class="absolute -top-24 left-10 h-72 w-72 rounded-full bg-gradient-to-br from-[#0ea5e9]/25 via-[#2dd4bf]/15 to-[#f97316]/20 blur-3xl"></div>
         <div class="absolute top-24 right-10 h-64 w-64 rounded-full bg-gradient-to-br from-[#f97316]/20 via-[#22c55e]/15 to-[#38bdf8]/20 blur-3xl"></div>
         <div class="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-gradient-to-br from-[#f59e0b]/18 via-[#22c55e]/12 to-[#0ea5e9]/16 blur-3xl"></div>
@@ -300,33 +384,33 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="grid grid-cols-2 gap-4 text-xs">
-            <div class="rounded-2xl border border-[#e9e2d6] bg-white/70 backdrop-blur-xl p-4 shadow-[0_14px_30px_-22px_rgba(31,27,23,0.35)] dark:border-slate-800/70 dark:bg-slate-900/60">
+            <div class="rounded-2xl border border-[#e9e2d6] bg-white/70 backdrop-blur-xl p-4 shadow-[0_14px_30px_-22px_rgba(31,27,23,0.35)] dark:border-slate-800/70 dark:bg-slate-900/60 transition-transform hover:scale-[1.02]">
               <div class="flex items-center justify-between">
                 <p class="text-[#8a7f70] dark:text-slate-400">节点总数</p>
                 <span class="text-[10px] px-2 py-0.5 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">ALL</span>
               </div>
-              <p class="mt-2 text-2xl font-semibold text-[#1f1b17] dark:text-slate-100">{{ statusSummary.total }}</p>
+              <p class="mt-2 text-2xl font-semibold text-[#1f1b17] dark:text-slate-100 tabular-nums">{{ displayMetrics.total }}</p>
             </div>
-            <div class="rounded-2xl border border-[#d1fae5]/80 bg-[#ecfdf3]/80 p-4 shadow-[0_14px_30px_-22px_rgba(5,150,105,0.2)] dark:border-emerald-500/30 dark:bg-emerald-500/10">
+            <div class="rounded-2xl border border-[#d1fae5]/80 bg-[#ecfdf3]/80 p-4 shadow-[0_14px_30px_-22px_rgba(5,150,105,0.2)] dark:border-emerald-500/30 dark:bg-emerald-500/10 transition-transform hover:scale-[1.02]">
               <div class="flex items-center justify-between">
                 <p class="text-[#087f5b] dark:text-emerald-300">在线节点</p>
                 <span class="text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300">OK</span>
               </div>
-              <p class="mt-2 text-2xl font-semibold text-[#064e3b] dark:text-emerald-200">{{ statusSummary.online }}</p>
+              <p class="mt-2 text-2xl font-semibold text-[#064e3b] dark:text-emerald-200 tabular-nums">{{ displayMetrics.online }}</p>
             </div>
-            <div class="rounded-2xl border border-[#fee2e2]/80 bg-[#fef2f2]/80 p-4 shadow-[0_14px_30px_-22px_rgba(244,63,94,0.22)] dark:border-rose-500/30 dark:bg-rose-500/10">
+            <div class="rounded-2xl border border-[#fee2e2]/80 bg-[#fef2f2]/80 p-4 shadow-[0_14px_30px_-22px_rgba(244,63,94,0.22)] dark:border-rose-500/30 dark:bg-rose-500/10 transition-transform hover:scale-[1.02]">
               <div class="flex items-center justify-between">
                 <p class="text-[#b91c1c] dark:text-rose-300">离线节点</p>
                 <span class="text-[10px] px-2 py-0.5 rounded-full border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300">DOWN</span>
               </div>
-              <p class="mt-2 text-2xl font-semibold text-[#7f1d1d] dark:text-rose-200">{{ statusSummary.offline }}</p>
+              <p class="mt-2 text-2xl font-semibold text-[#7f1d1d] dark:text-rose-200 tabular-nums">{{ displayMetrics.offline }}</p>
             </div>
-            <div class="rounded-2xl border border-[#e0e7ff]/80 bg-[#eef2ff]/80 p-4 shadow-[0_14px_30px_-22px_rgba(59,130,246,0.22)] dark:border-sky-500/30 dark:bg-sky-500/10">
+            <div class="rounded-2xl border border-[#e0e7ff]/80 bg-[#eef2ff]/80 p-4 shadow-[0_14px_30px_-22px_rgba(59,130,246,0.22)] dark:border-sky-500/30 dark:bg-sky-500/10 transition-transform hover:scale-[1.02]">
               <div class="flex items-center justify-between">
                 <p class="text-[#3730a3] dark:text-sky-300">在线率</p>
                 <span class="text-[10px] px-2 py-0.5 rounded-full border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300">SLA</span>
               </div>
-              <p class="mt-2 text-2xl font-semibold text-[#312e81] dark:text-sky-200">{{ onlineRate }}%</p>
+              <p class="mt-2 text-2xl font-semibold text-[#312e81] dark:text-sky-200 tabular-nums">{{ displayMetrics.sla }}%</p>
             </div>
           </div>
         </div>
@@ -360,9 +444,12 @@ onUnmounted(() => {
             </div>
             <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div v-for="node in topNodes" :key="node.id" class="vps-card-container">
-                <div class="vps-card-inner" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)">
+                <div class="vps-card-inner group" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)">
                   <!-- Front Side -->
-                  <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55">
+                  <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55 transition-all duration-300"
+                    :class="node.status === 'online' ? 'status-glow-online border-emerald-500/30' : 'border-[#efe6db] dark:border-slate-800/70'">
+                    <!-- Shimmer Overlay -->
+                    <div class="absolute inset-0 rounded-2xl bg-shimmer opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-700"></div>
                     <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
                       <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
                         <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
@@ -381,7 +468,14 @@ onUnmounted(() => {
                     <div class="flex items-start justify-between mt-2">
                       <div>
                         <div class="flex items-center gap-2">
-                          <img v-if="node.countryCode" :src="`https://flagcdn.com/w20/${node.countryCode.toLowerCase()}.png`" class="h-3 rounded-sm opacity-90" :alt="node.countryCode" />
+                          <img 
+                            v-if="node.countryCode" 
+                            :src="`https://flagcdn.com/w20/${node.countryCode.toLowerCase()}.png`" 
+                            class="h-3.5 w-auto rounded-sm opacity-90" 
+                            alt=""
+                            :title="node.countryCode"
+                            @error="(e) => e.target.style.display = 'none'"
+                          />
                           <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
                         </div>
                         <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ node.tag || '--' }} · {{ node.region || '未知地区' }}</p>
@@ -422,7 +516,10 @@ onUnmounted(() => {
                       </div>
                       <div class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden">
                         <div 
-                          class="h-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500" 
+                          class="h-full transition-all duration-500" 
+                          :class="((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100) > 95
+                            ? 'bg-rose-500' 
+                            : (((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100) > 80 ? 'bg-amber-500' : 'bg-gradient-to-r from-blue-400 to-indigo-500')"
                           :style="{ width: Math.min(100, ((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100)) + '%' }"
                         ></div>
                       </div>
@@ -507,10 +604,17 @@ onUnmounted(() => {
             <div class="rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900/60">
               <div class="flex items-start justify-between mt-3">
                 <div>
-                  <div class="flex items-center gap-2">
-                    <img v-if="activeFeatured?.countryCode" :src="`https://flagcdn.com/w20/${activeFeatured.countryCode.toLowerCase()}.png`" class="h-3 rounded-sm opacity-90" :alt="activeFeatured.countryCode" />
-                    <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ activeFeatured?.name || activeFeatured?.id || '--' }}</p>
-                  </div>
+                    <div class="flex items-center gap-2">
+                      <img 
+                        v-if="activeFeatured?.countryCode" 
+                        :src="`https://flagcdn.com/w20/${activeFeatured.countryCode.toLowerCase()}.png`" 
+                        class="h-3.5 w-auto rounded-sm opacity-90" 
+                        alt=""
+                        :title="activeFeatured.countryCode"
+                        @error="(e) => e.target.style.display = 'none'"
+                      />
+                      <p class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ activeFeatured?.name || activeFeatured?.id || '--' }}</p>
+                    </div>
                   <p class="text-xs text-[#8a7f70] dark:text-slate-400">{{ activeFeatured?.tag || '--' }} · {{ activeFeatured?.region || '未知地区' }}</p>
                 </div>
                 <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
@@ -594,9 +698,12 @@ onUnmounted(() => {
           </div>
           <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <div v-for="node in sortedNodes" :key="node.id" class="vps-card-container">
-              <div class="vps-card-inner" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)">
+              <div class="vps-card-inner group text-left" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)">
                 <!-- Front Side -->
-                <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55">
+                <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55 transition-all duration-300"
+                  :class="node.status === 'online' ? 'status-glow-online border-emerald-500/30' : 'border-[#efe6db] dark:border-slate-800/70'">
+                  <!-- Shimmer Overlay -->
+                  <div class="absolute inset-0 rounded-2xl bg-shimmer opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-700"></div>
                   <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
                     <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
                       <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
@@ -653,7 +760,10 @@ onUnmounted(() => {
                     </div>
                     <div class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden">
                       <div 
-                        class="h-full bg-gradient-to-r from-emerald-400 to-sky-500 transition-all duration-500" 
+                        class="h-full transition-all duration-500" 
+                        :class="((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100) > 95
+                          ? 'bg-rose-500' 
+                          : (((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100) > 80 ? 'bg-amber-500' : 'bg-gradient-to-r from-emerald-400 to-sky-500')"
                         :style="{ width: Math.min(100, ((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100)) + '%' }"
                       ></div>
                     </div>
