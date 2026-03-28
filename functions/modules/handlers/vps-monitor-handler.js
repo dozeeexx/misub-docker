@@ -150,21 +150,35 @@ function buildSnapshot(report, node) {
 }
 
 function summarizeNode(node, latestReport, settings) {
+    let status = node.status;
     const threshold = clampNumber(settings?.vpsMonitor?.offlineThresholdMinutes, 1, 1440, 10);
-    const online = isNodeOnline(node.lastSeenAt, threshold);
+    if (node.lastSeenAt) {
+        const lastSeen = new Date(node.lastSeenAt).getTime();
+        if (Date.now() - lastSeen > threshold * 60 * 1000) {
+            status = 'offline';
+        }
+    } else {
+        status = 'offline';
+    }
+
     const overloadInfo = latestReport ? computeOverload(latestReport, settings) : null;
+
     return {
         id: node.id,
         name: node.name,
         tag: node.tag,
+        groupTag: node.groupTag || node.group_tag,
         region: node.region,
+        countryCode: node.countryCode || node.country_code,
         description: node.description,
-        enabled: node.enabled !== false,
-        useGlobalTargets: node.useGlobalTargets === true,
-        status: online ? 'online' : 'offline',
+        status,
+        enabled: Boolean(node.enabled),
+        useGlobalTargets: Boolean(node.useGlobalTargets || node.use_global_targets),
+        totalRx: node.totalRx || node.total_rx || 0,
+        totalTx: node.totalTx || node.total_tx || 0,
+        trafficLimitGb: node.trafficLimitGb || node.traffic_limit_gb || 0,
         lastSeenAt: node.lastSeenAt,
         updatedAt: node.updatedAt,
-        createdAt: node.createdAt,
         latest: latestReport || null,
         overload: overloadInfo ? overloadInfo.overload : null
     };
@@ -423,6 +437,48 @@ async function updateNodeStatus(db, settings, node, report) {
     }
 }
 
+/**
+ * Global heartbeat check for all nodes.
+ * Used for "ride-along" detection when any node reports.
+ */
+async function checkAllNodesHeartbeat(db, settings) {
+    const threshold = clampNumber(settings?.vpsMonitor?.offlineThresholdMinutes, 1, 1440, 10);
+    const cutoff = new Date(Date.now() - threshold * 60 * 1000).toISOString();
+
+    // Find online nodes that haven't been seen since the cutoff
+    const staleNodesResult = await db.prepare(
+        "SELECT * FROM vps_nodes WHERE status = 'online' AND (last_seen_at < ? OR last_seen_at IS NULL) AND enabled = 1"
+    ).bind(cutoff).all();
+
+    const staleNodes = staleNodesResult?.results || [];
+    if (!staleNodes.length) return;
+
+    console.info(`[VPS Monitor] Detected ${staleNodes.length} stale nodes. Updating to offline.`);
+
+    for (const row of staleNodes) {
+        const node = mapNodeRow(row);
+        node.status = 'offline';
+        node.updatedAt = nowIso();
+
+        if (settings?.vpsMonitor?.notifyOffline !== false) {
+            await pushAlert(db, settings, {
+                id: crypto.randomUUID(),
+                nodeId: node.id,
+                type: 'offline',
+                createdAt: nowIso(),
+                message: buildAlertMessage('❌ VPS 离线 (心跳超时)', [
+                    `*节点:* ${node.name || node.id}`,
+                    node.tag ? `*标签:* ${node.tag}` : '',
+                    node.region ? `*地区:* ${node.region}` : '',
+                    node.lastSeenAt ? `*最后见于:* ${new Date(node.lastSeenAt).toLocaleString('zh-CN')}` : '',
+                    `*状态:* 探测任务未在预期时间内（${threshold} 分钟）收到心跳`
+                ])
+            });
+        }
+        await updateNode(db, node);
+    }
+}
+
 function getReportRetentionCutoff(settings) {
     const days = clampNumber(settings?.vpsMonitor?.reportRetentionDays, 1, 180, 30);
     return Date.now() - days * 24 * 60 * 60 * 1000;
@@ -433,12 +489,17 @@ function mapNodeRow(row) {
         id: row.id,
         name: row.name,
         tag: row.tag,
+        groupTag: row.group_tag,
         region: row.region,
+        countryCode: row.country_code,
         description: row.description,
         secret: row.secret,
         status: row.status,
         enabled: row.enabled === 1,
         useGlobalTargets: row.use_global_targets === 1,
+        totalRx: Number(row.total_rx || 0),
+        totalTx: Number(row.total_tx || 0),
+        trafficLimitGb: Number(row.traffic_limit_gb || 0),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         lastSeenAt: row.last_seen_at,
@@ -461,18 +522,23 @@ async function insertNode(db, node) {
     try {
         await db.prepare(
             `INSERT INTO vps_nodes
-             (id, name, tag, region, description, secret, status, enabled, use_global_targets, created_at, updated_at, last_seen_at, last_report_json, overload_state_json)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             (id, name, tag, group_tag, region, country_code, description, secret, status, enabled, use_global_targets, total_rx, total_tx, traffic_limit_gb, created_at, updated_at, last_seen_at, last_report_json, overload_state_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             node.id,
             node.name,
             node.tag,
+            node.groupTag,
             node.region,
+            node.countryCode,
             node.description,
             node.secret,
             node.status,
             node.enabled ? 1 : 0,
             node.useGlobalTargets ? 1 : 0,
+            node.totalRx || 0,
+            node.totalTx || 0,
+            node.trafficLimitGb || 0,
             node.createdAt,
             node.updatedAt,
             node.lastSeenAt,
@@ -509,18 +575,23 @@ async function updateNode(db, node) {
     try {
         await db.prepare(
             `UPDATE vps_nodes
-             SET name = ?, tag = ?, region = ?, description = ?, secret = ?, status = ?, enabled = ?,
-                 use_global_targets = ?, updated_at = ?, last_seen_at = ?, last_report_json = ?, overload_state_json = ?
+             SET name = ?, tag = ?, group_tag = ?, region = ?, country_code = ?, description = ?, secret = ?, status = ?, enabled = ?,
+                 use_global_targets = ?, total_rx = ?, total_tx = ?, traffic_limit_gb = ?, updated_at = ?, last_seen_at = ?, last_report_json = ?, overload_state_json = ?
              WHERE id = ?`
         ).bind(
             node.name,
             node.tag,
+            node.groupTag,
             node.region,
+            node.countryCode,
             node.description,
             node.secret,
             node.status,
             node.enabled ? 1 : 0,
             node.useGlobalTargets ? 1 : 0,
+            node.totalRx || 0,
+            node.totalTx || 0,
+            node.trafficLimitGb || 0,
             node.updatedAt,
             node.lastSeenAt,
             node.lastReport ? JSON.stringify(node.lastReport) : null,
@@ -1199,6 +1270,27 @@ export async function handleVpsReport(request, env) {
     const networkPayload = report.network || report.checks || null;
     const sanitizedChecks = sanitizeNetworkChecks(networkPayload);
 
+    // Update Geolocation if available
+    if (request.cf?.country) {
+        node.countryCode = normalizeString(request.cf.country);
+    }
+
+    // Traffic Accumulation
+    if (report.traffic) {
+        const lastTraffic = node.lastReport?.traffic || {};
+        const curRx = Number(report.traffic.rx || 0);
+        const curTx = Number(report.traffic.tx || 0);
+        const lastRx = Number(lastTraffic.rx || 0);
+        const lastTx = Number(lastTraffic.tx || 0);
+
+        // If current total is less than last, assume reboot/reset and use current as delta
+        const rxDelta = (curRx < lastRx || lastRx === 0) ? curRx : (curRx - lastRx);
+        const txDelta = (curTx < lastTx || lastTx === 0) ? curTx : (curTx - lastTx);
+
+        node.totalRx = (Number(node.totalRx) || 0) + rxDelta;
+        node.totalTx = (Number(node.totalTx) || 0) + txDelta;
+    }
+
     const normalizedReport = {
         id: crypto.randomUUID(),
         nodeId: node.id,
@@ -1211,7 +1303,8 @@ export async function handleVpsReport(request, env) {
             arch: normalizeString(report.arch),
             kernel: normalizeString(report.kernel),
             version: normalizeString(report.version),
-            publicIp: normalizeString(report.publicIp || report.ip || getClientIp(request))
+            publicIp: normalizeString(report.publicIp || report.ip || getClientIp(request)),
+            countryCode: node.countryCode
         },
         cpu: { usage: clampPayloadUsage(report.cpu?.usage) },
         mem: { usage: clampPayloadUsage(report.mem?.usage) },
@@ -1243,6 +1336,10 @@ export async function handleVpsReport(request, env) {
 
     node.lastSeenAt = normalizedReport.reportedAt;
     await updateNodeStatus(db, settings, node, normalizedReport);
+    
+    // Carry-along check for other nodes
+    await checkAllNodesHeartbeat(db, settings);
+
     node.lastReport = buildSnapshot(normalizedReport, node);
     node.updatedAt = nowIso();
     await updateNode(db, node);
@@ -1275,12 +1372,17 @@ export async function handleVpsNodesRequest(request, env) {
             id: crypto.randomUUID(),
             name,
             tag: normalizeString(body.tag),
+            groupTag: normalizeString(body.groupTag),
             region: normalizeString(body.region),
+            countryCode: normalizeString(body.countryCode),
             description: normalizeString(body.description),
             secret: normalizeString(body.secret) || crypto.randomUUID(),
             status: 'offline',
             enabled: body.enabled !== false,
             useGlobalTargets: body.useGlobalTargets === true,
+            totalRx: 0,
+            totalTx: 0,
+            trafficLimitGb: Number(body.trafficLimitGb || 0),
             createdAt: nowIso(),
             updatedAt: nowIso(),
             lastSeenAt: null,
@@ -1432,7 +1534,7 @@ export async function handleVpsNodeDetailRequest(request, env) {
 
     if (request.method === 'PATCH') {
         const body = await request.json();
-        const fields = ['name', 'tag', 'region', 'description'];
+        const fields = ['name', 'tag', 'groupTag', 'region', 'countryCode', 'description'];
         fields.forEach(field => {
             if (body[field] !== undefined) {
                 node[field] = normalizeString(body[field]);
@@ -1440,6 +1542,9 @@ export async function handleVpsNodeDetailRequest(request, env) {
         });
         if (typeof body.useGlobalTargets === 'boolean') {
             node.useGlobalTargets = body.useGlobalTargets;
+        }
+        if (typeof body.trafficLimitGb === 'number') {
+            node.trafficLimitGb = body.trafficLimitGb;
         }
         if (typeof body.enabled === 'boolean') {
             node.enabled = body.enabled;

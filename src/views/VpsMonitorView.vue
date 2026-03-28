@@ -18,6 +18,20 @@ const nodes = ref([]);
 const alerts = ref([]);
 const alertFilterType = ref('all');
 const alertFilterQuery = ref('');
+const selectedGroup = ref('全部');
+
+const groups = computed(() => {
+  const g = new Set(['全部']);
+  nodes.value.forEach(n => {
+    if (n.groupTag) g.add(n.groupTag);
+  });
+  return Array.from(g);
+});
+
+const filteredNodes = computed(() => {
+  if (selectedGroup.value === '全部') return nodes.value;
+  return nodes.value.filter(n => n.groupTag === selectedGroup.value);
+});
 
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
@@ -51,11 +65,13 @@ const alertPageSize = 8;
 const formState = ref({
   name: '',
   tag: '',
+  groupTag: '',
   region: '',
   description: '',
   enabled: true,
   secret: '',
-  useGlobalTargets: false
+  useGlobalTargets: false,
+  trafficLimitGb: 0
 });
 
 const statusBadge = (status) => {
@@ -79,6 +95,7 @@ const metricThresholds = {
 
 const columns = computed(() => [
   { key: 'name', title: '节点', sortable: false },
+  { key: 'groupTag', title: '分组', sortable: false },
   { key: 'status', title: '状态', sortable: false, align: 'center' },
   { key: 'metrics', title: '资源', sortable: false },
   { key: 'traffic', title: '流量', sortable: false },
@@ -152,13 +169,15 @@ const handleSettingsSave = async () => {
 const openEdit = (node) => {
   editingNode.value = node;
   formState.value = {
-    name: node.name || '',
-    tag: node.tag || '',
-    region: node.region || '',
-    description: node.description || '',
-    enabled: node.enabled !== false,
-    secret: '',
-    useGlobalTargets: node.useGlobalTargets === true
+    name: node.name,
+    tag: node.tag,
+    groupTag: node.groupTag || '',
+    region: node.region,
+    description: node.description,
+    enabled: node.enabled,
+    secret: node.secret,
+    useGlobalTargets: node.useGlobalTargets,
+    trafficLimitGb: node.trafficLimitGb || 0
   };
   showEditModal.value = true;
 };
@@ -267,11 +286,13 @@ const handleCreate = async () => {
   const result = await createVpsNode({
     name: formState.value.name,
     tag: formState.value.tag,
+    groupTag: formState.value.groupTag,
     region: formState.value.region,
     description: formState.value.description,
     enabled: formState.value.enabled,
     secret: formState.value.secret,
-    useGlobalTargets: formState.value.useGlobalTargets
+    useGlobalTargets: formState.value.useGlobalTargets,
+    trafficLimitGb: Number(formState.value.trafficLimitGb || 0)
   });
   if (result.success) {
     showToast('节点已创建', 'success');
@@ -292,10 +313,12 @@ const handleUpdate = async () => {
   const payload = {
     name: formState.value.name,
     tag: formState.value.tag,
+    groupTag: formState.value.groupTag,
     region: formState.value.region,
     description: formState.value.description,
     enabled: formState.value.enabled,
-    useGlobalTargets: formState.value.useGlobalTargets
+    useGlobalTargets: formState.value.useGlobalTargets,
+    trafficLimitGb: Number(formState.value.trafficLimitGb || 0)
   };
   if (formState.value.secret && formState.value.secret.trim()) {
     payload.secret = formState.value.secret;
@@ -394,6 +417,15 @@ const formatPercent = (value) => {
   return `${value}%`;
 };
 
+const formatTotalTraffic = (bytes) => {
+  if (bytes === null || bytes === undefined || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  if (bytes < k) return bytes + ' B';
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 const formatTraffic = (traffic) => {
   if (!traffic) return '-';
   const rx = traffic.rx ?? traffic.download ?? traffic.in;
@@ -427,12 +459,12 @@ const alertTotalPages = computed(() => {
   return Math.max(1, Math.ceil(total / alertPageSize));
 });
 
-const previewAlerts = computed(() => filteredAlerts.value.slice().reverse().slice(0, 6));
+const previewAlerts = computed(() => filteredAlerts.value.slice(0, 6));
 
 const pagedAlerts = computed(() => {
   const start = (alertPage.value - 1) * alertPageSize;
   const end = start + alertPageSize;
-  return filteredAlerts.value.slice().reverse().slice(start, end);
+  return filteredAlerts.value.slice(start, end);
 });
 
 const escapeHtml = (value) => {
@@ -562,6 +594,15 @@ onMounted(() => {
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <!-- Group Filter -->
+        <select
+          v-if="groups.length > 1"
+          v-model="selectedGroup"
+          class="px-3 py-2 text-xs font-medium bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-300 misub-radius-lg border border-gray-200/80 dark:border-white/10 shadow-sm"
+        >
+          <option v-for="group in groups" :key="group" :value="group">{{ group }}</option>
+        </select>
+
         <button
           @click="copyPublicPageLink"
           class="px-3 py-2 text-xs font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm"
@@ -603,23 +644,38 @@ onMounted(() => {
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div class="xl:col-span-2 space-y-4">
         <DataGrid
-          :data="nodes"
+          :data="filteredNodes"
           :columns="columns"
           :loading="isLoading"
           :pagination="false"
           empty-text="暂无节点数据"
         >
           <template #column-name="{ row }">
-            <div>
-              <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ row.name }}</div>
-              <div class="text-xs text-gray-500 dark:text-gray-400" v-if="row.tag || row.region">
-                <span v-if="row.tag">{{ row.tag }}</span>
-                <span v-if="row.tag && row.region"> · </span>
-                <span v-if="row.region">{{ row.region }}</span>
+            <div class="flex items-center gap-2">
+              <img 
+                v-if="row.countryCode" 
+                :src="`https://flagcdn.com/w20/${row.countryCode.toLowerCase()}.png`" 
+                class="h-3.5 w-auto rounded-sm opacity-80" 
+                alt=""
+                :title="row.countryCode"
+                @error="(e) => e.target.style.display = 'none'"
+              />
+              <div class="flex flex-col min-w-0">
+                <span class="font-medium text-slate-900 dark:text-white truncate cursor-pointer hover:text-blue-500" @click="openDetail(row)">
+                  {{ row.name }}
+                </span>
+                <span class="text-xs text-slate-500 truncate">{{ row.region || row.description || '--' }}</span>
               </div>
-              <div class="text-xs text-gray-400" v-if="row.description">{{ row.description }}</div>
             </div>
           </template>
+
+          <template #column-groupTag="{ row }">
+            <span v-if="row.groupTag" class="px-2 py-0.5 rounded-lg border border-slate-200 bg-slate-50 text-[10px] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+              {{ row.groupTag }}
+            </span>
+            <span v-else class="text-slate-400">-</span>
+          </template>
+
           <template #column-status="{ row }">
             <span
               class="px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1"
@@ -629,6 +685,7 @@ onMounted(() => {
               {{ row.status === 'online' ? '在线' : '离线' }}
             </span>
           </template>
+
           <template #column-metrics="{ row }">
             <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
               <div>
@@ -642,16 +699,36 @@ onMounted(() => {
               </div>
             </div>
           </template>
+
           <template #column-traffic="{ row }">
-            <div class="text-xs text-gray-500 dark:text-gray-400">
-              {{ formatTraffic(latestSnapshot(row)?.traffic) }}
+            <div class="flex flex-col gap-1 pr-4 min-w-[120px]">
+              <div class="flex justify-between items-center text-[10px]">
+                <span class="text-slate-500">本月累计</span>
+                <span v-if="row.trafficLimitGb > 0" class="font-medium text-slate-700 dark:text-slate-300">
+                  / {{ row.trafficLimitGb }} GB
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="h-1.5 flex-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    class="h-full bg-indigo-500 rounded-full transition-all duration-500" 
+                    :style="{ width: row.trafficLimitGb > 0 ? Math.min(100, ((row.totalRx + row.totalTx) / (row.trafficLimitGb * 1024 * 1024 * 1024) * 100)) + '%' : '100%' }"
+                    :class="{ 'opacity-30': row.trafficLimitGb === 0 }"
+                  ></div>
+                </div>
+                <span class="text-[10px] tabular-nums font-medium text-slate-600 dark:text-slate-400">
+                  {{ formatTotalTraffic(row.totalRx + row.totalTx) }}
+                </span>
+              </div>
             </div>
           </template>
+
           <template #column-lastSeenAt="{ row }">
             <div class="text-xs text-gray-500 dark:text-gray-400">
               {{ formatTime(row.lastSeenAt) }}
             </div>
           </template>
+
           <template #column-actions="{ row }">
             <div class="flex items-center justify-end gap-2">
               <button
@@ -758,16 +835,26 @@ onMounted(() => {
       <div class="space-y-3">
         <div>
           <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">节点名称</label>
-          <input v-model="formState.name" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" />
+          <input v-model="formState.name" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="例如：AWS-HK-01" />
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">标签</label>
-            <input v-model="formState.tag" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" />
+            <input v-model="formState.tag" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="例如：HK-01" />
           </div>
           <div>
+            <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">分组</label>
+            <input v-model="formState.groupTag" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="例如：核心业务/测试" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
             <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">地区</label>
-            <input v-model="formState.region" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" />
+            <input v-model="formState.region" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="例如：香港" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">月流量限额 (GB)</label>
+            <input v-model="formState.trafficLimitGb" type="number" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="0 为不限制" />
           </div>
         </div>
         <div>
@@ -801,16 +888,26 @@ onMounted(() => {
       <div class="space-y-3">
         <div>
           <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">节点名称</label>
-          <input v-model="formState.name" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" />
+          <input v-model="formState.name" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="例如：AWS-HK-01" />
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">标签</label>
-            <input v-model="formState.tag" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" />
+            <input v-model="formState.tag" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="例如：HK-01" />
           </div>
           <div>
+            <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">分组</label>
+            <input v-model="formState.groupTag" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="例如：核心业务/测试" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
             <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">地区</label>
-            <input v-model="formState.region" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" />
+            <input v-model="formState.region" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="例如：香港" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 dark:text-gray-300 mb-1">月流量限额 (GB)</label>
+            <input v-model="formState.trafficLimitGb" type="number" class="w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg text-sm" placeholder="0 为不限制" />
           </div>
         </div>
         <div>
@@ -1007,11 +1104,19 @@ onMounted(() => {
             <span class="text-xs text-gray-400">{{ rangeHint }}</span>
           </div>
 
-          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <VpsMetricChart title="CPU" unit="%" :points="pickSeries('cpu')" color="#f97316" :height="70" />
             <VpsMetricChart title="内存" unit="%" :points="pickSeries('mem')" color="#3b82f6" :height="70" />
             <VpsMetricChart title="磁盘" unit="%" :points="pickSeries('disk')" color="#22c55e" :height="70" />
             <VpsMetricChart title="Load1" unit="" :max="5" :points="pickScalarSeries(item => item?.load?.load1 ?? null)" color="#6366f1" :height="70" />
+            <VpsMetricChart title="下行流量" unit="GB" :points="pickScalarSeries(item => {
+              const b = item?.traffic?.rx ?? item?.traffic?.download ?? null;
+              return b !== null ? Number((b / (1024 * 1024 * 1024)).toFixed(2)) : null;
+            })" color="#0088cc" :height="70" :max="10" />
+            <VpsMetricChart title="上行流量" unit="GB" :points="pickScalarSeries(item => {
+              const b = item?.traffic?.tx ?? item?.traffic?.upload ?? null;
+              return b !== null ? Number((b / (1024 * 1024 * 1024)).toFixed(2)) : null;
+            })" color="#8b5cf6" :height="70" :max="10" />
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <VpsMetricChart title="网络延迟" unit="ms" :max="500" :points="buildNetworkSeries('latency')" color="#ec4899" :height="120" />

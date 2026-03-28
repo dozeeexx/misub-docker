@@ -28,19 +28,29 @@ const props = defineProps({
   }
 });
 
+const dynamicMax = computed(() => {
+  const raw = Array.isArray(props.points) ? props.points : [];
+  const maxVal = raw.reduce((acc, val) => {
+    if (val === null || val === undefined) return acc;
+    const num = Number(val);
+    return (Number.isFinite(num) && num > acc) ? num : acc;
+  }, props.max);
+  return maxVal || 1; // Ensure not zero
+});
+
 const normalizedPoints = computed(() => {
   const raw = Array.isArray(props.points) ? props.points : [];
   return raw.map((val) => {
     if (val === null || val === undefined) return null;
     const num = Number(val);
-    return Number.isFinite(num) ? Math.max(0, Math.min(props.max, num)) : null;
+    return Number.isFinite(num) ? Math.max(0, Math.min(dynamicMax.value, num)) : null;
   });
 });
 
 const lastValue = computed(() => {
-  const data = normalizedPoints.value;
+  const data = Array.isArray(props.points) ? props.points : [];
   for (let i = data.length - 1; i >= 0; i -= 1) {
-    if (data[i] !== null) return data[i];
+    if (data[i] !== null && data[i] !== undefined) return data[i];
   }
   return null;
 });
@@ -54,7 +64,7 @@ const polylinePoints = computed(() => {
   return data
     .map((val, index) => {
       const x = Math.round(index * step);
-      const y = val === null ? height : Math.round(height - (val / props.max) * height);
+      const y = val === null ? height : Math.round(height - (val / dynamicMax.value) * height);
       return `${x},${y}`;
     })
     .join(' ');
@@ -96,7 +106,7 @@ const gradientId = computed(() => {
         </p>
       </div>
       <div class="text-xs text-gray-400 dark:text-gray-500">
-        {{ max }}{{ unit }}
+        {{ dynamicMax.toFixed(dynamicMax < 1 ? 2 : 0) }}{{ unit }}
       </div>
     </div>
 
