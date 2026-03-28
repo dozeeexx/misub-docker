@@ -297,14 +297,22 @@ onUnmounted(() => {
 .vps-card-front,
 .vps-card-back {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+.vps-card-front {
+  z-index: 2;
+  transform: translateZ(1px);
 }
 
 .vps-card-back {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(1px);
 }
 
 /* v2.1 Enhanced Visuals */
@@ -446,10 +454,7 @@ onUnmounted(() => {
               <div v-for="node in topNodes" :key="node.id" class="vps-card-container">
                 <div class="vps-card-inner group" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)">
                   <!-- Front Side -->
-                  <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55 transition-all duration-300"
-                    :class="node.status === 'online' ? 'status-glow-online border-emerald-500/30' : 'border-[#efe6db] dark:border-slate-800/70'">
-                    <!-- Shimmer Overlay -->
-                    <div class="absolute inset-0 rounded-2xl bg-shimmer opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-700"></div>
+                  <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900">
                     <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
                       <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
                         <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
@@ -508,13 +513,13 @@ onUnmounted(() => {
                       <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
                       <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
                     </div>
-                    <!-- Traffic Progress Bar -->
-                    <div v-if="node.trafficLimitGb > 0" class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
-                      <div class="flex justify-between items-center text-[10px] mb-1">
+                    <!-- Traffic Display -->
+                    <div class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
+                      <div class="flex justify-between items-center text-[10px]" :class="{ 'mb-1': node.trafficLimitGb > 0 }">
                         <span class="text-[#8a7f70] dark:text-slate-400">本月流量: {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
-                        <span class="font-medium text-[#6a5f54] dark:text-slate-300">{{ node.trafficLimitGb }} GB</span>
+                        <span v-if="node.trafficLimitGb > 0" class="font-medium text-[#6a5f54] dark:text-slate-300">{{ node.trafficLimitGb }} GB</span>
                       </div>
-                      <div class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div v-if="node.trafficLimitGb > 0" class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden mt-1">
                         <div 
                           class="h-full transition-all duration-500" 
                           :class="((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100) > 95
@@ -527,7 +532,7 @@ onUnmounted(() => {
                   </div>
 
                   <!-- Back Side: Network Metrics -->
-                  <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/95 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/65 flex flex-col h-full">
+                  <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900 flex flex-col h-full">
                     <div class="flex items-center justify-between mb-2 border-b border-[#efe6db] pb-1.5 dark:border-slate-800">
                       <h4 class="text-xs font-semibold text-[#1f1b17] dark:text-slate-100 flex items-center gap-1">
                         <span class="text-blue-500 text-[10px]">🌐</span> 网络状态
@@ -700,10 +705,7 @@ onUnmounted(() => {
             <div v-for="node in sortedNodes" :key="node.id" class="vps-card-container">
               <div class="vps-card-inner group text-left" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)">
                 <!-- Front Side -->
-                <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/90 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/55 transition-all duration-300"
-                  :class="node.status === 'online' ? 'status-glow-online border-emerald-500/30' : 'border-[#efe6db] dark:border-slate-800/70'">
-                  <!-- Shimmer Overlay -->
-                  <div class="absolute inset-0 rounded-2xl bg-shimmer opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-700"></div>
+                <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900">
                   <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
                     <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
                       <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
@@ -757,13 +759,13 @@ onUnmounted(() => {
                     <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
                     <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
                   </div>
-                  <!-- Traffic Progress Bar -->
-                  <div v-if="node.trafficLimitGb > 0" class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
-                    <div class="flex justify-between items-center text-[10px] mb-1">
+                  <!-- Traffic Display -->
+                  <div class="mt-4 pt-3 border-t border-[#efe6db]/60 dark:border-slate-800/60">
+                    <div class="flex justify-between items-center text-[10px]" :class="{ 'mb-1': node.trafficLimitGb > 0 }">
                       <span class="text-[#8a7f70] dark:text-slate-400">本月流量: {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
-                      <span class="font-medium text-[#6a5f54] dark:text-slate-300">{{ node.trafficLimitGb }} GB</span>
+                      <span v-if="node.trafficLimitGb > 0" class="font-medium text-[#6a5f54] dark:text-slate-300">{{ node.trafficLimitGb }} GB</span>
                     </div>
-                    <div class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div v-if="node.trafficLimitGb > 0" class="h-1 w-full bg-[#efe6db] dark:bg-slate-800 rounded-full overflow-hidden mt-1">
                       <div 
                         class="h-full transition-all duration-500" 
                         :class="((node.totalRx + node.totalTx) / (node.trafficLimitGb * 1024 * 1024 * 1024) * 100) > 95
@@ -776,7 +778,7 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Back Side: Network Metrics -->
-                <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6]/95 p-4 backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-900/65 flex flex-col h-full">
+                <div class="vps-card-back rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900 flex flex-col h-full">
                   <div class="flex items-center justify-between mb-2 border-b border-[#efe6db] pb-1.5 dark:border-slate-800">
                     <h4 class="text-xs font-semibold text-[#1f1b17] dark:text-slate-100 flex items-center gap-1">
                       <span class="text-blue-500 text-[10px]">🌐</span> 网络状态
