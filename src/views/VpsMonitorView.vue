@@ -1,12 +1,13 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
-import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail, saveSettings, requestVpsNetworkCheck } from '../lib/api.js';
+import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail, saveSettings, requestVpsNetworkCheck, fetchSettings } from '../lib/api.js';
 import DataGrid from '../components/shared/DataGrid.vue';
 import Modal from '../components/forms/Modal.vue';
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
 import VpsNetworkTargets from '../components/vps/VpsNetworkTargets.vue';
 import VpsMonitorSettingsModal from '../components/modals/VpsMonitorSettingsModal.vue';
+import Switch from '../components/ui/Switch.vue';
 import { useSettingsStore } from '../stores/settings.js';
 
 const { showToast } = useToastStore();
@@ -24,6 +25,15 @@ const showGuideModal = ref(false);
 const showDeleteModal = ref(false);
 const showDetailModal = ref(false);
 const showSettingsModal = ref(false);
+const showAlertsModal = ref(false);
+
+const isSavingSettings = ref(false);
+const isCreatingNode = ref(false);
+const isUpdatingNode = ref(false);
+const isDeletingNode = ref(false);
+const isResettingSecret = ref(false);
+const isRefreshing = ref(false);
+const checkingTargets = ref({});
 
 const editingNode = ref(null);
 const guidePayload = ref(null);
@@ -33,6 +43,10 @@ const detailNetworkSamples = ref([]);
 const detailTargets = ref([]);
 const detailRange = ref('24h');
 const detailAggregation = ref('avg');
+const detailSection = ref('overview');
+
+const alertPage = ref(1);
+const alertPageSize = 8;
 
 const formState = ref({
   name: '',
@@ -40,7 +54,8 @@ const formState = ref({
   region: '',
   description: '',
   enabled: true,
-  secret: ''
+  secret: '',
+  useGlobalTargets: false
 });
 
 const statusBadge = (status) => {
@@ -73,6 +88,7 @@ const columns = computed(() => [
 
 const loadData = async () => {
   isLoading.value = true;
+  isRefreshing.value = true;
   try {
     const [nodesResult, alertsResult] = await Promise.all([fetchVpsNodes(), fetchVpsAlerts()]);
     if (nodesResult.success) {
@@ -82,11 +98,13 @@ const loadData = async () => {
     }
     if (alertsResult.success) {
       alerts.value = alertsResult.data.data || [];
+      alertPage.value = 1;
     }
   } catch (error) {
     showToast(error.message || '加载数据失败', 'error');
   } finally {
     isLoading.value = false;
+    isRefreshing.value = false;
   }
 };
 
@@ -97,7 +115,8 @@ const resetForm = () => {
     region: '',
     description: '',
     enabled: true,
-    secret: ''
+    secret: '',
+    useGlobalTargets: false
   };
 };
 
@@ -106,22 +125,28 @@ const openCreate = () => {
   showCreateModal.value = true;
 };
 
-const openSettings = () => {
+const openSettings = async () => {
+  const result = await fetchSettings();
+  if (result.success) {
+    updateConfig(result.data);
+  }
   showSettingsModal.value = true;
 };
 
 const handleSettingsSave = async () => {
+  if (isSavingSettings.value) return;
+  isSavingSettings.value = true;
   const payload = config.value || config;
   const result = await saveSettings(payload);
   if (result?.success === false) {
-    showToast(result.error || '保存设置失败', 'error');
+    showToast(result.error || result.message || '保存设置失败', 'error');
+    isSavingSettings.value = false;
     return;
   }
-  if (result?.data) {
-    updateConfig(result.data);
-  }
+  updateConfig(result?.data?.data || payload);
   showToast('设置已保存', 'success');
   showSettingsModal.value = false;
+  isSavingSettings.value = false;
 };
 
 const openEdit = (node) => {
@@ -132,7 +157,8 @@ const openEdit = (node) => {
     region: node.region || '',
     description: node.description || '',
     enabled: node.enabled !== false,
-    secret: ''
+    secret: '',
+    useGlobalTargets: node.useGlobalTargets === true
   };
   showEditModal.value = true;
 };
@@ -166,6 +192,7 @@ const openDetail = async (node) => {
   detailTargets.value = [];
   detailRange.value = '24h';
   detailAggregation.value = 'avg';
+  detailSection.value = 'overview';
   showDetailModal.value = true;
   const result = await fetchVpsNodeDetail(node.id);
   if (result.success) {
@@ -189,12 +216,15 @@ const refreshTargets = async () => {
 
 const handleNetworkCheck = async (target) => {
   if (!editingNode.value) return;
+  if (checkingTargets.value[target.id]) return;
+  checkingTargets.value = { ...checkingTargets.value, [target.id]: true };
   const result = await requestVpsNetworkCheck(editingNode.value.id, target.id);
   if (result.success) {
     showToast('已下发检测请求，等待下一次上报', 'success');
   } else {
     showToast(result.error || '检测请求失败', 'error');
   }
+  checkingTargets.value = { ...checkingTargets.value, [target.id]: false };
 };
 
 const latestNetwork = computed(() => {
@@ -228,17 +258,20 @@ const buildNetworkSeries = (mode) => {
 };
 
 const handleCreate = async () => {
+  if (isCreatingNode.value) return;
   if (!formState.value.name.trim()) {
     showToast('请输入节点名称', 'warning');
     return;
   }
+  isCreatingNode.value = true;
   const result = await createVpsNode({
     name: formState.value.name,
     tag: formState.value.tag,
     region: formState.value.region,
     description: formState.value.description,
     enabled: formState.value.enabled,
-    secret: formState.value.secret
+    secret: formState.value.secret,
+    useGlobalTargets: formState.value.useGlobalTargets
   });
   if (result.success) {
     showToast('节点已创建', 'success');
@@ -250,20 +283,24 @@ const handleCreate = async () => {
   } else {
     showToast(result.error || '创建失败', 'error');
   }
+  isCreatingNode.value = false;
 };
 
 const handleUpdate = async () => {
   if (!editingNode.value) return;
+  if (isUpdatingNode.value) return;
   const payload = {
     name: formState.value.name,
     tag: formState.value.tag,
     region: formState.value.region,
     description: formState.value.description,
-    enabled: formState.value.enabled
+    enabled: formState.value.enabled,
+    useGlobalTargets: formState.value.useGlobalTargets
   };
   if (formState.value.secret && formState.value.secret.trim()) {
     payload.secret = formState.value.secret;
   }
+  isUpdatingNode.value = true;
   const result = await updateVpsNode(editingNode.value.id, payload);
   if (result.success) {
     showToast('节点已更新', 'success');
@@ -275,10 +312,13 @@ const handleUpdate = async () => {
   } else {
     showToast(result.error || '更新失败', 'error');
   }
+  isUpdatingNode.value = false;
 };
 
 const handleResetSecret = async () => {
   if (!editingNode.value) return;
+  if (isResettingSecret.value) return;
+  isResettingSecret.value = true;
   const result = await updateVpsNode(editingNode.value.id, { resetSecret: true });
   if (result.success) {
     showToast('密钥已重置', 'success');
@@ -291,6 +331,7 @@ const handleResetSecret = async () => {
   } else {
     showToast(result.error || '重置失败', 'error');
   }
+  isResettingSecret.value = false;
 };
 
 const copyText = async (text) => {
@@ -305,6 +346,8 @@ const copyText = async (text) => {
 
 const handleDelete = async () => {
   if (!editingNode.value) return;
+  if (isDeletingNode.value) return;
+  isDeletingNode.value = true;
   const result = await deleteVpsNode(editingNode.value.id);
   if (result.success) {
     showToast('节点已删除', 'success');
@@ -313,15 +356,29 @@ const handleDelete = async () => {
   } else {
     showToast(result.error || '删除失败', 'error');
   }
+  isDeletingNode.value = false;
 };
 
 const handleClearAlerts = async () => {
+  if (isLoading.value) return;
   const result = await clearVpsAlerts();
   if (result.success) {
     showToast('告警已清空', 'success');
     alerts.value = [];
   } else {
     showToast(result.error || '清空失败', 'error');
+  }
+};
+
+const copyPublicPageLink = async () => {
+  const baseUrl = window.location.origin;
+  const token = config?.value?.vpsMonitor?.publicPageToken || '';
+  const url = token ? `${baseUrl}/vps/public?token=${encodeURIComponent(token)}` : `${baseUrl}/vps/public`;
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('公开页地址已复制', 'success');
+  } catch (error) {
+    showToast('复制失败', 'error');
   }
 };
 
@@ -341,7 +398,13 @@ const formatTraffic = (traffic) => {
   if (!traffic) return '-';
   const rx = traffic.rx ?? traffic.download ?? traffic.in;
   const tx = traffic.tx ?? traffic.upload ?? traffic.out;
-  const format = (val) => (val === null || val === undefined ? '-' : `${val}`);
+  const format = (val) => {
+    if (val === null || val === undefined) return '-';
+    const num = Number(val);
+    if (isNaN(num)) return '-';
+    const gb = num / (1024 * 1024 * 1024);
+    return `${gb.toFixed(2)} GB`;
+  };
   return `⬇ ${format(rx)} / ⬆ ${format(tx)}`;
 };
 
@@ -359,6 +422,42 @@ const filteredAlerts = computed(() => {
   });
 });
 
+const alertTotalPages = computed(() => {
+  const total = filteredAlerts.value.length;
+  return Math.max(1, Math.ceil(total / alertPageSize));
+});
+
+const previewAlerts = computed(() => filteredAlerts.value.slice().reverse().slice(0, 6));
+
+const pagedAlerts = computed(() => {
+  const start = (alertPage.value - 1) * alertPageSize;
+  const end = start + alertPageSize;
+  return filteredAlerts.value.slice().reverse().slice(start, end);
+});
+
+const escapeHtml = (value) => {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
+const highlightText = (value) => {
+  const keyword = alertFilterQuery.value.trim();
+  const escaped = escapeHtml(value || '');
+  if (!keyword) return escaped;
+  const safeKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return escaped.replace(new RegExp(safeKeyword, 'gi'), (match) => `<span class="text-amber-600 dark:text-amber-300 font-semibold">${match}</span>`);
+};
+
+const detailSections = [
+  { key: 'overview', label: '概览' },
+  { key: 'metrics', label: '指标' },
+  { key: 'network', label: '网络' }
+];
+
 const pickSeries = (key) => {
   return buildSeries(detailReports.value, detailRange.value, (item) => item?.[key]?.usage);
 };
@@ -374,12 +473,15 @@ const detailSummary = computed(() => {
     hostname: latest.meta?.hostname || '--',
     os: latest.meta?.os || '--',
     ip: latest.meta?.publicIp || '--',
+    reportedAt: latest.reportedAt || '--',
+    receivedAt: latest.receivedAt || '--',
     load1: latest.load?.load1 ?? '--',
     uptimeSec: latest.uptimeSec ?? '--'
   };
 });
 
 const rangeOptions = [
+  { key: '1h', label: '近1小时', bucketCount: 12, windowMs: 60 * 60 * 1000 },
   { key: '24h', label: '近24小时', bucketCount: 24, windowMs: 24 * 60 * 60 * 1000 },
   { key: '7d', label: '近7天', bucketCount: 28, windowMs: 7 * 24 * 60 * 60 * 1000 },
   { key: '30d', label: '近30天', bucketCount: 30, windowMs: 30 * 24 * 60 * 60 * 1000 }
@@ -433,6 +535,7 @@ const buildSeries = (reports, rangeKey, accessor) => {
 };
 
 const rangeHint = computed(() => {
+  if (detailRange.value === '1h') return '采样粒度：约 5 分钟';
   if (detailRange.value === '24h') return '采样粒度：约 1 小时';
   if (detailRange.value === '7d') return '采样粒度：约 6 小时';
   return '采样粒度：约 1 天';
@@ -454,13 +557,33 @@ onMounted(() => {
         <p class="mt-2 text-xs text-amber-600 dark:text-amber-400">
           注意：VPS 探针功能需要绑定 D1 数据库（MISUB_DB）并切换存储模式为 D1。
         </p>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          公开展示页：<span class="font-medium">/vps/public</span>（如设置公开页 Token，请使用 ?token=xxx）
+        </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <button
-          @click="loadData"
-          class="px-4 py-2 text-sm font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm"
+          @click="copyPublicPageLink"
+          class="px-3 py-2 text-xs font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm"
         >
-          刷新
+          复制公开页地址
+        </button>
+        <a
+          :href="(config?.vpsMonitor?.publicPageToken
+            ? `/vps/public?token=${encodeURIComponent(config.vpsMonitor.publicPageToken)}`
+            : '/vps/public')"
+          target="_blank"
+          rel="noopener"
+          class="px-3 py-2 text-xs font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm"
+        >
+          打开公开页
+        </a>
+        <button
+          @click="loadData"
+          :disabled="isRefreshing"
+          class="px-4 py-2 text-sm font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {{ isRefreshing ? '刷新中...' : '刷新' }}
         </button>
         <button
           @click="openSettings"
@@ -572,10 +695,10 @@ onMounted(() => {
               清空
             </button>
           </div>
-          <div class="mt-3 space-y-3" v-if="alerts.length">
-            <div class="flex flex-wrap gap-2">
-              <select
-                v-model="alertFilterType"
+        <div class="mt-3 space-y-3" v-if="alerts.length">
+          <div class="flex flex-wrap gap-2">
+            <select
+              v-model="alertFilterType"
                 class="px-2.5 py-1.5 text-xs bg-white/80 dark:bg-gray-900/70 border border-gray-200/60 dark:border-white/10 rounded-lg"
               >
                 <option value="all">全部类型</option>
@@ -590,12 +713,21 @@ onMounted(() => {
               />
             </div>
             <div
-              v-for="alert in filteredAlerts.slice().reverse().slice(0, 6)"
+              v-for="alert in previewAlerts"
               :key="alert.id"
               class="p-3 bg-gray-50 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-lg text-xs text-gray-600 dark:text-gray-300"
             >
               <div class="font-medium mb-1">{{ alert.type }}</div>
-              <div class="text-[11px] whitespace-pre-line">{{ alert.message }}</div>
+              <div class="text-[11px] whitespace-pre-line" v-html="highlightText(alert.message)"></div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400" v-if="filteredAlerts.length > previewAlerts.length">
+              <button
+                class="px-2 py-1 border border-gray-200 dark:border-white/10 rounded-lg"
+                @click="showAlertsModal = true; alertPage = 1"
+              >
+                查看全部
+              </button>
+              <span>共 {{ filteredAlerts.length }} 条</span>
             </div>
           </div>
           <div v-else class="text-xs text-gray-500 dark:text-gray-400 mt-3">
@@ -618,7 +750,7 @@ onMounted(() => {
     </div>
   </div>
 
-  <Modal v-model:show="showCreateModal" @confirm="handleCreate" confirm-text="创建" cancel-text="取消" size="lg">
+  <Modal v-model:show="showCreateModal" @confirm="handleCreate" confirm-text="创建" cancel-text="取消" size="lg" :confirm-disabled="isCreatingNode">
     <template #title>
       <h3 class="text-lg font-bold text-gray-900 dark:text-white">新增 VPS 节点</h3>
     </template>
@@ -650,11 +782,18 @@ onMounted(() => {
           <input type="checkbox" v-model="formState.enabled" class="rounded border-gray-300" />
           启用节点
         </div>
+        <div class="flex items-center justify-between rounded-lg border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-gray-900/60 px-3 py-2">
+          <div>
+            <div class="text-sm text-gray-700 dark:text-gray-200">应用全局监测目标</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">使用探针设置中的全局网络监测目标</div>
+          </div>
+          <Switch v-model="formState.useGlobalTargets" />
+        </div>
       </div>
     </template>
   </Modal>
 
-  <Modal v-model:show="showEditModal" @confirm="handleUpdate" confirm-text="保存" cancel-text="取消" size="lg">
+  <Modal v-model:show="showEditModal" @confirm="handleUpdate" confirm-text="保存" cancel-text="取消" size="lg" :confirm-disabled="isUpdatingNode">
     <template #title>
       <h3 class="text-lg font-bold text-gray-900 dark:text-white">编辑 VPS 节点</h3>
     </template>
@@ -682,13 +821,21 @@ onMounted(() => {
           <input type="checkbox" v-model="formState.enabled" class="rounded border-gray-300" />
           启用节点
         </div>
+        <div class="flex items-center justify-between rounded-lg border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-gray-900/60 px-3 py-2">
+          <div>
+            <div class="text-sm text-gray-700 dark:text-gray-200">应用全局监测目标</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">使用探针设置中的全局网络监测目标</div>
+          </div>
+          <Switch v-model="formState.useGlobalTargets" />
+        </div>
         <div class="pt-2 border-t border-gray-200/80 dark:border-white/10">
           <button
             type="button"
-            class="text-xs text-rose-600 dark:text-rose-300"
+            class="text-xs text-rose-600 dark:text-rose-300 disabled:opacity-60 disabled:cursor-not-allowed"
             @click="handleResetSecret"
+            :disabled="isResettingSecret"
           >
-            重新生成密钥并显示安装信息
+            {{ isResettingSecret ? '正在生成密钥...' : '重新生成密钥并显示安装信息' }}
           </button>
         </div>
       </div>
@@ -756,7 +903,7 @@ onMounted(() => {
     </template>
   </Modal>
 
-  <Modal v-model:show="showDeleteModal" @confirm="handleDelete" confirm-text="删除" cancel-text="取消">
+  <Modal v-model:show="showDeleteModal" @confirm="handleDelete" confirm-text="删除" cancel-text="取消" :confirm-disabled="isDeletingNode">
     <template #title>
       <h3 class="text-lg font-bold text-rose-600">确认删除节点</h3>
     </template>
@@ -773,95 +920,130 @@ onMounted(() => {
     </template>
     <template #body>
       <div v-if="detailPayload" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-            <div class="text-xs text-gray-500">主机名</div>
-            <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.hostname }}</div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            v-for="section in detailSections"
+            :key="section.key"
+            type="button"
+            class="px-3 py-1.5 text-xs rounded-full border transition-colors"
+            :class="detailSection === section.key
+              ? 'border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300'
+              : 'border-gray-200/70 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+            @click="detailSection = section.key"
+          >
+            {{ section.label }}
+          </button>
+        </div>
+
+        <div v-if="detailSection === 'overview'" class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
+              <div class="text-xs text-gray-500">主机名</div>
+              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.hostname }}</div>
+            </div>
+            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
+              <div class="text-xs text-gray-500">系统</div>
+              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.os }}</div>
+            </div>
+            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
+              <div class="text-xs text-gray-500">公网 IP</div>
+              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.ip }}</div>
+            </div>
           </div>
-          <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-            <div class="text-xs text-gray-500">系统</div>
-            <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.os }}</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
+              <div class="text-xs text-gray-500">Load1</div>
+              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.load1 }}</div>
+            </div>
+            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
+              <div class="text-xs text-gray-500">运行时长 (秒)</div>
+              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.uptimeSec }}</div>
+            </div>
           </div>
-          <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-            <div class="text-xs text-gray-500">公网 IP</div>
-            <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.ip }}</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
+              <div class="text-xs text-gray-500">探针上报时间</div>
+              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ formatTime(detailSummary?.reportedAt) }}</div>
+            </div>
+            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
+              <div class="text-xs text-gray-500">服务器接收时间</div>
+              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ formatTime(detailSummary?.receivedAt) }}</div>
+            </div>
           </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-            <div class="text-xs text-gray-500">Load1</div>
-            <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.load1 }}</div>
+
+        <div v-if="detailSection === 'metrics'" class="space-y-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs text-gray-500">范围</span>
+              <button
+                v-for="option in rangeOptions"
+                :key="option.key"
+                type="button"
+                class="px-3 py-1.5 text-xs rounded-full border transition-colors"
+                :class="detailRange === option.key
+                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300'
+                  : 'border-gray-200/70 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                @click="detailRange = option.key"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs text-gray-500">模式</span>
+              <button
+                v-for="option in aggregationOptions"
+                :key="option.key"
+                type="button"
+                class="px-3 py-1.5 text-xs rounded-full border transition-colors"
+                :class="detailAggregation === option.key
+                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+                  : 'border-gray-200/70 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                @click="detailAggregation = option.key"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+            <span class="text-xs text-gray-400">{{ rangeHint }}</span>
           </div>
-          <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-            <div class="text-xs text-gray-500">运行时长 (秒)</div>
-            <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.uptimeSec }}</div>
+
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <VpsMetricChart title="CPU" unit="%" :points="pickSeries('cpu')" color="#f97316" :height="70" />
+            <VpsMetricChart title="内存" unit="%" :points="pickSeries('mem')" color="#3b82f6" :height="70" />
+            <VpsMetricChart title="磁盘" unit="%" :points="pickSeries('disk')" color="#22c55e" :height="70" />
+            <VpsMetricChart title="Load1" unit="" :max="5" :points="pickScalarSeries(item => item?.load?.load1 ?? null)" color="#6366f1" :height="70" />
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <VpsMetricChart title="网络延迟" unit="ms" :max="500" :points="buildNetworkSeries('latency')" color="#ec4899" :height="120" />
+            <VpsMetricChart title="丢包率" unit="%" :max="100" :points="buildNetworkSeries('loss')" color="#f59e0b" :height="120" />
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs text-gray-500">范围</span>
-            <button
-              v-for="option in rangeOptions"
-              :key="option.key"
-              type="button"
-              class="px-3 py-1.5 text-xs rounded-full border transition-colors"
-              :class="detailRange === option.key
-                ? 'border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300'
-                : 'border-gray-200/70 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400'"
-              @click="detailRange = option.key"
-            >
-              {{ option.label }}
-            </button>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs text-gray-500">模式</span>
-            <button
-              v-for="option in aggregationOptions"
-              :key="option.key"
-              type="button"
-              class="px-3 py-1.5 text-xs rounded-full border transition-colors"
-              :class="detailAggregation === option.key
-                ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
-                : 'border-gray-200/70 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400'"
-              @click="detailAggregation = option.key"
-            >
-              {{ option.label }}
-            </button>
-          </div>
-          <span class="text-xs text-gray-400">{{ rangeHint }}</span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <VpsMetricChart title="CPU" unit="%" :points="pickSeries('cpu')" color="#f97316" />
-          <VpsMetricChart title="内存" unit="%" :points="pickSeries('mem')" color="#3b82f6" />
-          <VpsMetricChart title="磁盘" unit="%" :points="pickSeries('disk')" color="#22c55e" />
-          <VpsMetricChart title="Load1" unit="" :max="5" :points="pickScalarSeries(item => item?.load?.load1 ?? null)" color="#6366f1" />
-          <VpsMetricChart title="网络延迟" unit="ms" :max="500" :points="buildNetworkSeries('latency')" color="#ec4899" />
-          <VpsMetricChart title="丢包率" unit="%" :max="100" :points="buildNetworkSeries('loss')" color="#f59e0b" />
-        </div>
-
-        <VpsNetworkTargets
-          v-if="detailPayload"
-          :node-id="detailPayload.id"
-          :targets="detailTargets"
-          :limit="config?.vpsMonitor?.networkTargetsLimit || 3"
-          @refresh="refreshTargets"
-          @check="handleNetworkCheck"
-        />
-
-        <div v-if="latestNetwork.length" class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-5 border border-gray-100/80 dark:border-white/10">
-          <h4 class="text-sm font-semibold text-gray-900 dark:text-white">最近一次网络检测</h4>
-          <div class="mt-3 space-y-2">
-            <div v-for="item in latestNetwork" :key="item.target + (item.port || '') + (item.path || '')" class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
-              <div>
-                <span class="font-medium">{{ item.type.toUpperCase() }}</span>
-                <span class="ml-1">{{ item.target }}<span v-if="item.port">:{{ item.port }}</span>{{ item.path || '' }}</span>
-              </div>
-              <div>
-                <span :class="item.status === 'up' ? 'text-emerald-600' : 'text-rose-600'">{{ item.status }}</span>
-                <span v-if="item.latencyMs"> · {{ item.latencyMs }}ms</span>
-                <span v-if="item.lossPercent !== undefined && item.lossPercent !== null"> · loss {{ item.lossPercent }}%</span>
+        <div v-if="detailSection === 'network'" class="space-y-4">
+          <div v-if="latestNetwork.length" class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-5 border border-gray-100/80 dark:border-white/10">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">最近一次网络检测</h4>
+            <div class="mt-3 space-y-2">
+              <div v-for="item in latestNetwork" :key="item.target + (item.port || '') + (item.path || '')" class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border"
+                :class="item.status === 'up'
+                  ? 'border-emerald-200/70 text-emerald-600 bg-emerald-500/10'
+                  : 'border-rose-200/70 text-rose-600 bg-rose-500/10'"
+              >
+                {{ item.status }}
+              </span>
+              <span class="font-medium">{{ item.type.toUpperCase() }}</span>
+              <span class="font-medium truncate max-w-[120px]" v-if="item.name">{{ item.name }}</span>
+              <span :class="{ 'text-gray-400': item.name }">{{ item.target }}<span v-if="item.port">:{{ item.port }}</span>{{ item.path || '' }}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 text-[11px]">
+              <span v-if="item.latencyMs">{{ item.latencyMs }}ms</span>
+              <span v-if="item.httpCode">HTTP {{ item.httpCode }}</span>
+              <span v-if="item.lossPercent !== undefined && item.lossPercent !== null">loss {{ item.lossPercent }}%</span>
+              <span v-if="item.dnsMs !== undefined && item.dnsMs !== null">DNS {{ item.dnsMs }}ms</span>
+              <span v-if="item.connectMs !== undefined && item.connectMs !== null">TCP {{ item.connectMs }}ms</span>
+              <span v-if="item.tlsMs !== undefined && item.tlsMs !== null">TLS {{ item.tlsMs }}ms</span>
+            </div>
               </div>
             </div>
           </div>
@@ -871,5 +1053,63 @@ onMounted(() => {
     </template>
   </Modal>
 
-  <VpsMonitorSettingsModal v-model:show="showSettingsModal" :settings="config" @save="handleSettingsSave" />
+  <Modal v-model:show="showAlertsModal" size="4xl" confirm-text="关闭" cancel-text="关闭" :confirm-disabled="true">
+    <template #title>
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white">告警记录</h3>
+    </template>
+    <template #body>
+      <div class="space-y-4">
+        <div class="flex flex-wrap gap-2">
+          <select
+            v-model="alertFilterType"
+            class="px-2.5 py-1.5 text-xs bg-white/80 dark:bg-gray-900/70 border border-gray-200/60 dark:border-white/10 rounded-lg"
+          >
+            <option value="all">全部类型</option>
+            <option value="offline">离线</option>
+            <option value="recovery">恢复</option>
+            <option value="overload">负载</option>
+          </select>
+          <input
+            v-model="alertFilterQuery"
+            placeholder="搜索节点或关键词"
+            class="flex-1 min-w-[160px] px-2.5 py-1.5 text-xs bg-white/80 dark:bg-gray-900/70 border border-gray-200/60 dark:border-white/10 rounded-lg"
+          />
+        </div>
+
+        <div class="space-y-2" v-if="filteredAlerts.length">
+          <div
+            v-for="alert in pagedAlerts"
+            :key="alert.id"
+            class="p-3 bg-gray-50 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-lg text-xs text-gray-600 dark:text-gray-300"
+          >
+            <div class="font-medium mb-1">{{ alert.type }}</div>
+            <div class="text-[11px] whitespace-pre-line" v-html="highlightText(alert.message)"></div>
+          </div>
+        </div>
+        <div v-else class="text-xs text-gray-500">暂无告警记录</div>
+
+        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400" v-if="filteredAlerts.length > alertPageSize">
+          <span>第 {{ alertPage }} / {{ alertTotalPages }} 页</span>
+          <div class="flex items-center gap-2">
+            <button
+              class="px-2 py-1 border border-gray-200 dark:border-white/10 rounded-lg"
+              :disabled="alertPage <= 1"
+              @click="alertPage = Math.max(1, alertPage - 1)"
+            >
+              上一页
+            </button>
+            <button
+              class="px-2 py-1 border border-gray-200 dark:border-white/10 rounded-lg"
+              :disabled="alertPage >= alertTotalPages"
+              @click="alertPage = Math.min(alertTotalPages, alertPage + 1)"
+            >
+              下一页
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </Modal>
+
+  <VpsMonitorSettingsModal v-model:show="showSettingsModal" :settings="config" @save="handleSettingsSave" :saving="isSavingSettings" />
 </template>

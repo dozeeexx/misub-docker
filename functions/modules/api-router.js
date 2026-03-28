@@ -181,6 +181,11 @@ export async function handleApiRequest(request, env) {
         return await handleVpsConfig(request, env);
     }
 
+    if (path === '/vps/public') {
+        const { handleVpsPublicSnapshotRequest } = await import('./handlers/vps-monitor-handler.js');
+        return await handleVpsPublicSnapshotRequest(request, env);
+    }
+
     // Public GET access for clients
     if (path.startsWith('/clients') && request.method === 'GET') {
         return await handleClientRequest(request, env);

@@ -12,6 +12,10 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  checkingTargets: {
+    type: Object,
+    default: () => ({})
+  },
   limit: {
     type: Number,
     default: 3
@@ -22,16 +26,50 @@ const emit = defineEmits(['refresh', 'check']);
 const { showToast } = useToastStore();
 
 const formState = ref({
+  name: '',
   type: 'icmp',
   target: '',
   port: '',
-  path: '/'
+  path: '/',
+  scheme: 'https'
 });
+
+const sortKey = ref('type');
+const sortDir = ref('asc');
+const filterType = ref('all');
+const filterQuery = ref('');
 
 const canAddMore = computed(() => props.targets.length < props.limit);
 
+const filteredTargets = computed(() => {
+  const keyword = filterQuery.value.trim().toLowerCase();
+  return props.targets.filter((item) => {
+    if (filterType.value !== 'all' && item.type !== filterType.value) return false;
+    if (!keyword) return true;
+    const text = `${item.type} ${item.target} ${item.path || ''} ${item.port || ''}`.toLowerCase();
+    return text.includes(keyword);
+  });
+});
+
+const sortedTargets = computed(() => {
+  const list = [...filteredTargets.value];
+  const dir = sortDir.value === 'asc' ? 1 : -1;
+  list.sort((a, b) => {
+    if (sortKey.value === 'status') {
+      const av = a.enabled ? 1 : 0;
+      const bv = b.enabled ? 1 : 0;
+      return (av - bv) * dir;
+    }
+    if (sortKey.value === 'target') {
+      return (a.target || '').localeCompare(b.target || '') * dir;
+    }
+    return (a.type || '').localeCompare(b.type || '') * dir;
+  });
+  return list;
+});
+
 const resetForm = () => {
-  formState.value = { type: 'icmp', target: '', port: '', path: '/' };
+  formState.value = { name: '', type: 'icmp', target: '', port: '', path: '/', scheme: 'https' };
 };
 
 const handleCreate = async () => {
@@ -40,10 +78,12 @@ const handleCreate = async () => {
     return;
   }
   const payload = {
+    name: formState.value.name,
     type: formState.value.type,
     target: formState.value.target,
     port: formState.value.type === 'tcp' ? Number(formState.value.port) : undefined,
-    path: formState.value.type === 'http' ? formState.value.path || '/' : undefined
+    path: formState.value.type === 'http' ? formState.value.path || '/' : undefined,
+    scheme: formState.value.type === 'http' ? formState.value.scheme || 'https' : undefined
   };
   const result = await createVpsNetworkTarget(props.nodeId, payload);
   if (result.success) {
@@ -77,6 +117,8 @@ const handleDelete = async (target) => {
 const handleCheck = (target) => {
   emit('check', target);
 };
+
+const isChecking = (target) => Boolean(props.checkingTargets?.[target.id]);
 </script>
 
 <template>
@@ -89,26 +131,51 @@ const handleCheck = (target) => {
       <span class="text-xs text-gray-400">{{ targets.length }}/{{ limit }}</span>
     </div>
 
-    <div class="space-y-2" v-if="targets.length">
+    <div class="flex flex-wrap items-center gap-2 text-xs" v-if="targets.length">
+      <select v-model="filterType" class="px-2.5 py-1.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg">
+        <option value="all">全部类型</option>
+        <option value="icmp">ICMP</option>
+        <option value="tcp">TCP</option>
+        <option value="http">HTTP</option>
+      </select>
+      <input v-model="filterQuery" placeholder="搜索目标" class="px-2.5 py-1.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
+      <select v-model="sortKey" class="px-2.5 py-1.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg">
+        <option value="type">按类型</option>
+        <option value="target">按目标</option>
+        <option value="status">按状态</option>
+      </select>
+      <button
+        type="button"
+        class="px-2.5 py-1.5 border border-gray-200 dark:border-white/10 rounded-lg"
+        @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
+      >
+        {{ sortDir === 'asc' ? '升序' : '降序' }}
+      </button>
+    </div>
+
+    <div class="space-y-2" v-if="sortedTargets.length">
       <div
-        v-for="item in targets"
+        v-for="item in sortedTargets"
         :key="item.id"
         class="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200/70 dark:border-white/10 bg-white/70 dark:bg-gray-900/60"
       >
         <div>
           <div class="text-sm font-medium text-gray-900 dark:text-white">
-            {{ item.type.toUpperCase() }} · {{ item.target }}
-            <span v-if="item.port">:{{ item.port }}</span>
-            <span v-if="item.path">{{ item.path }}</span>
+            <span v-if="item.name" class="mr-1.5 px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold">{{ item.name }}</span>
+            <span class="opacity-60 text-xs font-normal mr-1">[{{ item.type.toUpperCase() }}]</span>
+            <span :class="{'text-xs opacity-70': item.name}">{{ item.target }}</span>
+            <span v-if="item.port" class="text-xs opacity-70">:{{ item.port }}</span>
+            <span v-if="item.path" class="text-xs opacity-70">{{ item.path }}</span>
           </div>
-          <div class="text-xs text-gray-500">{{ item.enabled ? '启用' : '停用' }}</div>
+          <div class="text-[10px] text-gray-400 mt-0.5">{{ item.enabled ? '已启用监控' : '已停用' }}</div>
         </div>
         <div class="flex items-center gap-2">
           <button
             class="px-2.5 py-1.5 text-xs border border-gray-200 dark:border-white/10 rounded-lg"
             @click="handleCheck(item)"
+            :disabled="isChecking(item)"
           >
-            立即检测
+            {{ isChecking(item) ? '检测中...' : '立即检测' }}
           </button>
           <button
             class="px-2.5 py-1.5 text-xs border border-gray-200 dark:border-white/10 rounded-lg"
@@ -127,17 +194,24 @@ const handleCheck = (target) => {
     </div>
 
     <div class="space-y-2" v-if="canAddMore">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+        <input v-model="formState.name" placeholder="名称 (如: 电信核心)" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
         <select v-model="formState.type" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg">
-          <option value="icmp">ICMP</option>
-          <option value="tcp">TCP</option>
-          <option value="http">HTTP</option>
+          <option value="icmp">ICMP (Ping)</option>
+          <option value="tcp">TCP (Port)</option>
+          <option value="http">HTTP (Web)</option>
         </select>
         <input v-model="formState.target" placeholder="IP 或域名" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
         <input v-if="formState.type === 'tcp'" v-model="formState.port" placeholder="端口" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
-        <input v-if="formState.type === 'http'" v-model="formState.path" placeholder="路径" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
+        <div v-if="formState.type === 'http'" class="grid grid-cols-2 gap-2">
+          <select v-model="formState.scheme" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg">
+            <option value="https">https</option>
+            <option value="http">http</option>
+          </select>
+          <input v-model="formState.path" placeholder="路径" class="px-3 py-2 text-xs bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg" />
+        </div>
         <button
-          class="px-3 py-2 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+          class="px-3 py-2 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium"
           @click="handleCreate"
         >
           添加目标

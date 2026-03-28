@@ -48,8 +48,10 @@ const D1_SCHEMA_STATEMENTS = [
         secret TEXT NOT NULL,
         status TEXT NOT NULL,
         enabled INTEGER DEFAULT 1,
+        use_global_targets INTEGER DEFAULT 0,
         last_seen_at DATETIME,
         last_report_json TEXT,
+        overload_state_json TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );`,
@@ -75,9 +77,11 @@ const D1_SCHEMA_STATEMENTS = [
         node_id TEXT NOT NULL,
         type TEXT NOT NULL,
         target TEXT NOT NULL,
+        scheme TEXT,
         port INTEGER,
         path TEXT,
         enabled INTEGER DEFAULT 1,
+        force_check_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );`,
@@ -490,6 +494,31 @@ export class StorageFactory {
         } catch (error) {
             console.error('[Storage] Failed to get storage type:', error);
             return STORAGE_TYPES.KV;
+        }
+    }
+
+    /**
+     * 将 KV Settings 同步到 D1（当 D1 为空时）
+     */
+    static async ensureD1Settings(env) {
+        if (!env?.MISUB_DB) return false;
+        try {
+            const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
+            const existing = await d1Adapter.get(DATA_KEYS.SETTINGS);
+            if (existing) return true;
+            const kvNs = resolveKV(env);
+            if (!kvNs) return false;
+            const raw = await kvNs.get(DATA_KEYS.SETTINGS);
+            if (!raw) return false;
+            const settings = JSON.parse(raw);
+            if (settings?.storageType !== STORAGE_TYPES.D1) {
+                settings.storageType = STORAGE_TYPES.D1;
+            }
+            await d1Adapter.put(DATA_KEYS.SETTINGS, settings);
+            return true;
+        } catch (error) {
+            console.warn('[Storage] ensureD1Settings failed:', error?.message || error);
+            return false;
         }
     }
 

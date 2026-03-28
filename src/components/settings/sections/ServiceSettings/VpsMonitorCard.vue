@@ -14,10 +14,13 @@ const vpsMonitorConfig = computed({
     return props.settings.vpsMonitor || {
       enabled: true,
       requireSecret: true,
+      requireSignature: false,
+      signatureClockSkewMinutes: 5,
       offlineThresholdMinutes: 10,
       cpuWarnPercent: 90,
       memWarnPercent: 90,
       diskWarnPercent: 90,
+      overloadConfirmCount: 2,
       alertCooldownMinutes: 15,
       alertsEnabled: true,
       notifyOffline: true,
@@ -26,7 +29,11 @@ const vpsMonitorConfig = computed({
       reportRetentionDays: 30,
       cooldownIgnoreRecovery: true,
       networkSampleIntervalMinutes: 5,
-      networkTargetsLimit: 3
+      reportIntervalMinutes: 1,
+      reportStoreIntervalMinutes: 1,
+      networkTargetsLimit: 3,
+      publicPageEnabled: false,
+      publicPageToken: ''
     };
   },
   set(value) {
@@ -74,6 +81,20 @@ const updateField = (key, value) => {
         </div>
         <Switch v-model="vpsMonitorConfig.alertsEnabled" />
       </div>
+      <div class="flex items-center justify-between p-3 bg-white/70 dark:bg-gray-900/50 border border-gray-200/60 dark:border-white/10 misub-radius-lg">
+        <div>
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-200">公开展示页</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">用于对外展示探针数据</div>
+        </div>
+        <Switch v-model="vpsMonitorConfig.publicPageEnabled" />
+      </div>
+      <div class="flex items-center justify-between p-3 bg-white/70 dark:bg-gray-900/50 border border-gray-200/60 dark:border-white/10 misub-radius-lg">
+        <div>
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-200">上报签名校验</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">启用 HMAC 防重放</div>
+        </div>
+        <Switch v-model="vpsMonitorConfig.requireSignature" />
+      </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -89,6 +110,28 @@ const updateField = (key, value) => {
         />
       </div>
       <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">上报间隔（分钟）</label>
+        <input
+          type="number"
+          min="1"
+          max="60"
+          :value="vpsMonitorConfig.reportIntervalMinutes"
+          @input="updateField('reportIntervalMinutes', Number($event.target.value))"
+          class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">记录间隔（分钟）</label>
+        <input
+          type="number"
+          min="1"
+          max="60"
+          :value="vpsMonitorConfig.reportStoreIntervalMinutes"
+          @input="updateField('reportStoreIntervalMinutes', Number($event.target.value))"
+          class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+        />
+      </div>
+      <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">网络采样间隔（分钟）</label>
         <input
           type="number"
@@ -100,6 +143,16 @@ const updateField = (key, value) => {
         />
       </div>
       <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">公开页 Token（可选）</label>
+        <input
+          type="text"
+          :value="vpsMonitorConfig.publicPageToken"
+          @input="updateField('publicPageToken', $event.target.value)"
+          placeholder="留空则公开访问"
+          class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+        />
+      </div>
+      <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">告警冷却（分钟）</label>
         <input
           type="number"
@@ -107,6 +160,17 @@ const updateField = (key, value) => {
           max="1440"
           :value="vpsMonitorConfig.alertCooldownMinutes"
           @input="updateField('alertCooldownMinutes', Number($event.target.value))"
+          class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">签名时钟偏差（分钟）</label>
+        <input
+          type="number"
+          min="1"
+          max="60"
+          :value="vpsMonitorConfig.signatureClockSkewMinutes"
+          @input="updateField('signatureClockSkewMinutes', Number($event.target.value))"
           class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
         />
       </div>
@@ -140,6 +204,17 @@ const updateField = (key, value) => {
           max="100"
           :value="vpsMonitorConfig.diskWarnPercent"
           @input="updateField('diskWarnPercent', Number($event.target.value))"
+          class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">负载告警确认次数</label>
+        <input
+          type="number"
+          min="1"
+          max="10"
+          :value="vpsMonitorConfig.overloadConfirmCount"
+          @input="updateField('overloadConfirmCount', Number($event.target.value))"
           class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
         />
       </div>
