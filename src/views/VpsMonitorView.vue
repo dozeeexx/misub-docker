@@ -16,6 +16,7 @@ const { config, updateConfig } = useSettingsStore();
 const isLoading = ref(false);
 const nodes = ref([]);
 const alerts = ref([]);
+const alertFilterType = ref('all');
 const alertFilterQuery = ref('');
 const selectedGroup = ref('全部');
 
