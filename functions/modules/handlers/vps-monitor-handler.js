@@ -437,6 +437,48 @@ async function updateNodeStatus(db, settings, node, report) {
     }
 }
 
+/**
+ * Global heartbeat check for all nodes.
+ * Used for "ride-along" detection when any node reports.
+ */
+async function checkAllNodesHeartbeat(db, settings) {
+    const threshold = clampNumber(settings?.vpsMonitor?.offlineThresholdMinutes, 1, 1440, 10);
+    const cutoff = new Date(Date.now() - threshold * 60 * 1000).toISOString();
+
+    // Find online nodes that haven't been seen since the cutoff
+    const staleNodesResult = await db.prepare(
+        "SELECT * FROM vps_nodes WHERE status = 'online' AND (last_seen_at < ? OR last_seen_at IS NULL) AND enabled = 1"
+    ).bind(cutoff).all();
+
+    const staleNodes = staleNodesResult?.results || [];
+    if (!staleNodes.length) return;
+
+    console.info(`[VPS Monitor] Detected ${staleNodes.length} stale nodes. Updating to offline.`);
+
+    for (const row of staleNodes) {
+        const node = mapNodeRow(row);
+        node.status = 'offline';
+        node.updatedAt = nowIso();
+
+        if (settings?.vpsMonitor?.notifyOffline !== false) {
+            await pushAlert(db, settings, {
+                id: crypto.randomUUID(),
+                nodeId: node.id,
+                type: 'offline',
+                createdAt: nowIso(),
+                message: buildAlertMessage('❌ VPS 离线 (心跳超时)', [
+                    `*节点:* ${node.name || node.id}`,
+                    node.tag ? `*标签:* ${node.tag}` : '',
+                    node.region ? `*地区:* ${node.region}` : '',
+                    node.lastSeenAt ? `*最后见于:* ${new Date(node.lastSeenAt).toLocaleString('zh-CN')}` : '',
+                    `*状态:* 探测任务未在预期时间内（${threshold} 分钟）收到心跳`
+                ])
+            });
+        }
+        await updateNode(db, node);
+    }
+}
+
 function getReportRetentionCutoff(settings) {
     const days = clampNumber(settings?.vpsMonitor?.reportRetentionDays, 1, 180, 30);
     return Date.now() - days * 24 * 60 * 60 * 1000;
@@ -1294,6 +1336,10 @@ export async function handleVpsReport(request, env) {
 
     node.lastSeenAt = normalizedReport.reportedAt;
     await updateNodeStatus(db, settings, node, normalizedReport);
+    
+    // Carry-along check for other nodes
+    await checkAllNodesHeartbeat(db, settings);
+
     node.lastReport = buildSnapshot(normalizedReport, node);
     node.updatedAt = nowIso();
     await updateNode(db, node);

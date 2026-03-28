@@ -459,12 +459,12 @@ const alertTotalPages = computed(() => {
   return Math.max(1, Math.ceil(total / alertPageSize));
 });
 
-const previewAlerts = computed(() => filteredAlerts.value.slice().reverse().slice(0, 6));
+const previewAlerts = computed(() => filteredAlerts.value.slice(0, 6));
 
 const pagedAlerts = computed(() => {
   const start = (alertPage.value - 1) * alertPageSize;
   const end = start + alertPageSize;
-  return filteredAlerts.value.slice().reverse().slice(start, end);
+  return filteredAlerts.value.slice(start, end);
 });
 
 const escapeHtml = (value) => {
