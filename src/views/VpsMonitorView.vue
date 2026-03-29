@@ -1,11 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useToastStore } from '../stores/toast.js';
-import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail, saveSettings, requestVpsNetworkCheck, fetchSettings } from '../lib/api.js';
+import { fetchVpsNodes, createVpsNode, updateVpsNode, deleteVpsNode, fetchVpsAlerts, clearVpsAlerts, fetchVpsNodeDetail, saveSettings, fetchSettings } from '../lib/api.js';
 import DataGrid from '../components/shared/DataGrid.vue';
 import Modal from '../components/forms/Modal.vue';
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
-import VpsNetworkTargets from '../components/vps/VpsNetworkTargets.vue';
 import VpsMonitorSettingsModal from '../components/modals/VpsMonitorSettingsModal.vue';
 import Switch from '../components/ui/Switch.vue';
 import { useSettingsStore } from '../stores/settings.js';
@@ -16,6 +15,8 @@ const { config, updateConfig } = useSettingsStore();
 const isLoading = ref(false);
 const nodes = ref([]);
 const alerts = ref([]);
+const nodesError = ref('');
+const alertsError = ref('');
 const alertFilterType = ref('all');
 const alertFilterQuery = ref('');
 const selectedGroup = ref('全部');
@@ -47,14 +48,13 @@ const isUpdatingNode = ref(false);
 const isDeletingNode = ref(false);
 const isResettingSecret = ref(false);
 const isRefreshing = ref(false);
-const checkingTargets = ref({});
 
 const editingNode = ref(null);
 const guidePayload = ref(null);
 const detailPayload = ref(null);
 const detailReports = ref([]);
 const detailNetworkSamples = ref([]);
-const detailTargets = ref([]);
+const detailError = ref('');
 const detailRange = ref('24h');
 const detailAggregation = ref('avg');
 const detailSection = ref('overview');
@@ -93,6 +93,29 @@ const metricThresholds = {
   disk: 90
 };
 
+const createEmptyNodeForm = () => ({
+  name: '',
+  tag: '',
+  groupTag: '',
+  region: '',
+  description: '',
+  enabled: true,
+  secret: '',
+  useGlobalTargets: false,
+  trafficLimitGb: 0
+});
+
+const getFlagFallback = (event) => {
+  event.target.style.display = 'none';
+};
+
+const getTrafficUsageWidth = (node) => {
+  if (!node?.trafficLimitGb) return '100%';
+  const totalBytes = node.trafficLimitGb * 1024 * 1024 * 1024;
+  const usedBytes = node.totalRx + node.totalTx;
+  return `${Math.min(100, (usedBytes / totalBytes) * 100)}%`;
+};
+
 const columns = computed(() => [
   { key: 'name', title: '节点', sortable: false },
   { key: 'groupTag', title: '分组', sortable: false },
@@ -106,19 +129,31 @@ const columns = computed(() => [
 const loadData = async () => {
   isLoading.value = true;
   isRefreshing.value = true;
+  nodesError.value = '';
+  alertsError.value = '';
   try {
     const [nodesResult, alertsResult] = await Promise.all([fetchVpsNodes(), fetchVpsAlerts()]);
     if (nodesResult.success) {
       nodes.value = nodesResult.data.data || [];
     } else {
+      nodes.value = [];
+      nodesError.value = nodesResult.error || '加载节点失败';
       showToast(nodesResult.error || '加载节点失败', 'error');
     }
     if (alertsResult.success) {
       alerts.value = alertsResult.data.data || [];
       alertPage.value = 1;
+    } else {
+      alerts.value = [];
+      alertsError.value = alertsResult.error || '加载告警失败';
     }
   } catch (error) {
-    showToast(error.message || '加载数据失败', 'error');
+    const message = error.message || '加载数据失败';
+    nodes.value = [];
+    alerts.value = [];
+    nodesError.value = message;
+    alertsError.value = message;
+    showToast(message, 'error');
   } finally {
     isLoading.value = false;
     isRefreshing.value = false;
@@ -126,15 +161,7 @@ const loadData = async () => {
 };
 
 const resetForm = () => {
-  formState.value = {
-    name: '',
-    tag: '',
-    region: '',
-    description: '',
-    enabled: true,
-    secret: '',
-    useGlobalTargets: false
-  };
+  formState.value = createEmptyNodeForm();
 };
 
 const openCreate = () => {
@@ -208,7 +235,7 @@ const openDetail = async (node) => {
   detailPayload.value = null;
   detailReports.value = [];
   detailNetworkSamples.value = [];
-  detailTargets.value = [];
+  detailError.value = '';
   detailRange.value = '24h';
   detailAggregation.value = 'avg';
   detailSection.value = 'overview';
@@ -218,32 +245,10 @@ const openDetail = async (node) => {
     detailPayload.value = result.data.data || null;
     detailReports.value = result.data.reports || [];
     detailNetworkSamples.value = result.data.networkSamples || [];
-    detailTargets.value = result.data.targets || [];
   } else {
+    detailError.value = result.error || '加载详情失败';
     showToast(result.error || '加载详情失败', 'error');
   }
-};
-
-const refreshTargets = async () => {
-  if (!editingNode.value) return;
-  const result = await fetchVpsNodeDetail(editingNode.value.id);
-  if (result.success) {
-    detailTargets.value = result.data.targets || [];
-    detailNetworkSamples.value = result.data.networkSamples || [];
-  }
-};
-
-const handleNetworkCheck = async (target) => {
-  if (!editingNode.value) return;
-  if (checkingTargets.value[target.id]) return;
-  checkingTargets.value = { ...checkingTargets.value, [target.id]: true };
-  const result = await requestVpsNetworkCheck(editingNode.value.id, target.id);
-  if (result.success) {
-    showToast('已下发检测请求，等待下一次上报', 'success');
-  } else {
-    showToast(result.error || '检测请求失败', 'error');
-  }
-  checkingTargets.value = { ...checkingTargets.value, [target.id]: false };
 };
 
 const latestNetwork = computed(() => {
@@ -384,10 +389,13 @@ const handleDelete = async () => {
 
 const handleClearAlerts = async () => {
   if (isLoading.value) return;
+  if (!alerts.value.length) return;
+  if (!window.confirm('确认清空全部探针告警记录吗？此操作不可撤销。')) return;
   const result = await clearVpsAlerts();
   if (result.success) {
     showToast('告警已清空', 'success');
     alerts.value = [];
+    alertsError.value = '';
   } else {
     showToast(result.error || '清空失败', 'error');
   }
@@ -457,6 +465,16 @@ const filteredAlerts = computed(() => {
 const alertTotalPages = computed(() => {
   const total = filteredAlerts.value.length;
   return Math.max(1, Math.ceil(total / alertPageSize));
+});
+
+watch([alertFilterType, alertFilterQuery], () => {
+  alertPage.value = 1;
+});
+
+watch(alertTotalPages, (total) => {
+  if (alertPage.value > total) {
+    alertPage.value = total;
+  }
 });
 
 const previewAlerts = computed(() => filteredAlerts.value.slice(0, 6));
@@ -605,7 +623,7 @@ onMounted(() => {
 
         <button
           @click="copyPublicPageLink"
-          class="px-3 py-2 text-xs font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm"
+          class="px-3 py-2 text-xs font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
         >
           复制公开页地址
         </button>
@@ -615,26 +633,26 @@ onMounted(() => {
             : '/vps/public')"
           target="_blank"
           rel="noopener"
-          class="px-3 py-2 text-xs font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm"
+          class="px-3 py-2 text-xs font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
         >
           打开公开页
         </a>
         <button
           @click="loadData"
           :disabled="isRefreshing"
-          class="px-4 py-2 text-sm font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          class="px-4 py-2 text-sm font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
         >
           {{ isRefreshing ? '刷新中...' : '刷新' }}
         </button>
         <button
           @click="openSettings"
-          class="px-4 py-2 text-sm font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm"
+          class="px-4 py-2 text-sm font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
         >
           探针设置
         </button>
         <button
           @click="openCreate"
-          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 misub-radius-lg transition-colors shadow-sm shadow-primary-500/20"
+          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 misub-radius-lg transition-colors shadow-sm shadow-primary-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60"
         >
           新增节点
         </button>
@@ -643,13 +661,79 @@ onMounted(() => {
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div class="xl:col-span-2 space-y-4">
-        <DataGrid
-          :data="filteredNodes"
-          :columns="columns"
-          :loading="isLoading"
-          :pagination="false"
-          empty-text="暂无节点数据"
-        >
+        <div v-if="nodesError" aria-live="assertive" class="rounded-xl border border-rose-200/70 bg-rose-50/80 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
+          {{ nodesError }}
+        </div>
+
+        <div v-else-if="!isLoading && !filteredNodes.length" class="rounded-2xl border border-dashed border-gray-300/80 bg-white/70 px-6 py-10 text-center dark:border-white/10 dark:bg-gray-900/50">
+          <div class="text-3xl">🛰️</div>
+          <p class="mt-3 text-sm font-medium text-gray-700 dark:text-gray-200">当前还没有可展示的探针节点</p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">你可以先新增节点，或切换分组筛选查看其它分组。</p>
+          <button
+            type="button"
+            class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+            @click="openCreate"
+          >
+            新增节点
+          </button>
+        </div>
+
+        <div v-else>
+          <div class="space-y-3 md:hidden">
+            <div
+              v-for="row in filteredNodes"
+              :key="row.id"
+              class="rounded-2xl border border-gray-200/70 bg-white/90 p-4 dark:border-white/10 dark:bg-gray-900/70"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <img
+                      v-if="row.countryCode"
+                      :src="`https://flagcdn.com/w20/${row.countryCode.toLowerCase()}.png`"
+                      class="h-3.5 w-auto rounded-sm opacity-80"
+                      alt=""
+                      :title="row.countryCode"
+                      @error="getFlagFallback"
+                    />
+                    <button type="button" class="truncate text-left text-sm font-semibold text-slate-900 hover:text-blue-500 dark:text-white" @click="openDetail(row)">
+                      {{ row.name }}
+                    </button>
+                  </div>
+                  <p class="mt-1 text-xs text-slate-500">{{ row.region || row.description || '--' }}</p>
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    <span v-if="row.groupTag" class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">{{ row.groupTag }}</span>
+                    <span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium" :class="statusBadge(row.status)">
+                      <span class="h-1.5 w-1.5 rounded-full" :class="row.status === 'online' ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                      {{ row.status === 'online' ? '在线' : '离线' }}
+                    </span>
+                  </div>
+                </div>
+                <button type="button" class="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 dark:border-white/10 dark:text-gray-300" @click="openGuide(row, row.guide)">安装</button>
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-3 text-xs text-gray-500 dark:text-gray-400">
+                <div>CPU <span :class="metricsBadge(latestSnapshot(row)?.cpuPercent, metricThresholds.cpu)">{{ formatPercent(latestSnapshot(row)?.cpuPercent) }}</span></div>
+                <div>内存 <span :class="metricsBadge(latestSnapshot(row)?.memPercent, metricThresholds.mem)">{{ formatPercent(latestSnapshot(row)?.memPercent) }}</span></div>
+                <div>磁盘 <span :class="metricsBadge(latestSnapshot(row)?.diskPercent, metricThresholds.disk)">{{ formatPercent(latestSnapshot(row)?.diskPercent) }}</span></div>
+                <div>流量 <span class="text-slate-600 dark:text-slate-300">{{ formatTotalTraffic(row.totalRx + row.totalTx) }}</span></div>
+              </div>
+              <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">最近上报：{{ formatTime(row.lastSeenAt) }}</div>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <button type="button" class="rounded-lg border border-indigo-200/60 px-2.5 py-1.5 text-xs font-medium text-indigo-600 dark:border-indigo-500/20 dark:text-indigo-300" @click="openEdit(row)">编辑</button>
+                <button type="button" class="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:border-white/10 dark:text-gray-300" @click="openDetail(row)">详情</button>
+                <button type="button" class="rounded-lg border border-rose-200/60 px-2.5 py-1.5 text-xs font-medium text-rose-600 dark:border-rose-500/20 dark:text-rose-300" @click="openDelete(row)">删除</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="hidden md:block">
+            <DataGrid
+              :data="filteredNodes"
+              :columns="columns"
+              :loading="isLoading"
+              :pagination="false"
+              empty-text="暂无节点数据"
+            >
           <template #column-name="{ row }">
             <div class="flex items-center gap-2">
               <img 
@@ -658,12 +742,12 @@ onMounted(() => {
                 class="h-3.5 w-auto rounded-sm opacity-80" 
                 alt=""
                 :title="row.countryCode"
-                @error="(e) => e.target.style.display = 'none'"
+                @error="getFlagFallback"
               />
               <div class="flex flex-col min-w-0">
-                <span class="font-medium text-slate-900 dark:text-white truncate cursor-pointer hover:text-blue-500" @click="openDetail(row)">
+                <button type="button" class="truncate text-left font-medium text-slate-900 hover:text-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 dark:text-white" @click="openDetail(row)">
                   {{ row.name }}
-                </span>
+                </button>
                 <span class="text-xs text-slate-500 truncate">{{ row.region || row.description || '--' }}</span>
               </div>
             </div>
@@ -712,7 +796,7 @@ onMounted(() => {
                 <div class="h-1.5 flex-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div 
                     class="h-full bg-indigo-500 rounded-full transition-all duration-500" 
-                    :style="{ width: row.trafficLimitGb > 0 ? Math.min(100, ((row.totalRx + row.totalTx) / (row.trafficLimitGb * 1024 * 1024 * 1024) * 100)) + '%' : '100%' }"
+                    :style="{ width: getTrafficUsageWidth(row) }"
                     :class="{ 'opacity-30': row.trafficLimitGb === 0 }"
                   ></div>
                 </div>
@@ -757,7 +841,9 @@ onMounted(() => {
               </button>
             </div>
           </template>
-        </DataGrid>
+            </DataGrid>
+          </div>
+        </div>
       </div>
 
       <div class="space-y-4">
@@ -772,7 +858,10 @@ onMounted(() => {
               清空
             </button>
           </div>
-        <div class="mt-3 space-y-3" v-if="alerts.length">
+          <div v-if="alertsError" aria-live="assertive" class="mt-3 rounded-lg border border-rose-200/70 bg-rose-50/80 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
+            {{ alertsError }}
+          </div>
+          <div class="mt-3 space-y-3" v-else-if="alerts.length">
           <div class="flex flex-wrap gap-2">
             <select
               v-model="alertFilterType"
@@ -1153,6 +1242,16 @@ onMounted(() => {
             </div>
           </div>
         </div>
+      </div>
+      <div v-else-if="detailError" class="space-y-3 rounded-xl border border-rose-200/70 bg-rose-50/70 p-4 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
+        <div>{{ detailError }}</div>
+        <button
+          type="button"
+          class="w-fit rounded-lg border border-rose-300/70 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-rose-100 dark:border-rose-500/30 dark:hover:bg-rose-500/10"
+          @click="editingNode && openDetail(editingNode)"
+        >
+          重试
+        </button>
       </div>
       <div v-else class="text-sm text-gray-500">正在加载...</div>
     </template>

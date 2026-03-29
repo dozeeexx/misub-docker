@@ -95,6 +95,13 @@ const updateField = (key, value) => {
         </div>
         <Switch v-model="vpsMonitorConfig.requireSignature" />
       </div>
+      <div class="flex items-center justify-between p-3 bg-white/70 dark:bg-gray-900/50 border border-gray-200/60 dark:border-white/10 misub-radius-lg">
+        <div>
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-200">强制校验节点密钥</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">关闭后仅依赖节点 ID 接收上报</div>
+        </div>
+        <Switch v-model="vpsMonitorConfig.requireSecret" />
+      </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -170,8 +170,13 @@ const activePoints = ref([]);
 
 const handleMouseMove = (e) => {
   const svg = e.currentTarget;
-  const rect = svg.getBoundingClientRect();
-  const x = e.clientX - rect.left;
+  // Standard SVG coordinate conversion
+  const point = svg.createSVGPoint();
+  point.x = e.clientX;
+  point.y = e.clientY;
+  const ctm = svg.getScreenCTM();
+  const transformedPoint = point.matrixTransform(ctm.inverse());
+  const x = transformedPoint.x;
   
   if (x < chartPadding.left || x > svgWidth - chartPadding.right) {
     hoverX.value = null;

@@ -1419,6 +1419,9 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
 
     const db = getD1(env);
     const nodes = await fetchNodes(db);
+    if (!nodes.length) {
+        return createJsonResponse({ success: true, data: [] });
+    }
     
     // Fetch latest network samples for all nodes to ensure they are visible
     const nodeIds = nodes.map(n => n.id);
@@ -1491,6 +1494,14 @@ export async function handleVpsPublicNodeDetailRequest(request, env) {
 
     if (settings?.vpsMonitor?.publicPageEnabled !== true) {
         return createErrorResponse('Public access disabled', 403);
+    }
+
+    const token = normalizeString(settings?.vpsMonitor?.publicPageToken);
+    if (token) {
+        const provided = normalizeString(new URL(request.url).searchParams.get('token'));
+        if (!provided || provided !== token) {
+            return createErrorResponse('Unauthorized', 401);
+        }
     }
 
     const url = new URL(request.url);
@@ -1748,7 +1759,7 @@ export async function handleVpsNetworkCheck(request, env) {
         return createErrorResponse('Target id required', 400);
     }
 
-    const targetRow = await db.prepare('SELECT * FROM vps_network_targets WHERE id = ? AND node_id = ?').bind(targetId, nodeId).first();
+    const targetRow = await db.prepare('SELECT * FROM vps_network_targets WHERE id = ? AND (node_id = ? OR node_id = ?)').bind(targetId, nodeId, 'global').first();
     if (!targetRow) {
         return createErrorResponse('Target not found', 404);
     }

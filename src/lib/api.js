@@ -264,9 +264,10 @@ export async function fetchVpsNodeDetail(nodeId) {
     }
 }
 
-export async function fetchVpsPublicNodeDetail(nodeId) {
+export async function fetchVpsPublicNodeDetail(nodeId, token = '') {
     try {
-        const data = await api.get(`/api/vps/public/nodes/${nodeId}`);
+        const query = token ? `?token=${encodeURIComponent(token)}` : '';
+        const data = await api.get(`/api/vps/public/nodes/${nodeId}${query}`);
         return { success: true, data };
     } catch (error) {
         return handleApiError(error, 'fetchVpsPublicNodeDetail');
