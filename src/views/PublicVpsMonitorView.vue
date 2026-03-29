@@ -942,7 +942,7 @@ onUnmounted(() => {
                       class="flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
                       aria-label="关闭节点详情弹窗"
                     >
-                      <span class="text-xl">×</span>
+                      <span class="block text-xl leading-none -translate-y-px">×</span>
                     </button>
                   </div>
                 </div>
