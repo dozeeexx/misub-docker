@@ -123,7 +123,7 @@ const columns = computed(() => [
   { key: 'metrics', title: '资源', sortable: false },
   { key: 'traffic', title: '流量', sortable: false },
   { key: 'lastSeenAt', title: '最近上报', sortable: false },
-  { key: 'actions', title: '操作', sortable: false, align: 'right' }
+  { key: 'actions', title: '操作', sortable: false, align: 'right', sticky: 'right' }
 ]);
 
 const loadData = async () => {
@@ -731,6 +731,7 @@ onMounted(() => {
               :data="filteredNodes"
               :columns="columns"
               :loading="isLoading"
+              :striped="false"
               :pagination="false"
               empty-text="暂无节点数据"
             >
