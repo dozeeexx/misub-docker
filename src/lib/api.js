@@ -264,6 +264,15 @@ export async function fetchVpsNodeDetail(nodeId) {
     }
 }
 
+export async function fetchVpsPublicNodeDetail(nodeId) {
+    try {
+        const data = await api.get(`/api/vps/public/nodes/${nodeId}`);
+        return { success: true, data };
+    } catch (error) {
+        return handleApiError(error, 'fetchVpsPublicNodeDetail');
+    }
+}
+
 export async function fetchVpsNetworkTargets(nodeId) {
     try {
         const data = await api.get(`/api/vps/network_targets?nodeId=${encodeURIComponent(nodeId)}`);

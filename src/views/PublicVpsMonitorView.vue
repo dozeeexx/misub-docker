@@ -1,8 +1,10 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { fetchVpsPublicSnapshot } from '../lib/api.js';
+import { fetchVpsPublicSnapshot, fetchVpsPublicNodeDetail } from '../lib/api.js';
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
+import VpsLatencyChart from '../components/vps/VpsLatencyChart.vue';
+import Switch from '../components/ui/Switch.vue';
 
 const route = useRoute();
 
@@ -18,6 +20,33 @@ const mouseY = ref(0);
 const updateMouse = (e) => {
   mouseX.value = e.clientX;
   mouseY.value = e.clientY;
+};
+
+// Node Detail & Latency Chart
+const selectedNodeId = ref(null);
+const nodeDetailData = ref({
+  loading: false,
+  node: null,
+  samples: []
+});
+const isSmooth = ref(true);
+const showAllPoints = ref(false);
+
+const openNodeDetail = async (nodeId) => {
+  if (selectedNodeId.value === nodeId) {
+    selectedNodeId.value = null;
+    return;
+  }
+  selectedNodeId.value = nodeId;
+  nodeDetailData.value.loading = true;
+  nodeDetailData.value.samples = [];
+
+  const result = await fetchVpsPublicNodeDetail(nodeId);
+  if (result.success) {
+    nodeDetailData.value.node = result.data.data;
+    nodeDetailData.value.samples = result.data.networkSamples || [];
+  }
+  nodeDetailData.value.loading = false;
 };
 
 const displayMetrics = ref({
@@ -564,6 +593,16 @@ onUnmounted(() => {
                       <span class="text-xl mb-1">📡</span>
                       <p class="text-[10px] text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
                     </div>
+
+                    <!-- History Detail Button -->
+                    <div class="mt-auto pt-2 border-t border-[#efe6db]/60 dark:border-slate-800/60">
+                      <button 
+                        @click.stop="openNodeDetail(node.id)"
+                        class="w-full py-2 rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider hover:bg-blue-500 hover:text-white transition-all"
+                      >
+                        {{ selectedNodeId === node.id ? '收起曲线' : '查看延迟曲线' }}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -813,11 +852,71 @@ onUnmounted(() => {
                     <span class="text-xl mb-1">📡</span>
                     <p class="text-[10px] text-[#8a7f70] dark:text-slate-400">暂无网络监控数据</p>
                   </div>
+
+                  <!-- History Detail Button -->
+                  <div class="mt-auto pt-2 border-t border-[#efe6db]/60 dark:border-slate-800/60">
+                    <button 
+                      @click.stop="openNodeDetail(node.id)"
+                      class="w-full py-2 rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider hover:bg-blue-500 hover:text-white transition-all"
+                    >
+                      {{ selectedNodeId === node.id ? '收起曲线' : '查看延迟曲线' }}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Latency Chart Section (Expanded) -->
+        <transition
+          enter-active-class="transition duration-500 ease-out"
+          enter-from-class="transform -translate-y-4 opacity-0 scale-95"
+          enter-to-class="transform translate-y-0 opacity-100 scale-100"
+          leave-active-class="transition duration-300 ease-in"
+          leave-from-class="transform translate-y-0 opacity-100 scale-100"
+          leave-to-class="transform -translate-y-4 opacity-0 scale-95"
+        >
+          <div v-if="selectedNodeId" class="relative group">
+            <div class="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-[32px] blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+            <div class="relative rounded-[28px] border border-[#e9e2d6] bg-white/90 backdrop-blur-2xl p-6 shadow-2xl dark:border-slate-800/70 dark:bg-slate-900/80">
+              <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 class="text-xl font-bold text-[#1f1b17] dark:text-slate-100 flex items-center gap-2">
+                    <span class="text-blue-500">📈</span> 
+                    {{ nodeDetailData.node?.name || '节点' }} 延迟趋势
+                  </h2>
+                  <p class="text-xs text-[#8a7f70] dark:text-slate-400 mt-1">展示最近 24-48 小时内的多监测点延迟波动</p>
+                </div>
+                <div class="flex items-center gap-4 p-1 bg-[#efe6db]/40 dark:bg-slate-800/40 rounded-2xl border border-[#efe6db]/60 dark:border-slate-700/60">
+                  <div class="flex items-center gap-2 px-3">
+                    <span class="text-[10px] font-bold text-[#6a5f54] dark:text-slate-400 uppercase tracking-tighter">曲线平滑</span>
+                    <Switch v-model="isSmooth" size="sm" />
+                  </div>
+                  <button 
+                    @click="selectedNodeId = null"
+                    class="p-2 h-8 w-8 flex items-center justify-center rounded-xl bg-white/80 dark:bg-slate-700/80 text-[#8a7f70] dark:text-slate-300 hover:text-rose-500 transition-colors shadow-sm"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="nodeDetailData.loading" class="h-[260px] flex items-center justify-center">
+                <div class="flex flex-col items-center gap-3">
+                  <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span class="text-xs text-[#8a7f70] dark:text-slate-400 animate-pulse">正在获取历史采样...</span>
+                </div>
+              </div>
+              <div v-else-if="nodeDetailData.samples.length">
+                <VpsLatencyChart :samples="nodeDetailData.samples" :smooth="isSmooth" />
+              </div>
+              <div v-else class="h-[260px] flex items-center justify-center border-2 border-dashed border-[#efe6db] dark:border-slate-800 rounded-2xl">
+                <p class="text-xs text-[#8a7f70] dark:text-slate-400 uppercase tracking-widest">暂无历史采样数据</p>
+              </div>
+            </div>
+          </div>
+        </transition>
 
         <details class="rounded-[30px] border border-[#e7e1d6] bg-white/80 backdrop-blur-2xl p-6 shadow-[0_20px_60px_-40px_rgba(31,27,23,0.45)] dark:border-slate-800/70 dark:bg-slate-900/60 dark:shadow-black/50">
           <summary class="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#1f1b17] dark:text-slate-100">

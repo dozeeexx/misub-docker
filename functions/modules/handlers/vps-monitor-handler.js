@@ -1482,6 +1482,60 @@ async function fetchLatestNetworkSamplesBatch(db, nodeIds) {
     return Array.from(latestMap.values());
 }
 
+export async function handleVpsPublicNodeDetailRequest(request, env) {
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+    const settings = await loadVpsSettings(env);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
+    if (storageModeCheck) return storageModeCheck;
+
+    if (settings?.vpsMonitor?.publicPageEnabled !== true) {
+        return createErrorResponse('Public access disabled', 403);
+    }
+
+    const url = new URL(request.url);
+    const nodeId = normalizeString(url.pathname.split('/').pop());
+    if (!nodeId || nodeId === 'nodes') {
+        const id = url.searchParams.get('id');
+        if (!id) return createErrorResponse('Node id required', 400);
+    }
+
+    const db = getD1(env);
+    const node = await fetchNode(db, nodeId);
+    if (!node) {
+        return createErrorResponse('Node not found', 404);
+    }
+
+    const nodeTargets = await fetchNetworkTargets(db, nodeId);
+    const globalTargets = node?.useGlobalTargets ? await fetchGlobalNetworkTargets(db) : [];
+    const targets = node?.useGlobalTargets ? globalTargets : nodeTargets;
+
+    // Fetch network samples - last 500 points for better precision
+    const cutoff = new Date(getReportRetentionCutoff(settings)).toISOString();
+    const result = await db.prepare(
+        'SELECT data FROM vps_network_samples WHERE node_id = ? AND reported_at >= ? ORDER BY reported_at ASC LIMIT 500'
+    ).bind(nodeId, cutoff).all();
+    
+    const samples = (result.results || []).map(row => {
+        const s = JSON.parse(row.data);
+        if (s.checks) s.checks = rehydrateCheckNames(s.checks, targets);
+        return s;
+    });
+
+    const summary = summarizeNode(node, node.lastReport || null, settings);
+    // Security: Remove sensitive IP information
+    if (summary.latest) {
+        if (summary.latest.publicIp) delete summary.latest.publicIp;
+        if (summary.latest.ip) delete summary.latest.ip;
+    }
+
+    return createJsonResponse({
+        success: true,
+        data: summary,
+        networkSamples: samples
+    });
+}
+
 export async function handleVpsNodeDetailRequest(request, env) {
     const d1Check = ensureD1Available(env);
     if (d1Check) return d1Check;
