@@ -29,6 +29,7 @@ const updateMouse = (e) => {
 
 // Node Detail & Latency Chart
 const selectedNodeId = ref(null);
+const anomalyExpanded = ref(false);
 const detailCloseButtonRef = ref(null);
 const detailTitleId = 'public-vps-detail-title';
 let previousFocusedElement = null;
@@ -549,10 +550,20 @@ onUnmounted(() => {
                   <p class="mt-0.5 text-[11px] text-rose-600/70 dark:text-rose-400/60">仅展示需要优先处理的离线或高负载节点</p>
                 </div>
               </div>
-              <span class="rounded-full bg-rose-500 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">{{ anomalyNodes.length }} 告警</span>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="rounded-full border border-rose-300/70 bg-white/70 px-3 py-1 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-700/50 dark:bg-slate-900/70 dark:text-rose-300 dark:hover:bg-rose-900/20"
+                  @click="anomalyExpanded = !anomalyExpanded"
+                  :aria-expanded="anomalyExpanded"
+                >
+                  {{ anomalyExpanded ? '收起' : '展开' }}异常
+                </button>
+                <span class="rounded-full bg-rose-500 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">{{ anomalyNodes.length }} 告警</span>
+              </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div v-if="anomalyExpanded" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               <article v-for="node in anomalyNodes" :key="node.id" class="rounded-2xl border border-rose-200/80 bg-white/55 p-2.5 shadow-lg shadow-rose-500/5 dark:border-rose-900/40 dark:bg-slate-900/70">
                 <div class="relative mb-2 h-1 w-full rounded-full bg-rose-100 dark:bg-slate-800">
                   <div class="h-1 rounded-full bg-rose-500" :style="{ width: node.status === 'offline' ? '88%' : '72%' }"></div>
@@ -576,6 +587,9 @@ onUnmounted(() => {
                   <button @click="openNodeDetail(node.id)" class="rounded-lg bg-rose-500 px-2 py-1 text-[10px] font-bold text-white transition-colors hover:bg-rose-600">诊断详情</button>
                 </div>
               </article>
+            </div>
+            <div v-else class="rounded-xl border border-dashed border-rose-300/60 bg-white/50 px-4 py-3 text-xs text-rose-700/80 dark:border-rose-800/60 dark:bg-slate-900/40 dark:text-rose-300/80">
+              异常节点列表已默认收起，点击右上角“展开异常”查看详情。
             </div>
           </div>
         </div>
