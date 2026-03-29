@@ -121,7 +121,6 @@ const columns = computed(() => [
   { key: 'groupTag', title: '分组', sortable: false },
   { key: 'status', title: '状态', sortable: false, align: 'center' },
   { key: 'metrics', title: '资源', sortable: false },
-  { key: 'traffic', title: '流量', sortable: false },
   { key: 'lastSeenAt', title: '最近上报', sortable: false },
   { key: 'actions', title: '操作', sortable: false, align: 'right', sticky: 'right' }
 ]);

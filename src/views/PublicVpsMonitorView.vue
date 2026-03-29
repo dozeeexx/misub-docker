@@ -50,6 +50,8 @@ const orderedSections = computed(() => {
   const normalized = raw.filter(item => valid.includes(item));
   return normalized.length ? normalized : valid;
 });
+const sectionOrderMap = computed(() => new Map(orderedSections.value.map((item, index) => [item, index + 1])));
+const sectionOrderStyle = (key) => ({ order: sectionOrderMap.value.get(key) || 99 });
 
 // v2.1 Interactive Effects
 const mouseX = ref(0);
