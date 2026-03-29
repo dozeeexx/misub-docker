@@ -696,9 +696,9 @@ onMounted(() => {
                       :title="row.countryCode"
                       @error="getFlagFallback"
                     />
-                    <button type="button" class="truncate text-left text-sm font-semibold text-slate-900 hover:text-blue-500 dark:text-white" @click="openDetail(row)">
+                    <div class="truncate text-left text-sm font-semibold text-slate-900 dark:text-white">
                       {{ row.name }}
-                    </button>
+                    </div>
                   </div>
                   <p class="mt-1 text-xs text-slate-500">{{ row.region || row.description || '--' }}</p>
                   <div class="mt-2 flex flex-wrap gap-2">
@@ -715,12 +715,10 @@ onMounted(() => {
                 <div>CPU <span :class="metricsBadge(latestSnapshot(row)?.cpuPercent, metricThresholds.cpu)">{{ formatPercent(latestSnapshot(row)?.cpuPercent) }}</span></div>
                 <div>内存 <span :class="metricsBadge(latestSnapshot(row)?.memPercent, metricThresholds.mem)">{{ formatPercent(latestSnapshot(row)?.memPercent) }}</span></div>
                 <div>磁盘 <span :class="metricsBadge(latestSnapshot(row)?.diskPercent, metricThresholds.disk)">{{ formatPercent(latestSnapshot(row)?.diskPercent) }}</span></div>
-                <div>流量 <span class="text-slate-600 dark:text-slate-300">{{ formatTotalTraffic(row.totalRx + row.totalTx) }}</span></div>
               </div>
               <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">最近上报：{{ formatTime(row.lastSeenAt) }}</div>
               <div class="mt-4 flex flex-wrap gap-2">
                 <button type="button" class="rounded-lg border border-indigo-200/60 px-2.5 py-1.5 text-xs font-medium text-indigo-600 dark:border-indigo-500/20 dark:text-indigo-300" @click="openEdit(row)">编辑</button>
-                <button type="button" class="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:border-white/10 dark:text-gray-300" @click="openDetail(row)">详情</button>
                 <button type="button" class="rounded-lg border border-rose-200/60 px-2.5 py-1.5 text-xs font-medium text-rose-600 dark:border-rose-500/20 dark:text-rose-300" @click="openDelete(row)">删除</button>
               </div>
             </div>
@@ -746,9 +744,9 @@ onMounted(() => {
                 @error="getFlagFallback"
               />
               <div class="flex flex-col min-w-0">
-                <button type="button" class="truncate text-left font-medium text-slate-900 hover:text-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 dark:text-white" @click="openDetail(row)">
+                <div class="truncate text-left font-medium text-slate-900 dark:text-white">
                   {{ row.name }}
-                </button>
+                </div>
                 <span class="text-xs text-slate-500 truncate">{{ row.region || row.description || '--' }}</span>
               </div>
             </div>
@@ -785,29 +783,6 @@ onMounted(() => {
             </div>
           </template>
 
-          <template #column-traffic="{ row }">
-            <div class="flex flex-col gap-1 pr-4 min-w-[120px]">
-              <div class="flex justify-between items-center text-[10px]">
-                <span class="text-slate-500">本月累计</span>
-                <span v-if="row.trafficLimitGb > 0" class="font-medium text-slate-700 dark:text-slate-300">
-                  / {{ row.trafficLimitGb }} GB
-                </span>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="h-1.5 flex-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div 
-                    class="h-full bg-indigo-500 rounded-full transition-all duration-500" 
-                    :style="{ width: getTrafficUsageWidth(row) }"
-                    :class="{ 'opacity-30': row.trafficLimitGb === 0 }"
-                  ></div>
-                </div>
-                <span class="text-[10px] tabular-nums font-medium text-slate-600 dark:text-slate-400">
-                  {{ formatTotalTraffic(row.totalRx + row.totalTx) }}
-                </span>
-              </div>
-            </div>
-          </template>
-
           <template #column-lastSeenAt="{ row }">
             <div class="text-xs text-gray-500 dark:text-gray-400">
               {{ formatTime(row.lastSeenAt) }}
@@ -827,12 +802,6 @@ onMounted(() => {
                 @click.stop="openEdit(row)"
               >
                 编辑
-              </button>
-              <button
-                class="px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5"
-                @click.stop="openDetail(row)"
-              >
-                详情
               </button>
               <button
                 class="px-2.5 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-300 border border-rose-200/60 dark:border-rose-500/20 rounded-lg hover:bg-rose-50/40 dark:hover:bg-rose-500/10"
@@ -1098,163 +1067,6 @@ onMounted(() => {
       <p class="text-sm text-gray-600 dark:text-gray-300">
         确定删除 {{ editingNode?.name || '该节点' }} 吗？相关上报数据会一并清除。
       </p>
-    </template>
-  </Modal>
-
-  <Modal v-model:show="showDetailModal" size="5xl" confirm-text="关闭" cancel-text="关闭" :confirm-disabled="true">
-    <template #title>
-      <h3 class="text-lg font-bold text-gray-900 dark:text-white">节点详情</h3>
-    </template>
-    <template #body>
-      <div v-if="detailPayload" class="space-y-6">
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            v-for="section in detailSections"
-            :key="section.key"
-            type="button"
-            class="px-3 py-1.5 text-xs rounded-full border transition-colors"
-            :class="detailSection === section.key
-              ? 'border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300'
-              : 'border-gray-200/70 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400'"
-            @click="detailSection = section.key"
-          >
-            {{ section.label }}
-          </button>
-        </div>
-
-        <div v-if="detailSection === 'overview'" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-              <div class="text-xs text-gray-500">主机名</div>
-              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.hostname }}</div>
-            </div>
-            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-              <div class="text-xs text-gray-500">系统</div>
-              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.os }}</div>
-            </div>
-            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-              <div class="text-xs text-gray-500">公网 IP</div>
-              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.ip }}</div>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-              <div class="text-xs text-gray-500">Load1</div>
-              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.load1 }}</div>
-            </div>
-            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-              <div class="text-xs text-gray-500">运行时长 (秒)</div>
-              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ detailSummary?.uptimeSec }}</div>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-              <div class="text-xs text-gray-500">探针上报时间</div>
-              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ formatTime(detailSummary?.reportedAt) }}</div>
-            </div>
-            <div class="bg-white/70 dark:bg-gray-900/60 border border-gray-200/60 dark:border-white/10 rounded-xl p-4">
-              <div class="text-xs text-gray-500">服务器接收时间</div>
-              <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ formatTime(detailSummary?.receivedAt) }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="detailSection === 'metrics'" class="space-y-4">
-          <div class="flex flex-wrap items-center gap-3">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-xs text-gray-500">范围</span>
-              <button
-                v-for="option in rangeOptions"
-                :key="option.key"
-                type="button"
-                class="px-3 py-1.5 text-xs rounded-full border transition-colors"
-                :class="detailRange === option.key
-                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300'
-                  : 'border-gray-200/70 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400'"
-                @click="detailRange = option.key"
-              >
-                {{ option.label }}
-              </button>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-xs text-gray-500">模式</span>
-              <button
-                v-for="option in aggregationOptions"
-                :key="option.key"
-                type="button"
-                class="px-3 py-1.5 text-xs rounded-full border transition-colors"
-                :class="detailAggregation === option.key
-                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
-                  : 'border-gray-200/70 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400'"
-                @click="detailAggregation = option.key"
-              >
-                {{ option.label }}
-              </button>
-            </div>
-            <span class="text-xs text-gray-400">{{ rangeHint }}</span>
-          </div>
-
-          <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <VpsMetricChart title="CPU" unit="%" :points="pickSeries('cpu')" color="#f97316" :height="70" />
-            <VpsMetricChart title="内存" unit="%" :points="pickSeries('mem')" color="#3b82f6" :height="70" />
-            <VpsMetricChart title="磁盘" unit="%" :points="pickSeries('disk')" color="#22c55e" :height="70" />
-            <VpsMetricChart title="Load1" unit="" :max="5" :points="pickScalarSeries(item => item?.load?.load1 ?? null)" color="#6366f1" :height="70" />
-            <VpsMetricChart title="下行流量" unit="GB" :points="pickScalarSeries(item => {
-              const b = item?.traffic?.rx ?? item?.traffic?.download ?? null;
-              return b !== null ? Number((b / (1024 * 1024 * 1024)).toFixed(2)) : null;
-            })" color="#0088cc" :height="70" :max="10" />
-            <VpsMetricChart title="上行流量" unit="GB" :points="pickScalarSeries(item => {
-              const b = item?.traffic?.tx ?? item?.traffic?.upload ?? null;
-              return b !== null ? Number((b / (1024 * 1024 * 1024)).toFixed(2)) : null;
-            })" color="#8b5cf6" :height="70" :max="10" />
-          </div>
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <VpsMetricChart title="网络延迟" unit="ms" :max="500" :points="buildNetworkSeries('latency')" color="#ec4899" :height="120" />
-            <VpsMetricChart title="丢包率" unit="%" :max="100" :points="buildNetworkSeries('loss')" color="#f59e0b" :height="120" />
-          </div>
-        </div>
-
-        <div v-if="detailSection === 'network'" class="space-y-4">
-          <div v-if="latestNetwork.length" class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-5 border border-gray-100/80 dark:border-white/10">
-            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">最近一次网络检测</h4>
-            <div class="mt-3 space-y-2">
-              <div v-for="item in latestNetwork" :key="item.target + (item.port || '') + (item.path || '')" class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border"
-                :class="item.status === 'up'
-                  ? 'border-emerald-200/70 text-emerald-600 bg-emerald-500/10'
-                  : 'border-rose-200/70 text-rose-600 bg-rose-500/10'"
-              >
-                {{ item.status }}
-              </span>
-              <span class="font-medium">{{ item.type.toUpperCase() }}</span>
-              <span class="font-medium truncate max-w-[120px]" v-if="item.name">{{ item.name }}</span>
-              <span :class="{ 'text-gray-400': item.name }">{{ item.target }}<span v-if="item.port">:{{ item.port }}</span>{{ item.path || '' }}</span>
-            </div>
-            <div class="flex flex-wrap items-center gap-2 text-[11px]">
-              <span v-if="item.latencyMs">{{ item.latencyMs }}ms</span>
-              <span v-if="item.httpCode">HTTP {{ item.httpCode }}</span>
-              <span v-if="item.lossPercent !== undefined && item.lossPercent !== null">loss {{ item.lossPercent }}%</span>
-              <span v-if="item.dnsMs !== undefined && item.dnsMs !== null">DNS {{ item.dnsMs }}ms</span>
-              <span v-if="item.connectMs !== undefined && item.connectMs !== null">TCP {{ item.connectMs }}ms</span>
-              <span v-if="item.tlsMs !== undefined && item.tlsMs !== null">TLS {{ item.tlsMs }}ms</span>
-            </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div v-else-if="detailError" class="space-y-3 rounded-xl border border-rose-200/70 bg-rose-50/70 p-4 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
-        <div>{{ detailError }}</div>
-        <button
-          type="button"
-          class="w-fit rounded-lg border border-rose-300/70 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-rose-100 dark:border-rose-500/30 dark:hover:bg-rose-500/10"
-          @click="editingNode && openDetail(editingNode)"
-        >
-          重试
-        </button>
-      </div>
-      <div v-else class="text-sm text-gray-500">正在加载...</div>
     </template>
   </Modal>
 
