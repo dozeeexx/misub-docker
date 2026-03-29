@@ -30,6 +30,7 @@ const updateMouse = (e) => {
 // Node Detail & Latency Chart
 const selectedNodeId = ref(null);
 const anomalyExpanded = ref(false);
+const selectedGroup = ref('全部');
 const detailCloseButtonRef = ref(null);
 const detailTitleId = 'public-vps-detail-title';
 let previousFocusedElement = null;
@@ -198,12 +199,33 @@ const sortedNodes = computed(() => {
   return sortNodesByStatusAndName(nodes.value);
 });
 
+const nodeGroupItems = computed(() => {
+  const countMap = new Map();
+  nodes.value.forEach((node) => {
+    const key = node.groupTag || '未分组';
+    countMap.set(key, (countMap.get(key) || 0) + 1);
+  });
+  const groups = Array.from(countMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([name, count]) => ({ name, count }));
+  return [{ name: '全部', count: nodes.value.length }, ...groups];
+});
+
+const filteredSortedNodes = computed(() => {
+  if (selectedGroup.value === '全部') return sortedNodes.value;
+  return sortedNodes.value.filter((node) => (node.groupTag || '未分组') === selectedGroup.value);
+});
+
 const loadSnapshot = async () => {
   loading.value = true;
   error.value = '';
   const result = await fetchVpsPublicSnapshot(getPublicToken());
   if (result.success) {
     nodes.value = result.data?.data || [];
+    const groupNames = new Set(nodeGroupItems.value.map((item) => item.name));
+    if (!groupNames.has(selectedGroup.value)) {
+      selectedGroup.value = '全部';
+    }
     lastUpdatedAt.value = new Date().toLocaleString();
     
     // Trigger animation
@@ -603,9 +625,25 @@ onUnmounted(() => {
               <span class="text-xs text-[#8a7f70] dark:text-slate-400">在线与离线节点统一展示</span>
             </div>
           </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="group in nodeGroupItems"
+              :key="group.name"
+              type="button"
+              class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors"
+              :class="selectedGroup === group.name
+                ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-300'
+                : 'border-[#e7dfd4] bg-white/70 text-[#7b6e5f] hover:bg-[#f8f3eb] dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800/70'"
+              @click="selectedGroup = group.name"
+            >
+              <span>{{ group.name }}</span>
+              <span class="text-[10px] opacity-75">{{ group.count }}</span>
+            </button>
+          </div>
           
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div v-for="node in sortedNodes" :key="node.id" class="vps-card-container">
+          <div v-if="filteredSortedNodes.length" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div v-for="node in filteredSortedNodes" :key="node.id" class="vps-card-container">
                 <div class="vps-card-inner group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)" @keydown.enter.prevent="toggleFlip(node.id)" @keydown.space.prevent="toggleFlip(node.id)" tabindex="0" role="button" :aria-pressed="flippedNodes.has(node.id)" :aria-label="`切换 ${node.name || node.id} 的节点网络状态卡片`">
                   <!-- Front Side -->
                   <div class="vps-card-front rounded-2xl border border-[#efe6db] bg-[#fdfaf6] p-4 dark:border-slate-800 dark:bg-slate-900">
@@ -643,6 +681,9 @@ onUnmounted(() => {
                           <span class="ml-1 opacity-70">| 📊 {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
                         </p>
                         <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                          <span class="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50/70 px-2 py-0.5 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
+                            组: {{ node.groupTag || '未分组' }}
+                          </span>
                           <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                             ⚡ 负载: {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}
                           </span>
@@ -727,10 +768,13 @@ onUnmounted(() => {
                       >
                         {{ selectedNodeId === node.id ? '收起曲线' : '查看延迟曲线' }}
                       </button>
-                    </div>
-                  </div>
                 </div>
               </div>
+          </div>
+          <div v-if="!filteredSortedNodes.length" class="rounded-xl border border-dashed border-[#dfd5c8] bg-white/60 px-4 py-3 text-xs text-[#7b6e5f] dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+            当前分组下暂无节点，试试切换其它分组。
+          </div>
+        </div>
             </div>
           </div>
 
