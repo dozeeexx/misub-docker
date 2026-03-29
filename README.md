@@ -83,7 +83,7 @@
   - 需要绑定 D1 数据库 (MISUB_DB)
   - 需要在设置中切换存储模式为 D1
   - 支持 ICMP/TCP/HTTP 网络监测（需执行最新 schema.sql）
-  - 公开页地址：`/vps/public`（如设置了公开页 Token，则需 `?token=xxx`）
+  - 公开页地址：`/vps`（如设置了公开页 Token，则需 `?token=xxx`）
 
 - **🚫 PWA 已移除**
   - 已彻底禁用 PWA/Service Worker，避免缓存导致的白屏问题
@@ -206,7 +206,7 @@ wrangler d1 execute misub --file=schema.sql --remote
 
 在 `设置` → `环境变量` 中添加 **生产环境** 变量：
 
-**必填：**
+**可选：**
 
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
