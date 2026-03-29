@@ -37,6 +37,7 @@ const accentButtonClass = computed(() => theme.value.accentButton);
 const nodeCardClass = computed(() => theme.value.nodeCard);
 const detailTableClass = computed(() => theme.value.detailTable);
 const layoutClass = computed(() => theme.value.layout || 'default');
+const themeClass = computed(() => theme.value.themeClass || '');
 const rootStyle = computed(() => themeConfig.value.backgroundImage
   ? { backgroundImage: `url(${themeConfig.value.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
   : {});
@@ -559,7 +560,7 @@ onUnmounted(() => {
 </style>
 
 <template>
-  <div class="min-h-screen vps-public-theme-root" :class="[theme.root, theme.backdrop, `layout-${layoutClass}`]" :style="rootStyle">
+  <div class="min-h-screen vps-public-theme-root" :class="[theme.root, theme.backdrop, themeClass, `layout-${layoutClass}`]" :style="rootStyle">
     <component :is="'style'" v-if="sanitizedCustomCss">{{ sanitizedCustomCss }}</component>
     <div class="relative overflow-hidden">
       <div class="absolute inset-0">
@@ -1095,7 +1096,7 @@ onUnmounted(() => {
           </div>
         </transition>
 
-        <details v-if="showDetailTable" class="rounded-[30px] border p-6" :class="panelClass" :style="sectionOrderStyle('details')">
+        <details v-if="showDetailTable" class="mt-8 rounded-[30px] border p-6" :class="panelClass" :style="sectionOrderStyle('details')">
           <summary class="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#1f1b17] dark:text-slate-100">
             <span>节点明细表</span>
             <span class="text-xs text-[#8a7f70] dark:text-slate-400">点击展开</span>
@@ -1132,3 +1133,155 @@ onUnmounted(() => {
       </div>
   </div>
 </template>
+
+<style scoped>
+.vps-theme-komari h1,
+.vps-theme-komari h2,
+.vps-theme-komari h3,
+.vps-theme-komari h4,
+.vps-theme-komari summary,
+.vps-theme-komari table,
+.vps-theme-komari .vps-card-front,
+.vps-theme-komari .vps-card-back {
+  color: #0f172a;
+}
+
+.vps-theme-komari .theme-komari {
+  background-image:
+    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.2), transparent 32%),
+    radial-gradient(circle at 82% 14%, rgba(99, 102, 241, 0.14), transparent 26%),
+    linear-gradient(180deg, #f4f7fb 0%, #edf5ff 55%, #f7fbff 100%);
+}
+
+.vps-theme-komari .vps-card-front,
+.vps-theme-komari .vps-card-back,
+.vps-theme-komari details,
+.vps-theme-komari article {
+  border-color: rgba(186, 230, 253, 0.9) !important;
+}
+
+.vps-theme-komari p,
+.vps-theme-komari span,
+.vps-theme-komari td,
+.vps-theme-komari th {
+  color: inherit;
+}
+
+.vps-theme-minimal h1,
+.vps-theme-minimal h2,
+.vps-theme-minimal h3,
+.vps-theme-minimal h4,
+.vps-theme-minimal summary,
+.vps-theme-minimal table {
+  color: #0f172a;
+}
+
+.vps-theme-minimal .vps-card-front,
+.vps-theme-minimal .vps-card-back,
+.vps-theme-minimal details,
+.vps-theme-minimal article {
+  box-shadow: none !important;
+}
+
+.vps-theme-minimal .theme-minimal {
+  background-image:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(255,255,255,1) 100%),
+    linear-gradient(transparent 31px, rgba(148,163,184,0.06) 32px),
+    linear-gradient(90deg, transparent 31px, rgba(148,163,184,0.06) 32px);
+  background-size: auto, 32px 32px, 32px 32px;
+}
+
+.vps-theme-minimal .vps-card-front,
+.vps-theme-minimal .vps-card-back {
+  border-radius: 1rem;
+}
+
+.vps-theme-minimal .vps-card-front,
+.vps-theme-minimal .vps-card-back,
+.vps-theme-minimal details,
+.vps-theme-minimal article {
+  border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+.vps-theme-tech-dark h1,
+.vps-theme-tech-dark h2,
+.vps-theme-tech-dark h3,
+.vps-theme-tech-dark h4,
+.vps-theme-tech-dark summary,
+.vps-theme-tech-dark table,
+.vps-theme-tech-dark .vps-card-front,
+.vps-theme-tech-dark .vps-card-back {
+  color: #e2e8f0;
+}
+
+.vps-theme-tech-dark p,
+.vps-theme-tech-dark span,
+.vps-theme-tech-dark td,
+.vps-theme-tech-dark th {
+  color: inherit;
+}
+
+.vps-theme-tech-dark details,
+.vps-theme-tech-dark .vps-card-front,
+.vps-theme-tech-dark .vps-card-back,
+.vps-theme-tech-dark article {
+  border-color: rgba(34, 211, 238, 0.18) !important;
+}
+
+.vps-theme-tech-dark .theme-tech-dark {
+  background-image:
+    radial-gradient(circle at 18% 18%, rgba(34, 211, 238, 0.16), transparent 28%),
+    radial-gradient(circle at 82% 12%, rgba(14, 165, 233, 0.16), transparent 24%),
+    linear-gradient(180deg, #050816 0%, #09101f 45%, #0d1630 100%);
+}
+
+.vps-theme-tech-dark .vps-card-front,
+.vps-theme-tech-dark .vps-card-back,
+.vps-theme-tech-dark details,
+.vps-theme-tech-dark article {
+  box-shadow: 0 18px 42px -34px rgba(34, 211, 238, 0.2), inset 0 0 0 1px rgba(34, 211, 238, 0.04);
+}
+
+.vps-theme-glass h1,
+.vps-theme-glass h2,
+.vps-theme-glass h3,
+.vps-theme-glass h4,
+.vps-theme-glass summary,
+.vps-theme-glass table,
+.vps-theme-glass .vps-card-front,
+.vps-theme-glass .vps-card-back {
+  color: #0f172a;
+}
+
+.vps-theme-glass p,
+.vps-theme-glass span,
+.vps-theme-glass td,
+.vps-theme-glass th {
+  color: inherit;
+}
+
+.vps-theme-glass details,
+.vps-theme-glass .vps-card-front,
+.vps-theme-glass .vps-card-back,
+.vps-theme-glass article {
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  backdrop-filter: blur(20px);
+}
+
+.vps-theme-glass .theme-glass {
+  background-image:
+    radial-gradient(circle at 20% 18%, rgba(99, 102, 241, 0.18), transparent 30%),
+    radial-gradient(circle at 78% 12%, rgba(56, 189, 248, 0.18), transparent 28%),
+    linear-gradient(180deg, #eef4ff 0%, #e8f0ff 52%, #edf5ff 100%);
+}
+
+.vps-theme-glass .vps-card-front,
+.vps-theme-glass .vps-card-back {
+  background: rgba(255, 255, 255, 0.38) !important;
+}
+
+.vps-theme-tech-dark .vps-card-front,
+.vps-theme-tech-dark .vps-card-back {
+  background: rgba(8, 16, 31, 0.92) !important;
+}
+</style>

@@ -24,13 +24,14 @@ export const VPS_PUBLIC_THEME_PRESETS = {
     heroBadge: 'border-sky-100 bg-white/90 text-sky-700',
     heroTitle: 'text-slate-900',
     heroText: 'text-slate-600',
-    statCard: 'border-sky-100 bg-white/90 shadow-[0_18px_40px_-28px_rgba(14,165,233,0.45)]',
-    panel: 'border-sky-100 bg-white/90 shadow-[0_20px_55px_-38px_rgba(15,23,42,0.18)]',
-    panelSoft: 'border-sky-100 bg-gradient-to-br from-white to-sky-50/80',
-    pill: 'border-sky-100 bg-sky-50/80 text-sky-700',
+    statCard: 'border-sky-100/90 bg-white/92 shadow-[0_20px_42px_-28px_rgba(14,165,233,0.32)]',
+    panel: 'border-sky-100/90 bg-white/92 shadow-[0_22px_60px_-40px_rgba(15,23,42,0.16)]',
+    panelSoft: 'border-sky-100/90 bg-gradient-to-br from-white via-sky-50/75 to-indigo-50/70',
+    pill: 'border-sky-100/90 bg-white/88 text-sky-700 shadow-sm shadow-sky-100/60',
     accentButton: 'border-sky-200 bg-sky-500 text-white shadow-lg shadow-sky-500/20',
     nodeCard: 'border-sky-100 bg-white/95 shadow-[0_20px_40px_-30px_rgba(56,189,248,0.45)]',
     detailTable: 'text-slate-800',
+    themeClass: 'vps-theme-komari',
     backdrop: 'theme-komari'
   },
   minimal: {
@@ -48,6 +49,7 @@ export const VPS_PUBLIC_THEME_PRESETS = {
     accentButton: 'border-slate-200 bg-slate-900 text-white',
     nodeCard: 'border-slate-200 bg-white shadow-none',
     detailTable: 'text-slate-700',
+    themeClass: 'vps-theme-minimal',
     backdrop: 'theme-minimal'
   },
   'tech-dark': {
@@ -58,13 +60,14 @@ export const VPS_PUBLIC_THEME_PRESETS = {
     heroBadge: 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300',
     heroTitle: 'text-slate-50',
     heroText: 'text-slate-400',
-    statCard: 'border-cyan-500/20 bg-[#0b1226] shadow-[0_20px_50px_-30px_rgba(6,182,212,0.35)]',
-    panel: 'border-cyan-500/20 bg-[#0b1226]/90 shadow-[0_25px_60px_-35px_rgba(6,182,212,0.28)]',
-    panelSoft: 'border-cyan-500/20 bg-gradient-to-br from-[#0b1226] to-[#111c3b]',
+    statCard: 'border-cyan-400/20 bg-[#0b1226]/96 shadow-[0_22px_52px_-34px_rgba(6,182,212,0.28)]',
+    panel: 'border-cyan-400/20 bg-[#0b1226]/94 shadow-[0_28px_65px_-36px_rgba(6,182,212,0.24)]',
+    panelSoft: 'border-cyan-400/20 bg-gradient-to-br from-[#091122] via-[#0d1730] to-[#122044]',
     pill: 'border-cyan-500/20 bg-cyan-500/10 text-cyan-200',
-    accentButton: 'border-cyan-400/30 bg-cyan-400/90 text-slate-950 shadow-lg shadow-cyan-500/20',
+    accentButton: 'border-cyan-300/30 bg-cyan-300/92 text-slate-950 shadow-lg shadow-cyan-500/16',
     nodeCard: 'border-cyan-500/20 bg-[#08101f] shadow-[0_20px_45px_-30px_rgba(34,211,238,0.35)]',
     detailTable: 'text-slate-200',
+    themeClass: 'vps-theme-tech-dark',
     backdrop: 'theme-tech-dark'
   },
   glass: {
@@ -75,13 +78,14 @@ export const VPS_PUBLIC_THEME_PRESETS = {
     heroBadge: 'border-white/40 bg-white/30 text-slate-700 backdrop-blur-xl',
     heroTitle: 'text-slate-900',
     heroText: 'text-slate-600',
-    statCard: 'border-white/30 bg-white/35 backdrop-blur-2xl shadow-[0_18px_45px_-30px_rgba(99,102,241,0.35)]',
-    panel: 'border-white/30 bg-white/35 backdrop-blur-2xl shadow-[0_22px_65px_-38px_rgba(99,102,241,0.35)]',
-    panelSoft: 'border-white/30 bg-white/30 backdrop-blur-2xl',
-    pill: 'border-white/40 bg-white/40 text-slate-700 backdrop-blur-xl',
+    statCard: 'border-white/34 bg-white/38 backdrop-blur-2xl shadow-[0_20px_46px_-30px_rgba(99,102,241,0.24)]',
+    panel: 'border-white/34 bg-white/38 backdrop-blur-2xl shadow-[0_24px_68px_-40px_rgba(99,102,241,0.24)]',
+    panelSoft: 'border-white/34 bg-white/34 backdrop-blur-2xl',
+    pill: 'border-white/45 bg-white/46 text-slate-700 backdrop-blur-xl',
     accentButton: 'border-white/40 bg-slate-900/85 text-white backdrop-blur-xl',
     nodeCard: 'border-white/30 bg-white/35 backdrop-blur-2xl shadow-[0_22px_48px_-34px_rgba(148,163,184,0.45)]',
     detailTable: 'text-slate-800',
+    themeClass: 'vps-theme-glass',
     backdrop: 'theme-glass'
   }
 };
