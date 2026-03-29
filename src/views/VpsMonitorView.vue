@@ -404,7 +404,7 @@ const handleClearAlerts = async () => {
 const copyPublicPageLink = async () => {
   const baseUrl = window.location.origin;
   const token = config?.value?.vpsMonitor?.publicPageToken || '';
-  const url = token ? `${baseUrl}/vps/public?token=${encodeURIComponent(token)}` : `${baseUrl}/vps/public`;
+  const url = token ? `${baseUrl}/vps?token=${encodeURIComponent(token)}` : `${baseUrl}/vps`;
   try {
     await navigator.clipboard.writeText(url);
     showToast('公开页地址已复制', 'success');
@@ -608,7 +608,7 @@ onMounted(() => {
           注意：VPS 探针功能需要绑定 D1 数据库（MISUB_DB）并切换存储模式为 D1。
         </p>
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          公开展示页：<span class="font-medium">/vps/public</span>（如设置公开页 Token，请使用 ?token=xxx）
+          公开展示页：<span class="font-medium">/vps</span>（如设置公开页 Token，请使用 ?token=xxx）
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
@@ -629,8 +629,8 @@ onMounted(() => {
         </button>
         <a
           :href="(config?.vpsMonitor?.publicPageToken
-            ? `/vps/public?token=${encodeURIComponent(config.vpsMonitor.publicPageToken)}`
-            : '/vps/public')"
+            ? `/vps?token=${encodeURIComponent(config.vpsMonitor.publicPageToken)}`
+            : '/vps')"
           target="_blank"
           rel="noopener"
           class="px-3 py-2 text-xs font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-gray-900/60 dark:text-gray-300 dark:hover:bg-gray-900 misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
