@@ -669,6 +669,16 @@ onUnmounted(() => {
   background-image: linear-gradient(90deg, #10b981, #38bdf8, #f59e0b) !important;
 }
 
+.vps-theme-default .vps-metric-chart {
+  color: #0f766e;
+}
+
+.vps-theme-default .metric-pill {
+  border-color: rgba(226, 216, 203, 0.8) !important;
+  background: rgba(253, 248, 241, 0.95) !important;
+  color: #6a5f54 !important;
+}
+
 .vps-theme-default .node-sparkline-line {
   color: #0ea5e9;
 }
@@ -970,8 +980,8 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.92);
 }
 
-.vps-theme-default .anomaly-status {
-  background: rgba(251, 207, 194, 0.45);
+.vps-anomaly-section .anomaly-status {
+  background: transparent !important;
 }
 
 .dark .vps-theme-default .anomaly-card {
@@ -1403,25 +1413,25 @@ onUnmounted(() => {
                 <h3 class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">资源脉冲</h3>
                 <p class="mt-1 text-xs text-[#8a7f70] dark:text-slate-400">汇总最近一次上报的资源占用</p>
                 <div class="mt-4 grid grid-cols-2 gap-3">
-                  <VpsMetricChart title="CPU" unit="%" :points="nodes.map(node => node.latest?.cpu?.usage ?? node.latest?.cpuPercent ?? null)" color="#0ea5e9" :height="56" />
-                  <VpsMetricChart title="内存" unit="%" :points="nodes.map(node => node.latest?.mem?.usage ?? node.latest?.memPercent ?? null)" color="#f97316" :height="56" />
-                  <VpsMetricChart title="磁盘" unit="%" :points="nodes.map(node => node.latest?.disk?.usage ?? node.latest?.diskPercent ?? null)" color="#22c55e" :height="56" />
+                  <VpsMetricChart title="CPU" unit="%" :points="nodes.map(node => node.latest?.cpu?.usage ?? node.latest?.cpuPercent ?? null)" color="currentColor" :height="56" class="vps-metric-chart" />
+                  <VpsMetricChart title="内存" unit="%" :points="nodes.map(node => node.latest?.mem?.usage ?? node.latest?.memPercent ?? null)" color="currentColor" :height="56" class="vps-metric-chart" />
+                  <VpsMetricChart title="磁盘" unit="%" :points="nodes.map(node => node.latest?.disk?.usage ?? node.latest?.diskPercent ?? null)" color="currentColor" :height="56" class="vps-metric-chart" />
                   <VpsMetricChart title="流量" unit="GB" :points="nodes.map(node => {
                     const b = node.latest?.traffic?.rx ?? node.latest?.traffic?.download ?? null;
                     return b !== null ? Number((b / (1024 * 1024 * 1024)).toFixed(2)) : null;
-                  })" color="#6366f1" :height="56" :max="10" />
+                  })" color="currentColor" :height="56" :max="10" class="vps-metric-chart" />
                 </div>
                 <div class="mt-4 grid grid-cols-2 gap-3 text-xs">
-                  <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-2.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                  <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-2.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 metric-pill">
                     平均 CPU <span class="font-semibold">{{ formatPercent(avgCpu) }}</span>
                   </div>
-                  <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-2.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                  <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-2.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 metric-pill">
                     平均内存 <span class="font-semibold">{{ formatPercent(avgMem) }}</span>
                   </div>
-                  <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-2.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                  <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-2.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 metric-pill">
                     平均磁盘 <span class="font-semibold">{{ formatPercent(avgDisk) }}</span>
                   </div>
-                  <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-2.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                  <div class="rounded-2xl border border-[#efe6db] bg-white/70 px-3 py-2.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 metric-pill">
                     平均负载 <span class="font-semibold">{{ avgLoad || '--' }}</span>
                   </div>
                 </div>
@@ -1689,6 +1699,11 @@ onUnmounted(() => {
   border-color: rgba(125, 211, 252, 0.35);
 }
 
+.dark .vps-theme-fresh .floating-filterbar {
+  background: rgba(8, 16, 31, 0.7);
+  border-color: rgba(56, 189, 248, 0.28);
+}
+
 .vps-theme-fresh .vps-card-front,
 .vps-theme-fresh .vps-card-back,
 .vps-theme-fresh details,
@@ -1726,9 +1741,6 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.94);
 }
 
-.vps-theme-fresh .anomaly-status {
-  background: rgba(186, 230, 253, 0.6);
-}
 
 .dark .vps-theme-fresh .anomaly-card {
   border-color: rgba(56, 189, 248, 0.3);
@@ -1747,6 +1759,12 @@ onUnmounted(() => {
 .dark .vps-theme-fresh .anomaly-link {
   background: #0284c7;
 }
+
+.dark .vps-theme-fresh .anomaly-card {
+  border-color: rgba(56, 189, 248, 0.32);
+  background: rgba(8, 16, 31, 0.8);
+}
+
 
 .vps-theme-fresh .vps-node-front,
 .vps-theme-fresh .vps-node-back {
@@ -1821,6 +1839,22 @@ onUnmounted(() => {
 
 .vps-theme-fresh .node-status-bar {
   background-image: linear-gradient(90deg, #22d3ee, #38bdf8, #818cf8) !important;
+}
+
+.vps-theme-fresh .vps-metric-chart {
+  color: #0ea5e9;
+}
+
+.vps-theme-fresh .metric-pill {
+  border-color: rgba(186, 230, 253, 0.6) !important;
+  background: rgba(239, 246, 255, 0.92) !important;
+  color: #0e7490 !important;
+}
+
+.dark .vps-theme-fresh .metric-pill {
+  border-color: rgba(56, 189, 248, 0.28) !important;
+  background: rgba(8, 16, 31, 0.75) !important;
+  color: #7dd3fc !important;
 }
 
 .vps-theme-fresh .node-sparkline-line {
@@ -2016,6 +2050,58 @@ onUnmounted(() => {
   background-image: linear-gradient(90deg, #94a3b8, #cbd5f5, #e2e8f0) !important;
 }
 
+.vps-theme-minimal .vps-metric-chart {
+  color: #475569;
+}
+
+.vps-theme-minimal .metric-pill {
+  border-color: rgba(226, 232, 240, 0.9) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #64748b !important;
+}
+
+.dark .vps-theme-minimal .metric-pill {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  color: #cbd5f5 !important;
+}
+
+.vps-theme-minimal .node-group-pill {
+  border-color: rgba(226, 232, 240, 0.9);
+  background: rgba(248, 250, 252, 0.95);
+  color: #475569;
+}
+
+.vps-theme-minimal .node-load-pill {
+  border-color: rgba(226, 232, 240, 0.9);
+  background: rgba(241, 245, 249, 0.9);
+  color: #64748b;
+}
+
+.dark .vps-theme-minimal .node-group-pill {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.85);
+  color: #cbd5f5;
+}
+
+.dark .vps-theme-minimal .node-load-pill {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+}
+
+.vps-theme-minimal .node-status-pill {
+  border-color: rgba(203, 213, 225, 0.8) !important;
+  background: rgba(248, 250, 252, 0.95) !important;
+  color: #475569 !important;
+}
+
+.dark .vps-theme-minimal .node-status-pill {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(15, 23, 42, 0.8) !important;
+  color: #e2e8f0 !important;
+}
+
 .vps-theme-minimal .node-sparkline-line {
   color: #334155;
 }
@@ -2072,9 +2158,6 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.9);
 }
 
-.vps-theme-minimal .anomaly-status {
-  background: rgba(226, 232, 240, 0.8);
-}
 
 .dark .vps-theme-minimal .anomaly-card {
   border-color: rgba(148, 163, 184, 0.25);
@@ -2232,9 +2315,6 @@ onUnmounted(() => {
   background: rgba(236, 254, 255, 0.85);
 }
 
-.vps-theme-tech .anomaly-status {
-  background: rgba(34, 211, 238, 0.15);
-}
 
 .dark .vps-theme-tech .anomaly-card {
   border-color: rgba(34, 211, 238, 0.2);
@@ -2325,6 +2405,58 @@ onUnmounted(() => {
 
 .vps-theme-tech .node-status-bar {
   background-image: linear-gradient(90deg, #22d3ee, #38bdf8, #0ea5e9) !important;
+}
+
+.vps-theme-tech .vps-metric-chart {
+  color: #22d3ee;
+}
+
+.vps-theme-tech .metric-pill {
+  border-color: rgba(34, 211, 238, 0.3) !important;
+  background: rgba(240, 253, 250, 0.85) !important;
+  color: #0e7490 !important;
+}
+
+.dark .vps-theme-tech .metric-pill {
+  border-color: rgba(34, 211, 238, 0.22) !important;
+  background: rgba(6, 10, 22, 0.85) !important;
+  color: #67e8f9 !important;
+}
+
+.vps-theme-tech .node-group-pill {
+  border-color: rgba(34, 211, 238, 0.35);
+  background: rgba(224, 231, 255, 0.8);
+  color: #0e7490;
+}
+
+.vps-theme-tech .node-load-pill {
+  border-color: rgba(34, 211, 238, 0.3);
+  background: rgba(240, 253, 250, 0.85);
+  color: #0e7490;
+}
+
+.dark .vps-theme-tech .node-group-pill {
+  border-color: rgba(34, 211, 238, 0.25);
+  background: rgba(6, 10, 22, 0.9);
+  color: #67e8f9;
+}
+
+.dark .vps-theme-tech .node-load-pill {
+  border-color: rgba(34, 211, 238, 0.22);
+  background: rgba(6, 10, 22, 0.85);
+  color: #67e8f9;
+}
+
+.vps-theme-tech .node-status-pill {
+  border-color: rgba(34, 211, 238, 0.3) !important;
+  background: rgba(224, 231, 255, 0.8) !important;
+  color: #0e7490 !important;
+}
+
+.dark .vps-theme-tech .node-status-pill {
+  border-color: rgba(34, 211, 238, 0.22) !important;
+  background: rgba(6, 10, 22, 0.9) !important;
+  color: #67e8f9 !important;
 }
 
 .vps-theme-tech .node-sparkline-line {
@@ -2543,9 +2675,6 @@ onUnmounted(() => {
   backdrop-filter: blur(12px);
 }
 
-.vps-theme-glass .anomaly-status {
-  background: rgba(255, 255, 255, 0.2);
-}
 
 .dark .vps-theme-glass .anomaly-card {
   border-color: rgba(255, 255, 255, 0.12);
@@ -2636,6 +2765,58 @@ onUnmounted(() => {
 
 .vps-theme-glass .node-status-bar {
   background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.8), rgba(191, 219, 254, 0.8), rgba(165, 180, 252, 0.8)) !important;
+}
+
+.vps-theme-glass .vps-metric-chart {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.vps-theme-glass .metric-pill {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+  color: #1e293b !important;
+}
+
+.dark .vps-theme-glass .metric-pill {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  color: #e2e8f0 !important;
+}
+
+.vps-theme-glass .node-group-pill {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.45);
+  color: #1e293b;
+}
+
+.vps-theme-glass .node-load-pill {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.4);
+  color: #475569;
+}
+
+.dark .vps-theme-glass .node-group-pill {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 42, 0.7);
+  color: #e2e8f0;
+}
+
+.dark .vps-theme-glass .node-load-pill {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(15, 23, 42, 0.65);
+  color: #cbd5f5;
+}
+
+.vps-theme-glass .node-status-pill {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+  color: #1e293b !important;
+}
+
+.dark .vps-theme-glass .node-status-pill {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: rgba(15, 23, 42, 0.7) !important;
+  color: #e2e8f0 !important;
 }
 
 .vps-theme-glass .node-sparkline-line {

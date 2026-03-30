@@ -32,7 +32,7 @@ export const VPS_PUBLIC_THEME_PRESETS = {
     pill: 'border-sky-100/90 bg-white/88 text-sky-700 shadow-sm shadow-sky-100/60 dark:border-sky-900/40 dark:bg-sky-900/30 dark:text-sky-300 dark:shadow-sm dark:shadow-sky-900/20',
     pillActive: 'border-sky-500 bg-sky-500 text-white shadow-lg shadow-sky-500/28 dark:border-sky-400 dark:bg-sky-400 dark:text-slate-900',
     accentButton: 'border-sky-200 bg-sky-500 text-white shadow-lg shadow-sky-500/22 dark:border-sky-700 dark:bg-sky-600 dark:shadow-lg dark:shadow-sky-600/30',
-    nodeCard: 'border-sky-100 bg-white/94 shadow-[0_18px_34px_-26px_rgba(56,189,248,0.35)] dark:border-sky-900/40 dark:bg-sky-900/30 dark:shadow-[0_18px_34px_-26px_rgba(56,189,248,0.2)]',
+    nodeCard: 'border-sky-100/90 bg-white/94 shadow-none dark:border-sky-900/40 dark:bg-sky-900/30 dark:shadow-none',
     detailTable: 'text-slate-800 dark:text-slate-200',
     themeClass: 'vps-theme-fresh',
     backdrop: ''
