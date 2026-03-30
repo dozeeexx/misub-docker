@@ -45,9 +45,9 @@ const vpsMonitorConfig = computed({
         publicThemeShowAnomalies: true,
         publicThemeShowFeatured: true,
         publicThemeShowDetailTable: true,
-        publicThemeShowHeader: true,
-        publicThemeShowFooter: true,
         publicThemeFooterText: '由 MiSub VPS 监控引擎提供实时数据驱动',
+        publicPageShowHeader: true,
+        publicPageShowFooter: true,
         publicThemeSectionOrder: ['anomalies', 'nodes', 'featured', 'details'],
         publicThemeCustomCss: ''
       };
@@ -90,8 +90,6 @@ const exportThemeConfig = async () => {
     showAnomalies: vpsMonitorConfig.value.publicThemeShowAnomalies !== false,
     showFeatured: vpsMonitorConfig.value.publicThemeShowFeatured !== false,
     showDetailTable: vpsMonitorConfig.value.publicThemeShowDetailTable !== false,
-    showHeader: vpsMonitorConfig.value.publicThemeShowHeader !== false,
-    showFooter: vpsMonitorConfig.value.publicThemeShowFooter !== false,
     footerText: vpsMonitorConfig.value.publicThemeFooterText || '',
     sectionOrder: vpsMonitorConfig.value.publicThemeSectionOrder || themeSections.map(item => item.key),
     customCss: vpsMonitorConfig.value.publicThemeCustomCss || ''
@@ -115,8 +113,6 @@ const importThemeConfig = (event) => {
       updateField('publicThemeShowAnomalies', parsed.showAnomalies !== false);
       updateField('publicThemeShowFeatured', parsed.showFeatured !== false);
       updateField('publicThemeShowDetailTable', parsed.showDetailTable !== false);
-      updateField('publicThemeShowHeader', parsed.showHeader !== false);
-      updateField('publicThemeShowFooter', parsed.showFooter !== false);
       updateField('publicThemeFooterText', parsed.footerText || '');
       updateField('publicThemeSectionOrder', Array.isArray(parsed.sectionOrder) ? parsed.sectionOrder : themeSections.map(item => item.key));
       updateField('publicThemeCustomCss', parsed.customCss || '');
@@ -441,23 +437,23 @@ const openPreview = (card) => {
         </div>
         <div class="flex items-center justify-between p-3 bg-white/70 dark:bg-gray-900/50 border border-gray-200/60 dark:border-white/10 misub-radius-lg">
           <div>
-            <div class="text-sm font-medium text-gray-900 dark:text-gray-200">显示页头</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">公开页顶部标题区</div>
+            <div class="text-sm font-medium text-gray-900 dark:text-gray-200">公开页页头</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">显示 MiSub 顶部导航</div>
           </div>
-          <Switch :model-value="vpsMonitorConfig.publicThemeShowHeader !== false" @update:model-value="updateField('publicThemeShowHeader', $event)" />
+          <Switch :model-value="vpsMonitorConfig.publicPageShowHeader !== false" @update:model-value="updateField('publicPageShowHeader', $event)" />
         </div>
         <div class="flex items-center justify-between p-3 bg-white/70 dark:bg-gray-900/50 border border-gray-200/60 dark:border-white/10 misub-radius-lg">
           <div>
-            <div class="text-sm font-medium text-gray-900 dark:text-gray-200">显示页眉</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">公开页底部署名区</div>
+            <div class="text-sm font-medium text-gray-900 dark:text-gray-200">公开页页眉</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">显示 MiSub 页脚</div>
           </div>
-          <Switch :model-value="vpsMonitorConfig.publicThemeShowFooter !== false" @update:model-value="updateField('publicThemeShowFooter', $event)" />
+          <Switch :model-value="vpsMonitorConfig.publicPageShowFooter !== false" @update:model-value="updateField('publicPageShowFooter', $event)" />
         </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">页眉文案</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">公开页页脚文案</label>
           <input
             type="text"
             :value="vpsMonitorConfig.publicThemeFooterText"

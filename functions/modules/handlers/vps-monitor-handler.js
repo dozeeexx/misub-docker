@@ -214,8 +214,6 @@ function buildPublicThemeConfig(settings) {
         showAnomalies: raw.publicThemeShowAnomalies !== false,
         showFeatured: raw.publicThemeShowFeatured !== false,
         showDetailTable: raw.publicThemeShowDetailTable !== false,
-        showHeader: raw.publicThemeShowHeader !== false,
-        showFooter: raw.publicThemeShowFooter !== false,
         footerText: normalizeString(raw.publicThemeFooterText) || DEFAULT_SETTINGS.vpsMonitor.publicThemeFooterText,
         sectionOrder,
         customCss: normalizeString(raw.publicThemeCustomCss)
@@ -1497,7 +1495,15 @@ export async function handleVpsPublicSnapshotRequest(request, env) {
         return summary;
     });
 
-    return createJsonResponse({ success: true, data, theme: buildPublicThemeConfig(settings) });
+    return createJsonResponse({
+        success: true,
+        data,
+        theme: buildPublicThemeConfig(settings),
+        layout: {
+            headerEnabled: settings?.vpsMonitor?.publicPageShowHeader !== false,
+            footerEnabled: settings?.vpsMonitor?.publicPageShowFooter !== false
+        }
+    });
 }
 
 async function fetchLatestNetworkSamplesBatch(db, nodeIds) {
@@ -1577,7 +1583,11 @@ export async function handleVpsPublicNodeDetailRequest(request, env) {
     return createJsonResponse({
         success: true,
         data: summary,
-        networkSamples: samples
+        networkSamples: samples,
+        layout: {
+            headerEnabled: settings?.vpsMonitor?.publicPageShowHeader !== false,
+            footerEnabled: settings?.vpsMonitor?.publicPageShowFooter !== false
+        }
     });
 }
 

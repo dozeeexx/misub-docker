@@ -23,9 +23,11 @@ const themeConfig = ref({
   showAnomalies: true,
   showFeatured: true,
   showDetailTable: true,
-  showHeader: true,
-  showFooter: true,
   footerText: '由 MiSub VPS 监控引擎提供实时数据驱动'
+});
+const publicLayout = ref({
+  headerEnabled: true,
+  footerEnabled: true
 });
 const theme = computed(() => resolveVpsPublicTheme(themePreset.value));
 
@@ -49,8 +51,7 @@ const showStats = computed(() => themeConfig.value.showStats !== false && layout
 const showAnomalies = computed(() => themeConfig.value.showAnomalies !== false && layoutClass.value !== 'minimal');
 const showFeatured = computed(() => themeConfig.value.showFeatured !== false && layoutClass.value !== 'minimal');
 const showDetailTable = computed(() => themeConfig.value.showDetailTable !== false);
-const showHeader = computed(() => themeConfig.value.showHeader !== false);
-const showFooter = computed(() => themeConfig.value.showFooter !== false);
+const showFooter = computed(() => themeConfig.value.footerText !== '' && publicLayout.value.footerEnabled !== false);
 const orderedSections = computed(() => {
   const raw = Array.isArray(themeConfig.value.sectionOrder) ? themeConfig.value.sectionOrder : ['anomalies', 'nodes', 'featured', 'details'];
   const valid = ['anomalies', 'nodes', 'featured', 'details'];
@@ -133,6 +134,10 @@ const openNodeDetail = async (nodeId) => {
   if (result.success) {
     nodeDetailData.value.node = result.data.data;
     nodeDetailData.value.samples = result.data.networkSamples || [];
+    publicLayout.value = {
+      headerEnabled: result.data?.layout?.headerEnabled !== false,
+      footerEnabled: result.data?.layout?.footerEnabled !== false
+    };
   } else {
     nodeDetailData.value.error = result.error || '历史数据加载失败';
   }
@@ -273,6 +278,10 @@ const loadSnapshot = async () => {
     themeConfig.value = {
       ...themeConfig.value,
       ...(result.data?.theme || {})
+    };
+    publicLayout.value = {
+      headerEnabled: result.data?.layout?.headerEnabled !== false,
+      footerEnabled: result.data?.layout?.footerEnabled !== false
     };
     const groupNames = new Set(nodeGroupItems.value.map((item) => item.name));
     if (!groupNames.has(selectedGroup.value)) {
@@ -525,45 +534,125 @@ onUnmounted(() => {
   backdrop-filter: blur(14px);
 }
 
-.theme-default {
-  background-image: radial-gradient(circle at top, rgba(255,255,255,0.32), transparent 60%);
+.vps-theme-default .vps-public-theme-root {
+  font-family: "Literata", "Times New Roman", serif;
 }
 
-.theme-komari {
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(56,189,248,0.18), transparent 35%),
-    radial-gradient(circle at 80% 10%, rgba(99,102,241,0.12), transparent 28%),
-    linear-gradient(180deg, #f4f7fb 0%, #eef4fb 100%);
+.vps-theme-default h1,
+.vps-theme-default h2,
+.vps-theme-default h3,
+.vps-theme-default h4 {
+  font-family: "Literata", "Times New Roman", serif;
+  letter-spacing: -0.01em;
 }
 
-.theme-minimal {
-  background-image:
-    linear-gradient(180deg, rgba(248,250,252,0.7) 0%, rgba(255,255,255,1) 100%),
-    linear-gradient(transparent 31px, rgba(148,163,184,0.08) 32px),
-    linear-gradient(90deg, transparent 31px, rgba(148,163,184,0.08) 32px);
-  background-size: auto, 32px 32px, 32px 32px;
+.vps-theme-default .vps-public-hero {
+  padding-top: 4.25rem;
+  padding-bottom: 2.25rem;
 }
 
-.theme-tech {
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(34,211,238,0.12), transparent 30%),
-    radial-gradient(circle at 80% 15%, rgba(14,165,233,0.16), transparent 26%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+.vps-theme-default .floating-filterbar {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(226, 216, 203, 0.7);
 }
 
-.dark .theme-tech {
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(34,211,238,0.12), transparent 30%),
-    radial-gradient(circle at 80% 15%, rgba(14,165,233,0.16), transparent 26%),
-    linear-gradient(180deg, #050816 0%, #0a1227 100%);
+.dark .vps-theme-default .floating-filterbar {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(71, 85, 105, 0.5);
 }
 
-.theme-glass {
-  background-image:
-    radial-gradient(circle at 25% 20%, rgba(99,102,241,0.14), transparent 30%),
-    radial-gradient(circle at 75% 10%, rgba(56,189,248,0.16), transparent 28%),
-    linear-gradient(180deg, #eef4ff 0%, #e7effd 100%);
+.vps-theme-default .vps-card-front,
+.vps-theme-default .vps-card-back,
+.vps-theme-default details,
+.vps-theme-default article {
+  border-color: rgba(226, 216, 203, 0.7) !important;
 }
+
+.dark .vps-theme-default .vps-card-front,
+.dark .vps-theme-default .vps-card-back,
+.dark .vps-theme-default details,
+.dark .vps-theme-default article {
+  border-color: rgba(71, 85, 105, 0.55) !important;
+}
+
+.vps-theme-default .vps-featured-section {
+  box-shadow: 0 24px 60px -48px rgba(120, 98, 74, 0.35);
+}
+
+.vps-theme-default .vps-detail-section summary {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.vps-theme-default .detail-table th,
+.vps-theme-default .detail-table td {
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+}
+
+.vps-theme-default .detail-table thead {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vps-theme-default .vps-node-front,
+.vps-theme-default .vps-node-back {
+  padding: 1.1rem;
+}
+
+.vps-theme-default .vps-node-front .node-badges {
+  gap: 0.6rem;
+}
+
+.vps-theme-default .vps-node-front .node-metrics {
+  font-weight: 500;
+}
+
+.vps-theme-default .node-status {
+  height: 0.3rem;
+}
+
+.vps-theme-default .vps-node-card .node-title {
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+.vps-theme-default .vps-node-card .node-meta {
+  font-size: 0.7rem;
+}
+
+.vps-theme-default .vps-node-card .node-metrics {
+  font-size: 0.7rem;
+}
+
+.vps-theme-default .anomaly-title {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.vps-theme-default .anomaly-subtitle {
+  font-size: 0.7rem;
+}
+
+.vps-theme-default .featured-title {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.vps-theme-default .vps-anomaly-section .relative > div {
+  border-color: rgba(239, 206, 186, 0.6);
+  background: rgba(255, 248, 244, 0.75);
+}
+
+.dark .vps-theme-default .vps-anomaly-section .relative > div {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.5);
+}
+
 
 .layout-hero-split .vps-card-front,
 .layout-hero-split .vps-card-back {
@@ -587,7 +676,7 @@ onUnmounted(() => {
 </style>
 
 <template>
-  <div class="min-h-screen vps-public-theme-root" :class="[theme.root, theme.backdrop, themeClass, `layout-${layoutClass}`]" :style="rootStyle">
+  <div class="min-h-screen vps-public-theme-root" :class="[theme.root, themeClass, `layout-${layoutClass}`]" :style="rootStyle">
     <component :is="'style'" v-if="sanitizedCustomCss">{{ sanitizedCustomCss }}</component>
     <div class="relative overflow-hidden">
       <div class="absolute inset-0">
@@ -602,8 +691,8 @@ onUnmounted(() => {
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff66,transparent_62%)] dark:bg-[radial-gradient(circle_at_top,#1e293b55,transparent_62%)]"></div>
         <div class="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/80 dark:from-[#0a0d14] dark:via-[#0a0d14]/70 to-transparent"></div>
       </div>
-        <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12 vps-public-hero" :class="showHeader ? '' : 'pt-10 pb-6'">
-          <div v-if="showHeader" class="flex flex-col gap-8" :class="layoutClass === 'hero-split' ? 'lg:flex-row lg:items-center lg:justify-between' : 'lg:flex-row lg:items-end lg:justify-between'">
+        <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12 vps-public-hero" :class="publicLayout.headerEnabled === false ? 'pt-10 pb-6' : ''">
+          <div class="flex flex-col gap-8" :class="layoutClass === 'hero-split' ? 'lg:flex-row lg:items-center lg:justify-between' : 'lg:flex-row lg:items-end lg:justify-between'">
             <div class="max-w-2xl">
               <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em]" :class="heroBadgeClass">
                 <img v-if="themeConfig.logo" :src="themeConfig.logo" alt="logo" class="h-4 w-4 rounded-full object-cover" />
@@ -659,30 +748,6 @@ onUnmounted(() => {
               </div>
             </div>
           </div>
-          <div v-else class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex flex-wrap items-center gap-3 text-xs" :class="heroTextClass">
-              <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1" :class="heroBadgeClass">
-                更新时间 {{ lastUpdatedAt || '--' }}
-              </span>
-              <button
-                class="inline-flex items-center gap-2 rounded-full border px-4 py-1 hover:-translate-y-0.5 hover:shadow-xl transition"
-                :class="accentButtonClass"
-                @click="loadSnapshot"
-              >
-                刷新数据
-              </button>
-            </div>
-            <div v-if="showStats" class="grid grid-cols-2 gap-3 text-xs">
-              <div class="rounded-[18px] border p-3" :class="statCardClass">
-                <p class="text-[#8a7f70] dark:text-slate-400">节点</p>
-                <p class="mt-1 text-lg font-semibold text-[#1f1b17] dark:text-slate-100 tabular-nums">{{ displayMetrics.total }}</p>
-              </div>
-              <div class="rounded-[18px] border p-3" :class="statCardClass">
-                <p class="text-[#8a7f70] dark:text-slate-400">在线率</p>
-                <p class="mt-1 text-lg font-semibold text-[#1f1b17] dark:text-slate-100 tabular-nums">{{ displayMetrics.sla }}%</p>
-              </div>
-            </div>
-          </div>
           <div v-if="showStats" class="mt-8 rounded-[20px] border p-4" :class="panelClass">
             <div class="flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-3">
@@ -711,29 +776,29 @@ onUnmounted(() => {
       </div>
         <div v-else class="flex flex-col gap-8 lg:gap-10">
           <!-- Anomaly/Alert Section (New) -->
-          <div v-if="showAnomalies && anomalyNodes.length > 0" class="relative group" :style="sectionOrderStyle('anomalies')">
+          <div v-if="showAnomalies && anomalyNodes.length > 0" class="relative group vps-anomaly-section" :style="sectionOrderStyle('anomalies')">
             <div class="absolute -inset-1 bg-gradient-to-r from-rose-500/10 to-orange-500/10 rounded-[28px] blur-lg opacity-35 group-hover:opacity-55 transition duration-700"></div>
             <div class="relative rounded-[20px] border border-rose-200/35 bg-rose-50/8 backdrop-blur-2xl p-4 dark:border-rose-900/22 dark:bg-rose-900/8">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2.5">
               <div class="flex items-center gap-3">
-                <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/20 text-rose-500 animate-pulse">
+                <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/20 text-rose-500 animate-pulse anomaly-icon">
                   <span class="inline-block -translate-y-px text-base leading-none">⚠</span>
                 </div>
                 <div>
-                  <h2 class="text-base font-bold text-rose-700 dark:text-rose-400">异常节点</h2>
-                  <p class="mt-0.5 text-[11px] text-rose-600/70 dark:text-rose-400/60">仅展示需要优先处理的离线或高负载节点</p>
+                  <h2 class="text-base font-bold text-rose-700 dark:text-rose-400 anomaly-title">异常节点</h2>
+                  <p class="mt-0.5 text-[11px] text-rose-600/70 dark:text-rose-400/60 anomaly-subtitle">仅展示需要优先处理的离线或高负载节点</p>
                 </div>
               </div>
               <div class="flex items-center gap-2">
                 <button
                   type="button"
-                  class="rounded-full border border-rose-300/70 bg-white/70 px-3 py-1 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-700/50 dark:bg-slate-900/70 dark:text-rose-300 dark:hover:bg-rose-900/20"
+                  class="rounded-full border border-rose-300/70 bg-white/70 px-3 py-1 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-700/50 dark:bg-slate-900/70 dark:text-rose-300 dark:hover:bg-rose-900/20 anomaly-toggle"
                   @click="anomalyExpanded = !anomalyExpanded"
                   :aria-expanded="anomalyExpanded"
                 >
                   {{ anomalyExpanded ? '收起' : '展开' }}异常
                 </button>
-                <span class="rounded-full bg-rose-500 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">{{ anomalyNodes.length }} 告警</span>
+                <span class="rounded-full bg-rose-500 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white anomaly-badge">{{ anomalyNodes.length }} 告警</span>
               </div>
             </div>
 
@@ -768,7 +833,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-          <div class="space-y-6" :style="sectionOrderStyle('nodes')">
+          <div class="space-y-6 vps-section" :style="sectionOrderStyle('nodes')">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-2xl font-bold text-[#1f1b17] dark:text-slate-100 flex items-center gap-3">
               <span class="text-blue-500">✦</span> 全部节点
@@ -793,11 +858,11 @@ onUnmounted(() => {
           </div>
           
           <div v-if="filteredSortedNodes.length" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div v-for="node in filteredSortedNodes" :key="node.id" class="vps-card-container">
+              <div v-for="node in filteredSortedNodes" :key="node.id" class="vps-card-container vps-node-card">
                 <div class="vps-card-inner group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)" @keydown.enter.prevent="toggleFlip(node.id)" @keydown.space.prevent="toggleFlip(node.id)" tabindex="0" role="button" :aria-pressed="flippedNodes.has(node.id)" :aria-label="`切换 ${node.name || node.id} 的节点网络状态卡片`">
                   <!-- Front Side -->
-                  <div class="vps-card-front rounded-[18px] border p-4" :class="nodeCardClass">
-                    <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
+                  <div class="vps-card-front rounded-[18px] border p-4 vps-node-front" :class="nodeCardClass">
+                    <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative node-status">
                       <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
                         <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
                         <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
@@ -823,23 +888,23 @@ onUnmounted(() => {
                             :title="node.countryCode"
                             @error="getFlagFallback"
                           />
-                          <p class="truncate text-sm font-semibold text-[#1f1b17] dark:text-slate-100">{{ node.name || node.id }}</p>
+                          <p class="truncate text-sm font-semibold text-[#1f1b17] dark:text-slate-100 node-title">{{ node.name || node.id }}</p>
                         </div>
-                        <p class="truncate text-xs text-[#8a7f70] dark:text-slate-400">
+                        <p class="truncate text-xs text-[#8a7f70] dark:text-slate-400 node-meta">
                           <span v-if="node.tag" class="mr-1">{{ node.tag }} ·</span>
                           {{ node.region || '未知地区' }}
                           <span class="ml-1 opacity-70">| 📊 {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
                         </p>
-                        <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
-                          <span class="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50/70 px-2 py-0.5 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
+                        <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px] node-badges">
+                          <span class="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50/70 px-2 py-0.5 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 node-pill">
                             组: {{ node.groupTag || '未分组' }}
                           </span>
-                          <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+                          <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 node-pill">
                             ⚡ 负载: {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}
                           </span>
                         </div>
                       </div>
-                      <span class="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
+                      <span class="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] node-pill"
                         :class="node.status === 'online'
                           ? 'border-[#bbf7d0] bg-[#ecfdf3] text-[#0f766e] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300'
                           : 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300'"
@@ -847,13 +912,13 @@ onUnmounted(() => {
                         {{ node.status === 'online' ? '在线' : '离线' }}
                       </span>
                     </div>
-                    <div class="mt-3 flex items-center justify-between">
+                    <div class="mt-3 flex items-center justify-between node-sparkline">
                       <svg viewBox="0 0 120 32" class="h-7 w-24">
                         <polyline :points="nodeSparkline(node)" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" />
                       </svg>
-                      <span class="text-[9px] text-[#8a7f70] dark:text-slate-400">CPU/MEM/DISK</span>
+                      <span class="text-[9px] text-[#8a7f70] dark:text-slate-400 node-sparkline-label">CPU/MEM/DISK</span>
                     </div>
-                    <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
+                    <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[#6a5f54] dark:text-slate-400 node-metrics">
                       <div>CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
                       <div>内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
                       <div>磁盘 {{ formatPercent(node.latest?.disk?.usage ?? node.latest?.diskPercent) }}</div>
@@ -877,7 +942,7 @@ onUnmounted(() => {
                   </div>
 
                   <!-- Back Side: Network Metrics -->
-                  <div class="vps-card-back rounded-[18px] border p-4 flex flex-col h-full" :class="nodeCardClass">
+                  <div class="vps-card-back rounded-[18px] border p-4 flex flex-col h-full vps-node-back" :class="nodeCardClass">
                     <div class="mb-2 flex items-center justify-between border-b border-[#efe6db] pb-1.5 dark:border-slate-800">
                       <h4 class="flex items-center gap-1 text-[11px] font-semibold text-[#1f1b17] dark:text-slate-100">
                         <span class="text-blue-500 text-[10px]">🌐</span> 网络状态
@@ -928,14 +993,14 @@ onUnmounted(() => {
           </div>
           </div>
 
-          <div v-if="showFeatured" class="rounded-[20px] border p-4 sm:p-5" :class="panelClass" :style="sectionOrderStyle('featured')">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 class="text-base font-semibold text-[#1f1b17] dark:text-slate-100">重点轮播 · 资源脉冲</h2>
-                <p class="mt-1 text-xs text-[#8a7f70] dark:text-slate-400">重点节点展示与最近一次资源占用汇总</p>
+            <div v-if="showFeatured" class="rounded-[20px] border p-4 sm:p-5 vps-featured-section" :class="panelClass" :style="sectionOrderStyle('featured')">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 class="text-base font-semibold text-[#1f1b17] dark:text-slate-100 featured-title">重点轮播 · 资源脉冲</h2>
+                  <p class="mt-1 text-xs text-[#8a7f70] dark:text-slate-400 featured-subtitle">重点节点展示与最近一次资源占用汇总</p>
+                </div>
+                <span class="text-xs text-[#8a7f70] dark:text-slate-400 featured-badge">每 6 秒切换</span>
               </div>
-              <span class="text-xs text-[#8a7f70] dark:text-slate-400">每 6 秒切换</span>
-            </div>
             <div class="mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.25fr_0.95fr]">
               <div class="grid grid-cols-1 gap-4 self-start lg:grid-cols-[1.15fr_0.85fr]">
             <div class="rounded-[18px] border p-4" :class="panelSoftClass">
@@ -1144,12 +1209,12 @@ onUnmounted(() => {
           </div>
         </transition>
 
-        <details v-if="showDetailTable" class="mt-8 rounded-[20px] border p-6" :class="panelClass" :style="sectionOrderStyle('details')">
+        <details v-if="showDetailTable" class="mt-8 rounded-[20px] border p-6 vps-detail-section" :class="panelClass" :style="sectionOrderStyle('details')">
           <summary class="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#1f1b17] dark:text-slate-100">
             <span>节点明细表</span>
             <span class="text-xs text-[#8a7f70] dark:text-slate-400">点击展开</span>
           </summary>
-          <div class="mt-4 overflow-x-auto">
+          <div class="mt-4 overflow-x-auto detail-table">
             <table class="w-full text-xs">
               <thead class="text-[#8a7f70] dark:text-slate-400">
                 <tr class="text-left">
@@ -1214,6 +1279,10 @@ onUnmounted(() => {
 
 .vps-theme-komari .vps-public-hero {
   font-family: "DM Sans", "Segoe UI", sans-serif;
+}
+
+.vps-theme-komari .layout-hero-split .vps-public-hero {
+  padding-bottom: 1.5rem;
 }
 
 .vps-theme-komari .floating-filterbar {
@@ -1285,6 +1354,92 @@ onUnmounted(() => {
   box-shadow: 0 16px 48px -32px rgba(14, 165, 233, 0.3);
 }
 
+.vps-theme-komari .floating-filterbar {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(125, 211, 252, 0.35);
+}
+
+.vps-theme-komari .vps-card-front,
+.vps-theme-komari .vps-card-back,
+.vps-theme-komari details,
+.vps-theme-komari article {
+  border-color: rgba(125, 211, 252, 0.45) !important;
+}
+
+.dark .vps-theme-komari .vps-card-front,
+.dark .vps-theme-komari .vps-card-back,
+.dark .vps-theme-komari details,
+.dark .vps-theme-komari article {
+  border-color: rgba(56, 189, 248, 0.25) !important;
+}
+
+.vps-theme-komari .vps-featured-section {
+  box-shadow: 0 28px 70px -50px rgba(56, 189, 248, 0.4);
+}
+
+.vps-theme-komari .vps-anomaly-section .relative > div {
+  border-radius: 20px;
+}
+
+.vps-theme-komari .vps-anomaly-section .relative > div {
+  border-color: rgba(147, 197, 253, 0.45);
+  background: rgba(239, 246, 255, 0.7);
+}
+
+.dark .vps-theme-komari .vps-anomaly-section .relative > div {
+  border-color: rgba(56, 189, 248, 0.25);
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.vps-theme-komari .vps-node-front,
+.vps-theme-komari .vps-node-back {
+  padding: 1.2rem;
+}
+
+.vps-theme-komari .vps-node-front .node-badges {
+  gap: 0.7rem;
+}
+
+.vps-theme-komari .vps-node-front .node-metrics {
+  font-weight: 600;
+}
+
+.vps-theme-komari .node-status {
+  height: 0.32rem;
+}
+
+.vps-theme-komari .vps-node-card .node-title {
+  font-size: 0.95rem;
+}
+
+.vps-theme-komari .vps-node-card .node-meta {
+  font-size: 0.72rem;
+}
+
+.vps-theme-komari .vps-node-card .node-metrics {
+  font-size: 0.72rem;
+}
+
+.vps-theme-komari .detail-table th,
+.vps-theme-komari .detail-table td {
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+
+.vps-theme-komari .detail-table thead {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.vps-theme-komari .featured-title {
+  font-size: 0.95rem;
+}
+
+.vps-theme-komari .featured-badge {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
 .vps-theme-komari .rounded-2xl.border.p-4 {
   background: rgba(255, 255, 255, 0.85) !important;
   border: 1px solid rgba(186, 230, 253, 0.6) !important;
@@ -1346,9 +1501,88 @@ onUnmounted(() => {
   letter-spacing: -0.01em;
 }
 
+.vps-theme-minimal .layout-minimal .vps-public-hero {
+  padding-top: 2.5rem;
+  padding-bottom: 1.5rem;
+}
+
 .vps-theme-minimal .floating-filterbar {
   font-weight: 500;
   letter-spacing: 0.03em;
+}
+
+.vps-theme-minimal .floating-filterbar {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.dark .vps-theme-minimal .floating-filterbar {
+  background: rgba(15, 23, 42, 0.55);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.vps-theme-minimal .vps-node-front,
+.vps-theme-minimal .vps-node-back {
+  padding: 0.9rem;
+}
+
+.vps-theme-minimal .vps-node-front .node-badges {
+  gap: 0.45rem;
+}
+
+.vps-theme-minimal .vps-node-front .node-metrics {
+  font-weight: 400;
+}
+
+.vps-theme-minimal .node-status {
+  height: 0.22rem;
+}
+
+.vps-theme-minimal .node-sparkline {
+  opacity: 0.6;
+}
+
+.vps-theme-minimal .vps-node-card .node-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+.vps-theme-minimal .vps-node-card .node-meta {
+  font-size: 0.68rem;
+}
+
+.vps-theme-minimal .vps-node-card .node-metrics {
+  font-size: 0.68rem;
+}
+
+.vps-theme-minimal .anomaly-title,
+.vps-theme-minimal .featured-title {
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.vps-theme-minimal .detail-table th,
+.vps-theme-minimal .detail-table td {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.vps-theme-minimal .detail-table thead {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vps-theme-minimal .vps-anomaly-section .relative > div {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.dark .vps-theme-minimal .vps-anomaly-section .relative > div {
+  border-color: rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.5);
 }
 
 .dark .vps-theme-minimal .theme-minimal {
@@ -1444,9 +1678,105 @@ onUnmounted(() => {
   text-transform: none;
 }
 
+.vps-theme-tech .layout-tech-grid .vps-public-hero {
+  padding-top: 4.5rem;
+}
+
 .vps-theme-tech .floating-filterbar {
   font-weight: 600;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vps-theme-tech .floating-filterbar {
+  background: rgba(240, 249, 255, 0.7);
+  border-color: rgba(34, 211, 238, 0.4);
+}
+
+.dark .vps-theme-tech .floating-filterbar {
+  background: rgba(8, 15, 30, 0.75);
+  border-color: rgba(34, 211, 238, 0.25);
+}
+
+.vps-theme-tech .vps-anomaly-section .relative > div {
+  border-radius: 16px;
+}
+
+.vps-theme-tech .vps-detail-section summary {
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.vps-theme-tech .vps-anomaly-section .relative > div {
+  border-color: rgba(34, 211, 238, 0.3);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.dark .vps-theme-tech .vps-anomaly-section .relative > div {
+  border-color: rgba(34, 211, 238, 0.2);
+  background: rgba(8, 16, 31, 0.7);
+}
+
+.vps-theme-tech .vps-node-front,
+.vps-theme-tech .vps-node-back {
+  padding: 1rem;
+}
+
+.vps-theme-tech .vps-node-front .node-badges {
+  gap: 0.5rem;
+}
+
+.vps-theme-tech .vps-node-front .node-metrics {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.vps-theme-tech .node-status {
+  height: 0.34rem;
+}
+
+.vps-theme-tech .node-sparkline {
+  opacity: 0.85;
+}
+
+.vps-theme-tech .vps-node-card .node-title {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vps-theme-tech .vps-node-card .node-meta {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vps-theme-tech .vps-node-card .node-metrics {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.vps-theme-tech .anomaly-title {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+}
+
+.vps-theme-tech .featured-title {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.vps-theme-tech .detail-table th,
+.vps-theme-tech .detail-table td {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.vps-theme-tech .detail-table thead {
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
@@ -1553,8 +1883,92 @@ onUnmounted(() => {
   letter-spacing: -0.01em;
 }
 
+.vps-theme-glass .layout-glass-showcase .vps-public-hero {
+  padding-top: 4.25rem;
+}
+
 .vps-theme-glass .floating-filterbar {
   font-weight: 500;
+}
+
+.vps-theme-glass .floating-filterbar {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .vps-theme-glass .floating-filterbar {
+  background: rgba(15, 23, 42, 0.35);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.vps-theme-glass .vps-featured-section {
+  box-shadow: 0 30px 80px -60px rgba(99, 102, 241, 0.35);
+}
+
+.vps-theme-glass .vps-detail-section summary {
+  letter-spacing: 0.12em;
+}
+
+.vps-theme-glass .vps-anomaly-section .relative > div {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.dark .vps-theme-glass .vps-anomaly-section .relative > div {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.vps-theme-glass .vps-node-front,
+.vps-theme-glass .vps-node-back {
+  padding: 1.05rem;
+}
+
+.vps-theme-glass .vps-node-front .node-badges {
+  gap: 0.6rem;
+}
+
+.vps-theme-glass .vps-node-front .node-metrics {
+  font-weight: 500;
+}
+
+.vps-theme-glass .node-status {
+  height: 0.28rem;
+}
+
+.vps-theme-glass .vps-node-card .node-title {
+  font-size: 0.95rem;
+}
+
+.vps-theme-glass .vps-node-card .node-meta {
+  font-size: 0.7rem;
+}
+
+.vps-theme-glass .vps-node-card .node-metrics {
+  font-size: 0.7rem;
+}
+
+.vps-theme-glass .anomaly-title {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.vps-theme-glass .featured-title {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.vps-theme-glass .detail-table th,
+.vps-theme-glass .detail-table td {
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+}
+
+.vps-theme-glass .detail-table thead {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .dark .vps-theme-glass .theme-glass {
