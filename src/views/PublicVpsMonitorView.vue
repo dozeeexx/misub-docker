@@ -5,6 +5,7 @@ import { fetchVpsPublicSnapshot, fetchVpsPublicNodeDetail } from '../lib/api.js'
 import VpsMetricChart from '../components/vps/VpsMetricChart.vue';
 import VpsLatencyChart from '../components/vps/VpsLatencyChart.vue';
 import Switch from '../components/ui/Switch.vue';
+import ThemeToggle from '../components/features/ThemeToggle.vue';
 import { resolveVpsPublicTheme } from '../constants/vps-public-themes.js';
 
 const route = useRoute();
@@ -678,21 +679,12 @@ onUnmounted(() => {
 <template>
   <div class="min-h-screen vps-public-theme-root" :class="[theme.root, themeClass, `layout-${layoutClass}`]" :style="rootStyle">
     <component :is="'style'" v-if="sanitizedCustomCss">{{ sanitizedCustomCss }}</component>
-    <div class="relative overflow-hidden">
-      <div class="absolute inset-0">
-        <!-- Interactive Glow -->
-        <div 
-          class="pointer-events-none absolute h-96 w-96 rounded-full bg-primary-500/10 blur-[100px] transition-transform duration-300 ease-out"
-          :style="{ transform: `translate(${mouseX - 192}px, ${mouseY - 192}px)` }"
-        ></div>
-        <div class="absolute -top-24 left-10 h-72 w-72 rounded-full bg-gradient-to-br from-[#0ea5e9]/22 via-[#2dd4bf]/12 to-[#f97316]/16 blur-3xl"></div>
-        <div class="absolute top-24 right-10 h-64 w-64 rounded-full bg-gradient-to-br from-[#f97316]/16 via-[#22c55e]/12 to-[#38bdf8]/16 blur-3xl"></div>
-        <div class="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-gradient-to-br from-[#f59e0b]/16 via-[#22c55e]/10 to-[#0ea5e9]/14 blur-3xl"></div>
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff66,transparent_62%)] dark:bg-[radial-gradient(circle_at_top,#1e293b55,transparent_62%)]"></div>
-        <div class="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/80 dark:from-[#0a0d14] dark:via-[#0a0d14]/70 to-transparent"></div>
-      </div>
-        <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12 vps-public-hero" :class="publicLayout.headerEnabled === false ? 'pt-10 pb-6' : ''">
-          <div class="flex flex-col gap-8" :class="layoutClass === 'hero-split' ? 'lg:flex-row lg:items-center lg:justify-between' : 'lg:flex-row lg:items-end lg:justify-between'">
+    <div class="relative">
+      <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12 vps-public-hero" :class="publicLayout.headerEnabled === false ? 'pt-10 pb-6' : ''">
+        <div v-if="publicLayout.headerEnabled === false" class="absolute right-6 top-6 z-10 vps-theme-toggle">
+          <ThemeToggle />
+        </div>
+        <div class="flex flex-col gap-8" :class="layoutClass === 'hero-split' ? 'lg:flex-row lg:items-center lg:justify-between' : 'lg:flex-row lg:items-end lg:justify-between'">
             <div class="max-w-2xl">
               <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em]" :class="heroBadgeClass">
                 <img v-if="themeConfig.logo" :src="themeConfig.logo" alt="logo" class="h-4 w-4 rounded-full object-cover" />
@@ -1270,6 +1262,11 @@ onUnmounted(() => {
   color: #e2e8f0;
 }
 
+.dark .vps-theme-komari .vps-card-front,
+.dark .vps-theme-komari .vps-card-back {
+  background: rgba(8, 16, 31, 0.7) !important;
+}
+
 .vps-theme-komari .theme-komari {
   background-image:
     radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.15), transparent 32%),
@@ -1482,6 +1479,11 @@ onUnmounted(() => {
   color: #e2e8f0;
 }
 
+.dark .vps-theme-minimal .vps-card-front,
+.dark .vps-theme-minimal .vps-card-back {
+  background: rgba(15, 23, 42, 0.85) !important;
+}
+
 .vps-theme-minimal .vps-card-front,
 .vps-theme-minimal .vps-card-back,
 .vps-theme-minimal details,
@@ -1644,6 +1646,11 @@ onUnmounted(() => {
 .dark .vps-theme-tech .vps-card-front,
 .dark .vps-theme-tech .vps-card-back {
   color: #e2e8f0;
+}
+
+.dark .vps-theme-tech .vps-card-front,
+.dark .vps-theme-tech .vps-card-back {
+  background: rgba(6, 10, 22, 0.92) !important;
 }
 
 .vps-theme-tech p,
@@ -1850,6 +1857,11 @@ onUnmounted(() => {
   color: #e2e8f0;
 }
 
+.dark .vps-theme-glass .vps-card-front,
+.dark .vps-theme-glass .vps-card-back {
+  background: rgba(10, 15, 30, 0.6) !important;
+}
+
 .vps-theme-glass p,
 .vps-theme-glass span,
 .vps-theme-glass td,
@@ -1907,6 +1919,23 @@ onUnmounted(() => {
 
 .vps-theme-glass .vps-detail-section summary {
   letter-spacing: 0.12em;
+}
+
+.vps-theme-komari .vps-theme-toggle button,
+.vps-theme-minimal .vps-theme-toggle button,
+.vps-theme-tech .vps-theme-toggle button,
+.vps-theme-glass .vps-theme-toggle button {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.dark .vps-theme-komari .vps-theme-toggle button,
+.dark .vps-theme-minimal .vps-theme-toggle button,
+.dark .vps-theme-tech .vps-theme-toggle button,
+.dark .vps-theme-glass .vps-theme-toggle button {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.55);
 }
 
 .vps-theme-glass .vps-anomaly-section .relative > div {
