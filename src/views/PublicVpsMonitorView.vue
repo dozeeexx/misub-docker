@@ -975,12 +975,26 @@ onUnmounted(() => {
 
 .vps-theme-default .vps-anomaly-section .relative > div {
   border-color: rgba(226, 192, 176, 0.55);
-  background: rgba(255, 248, 244, 0.85);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(255, 248, 244, 0.85) 76px,
+    rgba(255, 248, 244, 0.85) 100%
+  );
 }
 
 .dark .vps-theme-default .vps-anomaly-section .relative > div {
   border-color: rgba(148, 163, 184, 0.3);
-  background: rgba(15, 23, 42, 0.6);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(15, 23, 42, 0.6) 76px,
+    rgba(15, 23, 42, 0.6) 100%
+  );
 }
 
 .vps-theme-default .anomaly-card {
@@ -997,13 +1011,7 @@ onUnmounted(() => {
   background: transparent !important;
 }
 
-/* If the user applies custom CSS, it may be setting a background on the anomaly header.
-   Force anomaly header to stay transparent. */
-.vps-anomaly-section .anomaly-shell,
-.vps-anomaly-section .anomaly-header,
-.vps-anomaly-section .anomaly-body {
-  background: transparent !important;
-}
+/* Keep the title/subtitle transparent; the section shell handles its own background. */
 
 .dark .vps-theme-default .anomaly-card {
   border-color: rgba(148, 163, 184, 0.35);
@@ -1748,12 +1756,26 @@ onUnmounted(() => {
 
 .vps-theme-fresh .vps-anomaly-section .relative > div {
   border-color: rgba(147, 197, 253, 0.4);
-  background: rgba(239, 246, 255, 0.82);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(239, 246, 255, 0.82) 76px,
+    rgba(239, 246, 255, 0.82) 100%
+  );
 }
 
 .dark .vps-theme-fresh .vps-anomaly-section .relative > div {
   border-color: rgba(56, 189, 248, 0.28);
-  background: rgba(15, 23, 42, 0.6);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(15, 23, 42, 0.6) 76px,
+    rgba(15, 23, 42, 0.6) 100%
+  );
 }
 
 .vps-theme-fresh .anomaly-card {
@@ -2165,12 +2187,26 @@ onUnmounted(() => {
 
 .vps-theme-minimal .vps-anomaly-section .relative > div {
   border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(255, 255, 255, 0.82);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(255, 255, 255, 0.82) 76px,
+    rgba(255, 255, 255, 0.82) 100%
+  );
 }
 
 .dark .vps-theme-minimal .vps-anomaly-section .relative > div {
   border-color: rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.6);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(15, 23, 42, 0.6) 76px,
+    rgba(15, 23, 42, 0.6) 100%
+  );
 }
 
 .vps-theme-minimal .anomaly-card {
@@ -2322,12 +2358,26 @@ onUnmounted(() => {
 
 .vps-theme-tech .vps-anomaly-section .relative > div {
   border-color: rgba(34, 211, 238, 0.3);
-  background: rgba(240, 249, 255, 0.7);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(240, 249, 255, 0.7) 76px,
+    rgba(240, 249, 255, 0.7) 100%
+  );
 }
 
 .dark .vps-theme-tech .vps-anomaly-section .relative > div {
   border-color: rgba(34, 211, 238, 0.22);
-  background: rgba(8, 16, 31, 0.75);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(8, 16, 31, 0.75) 76px,
+    rgba(8, 16, 31, 0.75) 100%
+  );
 }
 
 .vps-theme-tech .anomaly-card {
@@ -2681,12 +2731,26 @@ onUnmounted(() => {
 
 .vps-theme-glass .vps-anomaly-section .relative > div {
   border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.32);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(255, 255, 255, 0.32) 76px,
+    rgba(255, 255, 255, 0.32) 100%
+  );
 }
 
 .dark .vps-theme-glass .vps-anomaly-section .relative > div {
   border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(15, 23, 42, 0.5);
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 76px,
+    rgba(15, 23, 42, 0.5) 76px,
+    rgba(15, 23, 42, 0.5) 100%
+  );
 }
 
 .vps-theme-glass .anomaly-card {
