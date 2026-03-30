@@ -997,6 +997,14 @@ onUnmounted(() => {
   background: transparent !important;
 }
 
+/* If the user applies custom CSS, it may be setting a background on the anomaly header.
+   Force anomaly header to stay transparent. */
+.vps-anomaly-section .anomaly-shell,
+.vps-anomaly-section .anomaly-header,
+.vps-anomaly-section .anomaly-body {
+  background: transparent !important;
+}
+
 .dark .vps-theme-default .anomaly-card {
   border-color: rgba(148, 163, 184, 0.35);
   background: rgba(15, 23, 42, 0.7);
@@ -1125,9 +1133,8 @@ onUnmounted(() => {
         <div v-else class="flex flex-col gap-8 lg:gap-10">
           <!-- Anomaly/Alert Section (New) -->
           <div v-if="showAnomalies && anomalyNodes.length > 0" class="relative group vps-anomaly-section" :style="sectionOrderStyle('anomalies')">
-            <div class="absolute -inset-1 rounded-[28px] bg-gradient-to-r from-rose-500/8 to-orange-500/8 opacity-40 blur-lg transition duration-700 group-hover:opacity-60"></div>
-            <div class="relative rounded-[20px] border border-rose-200/45 bg-transparent p-4 dark:border-rose-900/28 dark:bg-transparent">
-            <div class="mb-3 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="relative rounded-[20px] border border-rose-200/45 bg-transparent p-4 dark:border-rose-900/28 dark:bg-transparent anomaly-shell">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2.5 anomaly-header">
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/20 text-rose-500 animate-pulse anomaly-icon">
                   <span class="inline-block -translate-y-px text-base leading-none">⚠</span>
@@ -1150,7 +1157,7 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div v-if="anomalyExpanded" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div v-if="anomalyExpanded" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 anomaly-body">
               <article v-for="node in anomalyNodes" :key="node.id" class="rounded-[18px] border border-rose-200/50 bg-white/85 p-3 dark:border-rose-900/28 dark:bg-slate-900/55 anomaly-card">
                 <div class="relative mb-2 h-1 w-full rounded-full bg-transparent anomaly-status">
                   <div class="h-1 rounded-full bg-rose-500" :style="{ width: node.status === 'offline' ? '88%' : '72%' }"></div>
@@ -1175,7 +1182,7 @@ onUnmounted(() => {
                 </div>
               </article>
             </div>
-            <div v-else class="rounded-[18px] border border-dashed border-rose-300/55 bg-white/70 px-4 py-3 text-xs text-rose-700/80 dark:border-rose-800/45 dark:bg-slate-900/35 dark:text-rose-300/80">
+            <div v-else class="rounded-[18px] border border-dashed border-rose-300/55 bg-white/70 px-4 py-3 text-xs text-rose-700/80 dark:border-rose-800/45 dark:bg-slate-900/35 dark:text-rose-300/80 anomaly-body">
               异常节点列表已默认收起，点击右上角“展开异常”查看详情。
             </div>
           </div>
