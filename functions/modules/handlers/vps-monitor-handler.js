@@ -214,6 +214,9 @@ function buildPublicThemeConfig(settings) {
         showAnomalies: raw.publicThemeShowAnomalies !== false,
         showFeatured: raw.publicThemeShowFeatured !== false,
         showDetailTable: raw.publicThemeShowDetailTable !== false,
+        showHeader: raw.publicThemeShowHeader !== false,
+        showFooter: raw.publicThemeShowFooter !== false,
+        footerText: normalizeString(raw.publicThemeFooterText) || DEFAULT_SETTINGS.vpsMonitor.publicThemeFooterText,
         sectionOrder,
         customCss: normalizeString(raw.publicThemeCustomCss)
     };

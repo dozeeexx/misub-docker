@@ -22,7 +22,10 @@ const themeConfig = ref({
   showStats: true,
   showAnomalies: true,
   showFeatured: true,
-  showDetailTable: true
+  showDetailTable: true,
+  showHeader: true,
+  showFooter: true,
+  footerText: '由 MiSub VPS 监控引擎提供实时数据驱动'
 });
 const theme = computed(() => resolveVpsPublicTheme(themePreset.value));
 
@@ -33,6 +36,7 @@ const statCardClass = computed(() => theme.value.statCard);
 const panelClass = computed(() => theme.value.panel);
 const panelSoftClass = computed(() => theme.value.panelSoft);
 const pillClass = computed(() => theme.value.pill);
+const pillActiveClass = computed(() => theme.value.pillActive || theme.value.accentButton);
 const accentButtonClass = computed(() => theme.value.accentButton);
 const nodeCardClass = computed(() => theme.value.nodeCard);
 const detailTableClass = computed(() => theme.value.detailTable);
@@ -45,6 +49,8 @@ const showStats = computed(() => themeConfig.value.showStats !== false && layout
 const showAnomalies = computed(() => themeConfig.value.showAnomalies !== false && layoutClass.value !== 'minimal');
 const showFeatured = computed(() => themeConfig.value.showFeatured !== false && layoutClass.value !== 'minimal');
 const showDetailTable = computed(() => themeConfig.value.showDetailTable !== false);
+const showHeader = computed(() => themeConfig.value.showHeader !== false);
+const showFooter = computed(() => themeConfig.value.showFooter !== false);
 const orderedSections = computed(() => {
   const raw = Array.isArray(themeConfig.value.sectionOrder) ? themeConfig.value.sectionOrder : ['anomalies', 'nodes', 'featured', 'details'];
   const valid = ['anomalies', 'nodes', 'featured', 'details'];
@@ -461,6 +467,16 @@ onUnmounted(() => {
   transform-style: preserve-3d;
 }
 
+.vps-card-front,
+.vps-card-back {
+  box-shadow: 0 14px 34px -30px rgba(15, 23, 42, 0.18);
+}
+
+.dark .vps-card-front,
+.dark .vps-card-back {
+  box-shadow: 0 16px 36px -30px rgba(2, 6, 23, 0.6);
+}
+
 .vps-card-front {
   z-index: 2;
   transform: translateZ(1px);
@@ -503,6 +519,10 @@ onUnmounted(() => {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
+}
+
+.floating-filterbar {
+  backdrop-filter: blur(14px);
 }
 
 .theme-default {
@@ -576,86 +596,109 @@ onUnmounted(() => {
           class="pointer-events-none absolute h-96 w-96 rounded-full bg-primary-500/10 blur-[100px] transition-transform duration-300 ease-out"
           :style="{ transform: `translate(${mouseX - 192}px, ${mouseY - 192}px)` }"
         ></div>
-        <div class="absolute -top-24 left-10 h-72 w-72 rounded-full bg-gradient-to-br from-[#0ea5e9]/25 via-[#2dd4bf]/15 to-[#f97316]/20 blur-3xl"></div>
-        <div class="absolute top-24 right-10 h-64 w-64 rounded-full bg-gradient-to-br from-[#f97316]/20 via-[#22c55e]/15 to-[#38bdf8]/20 blur-3xl"></div>
-        <div class="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-gradient-to-br from-[#f59e0b]/18 via-[#22c55e]/12 to-[#0ea5e9]/16 blur-3xl"></div>
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff52,transparent_60%)] dark:bg-[radial-gradient(circle_at_top,#1e293b4d,transparent_60%)]"></div>
-        <div class="absolute inset-0 opacity-20 dark:opacity-25 bg-[linear-gradient(transparent_23px,rgba(148,163,184,0.22)_24px),linear-gradient(90deg,transparent_23px,rgba(148,163,184,0.22)_24px)] bg-[size:24px_24px]"></div>
+        <div class="absolute -top-24 left-10 h-72 w-72 rounded-full bg-gradient-to-br from-[#0ea5e9]/22 via-[#2dd4bf]/12 to-[#f97316]/16 blur-3xl"></div>
+        <div class="absolute top-24 right-10 h-64 w-64 rounded-full bg-gradient-to-br from-[#f97316]/16 via-[#22c55e]/12 to-[#38bdf8]/16 blur-3xl"></div>
+        <div class="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-gradient-to-br from-[#f59e0b]/16 via-[#22c55e]/10 to-[#0ea5e9]/14 blur-3xl"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff66,transparent_62%)] dark:bg-[radial-gradient(circle_at_top,#1e293b55,transparent_62%)]"></div>
         <div class="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/80 dark:from-[#0a0d14] dark:via-[#0a0d14]/70 to-transparent"></div>
       </div>
-        <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12">
-        <div class="flex flex-col gap-8" :class="layoutClass === 'hero-split' ? 'lg:flex-row lg:items-center lg:justify-between' : 'lg:flex-row lg:items-end lg:justify-between'">
-          <div class="max-w-2xl">
-            <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em]" :class="heroBadgeClass">
-              <img v-if="themeConfig.logo" :src="themeConfig.logo" alt="logo" class="h-4 w-4 rounded-full object-cover" />
-              Status Observatory
+        <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12 vps-public-hero" :class="showHeader ? '' : 'pt-10 pb-6'">
+          <div v-if="showHeader" class="flex flex-col gap-8" :class="layoutClass === 'hero-split' ? 'lg:flex-row lg:items-center lg:justify-between' : 'lg:flex-row lg:items-end lg:justify-between'">
+            <div class="max-w-2xl">
+              <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em]" :class="heroBadgeClass">
+                <img v-if="themeConfig.logo" :src="themeConfig.logo" alt="logo" class="h-4 w-4 rounded-full object-cover" />
+                Status Observatory
+              </div>
+              <h1 class="mt-4 text-4xl md:text-5xl font-semibold" :class="heroTitleClass">
+                {{ themeConfig.title }}
+              </h1>
+              <p class="mt-3 text-sm md:text-base" :class="heroTextClass">
+                {{ themeConfig.subtitle }}
+              </p>
+          <div class="mt-6 flex flex-wrap items-center gap-3 text-xs" :class="heroTextClass">
+            <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1" :class="heroBadgeClass">
+              更新时间 {{ lastUpdatedAt || '--' }}
+            </span>
+            <button
+              class="inline-flex items-center gap-2 rounded-full border px-4 py-1 hover:-translate-y-0.5 hover:shadow-xl transition"
+              :class="accentButtonClass"
+              @click="loadSnapshot"
+            >
+              刷新数据
+            </button>
+          </div>
             </div>
-            <h1 class="mt-4 text-4xl md:text-5xl font-semibold" :class="heroTitleClass">
-              {{ themeConfig.title }}
-            </h1>
-            <p class="mt-3 text-sm md:text-base" :class="heroTextClass">
-              {{ themeConfig.subtitle }}
-            </p>
-            <div class="mt-6 flex flex-wrap items-center gap-3 text-xs" :class="heroTextClass">
+            <div v-if="showStats" class="grid grid-cols-2 gap-4 text-xs" :class="layoutClass === 'hero-split' ? 'lg:max-w-md' : ''">
+              <div class="rounded-[18px] border p-4 transition-transform hover:scale-[1.02]" :class="statCardClass">
+                <div class="flex items-center justify-between">
+                  <p class="text-[#8a7f70] dark:text-slate-400">节点总数</p>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">ALL</span>
+                </div>
+                <p class="mt-2 text-2xl font-semibold text-[#1f1b17] dark:text-slate-100 tabular-nums">{{ displayMetrics.total }}</p>
+              </div>
+            <div class="rounded-[18px] border border-[#d1fae5]/80 bg-[#ecfdf3]/80 p-4 shadow-[0_14px_30px_-22px_rgba(5,150,105,0.2)] dark:border-emerald-500/30 dark:bg-emerald-500/10 transition-transform hover:scale-[1.02]">
+                <div class="flex items-center justify-between">
+                  <p class="text-[#087f5b] dark:text-emerald-300">在线节点</p>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300">OK</span>
+                </div>
+                <p class="mt-2 text-2xl font-semibold text-[#064e3b] dark:text-emerald-200 tabular-nums">{{ displayMetrics.online }}</p>
+              </div>
+            <div class="rounded-[18px] border border-[#fee2e2]/80 bg-[#fef2f2]/80 p-4 shadow-[0_14px_30px_-22px_rgba(244,63,94,0.22)] dark:border-rose-500/30 dark:bg-rose-500/10 transition-transform hover:scale-[1.02]">
+                <div class="flex items-center justify-between">
+                  <p class="text-[#b91c1c] dark:text-rose-300">离线节点</p>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300">DOWN</span>
+                </div>
+                <p class="mt-2 text-2xl font-semibold text-[#7f1d1d] dark:text-rose-200 tabular-nums">{{ displayMetrics.offline }}</p>
+              </div>
+            <div class="rounded-[18px] border border-[#e0e7ff]/80 bg-[#eef2ff]/80 p-4 shadow-[0_14px_30px_-22px_rgba(59,130,246,0.22)] dark:border-sky-500/30 dark:bg-sky-500/10 transition-transform hover:scale-[1.02]">
+                <div class="flex items-center justify-between">
+                  <p class="text-[#3730a3] dark:text-sky-300">在线率</p>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300">SLA</span>
+                </div>
+                <p class="mt-2 text-2xl font-semibold text-[#312e81] dark:text-sky-200 tabular-nums">{{ displayMetrics.sla }}%</p>
+              </div>
+            </div>
+          </div>
+          <div v-else class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3 text-xs" :class="heroTextClass">
               <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1" :class="heroBadgeClass">
                 更新时间 {{ lastUpdatedAt || '--' }}
               </span>
               <button
-                class="inline-flex items-center gap-2 rounded-full border px-4 py-1 hover:shadow-xl"
+                class="inline-flex items-center gap-2 rounded-full border px-4 py-1 hover:-translate-y-0.5 hover:shadow-xl transition"
                 :class="accentButtonClass"
                 @click="loadSnapshot"
               >
                 刷新数据
               </button>
             </div>
+            <div v-if="showStats" class="grid grid-cols-2 gap-3 text-xs">
+              <div class="rounded-[18px] border p-3" :class="statCardClass">
+                <p class="text-[#8a7f70] dark:text-slate-400">节点</p>
+                <p class="mt-1 text-lg font-semibold text-[#1f1b17] dark:text-slate-100 tabular-nums">{{ displayMetrics.total }}</p>
+              </div>
+              <div class="rounded-[18px] border p-3" :class="statCardClass">
+                <p class="text-[#8a7f70] dark:text-slate-400">在线率</p>
+                <p class="mt-1 text-lg font-semibold text-[#1f1b17] dark:text-slate-100 tabular-nums">{{ displayMetrics.sla }}%</p>
+              </div>
+            </div>
           </div>
-          <div v-if="showStats" class="grid grid-cols-2 gap-4 text-xs" :class="layoutClass === 'hero-split' ? 'lg:max-w-md' : ''">
-            <div class="rounded-2xl border p-4 transition-transform hover:scale-[1.02]" :class="statCardClass">
-              <div class="flex items-center justify-between">
-                <p class="text-[#8a7f70] dark:text-slate-400">节点总数</p>
-                <span class="text-[10px] px-2 py-0.5 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">ALL</span>
+          <div v-if="showStats" class="mt-8 rounded-[20px] border p-4" :class="panelClass">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="h-2 w-24 rounded-full bg-[#efe6db] dark:bg-slate-800">
+                  <div class="h-2 rounded-full bg-gradient-to-r from-emerald-500 via-sky-400 to-amber-400" :style="{ width: onlineRate + '%' }"></div>
+                </div>
+                <span class="text-xs text-[#8a7f70] dark:text-slate-400">在线率趋势</span>
               </div>
-              <p class="mt-2 text-2xl font-semibold text-[#1f1b17] dark:text-slate-100 tabular-nums">{{ displayMetrics.total }}</p>
-            </div>
-            <div class="rounded-2xl border border-[#d1fae5]/80 bg-[#ecfdf3]/80 p-4 shadow-[0_14px_30px_-22px_rgba(5,150,105,0.2)] dark:border-emerald-500/30 dark:bg-emerald-500/10 transition-transform hover:scale-[1.02]">
-              <div class="flex items-center justify-between">
-                <p class="text-[#087f5b] dark:text-emerald-300">在线节点</p>
-                <span class="text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300">OK</span>
+              <div class="flex flex-wrap items-center gap-2 text-[11px]">
+                <span class="px-2 py-1 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">CPU ≤ 85%</span>
+                <span class="px-2 py-1 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">内存 ≤ 90%</span>
+                <span class="px-2 py-1 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">响应稳定</span>
               </div>
-              <p class="mt-2 text-2xl font-semibold text-[#064e3b] dark:text-emerald-200 tabular-nums">{{ displayMetrics.online }}</p>
-            </div>
-            <div class="rounded-2xl border border-[#fee2e2]/80 bg-[#fef2f2]/80 p-4 shadow-[0_14px_30px_-22px_rgba(244,63,94,0.22)] dark:border-rose-500/30 dark:bg-rose-500/10 transition-transform hover:scale-[1.02]">
-              <div class="flex items-center justify-between">
-                <p class="text-[#b91c1c] dark:text-rose-300">离线节点</p>
-                <span class="text-[10px] px-2 py-0.5 rounded-full border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300">DOWN</span>
-              </div>
-              <p class="mt-2 text-2xl font-semibold text-[#7f1d1d] dark:text-rose-200 tabular-nums">{{ displayMetrics.offline }}</p>
-            </div>
-            <div class="rounded-2xl border border-[#e0e7ff]/80 bg-[#eef2ff]/80 p-4 shadow-[0_14px_30px_-22px_rgba(59,130,246,0.22)] dark:border-sky-500/30 dark:bg-sky-500/10 transition-transform hover:scale-[1.02]">
-              <div class="flex items-center justify-between">
-                <p class="text-[#3730a3] dark:text-sky-300">在线率</p>
-                <span class="text-[10px] px-2 py-0.5 rounded-full border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300">SLA</span>
-              </div>
-              <p class="mt-2 text-2xl font-semibold text-[#312e81] dark:text-sky-200 tabular-nums">{{ displayMetrics.sla }}%</p>
             </div>
           </div>
         </div>
-        <div v-if="showStats" class="mt-8 rounded-[24px] border p-4" :class="panelClass">
-          <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-              <div class="h-2 w-24 rounded-full bg-[#efe6db] dark:bg-slate-800">
-                <div class="h-2 rounded-full bg-gradient-to-r from-emerald-500 via-sky-400 to-amber-400" :style="{ width: onlineRate + '%' }"></div>
-              </div>
-              <span class="text-xs text-[#8a7f70] dark:text-slate-400">在线率趋势</span>
-            </div>
-            <div class="flex flex-wrap items-center gap-2 text-[11px]">
-              <span class="px-2 py-1 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">CPU ≤ 85%</span>
-              <span class="px-2 py-1 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">内存 ≤ 90%</span>
-              <span class="px-2 py-1 rounded-full border border-[#efe6db] bg-[#fdfaf6] text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">响应稳定</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="max-w-6xl mx-auto px-6 pb-16">
@@ -669,8 +712,8 @@ onUnmounted(() => {
         <div v-else class="flex flex-col gap-8 lg:gap-10">
           <!-- Anomaly/Alert Section (New) -->
           <div v-if="showAnomalies && anomalyNodes.length > 0" class="relative group" :style="sectionOrderStyle('anomalies')">
-          <div class="absolute -inset-1 bg-gradient-to-r from-rose-500/20 to-orange-500/20 rounded-[32px] blur-xl opacity-50 group-hover:opacity-100 transition duration-1000"></div>
-          <div class="relative rounded-[24px] border border-rose-200/50 bg-rose-50/10 backdrop-blur-3xl p-3 sm:p-4 dark:border-rose-900/30 dark:bg-rose-900/10">
+            <div class="absolute -inset-1 bg-gradient-to-r from-rose-500/10 to-orange-500/10 rounded-[28px] blur-lg opacity-35 group-hover:opacity-55 transition duration-700"></div>
+            <div class="relative rounded-[20px] border border-rose-200/35 bg-rose-50/8 backdrop-blur-2xl p-4 dark:border-rose-900/22 dark:bg-rose-900/8">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2.5">
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/20 text-rose-500 animate-pulse">
@@ -695,7 +738,7 @@ onUnmounted(() => {
             </div>
 
             <div v-if="anomalyExpanded" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <article v-for="node in anomalyNodes" :key="node.id" class="rounded-2xl border border-rose-200/80 bg-white/55 p-2.5 shadow-lg shadow-rose-500/5 dark:border-rose-900/40 dark:bg-slate-900/70">
+              <article v-for="node in anomalyNodes" :key="node.id" class="rounded-[18px] border border-rose-200/60 bg-white/60 p-3 dark:border-rose-900/30 dark:bg-slate-900/55">
                 <div class="relative mb-2 h-1 w-full rounded-full bg-rose-100 dark:bg-slate-800">
                   <div class="h-1 rounded-full bg-rose-500" :style="{ width: node.status === 'offline' ? '88%' : '72%' }"></div>
                 </div>
@@ -719,7 +762,7 @@ onUnmounted(() => {
                 </div>
               </article>
             </div>
-            <div v-else class="rounded-xl border border-dashed border-rose-300/60 bg-white/50 px-4 py-3 text-xs text-rose-700/80 dark:border-rose-800/60 dark:bg-slate-900/40 dark:text-rose-300/80">
+            <div v-else class="rounded-[18px] border border-dashed border-rose-300/55 bg-white/50 px-4 py-3 text-xs text-rose-700/80 dark:border-rose-800/55 dark:bg-slate-900/35 dark:text-rose-300/80">
               异常节点列表已默认收起，点击右上角“展开异常”查看详情。
             </div>
           </div>
@@ -735,17 +778,15 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="flex flex-wrap gap-2">
+          <div class="flex flex-wrap items-center gap-2 rounded-[999px] border border-white/35 bg-white/55 px-3 py-2.5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.2)] dark:border-white/10 dark:bg-slate-900/30 floating-filterbar">
             <button
               v-for="group in nodeGroupItems"
               :key="group.name"
               type="button"
-              class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors"
-                :class="selectedGroup === group.name
-                  ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-300'
-                  : pillClass"
-                @click="selectedGroup = group.name"
-              >
+              class="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] font-medium tracking-[0.02em] transition-all"
+              :class="selectedGroup === group.name ? pillActiveClass : pillClass"
+              @click="selectedGroup = group.name"
+            >
               <span>{{ group.name }}</span>
               <span class="text-[10px] opacity-75">{{ group.count }}</span>
             </button>
@@ -755,7 +796,7 @@ onUnmounted(() => {
               <div v-for="node in filteredSortedNodes" :key="node.id" class="vps-card-container">
                 <div class="vps-card-inner group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2" :class="{ 'is-flipped': flippedNodes.has(node.id) }" @click="toggleFlip(node.id)" @keydown.enter.prevent="toggleFlip(node.id)" @keydown.space.prevent="toggleFlip(node.id)" tabindex="0" role="button" :aria-pressed="flippedNodes.has(node.id)" :aria-label="`切换 ${node.name || node.id} 的节点网络状态卡片`">
                   <!-- Front Side -->
-                  <div class="vps-card-front rounded-2xl border p-4" :class="nodeCardClass">
+                  <div class="vps-card-front rounded-[18px] border p-4" :class="nodeCardClass">
                     <div class="h-1 w-full rounded-full bg-[#efe6db] dark:bg-slate-800 relative">
                       <div class="absolute inset-0 flex items-center justify-between px-1 opacity-40">
                         <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
@@ -836,7 +877,7 @@ onUnmounted(() => {
                   </div>
 
                   <!-- Back Side: Network Metrics -->
-                  <div class="vps-card-back rounded-2xl border p-4 flex flex-col h-full" :class="nodeCardClass">
+                  <div class="vps-card-back rounded-[18px] border p-4 flex flex-col h-full" :class="nodeCardClass">
                     <div class="mb-2 flex items-center justify-between border-b border-[#efe6db] pb-1.5 dark:border-slate-800">
                       <h4 class="flex items-center gap-1 text-[11px] font-semibold text-[#1f1b17] dark:text-slate-100">
                         <span class="text-blue-500 text-[10px]">🌐</span> 网络状态
@@ -887,7 +928,7 @@ onUnmounted(() => {
           </div>
           </div>
 
-          <div v-if="showFeatured" class="rounded-[26px] border p-4 sm:p-5" :class="panelClass" :style="sectionOrderStyle('featured')">
+          <div v-if="showFeatured" class="rounded-[20px] border p-4 sm:p-5" :class="panelClass" :style="sectionOrderStyle('featured')">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 class="text-base font-semibold text-[#1f1b17] dark:text-slate-100">重点轮播 · 资源脉冲</h2>
@@ -897,7 +938,7 @@ onUnmounted(() => {
             </div>
             <div class="mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.25fr_0.95fr]">
               <div class="grid grid-cols-1 gap-4 self-start lg:grid-cols-[1.15fr_0.85fr]">
-            <div class="rounded-2xl border p-4" :class="panelSoftClass">
+            <div class="rounded-[18px] border p-4" :class="panelSoftClass">
               <div class="flex items-start justify-between mt-3">
                 <div>
                     <div class="flex items-center gap-2">
@@ -929,7 +970,7 @@ onUnmounted(() => {
               </div>
             </div>
             
-            <div class="rounded-2xl border p-4" :class="panelSoftClass">
+            <div class="rounded-[18px] border p-4" :class="panelSoftClass">
               <h3 class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">运行概览</h3>
               <p class="mt-1 text-xs text-[#8a7f70] dark:text-slate-400">健康状况自检</p>
               <div v-if="anomalyNodes.length" class="mt-3 space-y-2 text-[11px] text-[#6a5f54] dark:text-slate-400">
@@ -946,7 +987,7 @@ onUnmounted(() => {
               </div>
               <div v-else class="mt-3 text-[11px] text-[#8a7f70] dark:text-slate-400">所有节点运行良好</div>
             </div>
-            <div class="rounded-2xl border p-4 lg:col-span-2" :class="panelSoftClass">
+            <div class="rounded-[18px] border p-4 lg:col-span-2" :class="panelSoftClass">
               <div class="flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">关注队列</h3>
                 <span class="text-[10px] text-[#8a7f70] dark:text-slate-400">按风险优先</span>
@@ -968,7 +1009,7 @@ onUnmounted(() => {
               </div>
             </div>
               </div>
-              <div class="rounded-[22px] border p-4" :class="panelClass">
+              <div class="rounded-[18px] border p-4" :class="panelClass">
                 <h3 class="text-sm font-semibold text-[#1f1b17] dark:text-slate-100">资源脉冲</h3>
                 <p class="mt-1 text-xs text-[#8a7f70] dark:text-slate-400">汇总最近一次上报的资源占用</p>
                 <div class="mt-4 grid grid-cols-2 gap-3">
@@ -1012,7 +1053,7 @@ onUnmounted(() => {
         >
           <div v-if="selectedNodeId" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 lg:p-10 overflow-hidden">
             <!-- Backdrop -->
-            <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-md" @click="closeNodeDetail"></div>
+                    <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-md" @click="closeNodeDetail"></div>
             
             <!-- Modal Content -->
             <transition
@@ -1021,11 +1062,11 @@ onUnmounted(() => {
               enter-to-class="transform scale-100 translate-y-0 opacity-100"
               appear
             >
-              <div class="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl border border-white/20 overflow-hidden flex flex-col max-h-[90vh]" role="dialog" aria-modal="true" :aria-labelledby="detailTitleId" tabindex="-1">
+              <div class="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[24px] shadow-2xl border border-white/20 overflow-hidden flex flex-col max-h-[90vh]" role="dialog" aria-modal="true" :aria-labelledby="detailTitleId" tabindex="-1">
                 <!-- Header -->
                 <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
                   <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-500">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-[18px] bg-blue-500/10 text-blue-500">
                       <span class="text-xl">📈</span>
                     </div>
                     <div>
@@ -1041,14 +1082,14 @@ onUnmounted(() => {
                   </div>
                   
                   <div class="flex items-center gap-4">
-                    <div class="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                    <div class="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-white dark:bg-slate-800 rounded-[18px] border border-slate-100 dark:border-slate-700 shadow-sm">
                       <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">曲线平滑</span>
                       <Switch v-model="isSmooth" size="sm" />
                     </div>
                     <button 
                       ref="detailCloseButtonRef"
                       @click="closeNodeDetail"
-                      class="flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+                      class="flex items-center justify-center w-10 h-10 rounded-[18px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
                       aria-label="关闭节点详情弹窗"
                     >
                       <span class="block text-xl leading-none -translate-y-px">×</span>
@@ -1064,7 +1105,7 @@ onUnmounted(() => {
                       <p class="text-xs text-slate-500 dark:text-slate-400 animate-pulse font-medium">正在拉取历史多点采样数据...</p>
                     </div>
                   </div>
-                  <div v-else-if="nodeDetailData.error" aria-live="assertive" class="h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-rose-100 dark:border-rose-900/40 rounded-[24px] bg-rose-50/40 dark:bg-rose-950/10">
+                  <div v-else-if="nodeDetailData.error" aria-live="assertive" class="h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-rose-100 dark:border-rose-900/40 rounded-[20px] bg-rose-50/40 dark:bg-rose-950/10">
                     <span class="text-3xl mb-3 opacity-60">⚠</span>
                     <p class="text-sm text-rose-600 dark:text-rose-300 font-medium">{{ nodeDetailData.error }}</p>
                     <button
@@ -1077,33 +1118,33 @@ onUnmounted(() => {
                   <div v-else-if="nodeDetailData.samples.length">
                     <VpsLatencyChart :samples="nodeDetailData.samples" :smooth="isSmooth" />
                     <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <div v-for="metric in [
+                    <div v-for="metric in [
                         { label: '监测点位', val: [...new Set(nodeDetailData.samples.flatMap(s => s.checks?.map(c => c.name) || []))].length + ' 个' },
                         { label: '采样总量', val: nodeDetailData.samples.length + ' 组' },
                         { label: '覆盖时长', val: '约 48 小时' },
                         { label: '状态更新', val: '实时同步' }
-                      ]" :key="metric.label" class="p-3 bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      ]" :key="metric.label" class="p-3 bg-slate-50/80 dark:bg-slate-800/40 rounded-[18px] border border-slate-100 dark:border-slate-800">
                         <p class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mb-1">{{ metric.label }}</p>
                         <p class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ metric.val }}</p>
                       </div>
                     </div>
                   </div>
-                  <div v-else class="h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[24px] bg-slate-50/30 dark:bg-black/10">
+                  <div v-else class="h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[20px] bg-slate-50/30 dark:bg-black/10">
                     <span class="text-3xl mb-3 opacity-30">📊</span>
                     <p class="text-xs text-slate-400 dark:text-slate-500 font-medium tracking-widest">该节点暂无历史采样数据</p>
                   </div>
                 </div>
 
                 <!-- Footer -->
-                <div class="p-4 px-6 bg-slate-50/30 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-                  <p class="text-[9px] text-slate-400 dark:text-slate-600 font-medium">由 MiSub VPS 监控引擎提供实时数据驱动</p>
+                <div v-if="showFooter" class="p-4 px-6 bg-slate-50/30 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                  <p class="text-[9px] text-slate-400 dark:text-slate-600 font-medium">{{ themeConfig.footerText || '由 MiSub VPS 监控引擎提供实时数据驱动' }}</p>
                 </div>
               </div>
             </transition>
           </div>
         </transition>
 
-        <details v-if="showDetailTable" class="mt-8 rounded-[30px] border p-6" :class="panelClass" :style="sectionOrderStyle('details')">
+        <details v-if="showDetailTable" class="mt-8 rounded-[20px] border p-6" :class="panelClass" :style="sectionOrderStyle('details')">
           <summary class="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#1f1b17] dark:text-slate-100">
             <span>节点明细表</span>
             <span class="text-xs text-[#8a7f70] dark:text-slate-400">点击展开</span>
@@ -1171,6 +1212,22 @@ onUnmounted(() => {
     linear-gradient(180deg, #f0f4f8 0%, #e6f0ff 55%, #f0f8ff 100%);
 }
 
+.vps-theme-komari .vps-public-hero {
+  font-family: "DM Sans", "Segoe UI", sans-serif;
+}
+
+.vps-theme-komari .floating-filterbar {
+  font-weight: 600;
+}
+
+.vps-theme-komari h1,
+.vps-theme-komari h2,
+.vps-theme-komari h3,
+.vps-theme-komari h4 {
+  font-family: "DM Sans", "Segoe UI", sans-serif;
+  letter-spacing: -0.02em;
+}
+
 .dark .vps-theme-komari .theme-komari {
   background-image:
     radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.15), transparent 32%),
@@ -1201,6 +1258,11 @@ onUnmounted(() => {
 .vps-theme-komari .vps-card-back {
   background: rgba(255, 255, 255, 0.9) !important;
   box-shadow: 0 12px 32px -24px rgba(14, 165, 233, 0.25);
+}
+
+.vps-theme-komari .vps-card-front,
+.vps-theme-komari .vps-card-back {
+  box-shadow: 0 14px 36px -28px rgba(14, 165, 233, 0.25);
 }
 
 .dark .vps-theme-komari .vps-card-front,
@@ -1244,6 +1306,18 @@ onUnmounted(() => {
   color: #0f172a;
 }
 
+.vps-theme-minimal .vps-public-theme-root {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+.vps-theme-minimal h1,
+.vps-theme-minimal h2,
+.vps-theme-minimal h3,
+.vps-theme-minimal h4 {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
+}
+
 .dark .vps-theme-minimal h1,
 .dark .vps-theme-minimal h2,
 .dark .vps-theme-minimal h3,
@@ -1266,6 +1340,15 @@ onUnmounted(() => {
     linear-gradient(transparent 31px, rgba(148,163,184,0.06) 32px),
     linear-gradient(90deg, transparent 31px, rgba(148,163,184,0.06) 32px);
   background-size: auto, 32px 32px, 32px 32px;
+}
+
+.vps-theme-minimal .vps-public-hero {
+  letter-spacing: -0.01em;
+}
+
+.vps-theme-minimal .floating-filterbar {
+  font-weight: 500;
+  letter-spacing: 0.03em;
 }
 
 .dark .vps-theme-minimal .theme-minimal {
@@ -1304,6 +1387,18 @@ onUnmounted(() => {
 .vps-theme-tech .vps-card-front,
 .vps-theme-tech .vps-card-back {
   color: #0f172a;
+}
+
+.vps-theme-tech .vps-public-theme-root {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.vps-theme-tech h1,
+.vps-theme-tech h2,
+.vps-theme-tech h3,
+.vps-theme-tech h4 {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .dark .vps-theme-tech h1,
@@ -1345,6 +1440,16 @@ onUnmounted(() => {
     linear-gradient(180deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%);
 }
 
+.vps-theme-tech .vps-public-hero {
+  text-transform: none;
+}
+
+.vps-theme-tech .floating-filterbar {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .dark .vps-theme-tech .theme-tech {
   background-image:
     radial-gradient(circle at 18% 18%, rgba(34, 211, 238, 0.16), transparent 28%),
@@ -1357,6 +1462,11 @@ onUnmounted(() => {
 .vps-theme-tech details,
 .vps-theme-tech article {
   box-shadow: 0 18px 42px -34px rgba(6, 182, 212, 0.15), inset 0 0 0 1px rgba(6, 182, 212, 0.04);
+}
+
+.vps-theme-tech .vps-card-front,
+.vps-theme-tech .vps-card-back {
+  box-shadow: 0 16px 36px -30px rgba(6, 182, 212, 0.18), inset 0 0 0 1px rgba(6, 182, 212, 0.04);
 }
 
 .dark .vps-theme-tech .vps-card-front,
@@ -1385,6 +1495,18 @@ onUnmounted(() => {
 .vps-theme-glass .vps-card-front,
 .vps-theme-glass .vps-card-back {
   color: #0f172a;
+}
+
+.vps-theme-glass .vps-public-theme-root {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+}
+
+.vps-theme-glass h1,
+.vps-theme-glass h2,
+.vps-theme-glass h3,
+.vps-theme-glass h4 {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  letter-spacing: -0.015em;
 }
 
 .dark .vps-theme-glass h1,
@@ -1425,6 +1547,14 @@ onUnmounted(() => {
     radial-gradient(circle at 20% 18%, rgba(99, 102, 241, 0.18), transparent 30%),
     radial-gradient(circle at 78% 12%, rgba(56, 189, 248, 0.18), transparent 28%),
     linear-gradient(180deg, #eef4ff 0%, #e8f0ff 52%, #edf5ff 100%);
+}
+
+.vps-theme-glass .vps-public-hero {
+  letter-spacing: -0.01em;
+}
+
+.vps-theme-glass .floating-filterbar {
+  font-weight: 500;
 }
 
 .dark .vps-theme-glass .theme-glass {
