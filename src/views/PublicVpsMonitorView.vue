@@ -536,14 +536,14 @@ onUnmounted(() => {
 }
 
 .vps-theme-default .vps-public-theme-root {
-  font-family: "Literata", "Times New Roman", serif;
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
 }
 
 .vps-theme-default h1,
 .vps-theme-default h2,
 .vps-theme-default h3,
 .vps-theme-default h4 {
-  font-family: "Literata", "Times New Roman", serif;
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
   letter-spacing: -0.01em;
 }
 
@@ -681,7 +681,7 @@ onUnmounted(() => {
     <component :is="'style'" v-if="sanitizedCustomCss">{{ sanitizedCustomCss }}</component>
     <div class="relative">
       <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12 vps-public-hero" :class="publicLayout.headerEnabled === false ? 'pt-10 pb-6' : ''">
-        <div v-if="publicLayout.headerEnabled === false" class="absolute right-6 top-6 z-10 vps-theme-toggle">
+        <div v-if="publicLayout.headerEnabled === false" class="fixed right-6 bottom-6 z-40 vps-theme-toggle">
           <ThemeToggle />
         </div>
         <div class="flex flex-col gap-8" :class="layoutClass === 'hero-split' ? 'lg:flex-row lg:items-center lg:justify-between' : 'lg:flex-row lg:items-end lg:justify-between'">
@@ -1275,7 +1275,7 @@ onUnmounted(() => {
 }
 
 .vps-theme-komari .vps-public-hero {
-  font-family: "DM Sans", "Segoe UI", sans-serif;
+  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .vps-theme-komari .layout-hero-split .vps-public-hero {
@@ -1290,7 +1290,7 @@ onUnmounted(() => {
 .vps-theme-komari h2,
 .vps-theme-komari h3,
 .vps-theme-komari h4 {
-  font-family: "DM Sans", "Segoe UI", sans-serif;
+  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: -0.02em;
 }
 
@@ -1459,14 +1459,14 @@ onUnmounted(() => {
 }
 
 .vps-theme-minimal .vps-public-theme-root {
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .vps-theme-minimal h1,
 .vps-theme-minimal h2,
 .vps-theme-minimal h3,
 .vps-theme-minimal h4 {
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: -0.01em;
 }
 
@@ -1626,14 +1626,14 @@ onUnmounted(() => {
 }
 
 .vps-theme-tech .vps-public-theme-root {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .vps-theme-tech h1,
 .vps-theme-tech h2,
 .vps-theme-tech h3,
 .vps-theme-tech h4 {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: -0.02em;
 }
 
@@ -1835,14 +1835,14 @@ onUnmounted(() => {
 }
 
 .vps-theme-glass .vps-public-theme-root {
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .vps-theme-glass h1,
 .vps-theme-glass h2,
 .vps-theme-glass h3,
 .vps-theme-glass h4 {
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: -0.015em;
 }
 
