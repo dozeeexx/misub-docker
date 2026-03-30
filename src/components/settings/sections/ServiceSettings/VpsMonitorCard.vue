@@ -244,7 +244,7 @@ const openPreview = (card) => {
           <option value="default">默认</option>
           <option value="komari">Komari 风</option>
           <option value="minimal">极简</option>
-          <option value="tech-dark">深色科技</option>
+          <option value="tech">科技</option>
           <option value="glass">玻璃态</option>
         </select>
       </div>

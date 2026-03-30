@@ -190,8 +190,9 @@ function resolveSettings(config) {
 
 function resolvePublicThemePreset(settings) {
     const preset = normalizeString(settings?.vpsMonitor?.publicThemePreset).toLowerCase();
-    const supported = new Set(['default', 'komari', 'minimal', 'tech-dark', 'glass']);
-    return supported.has(preset) ? preset : 'default';
+    const supported = new Set(['default', 'komari', 'minimal', 'tech', 'glass']);
+    // 兼容旧的 tech-dark 主题
+    return supported.has(preset) ? preset : (preset === 'tech-dark' ? 'tech' : 'default');
 }
 
 function buildPublicThemeConfig(settings) {

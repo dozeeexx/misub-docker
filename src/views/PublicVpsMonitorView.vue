@@ -524,7 +524,14 @@ onUnmounted(() => {
   background-size: auto, 32px 32px, 32px 32px;
 }
 
-.theme-tech-dark {
+.theme-tech {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(34,211,238,0.12), transparent 30%),
+    radial-gradient(circle at 80% 15%, rgba(14,165,233,0.16), transparent 26%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.dark .theme-tech {
   background-image:
     radial-gradient(circle at 20% 20%, rgba(34,211,238,0.12), transparent 30%),
     radial-gradient(circle at 80% 15%, rgba(14,165,233,0.16), transparent 26%),
@@ -1146,6 +1153,17 @@ onUnmounted(() => {
   color: #0f172a;
 }
 
+.dark .vps-theme-komari h1,
+.dark .vps-theme-komari h2,
+.dark .vps-theme-komari h3,
+.dark .vps-theme-komari h4,
+.dark .vps-theme-komari summary,
+.dark .vps-theme-komari table,
+.dark .vps-theme-komari .vps-card-front,
+.dark .vps-theme-komari .vps-card-back {
+  color: #e2e8f0;
+}
+
 .vps-theme-komari .theme-komari {
   background-image:
     radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.2), transparent 32%),
@@ -1153,11 +1171,25 @@ onUnmounted(() => {
     linear-gradient(180deg, #f4f7fb 0%, #edf5ff 55%, #f7fbff 100%);
 }
 
+.dark .vps-theme-komari .theme-komari {
+  background-image:
+    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.15), transparent 32%),
+    radial-gradient(circle at 82% 14%, rgba(99, 102, 241, 0.1), transparent 26%),
+    linear-gradient(180deg, #0f172a 0%, #1e293b 55%, #0f172a 100%);
+}
+
 .vps-theme-komari .vps-card-front,
 .vps-theme-komari .vps-card-back,
 .vps-theme-komari details,
 .vps-theme-komari article {
   border-color: rgba(186, 230, 253, 0.9) !important;
+}
+
+.dark .vps-theme-komari .vps-card-front,
+.dark .vps-theme-komari .vps-card-back,
+.dark .vps-theme-komari details,
+.dark .vps-theme-komari article {
+  border-color: rgba(14, 165, 233, 0.3) !important;
 }
 
 .vps-theme-komari p,
@@ -1176,6 +1208,15 @@ onUnmounted(() => {
   color: #0f172a;
 }
 
+.dark .vps-theme-minimal h1,
+.dark .vps-theme-minimal h2,
+.dark .vps-theme-minimal h3,
+.dark .vps-theme-minimal h4,
+.dark .vps-theme-minimal summary,
+.dark .vps-theme-minimal table {
+  color: #e2e8f0;
+}
+
 .vps-theme-minimal .vps-card-front,
 .vps-theme-minimal .vps-card-back,
 .vps-theme-minimal details,
@@ -1191,6 +1232,14 @@ onUnmounted(() => {
   background-size: auto, 32px 32px, 32px 32px;
 }
 
+.dark .vps-theme-minimal .theme-minimal {
+  background-image:
+    linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 1) 100%),
+    linear-gradient(transparent 31px, rgba(148,163,184,0.04) 32px),
+    linear-gradient(90deg, transparent 31px, rgba(148,163,184,0.04) 32px);
+  background-size: auto, 32px 32px, 32px 32px;
+}
+
 .vps-theme-minimal .vps-card-front,
 .vps-theme-minimal .vps-card-back {
   border-radius: 1rem;
@@ -1203,43 +1252,92 @@ onUnmounted(() => {
   border-color: rgba(226, 232, 240, 0.9) !important;
 }
 
-.vps-theme-tech-dark h1,
-.vps-theme-tech-dark h2,
-.vps-theme-tech-dark h3,
-.vps-theme-tech-dark h4,
-.vps-theme-tech-dark summary,
-.vps-theme-tech-dark table,
-.vps-theme-tech-dark .vps-card-front,
-.vps-theme-tech-dark .vps-card-back {
+.dark .vps-theme-minimal .vps-card-front,
+.dark .vps-theme-minimal .vps-card-back,
+.dark .vps-theme-minimal details,
+.dark .vps-theme-minimal article {
+  border-color: rgba(71, 85, 105, 0.5) !important;
+}
+
+.vps-theme-tech h1,
+.vps-theme-tech h2,
+.vps-theme-tech h3,
+.vps-theme-tech h4,
+.vps-theme-tech summary,
+.vps-theme-tech table,
+.vps-theme-tech .vps-card-front,
+.vps-theme-tech .vps-card-back {
+  color: #0f172a;
+}
+
+.dark .vps-theme-tech h1,
+.dark .vps-theme-tech h2,
+.dark .vps-theme-tech h3,
+.dark .vps-theme-tech h4,
+.dark .vps-theme-tech summary,
+.dark .vps-theme-tech table,
+.dark .vps-theme-tech .vps-card-front,
+.dark .vps-theme-tech .vps-card-back {
   color: #e2e8f0;
 }
 
-.vps-theme-tech-dark p,
-.vps-theme-tech-dark span,
-.vps-theme-tech-dark td,
-.vps-theme-tech-dark th {
+.vps-theme-tech p,
+.vps-theme-tech span,
+.vps-theme-tech td,
+.vps-theme-tech th {
   color: inherit;
 }
 
-.vps-theme-tech-dark details,
-.vps-theme-tech-dark .vps-card-front,
-.vps-theme-tech-dark .vps-card-back,
-.vps-theme-tech-dark article {
+.vps-theme-tech details,
+.vps-theme-tech .vps-card-front,
+.vps-theme-tech .vps-card-back,
+.vps-theme-tech article {
+  border-color: rgba(6, 182, 212, 0.25) !important;
+}
+
+.dark .vps-theme-tech details,
+.dark .vps-theme-tech .vps-card-front,
+.dark .vps-theme-tech .vps-card-back,
+.dark .vps-theme-tech article {
   border-color: rgba(34, 211, 238, 0.18) !important;
 }
 
-.vps-theme-tech-dark .theme-tech-dark {
+.vps-theme-tech .theme-tech {
+  background-image:
+    radial-gradient(circle at 18% 18%, rgba(6, 182, 212, 0.12), transparent 28%),
+    radial-gradient(circle at 82% 12%, rgba(14, 165, 233, 0.1), transparent 24%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%);
+}
+
+.dark .vps-theme-tech .theme-tech {
   background-image:
     radial-gradient(circle at 18% 18%, rgba(34, 211, 238, 0.16), transparent 28%),
     radial-gradient(circle at 82% 12%, rgba(14, 165, 233, 0.16), transparent 24%),
     linear-gradient(180deg, #050816 0%, #09101f 45%, #0d1630 100%);
 }
 
-.vps-theme-tech-dark .vps-card-front,
-.vps-theme-tech-dark .vps-card-back,
-.vps-theme-tech-dark details,
-.vps-theme-tech-dark article {
+.vps-theme-tech .vps-card-front,
+.vps-theme-tech .vps-card-back,
+.vps-theme-tech details,
+.vps-theme-tech article {
+  box-shadow: 0 18px 42px -34px rgba(6, 182, 212, 0.15), inset 0 0 0 1px rgba(6, 182, 212, 0.04);
+}
+
+.dark .vps-theme-tech .vps-card-front,
+.dark .vps-theme-tech .vps-card-back,
+.dark .vps-theme-tech details,
+.dark .vps-theme-tech article {
   box-shadow: 0 18px 42px -34px rgba(34, 211, 238, 0.2), inset 0 0 0 1px rgba(34, 211, 238, 0.04);
+}
+
+.vps-theme-tech .vps-card-front,
+.vps-theme-tech .vps-card-back {
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+.dark .vps-theme-tech .vps-card-front,
+.dark .vps-theme-tech .vps-card-back {
+  background: rgba(8, 16, 31, 0.92) !important;
 }
 
 .vps-theme-glass h1,
@@ -1251,6 +1349,17 @@ onUnmounted(() => {
 .vps-theme-glass .vps-card-front,
 .vps-theme-glass .vps-card-back {
   color: #0f172a;
+}
+
+.dark .vps-theme-glass h1,
+.dark .vps-theme-glass h2,
+.dark .vps-theme-glass h3,
+.dark .vps-theme-glass h4,
+.dark .vps-theme-glass summary,
+.dark .vps-theme-glass table,
+.dark .vps-theme-glass .vps-card-front,
+.dark .vps-theme-glass .vps-card-back {
+  color: #e2e8f0;
 }
 
 .vps-theme-glass p,
@@ -1268,6 +1377,13 @@ onUnmounted(() => {
   backdrop-filter: blur(20px);
 }
 
+.dark .vps-theme-glass details,
+.dark .vps-theme-glass .vps-card-front,
+.dark .vps-theme-glass .vps-card-back,
+.dark .vps-theme-glass article {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 .vps-theme-glass .theme-glass {
   background-image:
     radial-gradient(circle at 20% 18%, rgba(99, 102, 241, 0.18), transparent 30%),
@@ -1275,13 +1391,20 @@ onUnmounted(() => {
     linear-gradient(180deg, #eef4ff 0%, #e8f0ff 52%, #edf5ff 100%);
 }
 
+.dark .vps-theme-glass .theme-glass {
+  background-image:
+    radial-gradient(circle at 20% 18%, rgba(99, 102, 241, 0.12), transparent 30%),
+    radial-gradient(circle at 78% 12%, rgba(56, 189, 248, 0.12), transparent 28%),
+    linear-gradient(180deg, #0f172a 0%, #1e293b 52%, #0f172a 100%);
+}
+
 .vps-theme-glass .vps-card-front,
 .vps-theme-glass .vps-card-back {
   background: rgba(255, 255, 255, 0.38) !important;
 }
 
-.vps-theme-tech-dark .vps-card-front,
-.vps-theme-tech-dark .vps-card-back {
-  background: rgba(8, 16, 31, 0.92) !important;
+.dark .vps-theme-glass .vps-card-front,
+.dark .vps-theme-glass .vps-card-back {
+  background: rgba(15, 23, 42, 0.6) !important;
 }
 </style>
