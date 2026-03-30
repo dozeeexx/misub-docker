@@ -52,7 +52,9 @@ const showStats = computed(() => themeConfig.value.showStats !== false && layout
 const showAnomalies = computed(() => themeConfig.value.showAnomalies !== false && layoutClass.value !== 'minimal');
 const showFeatured = computed(() => themeConfig.value.showFeatured !== false && layoutClass.value !== 'minimal');
 const showDetailTable = computed(() => themeConfig.value.showDetailTable !== false);
-const showFooter = computed(() => themeConfig.value.footerText !== '' && publicLayout.value.footerEnabled !== false);
+// Show the in-page footer copy only when the MiSub global footer is disabled.
+// If the global footer is enabled, keep the page cleaner and rely on the global footer.
+const showFooter = computed(() => themeConfig.value.footerText !== '' && publicLayout.value.footerEnabled === false);
 const orderedSections = computed(() => {
   const raw = Array.isArray(themeConfig.value.sectionOrder) ? themeConfig.value.sectionOrder : ['anomalies', 'nodes', 'featured', 'details'];
   const valid = ['anomalies', 'nodes', 'featured', 'details'];
@@ -1139,7 +1141,7 @@ onUnmounted(() => {
 
             <div v-if="anomalyExpanded" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               <article v-for="node in anomalyNodes" :key="node.id" class="rounded-[18px] border border-rose-200/50 bg-white/85 p-3 dark:border-rose-900/28 dark:bg-slate-900/55 anomaly-card">
-                <div class="relative mb-2 h-1 w-full rounded-full bg-rose-100 dark:bg-slate-800 anomaly-status">
+                <div class="relative mb-2 h-1 w-full rounded-full bg-transparent anomaly-status">
                   <div class="h-1 rounded-full bg-rose-500" :style="{ width: node.status === 'offline' ? '88%' : '72%' }"></div>
                 </div>
                 <div class="flex items-start justify-between gap-3">
@@ -1171,7 +1173,7 @@ onUnmounted(() => {
           <div class="space-y-6 vps-section" :style="sectionOrderStyle('nodes')">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-2xl font-bold text-[#1f1b17] dark:text-slate-100 flex items-center gap-3">
-              <span class="text-blue-500">✦</span> 全部节点
+              <span class="text-blue-500 node-section-accent">✦</span> 全部节点
             </h2>
             <div class="flex items-center gap-2">
               <span class="text-xs text-[#8a7f70] dark:text-slate-400">在线与离线节点统一展示</span>
@@ -1280,7 +1282,7 @@ onUnmounted(() => {
                   <div class="vps-card-back rounded-[18px] border p-4 flex flex-col h-full vps-node-back" :class="nodeCardClass">
                     <div class="mb-2 flex items-center justify-between border-b border-[#efe6db] pb-1.5 dark:border-slate-800">
                       <h4 class="flex items-center gap-1 text-[11px] font-semibold text-[#1f1b17] dark:text-slate-100">
-                        <span class="text-blue-500 text-[10px]">🌐</span> 网络状态
+                        <span class="text-blue-500 text-[10px] node-section-accent">🌐</span> 网络状态
                       </h4>
                       <span class="text-[9px] text-[#8a7f70] dark:text-slate-400 opacity-70">点击返回</span>
                     </div>
@@ -1838,7 +1840,7 @@ onUnmounted(() => {
 }
 
 .vps-theme-fresh .node-status-bar {
-  background-image: linear-gradient(90deg, #22d3ee, #38bdf8, #818cf8) !important;
+  background-image: linear-gradient(90deg, #10b981, #38bdf8, #f59e0b) !important;
 }
 
 .vps-theme-fresh .vps-metric-chart {
@@ -2047,7 +2049,7 @@ onUnmounted(() => {
 }
 
 .vps-theme-minimal .node-status-bar {
-  background-image: linear-gradient(90deg, #94a3b8, #cbd5f5, #e2e8f0) !important;
+  background-image: linear-gradient(90deg, #10b981, #38bdf8, #f59e0b) !important;
 }
 
 .vps-theme-minimal .vps-metric-chart {
@@ -2404,7 +2406,7 @@ onUnmounted(() => {
 }
 
 .vps-theme-tech .node-status-bar {
-  background-image: linear-gradient(90deg, #22d3ee, #38bdf8, #0ea5e9) !important;
+  background-image: linear-gradient(90deg, #10b981, #38bdf8, #f59e0b) !important;
 }
 
 .vps-theme-tech .vps-metric-chart {
@@ -2764,7 +2766,7 @@ onUnmounted(() => {
 }
 
 .vps-theme-glass .node-status-bar {
-  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.8), rgba(191, 219, 254, 0.8), rgba(165, 180, 252, 0.8)) !important;
+  background-image: linear-gradient(90deg, #10b981, #38bdf8, #f59e0b) !important;
 }
 
 .vps-theme-glass .vps-metric-chart {
@@ -2875,3 +2877,116 @@ onUnmounted(() => {
   background: rgba(15, 23, 42, 0.6) !important;
 }
 </style>
+.vps-theme-fresh .vps-metric-chart-shell {
+  border-color: rgba(186, 230, 253, 0.6) !important;
+  background: rgba(239, 246, 255, 0.92) !important;
+}
+
+.vps-theme-fresh .node-section-accent {
+  color: #0ea5e9 !important;
+}
+
+.vps-theme-fresh .vps-latency-shell {
+  border-color: rgba(186, 230, 253, 0.6) !important;
+  background: rgba(239, 246, 255, 0.6) !important;
+}
+
+.dark .vps-theme-fresh .vps-latency-shell {
+  border-color: rgba(56, 189, 248, 0.28) !important;
+  background: rgba(8, 16, 31, 0.55) !important;
+}
+
+.vps-theme-fresh .latency-guideline {
+  color: rgba(14, 165, 233, 0.55) !important;
+}
+
+.dark .vps-theme-fresh .vps-metric-chart-shell {
+  border-color: rgba(56, 189, 248, 0.28) !important;
+  background: rgba(8, 16, 31, 0.8) !important;
+}
+
+.vps-theme-minimal .vps-metric-chart-shell {
+  border-color: rgba(226, 232, 240, 0.9) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.vps-theme-minimal .node-section-accent {
+  color: #475569 !important;
+}
+
+.vps-theme-minimal .vps-latency-shell {
+  border-color: rgba(226, 232, 240, 0.9) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+}
+
+.dark .vps-theme-minimal .vps-latency-shell {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+}
+
+.vps-theme-minimal .latency-guideline {
+  color: rgba(71, 85, 105, 0.35) !important;
+}
+
+.dark .vps-theme-minimal .vps-metric-chart-shell {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(15, 23, 42, 0.8) !important;
+}
+
+.vps-theme-tech .vps-metric-chart-shell {
+  border-color: rgba(34, 211, 238, 0.3) !important;
+  background: rgba(240, 253, 250, 0.85) !important;
+}
+
+.vps-theme-tech .node-section-accent {
+  color: #22d3ee !important;
+}
+
+.vps-theme-tech .vps-latency-shell {
+  border-color: rgba(34, 211, 238, 0.3) !important;
+  background: rgba(240, 253, 250, 0.55) !important;
+}
+
+.dark .vps-theme-tech .vps-latency-shell {
+  border-color: rgba(34, 211, 238, 0.22) !important;
+  background: rgba(6, 10, 22, 0.6) !important;
+}
+
+.vps-theme-tech .latency-guideline {
+  color: rgba(34, 211, 238, 0.5) !important;
+}
+
+.dark .vps-theme-tech .vps-metric-chart-shell {
+  border-color: rgba(34, 211, 238, 0.22) !important;
+  background: rgba(6, 10, 22, 0.88) !important;
+}
+
+.vps-theme-glass .vps-metric-chart-shell {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(12px);
+}
+
+.vps-theme-glass .node-section-accent {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.vps-theme-glass .vps-latency-shell {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(14px);
+}
+
+.dark .vps-theme-glass .vps-latency-shell {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(15, 23, 42, 0.55) !important;
+}
+
+.vps-theme-glass .latency-guideline {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+.dark .vps-theme-glass .vps-metric-chart-shell {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+}
