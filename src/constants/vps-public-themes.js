@@ -18,9 +18,9 @@ export const VPS_PUBLIC_THEME_PRESETS = {
     themeClass: 'vps-theme-default',
     backdrop: ''
   },
-  komari: {
-    key: 'komari',
-    label: 'Komari 风',
+  fresh: {
+    key: 'fresh',
+    label: '清爽',
     layout: 'hero-split',
     root: 'text-slate-900 dark:text-slate-100',
     heroBadge: 'border-sky-100 bg-transparent text-sky-700 dark:border-sky-900/40 dark:bg-transparent dark:text-sky-300',
@@ -34,7 +34,7 @@ export const VPS_PUBLIC_THEME_PRESETS = {
     accentButton: 'border-sky-200 bg-sky-500 text-white shadow-lg shadow-sky-500/22 dark:border-sky-700 dark:bg-sky-600 dark:shadow-lg dark:shadow-sky-600/30',
     nodeCard: 'border-sky-100 bg-white/94 shadow-[0_18px_34px_-26px_rgba(56,189,248,0.35)] dark:border-sky-900/40 dark:bg-sky-900/30 dark:shadow-[0_18px_34px_-26px_rgba(56,189,248,0.2)]',
     detailTable: 'text-slate-800 dark:text-slate-200',
-    themeClass: 'vps-theme-komari',
+    themeClass: 'vps-theme-fresh',
     backdrop: ''
   },
   minimal: {
@@ -105,9 +105,9 @@ export const VPS_PUBLIC_THEME_PREVIEW_CARDS = [
     accentClass: 'bg-stone-800'
   },
   {
-    key: 'komari',
-    title: 'Komari 风',
-    description: '明亮卡片 + 分栏头图，适合做对外展示首页。',
+    key: 'fresh',
+    title: '清爽',
+    description: '清爽卡片 + 分栏头图，适合对外展示。',
     previewClass: 'from-sky-100 via-white to-indigo-100',
     accentClass: 'bg-sky-500'
   },

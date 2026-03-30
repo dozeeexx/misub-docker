@@ -615,6 +615,317 @@ onUnmounted(() => {
   height: 0.3rem;
 }
 
+.vps-theme-default .node-group-pill {
+  border-color: rgba(191, 170, 150, 0.6);
+  background: rgba(252, 244, 235, 0.9);
+  color: #7c5e45;
+}
+
+.vps-theme-default .node-load-pill {
+  border-color: rgba(226, 216, 203, 0.8);
+  background: rgba(253, 248, 241, 0.9);
+  color: #6a5f54;
+}
+
+.dark .vps-theme-default .node-group-pill {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.8);
+  color: #cbd5f5;
+}
+
+.dark .vps-theme-default .node-load-pill {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.75);
+  color: #94a3b8;
+}
+
+.vps-theme-default .node-back-divider {
+  border-color: rgba(226, 216, 203, 0.7) !important;
+}
+
+.vps-theme-default .node-status-pill {
+  border-color: rgba(191, 170, 150, 0.6) !important;
+  background: rgba(252, 244, 235, 0.9) !important;
+  color: #7c5e45 !important;
+}
+
+.dark .vps-theme-default .node-status-pill {
+  border-color: rgba(148, 163, 184, 0.35) !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  color: #e2e8f0 !important;
+}
+
+.vps-theme-default .node-detail-metric {
+  border-color: rgba(226, 216, 203, 0.7) !important;
+  background: rgba(253, 248, 241, 0.9) !important;
+}
+
+.dark .vps-theme-default .node-detail-metric {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+}
+
+.vps-theme-default .node-status-bar {
+  background-image: linear-gradient(90deg, #10b981, #38bdf8, #f59e0b) !important;
+}
+
+.vps-theme-default .node-sparkline-line {
+  color: #0ea5e9;
+}
+
+.vps-theme-fresh .node-detail-modal {
+  border-color: rgba(186, 230, 253, 0.45) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+}
+
+.dark .vps-theme-fresh .node-detail-modal {
+  border-color: rgba(56, 189, 248, 0.28) !important;
+  background: rgba(8, 16, 31, 0.92) !important;
+}
+
+.vps-theme-minimal .node-detail-modal {
+  border-color: rgba(203, 213, 225, 0.6) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+}
+
+.dark .vps-theme-minimal .node-detail-modal {
+  border-color: rgba(148, 163, 184, 0.35) !important;
+  background: rgba(15, 23, 42, 0.92) !important;
+}
+
+.vps-theme-tech .node-detail-modal {
+  border-color: rgba(34, 211, 238, 0.4) !important;
+  background: rgba(240, 253, 250, 0.96) !important;
+}
+
+.dark .vps-theme-tech .node-detail-modal {
+  border-color: rgba(34, 211, 238, 0.28) !important;
+  background: rgba(6, 10, 22, 0.94) !important;
+}
+
+.vps-theme-glass .node-detail-modal {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(18px);
+}
+
+.dark .vps-theme-glass .node-detail-modal {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(15, 23, 42, 0.7) !important;
+}
+
+.vps-theme-fresh .node-detail-header {
+  border-color: rgba(186, 230, 253, 0.4) !important;
+  background: rgba(239, 246, 255, 0.85) !important;
+}
+
+.dark .vps-theme-fresh .node-detail-header {
+  border-color: rgba(56, 189, 248, 0.3) !important;
+  background: rgba(8, 16, 31, 0.85) !important;
+}
+
+.vps-theme-fresh .node-detail-icon {
+  background: rgba(14, 165, 233, 0.12) !important;
+  color: #0ea5e9 !important;
+}
+
+.vps-theme-fresh .node-detail-toggle {
+  border-color: rgba(186, 230, 253, 0.5) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+.dark .vps-theme-fresh .node-detail-toggle {
+  border-color: rgba(56, 189, 248, 0.25) !important;
+  background: rgba(8, 16, 31, 0.8) !important;
+}
+
+.vps-theme-fresh .node-detail-close {
+  background: rgba(226, 232, 240, 0.7) !important;
+}
+
+.dark .vps-theme-fresh .node-detail-close {
+  background: rgba(15, 23, 42, 0.8) !important;
+}
+
+.vps-theme-fresh .node-detail-spinner {
+  border-color: #0ea5e9 !important;
+  border-top-color: transparent !important;
+}
+
+.vps-theme-fresh .node-detail-error {
+  border-color: rgba(186, 230, 253, 0.5) !important;
+  background: rgba(239, 246, 255, 0.85) !important;
+}
+
+.dark .vps-theme-fresh .node-detail-error {
+  border-color: rgba(56, 189, 248, 0.25) !important;
+  background: rgba(8, 16, 31, 0.85) !important;
+}
+
+.vps-theme-fresh .node-detail-retry {
+  background: #0ea5e9 !important;
+}
+
+.vps-theme-minimal .node-detail-header {
+  border-color: rgba(226, 232, 240, 0.6) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.dark .vps-theme-minimal .node-detail-header {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(15, 23, 42, 0.9) !important;
+}
+
+.vps-theme-minimal .node-detail-icon {
+  background: rgba(226, 232, 240, 0.7) !important;
+  color: #334155 !important;
+}
+
+.vps-theme-minimal .node-detail-toggle {
+  border-color: rgba(226, 232, 240, 0.6) !important;
+  background: rgba(248, 250, 252, 0.9) !important;
+}
+
+.dark .vps-theme-minimal .node-detail-toggle {
+  border-color: rgba(148, 163, 184, 0.25) !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+}
+
+.vps-theme-minimal .node-detail-close {
+  background: rgba(226, 232, 240, 0.6) !important;
+}
+
+.dark .vps-theme-minimal .node-detail-close {
+  background: rgba(15, 23, 42, 0.8) !important;
+}
+
+.vps-theme-minimal .node-detail-spinner {
+  border-color: #64748b !important;
+  border-top-color: transparent !important;
+}
+
+.vps-theme-minimal .node-detail-error {
+  border-color: rgba(226, 232, 240, 0.5) !important;
+  background: rgba(248, 250, 252, 0.9) !important;
+}
+
+.dark .vps-theme-minimal .node-detail-error {
+  border-color: rgba(148, 163, 184, 0.25) !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+}
+
+.vps-theme-minimal .node-detail-retry {
+  background: #111827 !important;
+}
+
+.vps-theme-tech .node-detail-header {
+  border-color: rgba(34, 211, 238, 0.35) !important;
+  background: rgba(236, 254, 255, 0.85) !important;
+}
+
+.dark .vps-theme-tech .node-detail-header {
+  border-color: rgba(34, 211, 238, 0.25) !important;
+  background: rgba(6, 10, 22, 0.9) !important;
+}
+
+.vps-theme-tech .node-detail-icon {
+  background: rgba(34, 211, 238, 0.15) !important;
+  color: #0e7490 !important;
+}
+
+.vps-theme-tech .node-detail-toggle {
+  border-color: rgba(34, 211, 238, 0.3) !important;
+  background: rgba(224, 231, 255, 0.8) !important;
+}
+
+.dark .vps-theme-tech .node-detail-toggle {
+  border-color: rgba(34, 211, 238, 0.2) !important;
+  background: rgba(6, 10, 22, 0.85) !important;
+}
+
+.vps-theme-tech .node-detail-close {
+  background: rgba(224, 231, 255, 0.7) !important;
+}
+
+.dark .vps-theme-tech .node-detail-close {
+  background: rgba(6, 10, 22, 0.8) !important;
+}
+
+.vps-theme-tech .node-detail-spinner {
+  border-color: #22d3ee !important;
+  border-top-color: transparent !important;
+}
+
+.vps-theme-tech .node-detail-error {
+  border-color: rgba(34, 211, 238, 0.35) !important;
+  background: rgba(236, 254, 255, 0.85) !important;
+}
+
+.dark .vps-theme-tech .node-detail-error {
+  border-color: rgba(34, 211, 238, 0.2) !important;
+  background: rgba(6, 10, 22, 0.9) !important;
+}
+
+.vps-theme-tech .node-detail-retry {
+  background: #22d3ee !important;
+  color: #0b1226 !important;
+}
+
+.vps-theme-glass .node-detail-header {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(18px);
+}
+
+.dark .vps-theme-glass .node-detail-header {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+}
+
+.vps-theme-glass .node-detail-icon {
+  background: rgba(255, 255, 255, 0.35) !important;
+  color: #1e293b !important;
+}
+
+.vps-theme-glass .node-detail-toggle {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+}
+
+.dark .vps-theme-glass .node-detail-toggle {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+}
+
+.vps-theme-glass .node-detail-close {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+.dark .vps-theme-glass .node-detail-close {
+  background: rgba(15, 23, 42, 0.65) !important;
+}
+
+.vps-theme-glass .node-detail-spinner {
+  border-color: rgba(255, 255, 255, 0.8) !important;
+  border-top-color: transparent !important;
+}
+
+.vps-theme-glass .node-detail-error {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(16px);
+}
+
+.dark .vps-theme-glass .node-detail-error {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+}
+
+.vps-theme-glass .node-detail-retry {
+  background: rgba(255, 255, 255, 0.75) !important;
+  color: #0f172a !important;
+}
+
 .vps-theme-default .vps-node-card .node-title {
   font-size: 0.95rem;
   letter-spacing: -0.01em;
@@ -645,13 +956,35 @@ onUnmounted(() => {
 }
 
 .vps-theme-default .vps-anomaly-section .relative > div {
-  border-color: rgba(239, 206, 186, 0.6);
-  background: rgba(255, 248, 244, 0.75);
+  border-color: rgba(226, 192, 176, 0.55);
+  background: rgba(255, 248, 244, 0.85);
 }
 
 .dark .vps-theme-default .vps-anomaly-section .relative > div {
-  border-color: rgba(148, 163, 184, 0.25);
-  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.vps-theme-default .anomaly-card {
+  border-color: rgba(226, 192, 176, 0.45);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.vps-theme-default .anomaly-status {
+  background: rgba(251, 207, 194, 0.45);
+}
+
+.dark .vps-theme-default .anomaly-card {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.vps-theme-default .anomaly-tag {
+  background: #f97316;
+}
+
+.vps-theme-default .anomaly-link {
+  background: #f97316;
 }
 
 
@@ -681,7 +1014,7 @@ onUnmounted(() => {
     <component :is="'style'" v-if="sanitizedCustomCss">{{ sanitizedCustomCss }}</component>
     <div class="relative">
       <div class="relative max-w-6xl mx-auto px-6 pt-16 pb-12 vps-public-hero" :class="publicLayout.headerEnabled === false ? 'pt-10 pb-6' : ''">
-        <div v-if="publicLayout.headerEnabled === false" class="fixed right-6 bottom-6 z-40 vps-theme-toggle">
+        <div v-if="publicLayout.headerEnabled === false" class="absolute right-6 top-6 z-40 vps-theme-toggle">
           <ThemeToggle />
         </div>
         <div class="flex flex-col gap-8" :class="layoutClass === 'hero-split' ? 'lg:flex-row lg:items-center lg:justify-between' : 'lg:flex-row lg:items-end lg:justify-between'">
@@ -769,8 +1102,8 @@ onUnmounted(() => {
         <div v-else class="flex flex-col gap-8 lg:gap-10">
           <!-- Anomaly/Alert Section (New) -->
           <div v-if="showAnomalies && anomalyNodes.length > 0" class="relative group vps-anomaly-section" :style="sectionOrderStyle('anomalies')">
-            <div class="absolute -inset-1 bg-gradient-to-r from-rose-500/10 to-orange-500/10 rounded-[28px] blur-lg opacity-35 group-hover:opacity-55 transition duration-700"></div>
-            <div class="relative rounded-[20px] border border-rose-200/35 bg-rose-50/8 backdrop-blur-2xl p-4 dark:border-rose-900/22 dark:bg-rose-900/8">
+            <div class="absolute -inset-1 rounded-[28px] bg-gradient-to-r from-rose-500/8 to-orange-500/8 opacity-40 blur-lg transition duration-700 group-hover:opacity-60"></div>
+            <div class="relative rounded-[20px] border border-rose-200/45 bg-white/75 p-4 dark:border-rose-900/28 dark:bg-slate-900/55">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2.5">
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/20 text-rose-500 animate-pulse anomaly-icon">
@@ -795,31 +1128,31 @@ onUnmounted(() => {
             </div>
 
             <div v-if="anomalyExpanded" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <article v-for="node in anomalyNodes" :key="node.id" class="rounded-[18px] border border-rose-200/60 bg-white/60 p-3 dark:border-rose-900/30 dark:bg-slate-900/55">
-                <div class="relative mb-2 h-1 w-full rounded-full bg-rose-100 dark:bg-slate-800">
+              <article v-for="node in anomalyNodes" :key="node.id" class="rounded-[18px] border border-rose-200/50 bg-white/85 p-3 dark:border-rose-900/28 dark:bg-slate-900/55 anomaly-card">
+                <div class="relative mb-2 h-1 w-full rounded-full bg-rose-100 dark:bg-slate-800 anomaly-status">
                   <div class="h-1 rounded-full bg-rose-500" :style="{ width: node.status === 'offline' ? '88%' : '72%' }"></div>
                 </div>
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
                       <img v-if="node.countryCode" :src="`https://flagcdn.com/w20/${node.countryCode.toLowerCase()}.png`" class="h-3 rounded-sm opacity-90" alt="" @error="getFlagFallback" />
-                      <p class="truncate text-sm font-bold text-rose-900 dark:text-rose-300">{{ node.name || node.id }}</p>
+                      <p class="truncate text-sm font-bold text-rose-900 dark:text-rose-300 anomaly-name">{{ node.name || node.id }}</p>
                     </div>
-                    <p class="mt-1 truncate text-[10px] uppercase tracking-tight text-rose-700/65 dark:text-rose-400/60">{{ node.region || '未知地区' }} · {{ node.status === 'offline' ? '连接异常' : '负载告警' }}</p>
+                    <p class="mt-1 truncate text-[10px] uppercase tracking-tight text-rose-700/65 dark:text-rose-400/60 anomaly-meta">{{ node.region || '未知地区' }} · {{ node.status === 'offline' ? '连接异常' : '负载告警' }}</p>
                   </div>
-                  <span class="shrink-0 rounded-lg bg-rose-500 px-2 py-1 text-[9px] font-bold text-white">{{ node.status === 'online' ? '高负载' : '离线' }}</span>
+                  <span class="shrink-0 rounded-lg bg-rose-500 px-2 py-1 text-[9px] font-bold text-white anomaly-tag">{{ node.status === 'online' ? '高负载' : '离线' }}</span>
                 </div>
-                <div class="mt-2 grid grid-cols-2 gap-2 text-[10px] font-medium text-rose-700/80 dark:text-rose-300/75">
+                <div class="mt-2 grid grid-cols-2 gap-2 text-[10px] font-medium text-rose-700/80 dark:text-rose-300/75 anomaly-metrics">
                   <div :class="{ 'text-rose-600 font-bold': (node.latest?.cpu?.usage ?? node.latest?.cpuPercent) >= 85 }">CPU {{ formatPercent(node.latest?.cpu?.usage ?? node.latest?.cpuPercent) }}</div>
                   <div :class="{ 'text-rose-600 font-bold': (node.latest?.mem?.usage ?? node.latest?.memPercent) >= 90 }">内存 {{ formatPercent(node.latest?.mem?.usage ?? node.latest?.memPercent) }}</div>
                 </div>
-                <div class="mt-2 flex items-center justify-between border-t border-rose-200/50 pt-2 dark:border-rose-900/35">
+                <div class="mt-2 flex items-center justify-between border-t border-rose-200/50 pt-2 dark:border-rose-900/35 anomaly-footer">
                   <span class="truncate text-[9px] font-mono text-rose-500/85">{{ lastUpdatedAt }}</span>
-                  <button @click="openNodeDetail(node.id)" class="rounded-lg bg-rose-500 px-2 py-1 text-[10px] font-bold text-white transition-colors hover:bg-rose-600">诊断详情</button>
+                  <button @click="openNodeDetail(node.id)" class="rounded-lg bg-rose-500 px-2 py-1 text-[10px] font-bold text-white transition-colors hover:bg-rose-600 anomaly-link">诊断详情</button>
                 </div>
               </article>
             </div>
-            <div v-else class="rounded-[18px] border border-dashed border-rose-300/55 bg-white/50 px-4 py-3 text-xs text-rose-700/80 dark:border-rose-800/55 dark:bg-slate-900/35 dark:text-rose-300/80">
+            <div v-else class="rounded-[18px] border border-dashed border-rose-300/55 bg-white/70 px-4 py-3 text-xs text-rose-700/80 dark:border-rose-800/45 dark:bg-slate-900/35 dark:text-rose-300/80">
               异常节点列表已默认收起，点击右上角“展开异常”查看详情。
             </div>
           </div>
@@ -862,7 +1195,7 @@ onUnmounted(() => {
                         <span class="h-0.5 w-2 bg-white/70 dark:bg-white/20"></span>
                       </div>
                       <div
-                        class="h-1 rounded-full bg-gradient-to-r"
+                        class="h-1 rounded-full bg-gradient-to-r node-status-bar"
                         :class="node.status === 'online'
                           ? 'from-emerald-500 via-sky-400 to-amber-400'
                           : 'from-rose-500 via-orange-400 to-amber-300'"
@@ -888,15 +1221,15 @@ onUnmounted(() => {
                           <span class="ml-1 opacity-70">| 📊 {{ formatTotalTraffic(node.totalRx + node.totalTx) }}</span>
                         </p>
                         <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px] node-badges">
-                          <span class="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50/70 px-2 py-0.5 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 node-pill">
+                          <span class="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50/70 px-2 py-0.5 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 node-pill node-group-pill">
                             组: {{ node.groupTag || '未分组' }}
                           </span>
-                          <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 node-pill">
+                          <span class="inline-flex items-center gap-1 rounded-full border border-[#efe6db] bg-white/70 px-2 py-0.5 text-[#6a5f54] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 node-pill node-load-pill">
                             ⚡ 负载: {{ formatLoad(node.latest?.load1 ?? node.latest?.load?.load1) }}
                           </span>
                         </div>
                       </div>
-                      <span class="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] node-pill"
+                      <span class="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] node-pill node-status-pill"
                         :class="node.status === 'online'
                           ? 'border-[#bbf7d0] bg-[#ecfdf3] text-[#0f766e] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300'
                           : 'border-[#fecdd3] bg-[#fff1f2] text-[#be123c] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300'"
@@ -906,7 +1239,7 @@ onUnmounted(() => {
                     </div>
                     <div class="mt-3 flex items-center justify-between node-sparkline">
                       <svg viewBox="0 0 120 32" class="h-7 w-24">
-                        <polyline :points="nodeSparkline(node)" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" />
+                        <polyline :points="nodeSparkline(node)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="node-sparkline-line" />
                       </svg>
                       <span class="text-[9px] text-[#8a7f70] dark:text-slate-400 node-sparkline-label">CPU/MEM/DISK</span>
                     </div>
@@ -917,7 +1250,7 @@ onUnmounted(() => {
                       <div>流量 {{ formatTraffic(node.latest?.traffic) }}</div>
                     </div>
                     <!-- Traffic Limit Progress -->
-                    <div v-if="node.trafficLimitGb > 0" class="mt-4 border-t border-[#efe6db]/60 pt-3 dark:border-slate-800/60">
+                    <div v-if="node.trafficLimitGb > 0" class="mt-4 border-t border-[#efe6db]/60 pt-3 dark:border-slate-800/60 node-limit">
                       <div class="mb-1 flex items-center justify-end text-[10px] text-emerald-600 dark:text-emerald-400">
                         <span class="font-medium text-[#6a5f54] dark:text-slate-300">限额: {{ node.trafficLimitGb }} GB</span>
                       </div>
@@ -968,7 +1301,7 @@ onUnmounted(() => {
                     </div>
 
                     <!-- History Detail Button -->
-                    <div class="mt-auto border-t border-[#efe6db]/60 pt-2.5 dark:border-slate-800/60">
+                    <div class="mt-auto border-t border-[#efe6db]/60 pt-2.5 dark:border-slate-800/60 node-back-divider">
                       <button 
                         @click.stop="openNodeDetail(node.id)"
                         class="w-full rounded-xl bg-blue-500/10 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 transition-all hover:bg-blue-500 hover:text-white dark:bg-blue-500/20 dark:text-blue-400"
@@ -1119,11 +1452,11 @@ onUnmounted(() => {
               enter-to-class="transform scale-100 translate-y-0 opacity-100"
               appear
             >
-              <div class="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[24px] shadow-2xl border border-white/20 overflow-hidden flex flex-col max-h-[90vh]" role="dialog" aria-modal="true" :aria-labelledby="detailTitleId" tabindex="-1">
+              <div class="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[24px] shadow-2xl border border-white/20 overflow-hidden flex flex-col max-h-[90vh] node-detail-modal" role="dialog" aria-modal="true" :aria-labelledby="detailTitleId" tabindex="-1">
                 <!-- Header -->
-                <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
+                <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10 node-detail-header">
                   <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-[18px] bg-blue-500/10 text-blue-500">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-[18px] bg-blue-500/10 text-blue-500 node-detail-icon">
                       <span class="text-xl">📈</span>
                     </div>
                     <div>
@@ -1139,14 +1472,14 @@ onUnmounted(() => {
                   </div>
                   
                   <div class="flex items-center gap-4">
-                    <div class="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-white dark:bg-slate-800 rounded-[18px] border border-slate-100 dark:border-slate-700 shadow-sm">
+                    <div class="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-white dark:bg-slate-800 rounded-[18px] border border-slate-100 dark:border-slate-700 shadow-sm node-detail-toggle">
                       <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">曲线平滑</span>
                       <Switch v-model="isSmooth" size="sm" />
                     </div>
                     <button 
                       ref="detailCloseButtonRef"
                       @click="closeNodeDetail"
-                      class="flex items-center justify-center w-10 h-10 rounded-[18px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+                      class="flex items-center justify-center w-10 h-10 rounded-[18px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 node-detail-close"
                       aria-label="关闭节点详情弹窗"
                     >
                       <span class="block text-xl leading-none -translate-y-px">×</span>
@@ -1156,17 +1489,17 @@ onUnmounted(() => {
 
                 <!-- Body -->
                 <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                  <div v-if="nodeDetailData.loading" class="h-[300px] flex items-center justify-center">
+                  <div v-if="nodeDetailData.loading" class="h-[300px] flex items-center justify-center node-detail-loading">
                     <div class="flex flex-col items-center gap-4">
-                      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin node-detail-spinner"></div>
                       <p class="text-xs text-slate-500 dark:text-slate-400 animate-pulse font-medium">正在拉取历史多点采样数据...</p>
                     </div>
                   </div>
-                  <div v-else-if="nodeDetailData.error" aria-live="assertive" class="h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-rose-100 dark:border-rose-900/40 rounded-[20px] bg-rose-50/40 dark:bg-rose-950/10">
+                  <div v-else-if="nodeDetailData.error" aria-live="assertive" class="h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-rose-100 dark:border-rose-900/40 rounded-[20px] bg-rose-50/40 dark:bg-rose-950/10 node-detail-error">
                     <span class="text-3xl mb-3 opacity-60">⚠</span>
                     <p class="text-sm text-rose-600 dark:text-rose-300 font-medium">{{ nodeDetailData.error }}</p>
                     <button
-                      class="mt-4 rounded-xl bg-rose-500 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-600"
+                      class="mt-4 rounded-xl bg-rose-500 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-600 node-detail-retry"
                       @click="openNodeDetail(selectedNodeId)"
                     >
                       重试加载
@@ -1180,7 +1513,7 @@ onUnmounted(() => {
                         { label: '采样总量', val: nodeDetailData.samples.length + ' 组' },
                         { label: '覆盖时长', val: '约 48 小时' },
                         { label: '状态更新', val: '实时同步' }
-                      ]" :key="metric.label" class="p-3 bg-slate-50/80 dark:bg-slate-800/40 rounded-[18px] border border-slate-100 dark:border-slate-800">
+                      ]" :key="metric.label" class="p-3 bg-slate-50/80 dark:bg-slate-800/40 rounded-[18px] border border-slate-100 dark:border-slate-800 node-detail-metric">
                         <p class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mb-1">{{ metric.label }}</p>
                         <p class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ metric.val }}</p>
                       </div>
@@ -1240,210 +1573,299 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.vps-theme-komari h1,
-.vps-theme-komari h2,
-.vps-theme-komari h3,
-.vps-theme-komari h4,
-.vps-theme-komari summary,
-.vps-theme-komari table,
-.vps-theme-komari .vps-card-front,
-.vps-theme-komari .vps-card-back {
+.vps-theme-fresh h1,
+.vps-theme-fresh h2,
+.vps-theme-fresh h3,
+.vps-theme-fresh h4,
+.vps-theme-fresh summary,
+.vps-theme-fresh table,
+.vps-theme-fresh .vps-card-front,
+.vps-theme-fresh .vps-card-back {
   color: #0f172a;
 }
 
-.dark .vps-theme-komari h1,
-.dark .vps-theme-komari h2,
-.dark .vps-theme-komari h3,
-.dark .vps-theme-komari h4,
-.dark .vps-theme-komari summary,
-.dark .vps-theme-komari table,
-.dark .vps-theme-komari .vps-card-front,
-.dark .vps-theme-komari .vps-card-back {
+.dark .vps-theme-fresh h1,
+.dark .vps-theme-fresh h2,
+.dark .vps-theme-fresh h3,
+.dark .vps-theme-fresh h4,
+.dark .vps-theme-fresh summary,
+.dark .vps-theme-fresh table,
+.dark .vps-theme-fresh .vps-card-front,
+.dark .vps-theme-fresh .vps-card-back {
   color: #e2e8f0;
 }
 
-.dark .vps-theme-komari .vps-card-front,
-.dark .vps-theme-komari .vps-card-back {
+.dark .vps-theme-fresh .vps-card-front,
+.dark .vps-theme-fresh .vps-card-back {
   background: rgba(8, 16, 31, 0.7) !important;
 }
 
-.vps-theme-komari .theme-komari {
+.vps-theme-fresh .theme-fresh {
   background-image:
     radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.15), transparent 32%),
     radial-gradient(circle at 82% 14%, rgba(99, 102, 241, 0.1), transparent 26%),
     linear-gradient(180deg, #f0f4f8 0%, #e6f0ff 55%, #f0f8ff 100%);
 }
 
-.vps-theme-komari .vps-public-hero {
+.vps-theme-fresh .vps-public-hero {
   font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-.vps-theme-komari .layout-hero-split .vps-public-hero {
+.vps-theme-fresh .layout-hero-split .vps-public-hero {
   padding-bottom: 1.5rem;
 }
 
-.vps-theme-komari .floating-filterbar {
+.vps-theme-fresh .floating-filterbar {
   font-weight: 600;
 }
 
-.vps-theme-komari h1,
-.vps-theme-komari h2,
-.vps-theme-komari h3,
-.vps-theme-komari h4 {
+.vps-theme-fresh h1,
+.vps-theme-fresh h2,
+.vps-theme-fresh h3,
+.vps-theme-fresh h4 {
   font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: -0.02em;
 }
 
-.dark .vps-theme-komari .theme-komari {
+.dark .vps-theme-fresh .theme-fresh {
   background-image:
     radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.15), transparent 32%),
     radial-gradient(circle at 82% 14%, rgba(99, 102, 241, 0.1), transparent 26%),
     linear-gradient(180deg, #0f172a 0%, #1e293b 55%, #0f172a 100%);
 }
 
-.vps-theme-komari .vps-card-front,
-.vps-theme-komari .vps-card-back,
-.vps-theme-komari details,
-.vps-theme-komari article {
+.vps-theme-fresh .vps-card-front,
+.vps-theme-fresh .vps-card-back,
+.vps-theme-fresh details,
+.vps-theme-fresh article {
   border-color: rgba(186, 230, 253, 0.9) !important;
 }
 
-.vps-theme-komari .relative.group {
+.vps-theme-fresh .relative.group {
   background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(99, 102, 241, 0.06));
   border-radius: 32px;
   padding: 1px;
 }
 
-.vps-theme-komari .relative.group > div {
+.vps-theme-fresh .relative.group > div {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 31px;
   backdrop-filter: blur(10px);
 }
 
-.vps-theme-komari .vps-card-front,
-.vps-theme-komari .vps-card-back {
+.vps-theme-fresh .vps-card-front,
+.vps-theme-fresh .vps-card-back {
   background: rgba(255, 255, 255, 0.9) !important;
   box-shadow: 0 12px 32px -24px rgba(14, 165, 233, 0.25);
 }
 
-.vps-theme-komari .vps-card-front,
-.vps-theme-komari .vps-card-back {
+.vps-theme-fresh .vps-card-front,
+.vps-theme-fresh .vps-card-back {
   box-shadow: 0 14px 36px -28px rgba(14, 165, 233, 0.25);
 }
 
-.dark .vps-theme-komari .vps-card-front,
-.dark .vps-theme-komari .vps-card-back,
-.dark .vps-theme-komari details,
-.dark .vps-theme-komari article {
+.dark .vps-theme-fresh .vps-card-front,
+.dark .vps-theme-fresh .vps-card-back,
+.dark .vps-theme-fresh details,
+.dark .vps-theme-fresh article {
   border-color: rgba(14, 165, 233, 0.3) !important;
 }
 
-.vps-theme-komari p,
-.vps-theme-komari span,
-.vps-theme-komari td,
-.vps-theme-komari th {
+.vps-theme-fresh p,
+.vps-theme-fresh span,
+.vps-theme-fresh td,
+.vps-theme-fresh th {
   color: inherit;
 }
 
-.vps-theme-komari .rounded-\[26px\].border.p-4.sm\:p-5 {
+.vps-theme-fresh .rounded-\[26px\].border.p-4.sm\:p-5 {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 249, 255, 0.8));
   border: 1px solid rgba(186, 230, 253, 0.7) !important;
   box-shadow: 0 16px 48px -32px rgba(14, 165, 233, 0.3);
 }
 
-.vps-theme-komari .floating-filterbar {
+.vps-theme-fresh .floating-filterbar {
   background: rgba(255, 255, 255, 0.72);
   border-color: rgba(125, 211, 252, 0.35);
 }
 
-.vps-theme-komari .vps-card-front,
-.vps-theme-komari .vps-card-back,
-.vps-theme-komari details,
-.vps-theme-komari article {
+.vps-theme-fresh .vps-card-front,
+.vps-theme-fresh .vps-card-back,
+.vps-theme-fresh details,
+.vps-theme-fresh article {
   border-color: rgba(125, 211, 252, 0.45) !important;
 }
 
-.dark .vps-theme-komari .vps-card-front,
-.dark .vps-theme-komari .vps-card-back,
-.dark .vps-theme-komari details,
-.dark .vps-theme-komari article {
+.dark .vps-theme-fresh .vps-card-front,
+.dark .vps-theme-fresh .vps-card-back,
+.dark .vps-theme-fresh details,
+.dark .vps-theme-fresh article {
   border-color: rgba(56, 189, 248, 0.25) !important;
 }
 
-.vps-theme-komari .vps-featured-section {
+.vps-theme-fresh .vps-featured-section {
   box-shadow: 0 28px 70px -50px rgba(56, 189, 248, 0.4);
 }
 
-.vps-theme-komari .vps-anomaly-section .relative > div {
+.vps-theme-fresh .vps-anomaly-section .relative > div {
   border-radius: 20px;
 }
 
-.vps-theme-komari .vps-anomaly-section .relative > div {
-  border-color: rgba(147, 197, 253, 0.45);
-  background: rgba(239, 246, 255, 0.7);
+.vps-theme-fresh .vps-anomaly-section .relative > div {
+  border-color: rgba(147, 197, 253, 0.4);
+  background: rgba(239, 246, 255, 0.82);
 }
 
-.dark .vps-theme-komari .vps-anomaly-section .relative > div {
-  border-color: rgba(56, 189, 248, 0.25);
-  background: rgba(15, 23, 42, 0.5);
+.dark .vps-theme-fresh .vps-anomaly-section .relative > div {
+  border-color: rgba(56, 189, 248, 0.28);
+  background: rgba(15, 23, 42, 0.6);
 }
 
-.vps-theme-komari .vps-node-front,
-.vps-theme-komari .vps-node-back {
+.vps-theme-fresh .anomaly-card {
+  border-color: rgba(125, 211, 252, 0.4);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.vps-theme-fresh .anomaly-status {
+  background: rgba(186, 230, 253, 0.6);
+}
+
+.dark .vps-theme-fresh .anomaly-card {
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(8, 16, 31, 0.72);
+}
+
+.vps-theme-fresh .anomaly-tag {
+  background: #0ea5e9;
+}
+
+.vps-theme-fresh .anomaly-link {
+  background: #0ea5e9;
+}
+
+.dark .vps-theme-fresh .anomaly-tag,
+.dark .vps-theme-fresh .anomaly-link {
+  background: #0284c7;
+}
+
+.vps-theme-fresh .vps-node-front,
+.vps-theme-fresh .vps-node-back {
   padding: 1.2rem;
 }
 
-.vps-theme-komari .vps-node-front .node-badges {
+.vps-theme-fresh .vps-node-front .node-badges {
   gap: 0.7rem;
 }
 
-.vps-theme-komari .vps-node-front .node-metrics {
+.vps-theme-fresh .vps-node-front .node-metrics {
   font-weight: 600;
 }
 
-.vps-theme-komari .node-status {
+.vps-theme-fresh .node-status {
   height: 0.32rem;
 }
 
-.vps-theme-komari .vps-node-card .node-title {
+.vps-theme-fresh .node-status {
+  background: rgba(186, 230, 253, 0.7);
+}
+
+.vps-theme-fresh .node-group-pill {
+  border-color: rgba(125, 211, 252, 0.45);
+  background: rgba(186, 230, 253, 0.35);
+  color: #0369a1;
+}
+
+.vps-theme-fresh .node-load-pill {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(241, 245, 249, 0.8);
+  color: #475569;
+}
+
+.dark .vps-theme-fresh .node-group-pill {
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(14, 116, 144, 0.25);
+  color: #7dd3fc;
+}
+
+.dark .vps-theme-fresh .node-load-pill {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.7);
+  color: #cbd5f5;
+}
+
+.vps-theme-fresh .node-back-divider {
+  border-color: rgba(186, 230, 253, 0.4) !important;
+}
+
+.vps-theme-fresh .node-status-pill {
+  border-color: rgba(125, 211, 252, 0.45) !important;
+  background: rgba(14, 165, 233, 0.12) !important;
+  color: #0e7490 !important;
+}
+
+.dark .vps-theme-fresh .node-status-pill {
+  border-color: rgba(56, 189, 248, 0.35) !important;
+  background: rgba(14, 116, 144, 0.2) !important;
+  color: #7dd3fc !important;
+}
+
+.vps-theme-fresh .node-detail-metric {
+  border-color: rgba(186, 230, 253, 0.6) !important;
+  background: rgba(239, 246, 255, 0.9) !important;
+}
+
+.dark .vps-theme-fresh .node-detail-metric {
+  border-color: rgba(56, 189, 248, 0.3) !important;
+  background: rgba(8, 16, 31, 0.85) !important;
+}
+
+.vps-theme-fresh .node-status-bar {
+  background-image: linear-gradient(90deg, #22d3ee, #38bdf8, #818cf8) !important;
+}
+
+.vps-theme-fresh .node-sparkline-line {
+  color: #0ea5e9;
+}
+
+.vps-theme-fresh .vps-node-card .node-title {
   font-size: 0.95rem;
 }
 
-.vps-theme-komari .vps-node-card .node-meta {
+.vps-theme-fresh .vps-node-card .node-meta {
   font-size: 0.72rem;
 }
 
-.vps-theme-komari .vps-node-card .node-metrics {
+.vps-theme-fresh .vps-node-card .node-metrics {
   font-size: 0.72rem;
 }
 
-.vps-theme-komari .detail-table th,
-.vps-theme-komari .detail-table td {
+.vps-theme-fresh .detail-table th,
+.vps-theme-fresh .detail-table td {
   padding-top: 0.7rem;
   padding-bottom: 0.7rem;
 }
 
-.vps-theme-komari .detail-table thead {
+.vps-theme-fresh .detail-table thead {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
 }
 
-.vps-theme-komari .featured-title {
+.vps-theme-fresh .featured-title {
   font-size: 0.95rem;
 }
 
-.vps-theme-komari .featured-badge {
+.vps-theme-fresh .featured-badge {
   font-weight: 600;
   letter-spacing: 0.08em;
 }
 
-.vps-theme-komari .rounded-2xl.border.p-4 {
+.vps-theme-fresh .rounded-2xl.border.p-4 {
   background: rgba(255, 255, 255, 0.85) !important;
   border: 1px solid rgba(186, 230, 253, 0.6) !important;
   box-shadow: 0 8px 24px -16px rgba(14, 165, 233, 0.2);
 }
 
-.vps-theme-komari .rounded-\[22px\].border.p-4 {
+.vps-theme-fresh .rounded-\[22px\].border.p-4 {
   background: rgba(255, 255, 255, 0.9) !important;
   border: 1px solid rgba(186, 230, 253, 0.7) !important;
   box-shadow: 0 12px 32px -20px rgba(14, 165, 233, 0.25);
@@ -1540,6 +1962,64 @@ onUnmounted(() => {
   height: 0.22rem;
 }
 
+.vps-theme-minimal .node-status {
+  background: rgba(226, 232, 240, 0.8);
+}
+
+.vps-theme-minimal .node-group-pill {
+  border-color: rgba(203, 213, 225, 0.8);
+  background: rgba(226, 232, 240, 0.7);
+  color: #334155;
+}
+
+.vps-theme-minimal .node-load-pill {
+  border-color: rgba(226, 232, 240, 0.8);
+  background: rgba(248, 250, 252, 0.9);
+  color: #64748b;
+}
+
+.dark .vps-theme-minimal .node-group-pill {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.8);
+  color: #cbd5f5;
+}
+
+.dark .vps-theme-minimal .node-load-pill {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.75);
+  color: #94a3b8;
+}
+
+.vps-theme-minimal .node-status-pill {
+  border-color: rgba(148, 163, 184, 0.45) !important;
+  background: rgba(226, 232, 240, 0.75) !important;
+  color: #334155 !important;
+}
+
+.dark .vps-theme-minimal .node-status-pill {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(15, 23, 42, 0.7) !important;
+  color: #e2e8f0 !important;
+}
+
+.vps-theme-minimal .node-detail-metric {
+  border-color: rgba(226, 232, 240, 0.8) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.dark .vps-theme-minimal .node-detail-metric {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(15, 23, 42, 0.8) !important;
+}
+
+.vps-theme-minimal .node-status-bar {
+  background-image: linear-gradient(90deg, #94a3b8, #cbd5f5, #e2e8f0) !important;
+}
+
+.vps-theme-minimal .node-sparkline-line {
+  color: #334155;
+}
+
 .vps-theme-minimal .node-sparkline {
   opacity: 0.6;
 }
@@ -1579,12 +2059,35 @@ onUnmounted(() => {
 
 .vps-theme-minimal .vps-anomaly-section .relative > div {
   border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .dark .vps-theme-minimal .vps-anomaly-section .relative > div {
-  border-color: rgba(148, 163, 184, 0.15);
-  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.vps-theme-minimal .anomaly-card {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.vps-theme-minimal .anomaly-status {
+  background: rgba(226, 232, 240, 0.8);
+}
+
+.dark .vps-theme-minimal .anomaly-card {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.vps-theme-minimal .anomaly-tag {
+  background: #111827;
+  color: #f8fafc;
+}
+
+.vps-theme-minimal .anomaly-link {
+  background: #111827;
 }
 
 .dark .vps-theme-minimal .theme-minimal {
@@ -1716,12 +2219,36 @@ onUnmounted(() => {
 
 .vps-theme-tech .vps-anomaly-section .relative > div {
   border-color: rgba(34, 211, 238, 0.3);
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(240, 249, 255, 0.7);
 }
 
 .dark .vps-theme-tech .vps-anomaly-section .relative > div {
+  border-color: rgba(34, 211, 238, 0.22);
+  background: rgba(8, 16, 31, 0.75);
+}
+
+.vps-theme-tech .anomaly-card {
+  border-color: rgba(34, 211, 238, 0.28);
+  background: rgba(236, 254, 255, 0.85);
+}
+
+.vps-theme-tech .anomaly-status {
+  background: rgba(34, 211, 238, 0.15);
+}
+
+.dark .vps-theme-tech .anomaly-card {
   border-color: rgba(34, 211, 238, 0.2);
-  background: rgba(8, 16, 31, 0.7);
+  background: rgba(8, 16, 31, 0.8);
+}
+
+.vps-theme-tech .anomaly-tag {
+  background: #22d3ee;
+  color: #0b1226;
+}
+
+.vps-theme-tech .anomaly-link {
+  background: #22d3ee;
+  color: #0b1226;
 }
 
 .vps-theme-tech .vps-node-front,
@@ -1740,6 +2267,68 @@ onUnmounted(() => {
 
 .vps-theme-tech .node-status {
   height: 0.34rem;
+}
+
+.vps-theme-tech .node-status {
+  background: rgba(165, 243, 252, 0.5);
+}
+
+.vps-theme-tech .node-group-pill {
+  border-color: rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.15);
+  color: #0e7490;
+}
+
+.vps-theme-tech .node-load-pill {
+  border-color: rgba(56, 189, 248, 0.25);
+  background: rgba(224, 231, 255, 0.5);
+  color: #1e40af;
+}
+
+.dark .vps-theme-tech .node-group-pill {
+  border-color: rgba(34, 211, 238, 0.3);
+  background: rgba(8, 145, 178, 0.2);
+  color: #67e8f9;
+}
+
+.dark .vps-theme-tech .node-load-pill {
+  border-color: rgba(56, 189, 248, 0.25);
+  background: rgba(30, 58, 138, 0.25);
+  color: #bfdbfe;
+}
+
+.vps-theme-tech .node-back-divider {
+  border-color: rgba(34, 211, 238, 0.35) !important;
+}
+
+.vps-theme-tech .node-status-pill {
+  border-color: rgba(34, 211, 238, 0.4) !important;
+  background: rgba(34, 211, 238, 0.12) !important;
+  color: #0e7490 !important;
+}
+
+.dark .vps-theme-tech .node-status-pill {
+  border-color: rgba(34, 211, 238, 0.28) !important;
+  background: rgba(8, 145, 178, 0.2) !important;
+  color: #67e8f9 !important;
+}
+
+.vps-theme-tech .node-detail-metric {
+  border-color: rgba(34, 211, 238, 0.3) !important;
+  background: rgba(240, 253, 250, 0.85) !important;
+}
+
+.dark .vps-theme-tech .node-detail-metric {
+  border-color: rgba(34, 211, 238, 0.22) !important;
+  background: rgba(6, 10, 22, 0.9) !important;
+}
+
+.vps-theme-tech .node-status-bar {
+  background-image: linear-gradient(90deg, #22d3ee, #38bdf8, #0ea5e9) !important;
+}
+
+.vps-theme-tech .node-sparkline-line {
+  color: #22d3ee;
 }
 
 .vps-theme-tech .node-sparkline {
@@ -1921,7 +2510,7 @@ onUnmounted(() => {
   letter-spacing: 0.12em;
 }
 
-.vps-theme-komari .vps-theme-toggle button,
+.vps-theme-fresh .vps-theme-toggle button,
 .vps-theme-minimal .vps-theme-toggle button,
 .vps-theme-tech .vps-theme-toggle button,
 .vps-theme-glass .vps-theme-toggle button {
@@ -1930,7 +2519,7 @@ onUnmounted(() => {
   backdrop-filter: blur(10px);
 }
 
-.dark .vps-theme-komari .vps-theme-toggle button,
+.dark .vps-theme-fresh .vps-theme-toggle button,
 .dark .vps-theme-minimal .vps-theme-toggle button,
 .dark .vps-theme-tech .vps-theme-toggle button,
 .dark .vps-theme-glass .vps-theme-toggle button {
@@ -1939,13 +2528,38 @@ onUnmounted(() => {
 }
 
 .vps-theme-glass .vps-anomaly-section .relative > div {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.32);
 }
 
 .dark .vps-theme-glass .vps-anomaly-section .relative > div {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.vps-theme-glass .anomaly-card {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.vps-theme-glass .anomaly-status {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .vps-theme-glass .anomaly-card {
   border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.vps-theme-glass .anomaly-tag {
+  background: rgba(255, 255, 255, 0.65);
+  color: #0f172a;
+}
+
+.vps-theme-glass .anomaly-link {
+  background: rgba(255, 255, 255, 0.75);
+  color: #0f172a;
 }
 
 .vps-theme-glass .vps-node-front,
@@ -1963,6 +2577,69 @@ onUnmounted(() => {
 
 .vps-theme-glass .node-status {
   height: 0.28rem;
+}
+
+.vps-theme-glass .node-status {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.vps-theme-glass .node-group-pill {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.4);
+  color: #1e293b;
+}
+
+.vps-theme-glass .node-load-pill {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.3);
+  color: #475569;
+}
+
+.dark .vps-theme-glass .node-group-pill {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(30, 41, 59, 0.6);
+  color: #e2e8f0;
+}
+
+.dark .vps-theme-glass .node-load-pill {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(30, 41, 59, 0.5);
+  color: #cbd5f5;
+}
+
+.vps-theme-glass .node-back-divider {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.vps-theme-glass .node-status-pill {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  color: #1e293b !important;
+}
+
+.dark .vps-theme-glass .node-status-pill {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(30, 41, 59, 0.55) !important;
+  color: #e2e8f0 !important;
+}
+
+.vps-theme-glass .node-detail-metric {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(12px);
+}
+
+.dark .vps-theme-glass .node-detail-metric {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+}
+
+.vps-theme-glass .node-status-bar {
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.8), rgba(191, 219, 254, 0.8), rgba(165, 180, 252, 0.8)) !important;
+}
+
+.vps-theme-glass .node-sparkline-line {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .vps-theme-glass .vps-node-card .node-title {

@@ -247,7 +247,7 @@ const openPreview = (card) => {
           class="block w-full px-3 py-2 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
         >
           <option value="default">默认</option>
-          <option value="komari">Komari 风</option>
+          <option value="fresh">清爽</option>
           <option value="minimal">极简</option>
           <option value="tech">科技</option>
           <option value="glass">玻璃态</option>
