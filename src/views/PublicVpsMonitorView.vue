@@ -1166,9 +1166,9 @@ onUnmounted(() => {
 
 .vps-theme-komari .theme-komari {
   background-image:
-    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.2), transparent 32%),
-    radial-gradient(circle at 82% 14%, rgba(99, 102, 241, 0.14), transparent 26%),
-    linear-gradient(180deg, #f4f7fb 0%, #edf5ff 55%, #f7fbff 100%);
+    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.15), transparent 32%),
+    radial-gradient(circle at 82% 14%, rgba(99, 102, 241, 0.1), transparent 26%),
+    linear-gradient(180deg, #f0f4f8 0%, #e6f0ff 55%, #f0f8ff 100%);
 }
 
 .dark .vps-theme-komari .theme-komari {
@@ -1185,6 +1185,24 @@ onUnmounted(() => {
   border-color: rgba(186, 230, 253, 0.9) !important;
 }
 
+.vps-theme-komari .relative.group {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(99, 102, 241, 0.06));
+  border-radius: 32px;
+  padding: 1px;
+}
+
+.vps-theme-komari .relative.group > div {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 31px;
+  backdrop-filter: blur(10px);
+}
+
+.vps-theme-komari .vps-card-front,
+.vps-theme-komari .vps-card-back {
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 12px 32px -24px rgba(14, 165, 233, 0.25);
+}
+
 .dark .vps-theme-komari .vps-card-front,
 .dark .vps-theme-komari .vps-card-back,
 .dark .vps-theme-komari details,
@@ -1197,6 +1215,24 @@ onUnmounted(() => {
 .vps-theme-komari td,
 .vps-theme-komari th {
   color: inherit;
+}
+
+.vps-theme-komari .rounded-\[26px\].border.p-4.sm\:p-5 {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 249, 255, 0.8));
+  border: 1px solid rgba(186, 230, 253, 0.7) !important;
+  box-shadow: 0 16px 48px -32px rgba(14, 165, 233, 0.3);
+}
+
+.vps-theme-komari .rounded-2xl.border.p-4 {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(186, 230, 253, 0.6) !important;
+  box-shadow: 0 8px 24px -16px rgba(14, 165, 233, 0.2);
+}
+
+.vps-theme-komari .rounded-\[22px\].border.p-4 {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(186, 230, 253, 0.7) !important;
+  box-shadow: 0 12px 32px -20px rgba(14, 165, 233, 0.25);
 }
 
 .vps-theme-minimal h1,
