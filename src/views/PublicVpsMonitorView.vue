@@ -24,7 +24,9 @@ const themeConfig = ref({
   showAnomalies: true,
   showFeatured: true,
   showDetailTable: true,
-  footerText: '由 MiSub VPS 监控引擎提供实时数据驱动'
+  footerText: '由 MiSub VPS 监控引擎提供实时数据驱动',
+  sectionOrder: ['anomalies', 'nodes', 'featured', 'details'],
+  customCss: ''
 });
 const publicLayout = ref({
   headerEnabled: true,
@@ -52,9 +54,15 @@ const showStats = computed(() => themeConfig.value.showStats !== false && layout
 const showAnomalies = computed(() => themeConfig.value.showAnomalies !== false && layoutClass.value !== 'minimal');
 const showFeatured = computed(() => themeConfig.value.showFeatured !== false && layoutClass.value !== 'minimal');
 const showDetailTable = computed(() => themeConfig.value.showDetailTable !== false);
+const isInitialLoading = computed(() => loading.value && !error.value && !lastUpdatedAt.value && nodes.value.length === 0);
+const footerText = computed(() => String(themeConfig.value.footerText || '').trim());
+const sanitizedCustomCss = computed(() => {
+  const rawCss = typeof themeConfig.value.customCss === 'string' ? themeConfig.value.customCss : '';
+  return rawCss.trim();
+});
 // Show the in-page footer copy only when the MiSub global footer is disabled.
 // If the global footer is enabled, keep the page cleaner and rely on the global footer.
-const showFooter = computed(() => themeConfig.value.footerText !== '' && publicLayout.value.footerEnabled === false);
+const showFooter = computed(() => footerText.value !== '' && publicLayout.value.footerEnabled === false);
 const orderedSections = computed(() => {
   const raw = Array.isArray(themeConfig.value.sectionOrder) ? themeConfig.value.sectionOrder : ['anomalies', 'nodes', 'featured', 'details'];
   const valid = ['anomalies', 'nodes', 'featured', 'details'];
@@ -1057,7 +1065,17 @@ onUnmounted(() => {
           <ThemeToggle />
         </div>
         <div class="flex flex-col gap-8" :class="layoutClass === 'hero-split' ? 'lg:flex-row lg:items-center lg:justify-between' : 'lg:flex-row lg:items-end lg:justify-between'">
-            <div class="max-w-2xl">
+            <div v-if="isInitialLoading" class="max-w-2xl w-full animate-pulse space-y-4">
+              <div class="h-7 w-36 rounded-full bg-white/60 dark:bg-slate-800/80"></div>
+              <div class="h-10 w-64 rounded-2xl bg-white/70 dark:bg-slate-800/80 md:h-12 md:w-80"></div>
+              <div class="h-4 w-full max-w-xl rounded-full bg-white/60 dark:bg-slate-800/70"></div>
+              <div class="h-4 w-5/6 max-w-lg rounded-full bg-white/50 dark:bg-slate-800/60"></div>
+              <div class="flex flex-wrap items-center gap-3 pt-2">
+                <div class="h-8 w-28 rounded-full bg-white/65 dark:bg-slate-800/75"></div>
+                <div class="h-8 w-24 rounded-full bg-white/65 dark:bg-slate-800/75"></div>
+              </div>
+            </div>
+            <div v-else class="max-w-2xl">
               <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em]" :class="heroBadgeClass">
                 <img v-if="themeConfig.logo" :src="themeConfig.logo" alt="logo" class="h-4 w-4 rounded-full object-cover" />
                 Status Observatory
@@ -1081,7 +1099,13 @@ onUnmounted(() => {
             </button>
           </div>
             </div>
-            <div v-if="showStats" class="grid grid-cols-2 gap-4 text-xs" :class="layoutClass === 'hero-split' ? 'lg:max-w-md' : ''">
+            <div v-if="showStats && isInitialLoading" class="grid grid-cols-2 gap-4 text-xs" :class="layoutClass === 'hero-split' ? 'lg:max-w-md' : ''">
+              <div v-for="index in 4" :key="index" class="rounded-[18px] border p-4 animate-pulse" :class="statCardClass">
+                <div class="h-3 w-16 rounded-full bg-white/60 dark:bg-slate-800/80"></div>
+                <div class="mt-3 h-7 w-12 rounded-xl bg-white/70 dark:bg-slate-800/80"></div>
+              </div>
+            </div>
+            <div v-else-if="showStats" class="grid grid-cols-2 gap-4 text-xs" :class="layoutClass === 'hero-split' ? 'lg:max-w-md' : ''">
               <div class="rounded-[18px] border p-4 transition-transform hover:scale-[1.02]" :class="statCardClass">
                 <div class="flex items-center justify-between">
                   <p class="text-[#8a7f70] dark:text-slate-400">节点总数</p>
@@ -1112,7 +1136,7 @@ onUnmounted(() => {
               </div>
             </div>
           </div>
-          <div v-if="showStats" class="mt-8 rounded-[20px] border p-4" :class="panelClass">
+          <div v-if="showStats && !isInitialLoading" class="mt-8 rounded-[20px] border p-4" :class="panelClass">
             <div class="flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-3">
                 <div class="h-2 w-24 rounded-full bg-[#efe6db] dark:bg-slate-800">
@@ -1563,10 +1587,6 @@ onUnmounted(() => {
                   </div>
                 </div>
 
-                <!-- Footer -->
-                <div v-if="showFooter" class="p-4 px-6 bg-slate-50/30 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-                  <p class="text-[9px] text-slate-400 dark:text-slate-600 font-medium">{{ themeConfig.footerText || '由 MiSub VPS 监控引擎提供实时数据驱动' }}</p>
-                </div>
               </div>
             </transition>
           </div>
@@ -1606,6 +1626,16 @@ onUnmounted(() => {
             </table>
           </div>
         </details>
+
+        <div
+          v-if="showFooter"
+          class="mt-8 rounded-[20px] border px-5 py-4 text-center"
+          :class="panelSoftClass"
+        >
+          <p class="text-xs font-medium tracking-wide text-[#8a7f70] dark:text-slate-400">
+            {{ footerText }}
+          </p>
+        </div>
       </div>
   </div>
 </template>
