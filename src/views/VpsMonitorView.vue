@@ -689,8 +689,8 @@ onMounted(() => {
                   <div class="flex items-center gap-2">
                     <img
                       v-if="row.countryCode"
-                      :src="`https://flagcdn.com/w20/${row.countryCode.toLowerCase()}.png`"
-                      class="h-3.5 w-auto rounded-sm opacity-80"
+                      :src="`https://flagcdn.com/24x18/${row.countryCode.toLowerCase()}.png`"
+                      class="h-3.5 w-auto shrink-0 rounded-sm object-cover opacity-80"
                       alt=""
                       :title="row.countryCode"
                       @error="getFlagFallback"
@@ -736,8 +736,8 @@ onMounted(() => {
             <div class="flex items-center gap-2">
               <img 
                 v-if="row.countryCode" 
-                :src="`https://flagcdn.com/w20/${row.countryCode.toLowerCase()}.png`" 
-                class="h-3.5 w-auto rounded-sm opacity-80" 
+                :src="`https://flagcdn.com/24x18/${row.countryCode.toLowerCase()}.png`" 
+                class="h-3.5 w-auto shrink-0 rounded-sm object-cover opacity-80" 
                 alt=""
                 :title="row.countryCode"
                 @error="getFlagFallback"
