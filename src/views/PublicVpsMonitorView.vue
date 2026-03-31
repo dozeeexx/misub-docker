@@ -1214,7 +1214,7 @@ onUnmounted(() => {
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
-                      <img v-if="node.countryCode" :src="`https://flagcdn.com/w20/${node.countryCode.toLowerCase()}.png`" class="h-3 rounded-sm opacity-90" alt="" @error="getFlagFallback" />
+                      <img v-if="node.countryCode" :src="`https://flagcdn.com/24x18/${node.countryCode.toLowerCase()}.png`" class="h-3 w-auto shrink-0 rounded-sm object-cover opacity-90" alt="" @error="getFlagFallback" />
                       <p class="truncate text-sm font-bold text-rose-900 dark:text-rose-300 anomaly-name">{{ node.name || node.id }}</p>
                     </div>
                     <p class="mt-1 truncate text-[10px] uppercase tracking-tight text-rose-700/65 dark:text-rose-400/60 anomaly-meta">{{ node.region || '未知地区' }} · {{ node.status === 'offline' ? '连接异常' : '负载告警' }}</p>
@@ -1286,8 +1286,8 @@ onUnmounted(() => {
                         <div class="flex items-center gap-2">
                           <img 
                             v-if="node.countryCode" 
-                            :src="`https://flagcdn.com/w20/${node.countryCode.toLowerCase()}.png`" 
-                            class="h-3.5 w-auto rounded-sm opacity-90" 
+                            :src="`https://flagcdn.com/24x18/${node.countryCode.toLowerCase()}.png`" 
+                            class="h-3.5 w-auto shrink-0 rounded-sm object-cover opacity-90" 
                             alt=""
                             :title="node.countryCode"
                             @error="getFlagFallback"
@@ -1413,8 +1413,8 @@ onUnmounted(() => {
                     <div class="flex items-center gap-2">
                       <img 
                         v-if="activeFeatured?.countryCode" 
-                        :src="`https://flagcdn.com/w20/${activeFeatured.countryCode.toLowerCase()}.png`" 
-                        class="h-3.5 w-auto rounded-sm opacity-90" 
+                        :src="`https://flagcdn.com/24x18/${activeFeatured.countryCode.toLowerCase()}.png`" 
+                        class="h-3.5 w-auto shrink-0 rounded-sm object-cover opacity-90" 
                         alt=""
                         :title="activeFeatured.countryCode"
                         @error="getFlagFallback"
