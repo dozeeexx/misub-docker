@@ -60,6 +60,15 @@ const sanitizedCustomCss = computed(() => {
   const rawCss = typeof themeConfig.value.customCss === 'string' ? themeConfig.value.customCss : '';
   return rawCss.trim();
 });
+const syncDocumentTitle = () => {
+  if (typeof document === 'undefined') return;
+  if (isInitialLoading.value) {
+    document.title = '加载中 - MISUB';
+    return;
+  }
+  const pageTitle = String(themeConfig.value.title || '').trim() || 'VPS 探针公开视图';
+  document.title = `${pageTitle} - MISUB`;
+};
 // Show the in-page footer copy only when the MiSub global footer is disabled.
 // If the global footer is enabled, keep the page cleaner and rely on the global footer.
 const showFooter = computed(() => footerText.value !== '' && publicLayout.value.footerEnabled === false);
@@ -181,6 +190,14 @@ watch(selectedNodeId, async (value) => {
   }
   previousFocusedElement = null;
 });
+
+watch(
+  [() => themeConfig.value.title, isInitialLoading, error],
+  () => {
+    syncDocumentTitle();
+  },
+  { immediate: true }
+);
 
 const displayMetrics = ref({
   total: 0,

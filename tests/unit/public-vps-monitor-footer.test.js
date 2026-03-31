@@ -107,4 +107,36 @@ describe('PublicVpsMonitorView', () => {
     expect(wrapper.text()).toContain('自定义标题');
     expect(wrapper.text()).toContain('自定义副标题');
   });
+
+  it('syncs the browser tab title with the configured public page title', async () => {
+    fetchVpsPublicSnapshot.mockResolvedValueOnce({
+      success: true,
+      data: {
+        data: [],
+        theme: {
+          title: '我的探针状态页'
+        },
+        layout: {
+          headerEnabled: true,
+          footerEnabled: true
+        }
+      }
+    });
+
+    wrapper = mount(PublicVpsMonitorView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          VpsMetricChart: true,
+          VpsLatencyChart: true,
+          ThemeToggle: true,
+          Switch: true
+        }
+      }
+    });
+
+    await flushPromises();
+
+    expect(document.title).toBe('我的探针状态页 - MISUB');
+  });
 });

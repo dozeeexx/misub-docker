@@ -40,14 +40,21 @@ const { layoutMode } = storeToRefs(uiStore);
 const isLoggedIn = computed(() => sessionState.value === 'loggedIn');
 const isPublicRoute = computed(() => route.meta.isPublic);
 const isSessionLoading = computed(() => sessionState.value === 'loading');
+const isVpsPublicRoute = computed(() =>
+  isPublicRoute.value && (route.name === 'PublicVpsMonitor' || route.path === '/vps')
+);
 
 const showModernNavBar = computed(() => isLoggedIn.value && layoutMode.value === 'modern');
 const showLegacyHeader = computed(() => {
   if (showModernNavBar.value) return false;
   if (isLoggedIn.value) return true;
-  return !isSessionLoading.value && isPublicRoute.value && publicHeaderFooter.value?.vpsPublicHeaderEnabled !== false;
+  if (isSessionLoading.value || !isPublicRoute.value) return false;
+  return !isVpsPublicRoute.value || publicHeaderFooter.value?.vpsPublicHeaderEnabled !== false;
 });
-const showPublicFooter = computed(() => publicHeaderFooter.value?.vpsPublicFooterEnabled !== false);
+const showPublicFooter = computed(() => {
+  if (!isVpsPublicRoute.value) return true;
+  return publicHeaderFooter.value?.vpsPublicFooterEnabled !== false;
+});
 const shouldShowFooter = computed(() => !isSessionLoading.value && (!isPublicRoute.value || showPublicFooter.value));
 
 const shouldCenterMain = computed(() =>
