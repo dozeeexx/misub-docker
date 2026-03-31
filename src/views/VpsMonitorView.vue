@@ -1004,9 +1004,9 @@ onMounted(() => {
     <template #body>
       <div v-if="guidePayload" class="space-y-4 text-sm text-gray-600 dark:text-gray-300">
         <div>
-          <label class="block text-xs text-gray-500 mb-1">一行安装命令</label>
+          <label class="block text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-1">一行安装命令</label>
           <div class="flex items-center gap-2">
-            <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto flex-1">{{ guidePayload.installCommand }}</pre>
+            <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto flex-1 font-mono">{{ guidePayload.installCommand }}</pre>
             <button
               type="button"
               class="px-2.5 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5"
@@ -1016,7 +1016,22 @@ onMounted(() => {
             </button>
           </div>
         </div>
-        <div>
+
+        <div v-if="guidePayload.uninstallCommand">
+          <label class="block text-xs font-semibold text-rose-600 dark:text-rose-400 mb-1">一行卸载命令</label>
+          <div class="flex items-center gap-2">
+            <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto flex-1 font-mono">{{ guidePayload.uninstallCommand }}</pre>
+            <button
+              type="button"
+              class="px-2.5 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5"
+              @click="copyText(guidePayload.uninstallCommand)"
+            >
+              复制
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-gray-100 dark:border-white/5">
           <label class="block text-xs text-gray-500 mb-1">上报地址</label>
           <div class="font-mono text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2">
             {{ guidePayload.reportUrl }}
@@ -1038,21 +1053,44 @@ onMounted(() => {
         </div>
         <div>
           <label class="block text-xs text-gray-500 mb-1">请求头</label>
-          <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto">{{ JSON.stringify(guidePayload.headers, null, 2) }}</pre>
+          <pre class="text-xs font-mono bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto">{{ JSON.stringify(guidePayload.headers, null, 2) }}</pre>
         </div>
-        <details class="text-xs text-gray-500">
-          <summary class="cursor-pointer">查看一键安装脚本</summary>
-          <div class="mt-2 flex items-center gap-2">
-            <pre class="text-xs bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto flex-1">{{ guidePayload.installScript }}</pre>
-            <button
-              type="button"
-              class="px-2.5 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5"
-              @click="copyText(guidePayload.installScript)"
-            >
-              复制
-            </button>
-          </div>
-        </details>
+        
+        <div class="flex flex-col gap-3 pt-2 border-t border-gray-100 dark:border-white/5">
+          <details class="text-xs text-gray-500 group">
+            <summary class="cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors list-none flex items-center gap-1">
+              <span class="rotate-0 group-open:rotate-90 transition-transform">▶</span>
+              查看一键安装脚本内容
+            </summary>
+            <div class="mt-2 flex items-center gap-2">
+              <pre class="text-xs font-mono bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto flex-1 max-h-48">{{ guidePayload.installScript }}</pre>
+              <button
+                type="button"
+                class="px-2.5 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 shrink-0"
+                @click="copyText(guidePayload.installScript)"
+              >
+                复制
+              </button>
+            </div>
+          </details>
+
+          <details v-if="guidePayload.uninstallScript" class="text-xs text-gray-500 group">
+            <summary class="cursor-pointer hover:text-rose-600 dark:hover:text-rose-400 transition-colors list-none flex items-center gap-1">
+              <span class="rotate-0 group-open:rotate-90 transition-transform">▶</span>
+              查看一键卸载脚本内容
+            </summary>
+            <div class="mt-2 flex items-center gap-2">
+              <pre class="text-xs font-mono bg-gray-100/70 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 rounded-lg px-3 py-2 overflow-auto flex-1 max-h-48">{{ guidePayload.uninstallScript }}</pre>
+              <button
+                type="button"
+                class="px-2.5 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 shrink-0"
+                @click="copyText(guidePayload.uninstallScript)"
+              >
+                复制
+              </button>
+            </div>
+          </details>
+        </div>
       </div>
       <div v-else class="text-sm text-gray-500">暂无安装信息</div>
     </template>

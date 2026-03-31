@@ -1096,11 +1096,38 @@ function buildInstallScript(reportUrl, node) {
     ].join('\n');
 }
 
+function buildUninstallScript(node) {
+    return [
+        '#!/usr/bin/env bash',
+        '',
+        'set -euo pipefail',
+        '',
+        'echo "[misub-probe] stopping and disabling misub-vps-probe.timer..."',
+        'systemctl stop misub-vps-probe.timer || true',
+        'systemctl disable misub-vps-probe.timer || true',
+        '',
+        'echo "[misub-probe] removing systemd configuration..."',
+        'rm -f /etc/systemd/system/misub-vps-probe.timer',
+        'rm -f /etc/systemd/system/misub-vps-probe.service',
+        'systemctl daemon-reload',
+        '',
+        'echo "[misub-probe] removing probe script..."',
+        'rm -f /usr/local/bin/misub-vps-probe.sh',
+        '',
+        'echo "[misub-probe] cleaning up temporary files..."',
+        'rm -f /var/tmp/misub-vps-network.ts /var/tmp/misub-vps-report.ts /var/tmp/misub-vps-report-store.ts',
+        '',
+        'echo "[misub-probe] uninstallation complete."'
+    ].join('\n');
+}
+
 function buildPublicGuide(env, request, node) {
     const baseUrl = getPublicBaseUrl(env, new URL(request.url));
     const reportUrl = `${baseUrl.origin}/api/vps/report`;
     const installScript = buildInstallScript(reportUrl, node);
     const installCommand = `curl -fsSL "${baseUrl.origin}/api/vps/install?nodeId=${node.id}&secret=${node.secret}" | bash`;
+    const uninstallScript = buildUninstallScript(node);
+    const uninstallCommand = `curl -fsSL "${baseUrl.origin}/api/vps/uninstall?nodeId=${node.id}&secret=${node.secret}" | bash`;
     return {
         reportUrl,
         nodeId: node.id,
@@ -1111,7 +1138,9 @@ function buildPublicGuide(env, request, node) {
             'x-node-secret': node.secret
         },
         installScript,
-        installCommand
+        installCommand,
+        uninstallScript,
+        uninstallCommand
     };
 }
 
@@ -1145,6 +1174,42 @@ export async function handleVpsInstallScript(request, env) {
     const baseUrl = getPublicBaseUrl(env, new URL(request.url));
     const reportUrl = `${baseUrl.origin}/api/vps/report`;
     const script = buildInstallScript(reportUrl, node);
+    return new Response(script, {
+        status: 200,
+        headers: {
+            'Content-Type': 'text/plain; charset=utf-8'
+        }
+    });
+}
+
+export async function handleVpsUninstallScript(request, env) {
+    if (request.method !== 'GET') {
+        return createErrorResponse('Method Not Allowed', 405);
+    }
+    const d1Check = ensureD1Available(env);
+    if (d1Check) return d1Check;
+
+    const settings = await loadVpsSettings(env);
+    const storageModeCheck = ensureD1StorageMode(settings, env);
+    if (storageModeCheck) return storageModeCheck;
+
+    const url = new URL(request.url);
+    const nodeId = normalizeString(url.searchParams.get('nodeId'));
+    const nodeSecret = normalizeString(url.searchParams.get('secret'));
+    if (!nodeId || !nodeSecret) {
+        return createErrorResponse('Missing node credentials', 401);
+    }
+
+    const db = getD1(env);
+    const node = await fetchNode(db, nodeId);
+    if (!node) {
+        return createErrorResponse('Node not found', 404);
+    }
+    if (node.secret !== nodeSecret) {
+        return createErrorResponse('Unauthorized', 401);
+    }
+
+    const script = buildUninstallScript(node);
     return new Response(script, {
         status: 200,
         headers: {

@@ -43,6 +43,7 @@ import {
     handleVpsNodeDetailRequest,
     handleVpsAlertsRequest,
     handleVpsInstallScript,
+    handleVpsUninstallScript,
     handleVpsNetworkTargetsRequest,
     handleVpsNetworkCheck,
     handleVpsConfig,
@@ -173,9 +174,12 @@ export async function handleApiRequest(request, env) {
         return await handleVpsReport(request, env);
     }
 
-    // VPS monitor install script endpoint (public)
+    // VPS monitor install/uninstall script endpoint (public)
     if (path === '/vps/install') {
         return await handleVpsInstallScript(request, env);
+    }
+    if (path === '/vps/uninstall') {
+        return await handleVpsUninstallScript(request, env);
     }
 
     if (path === '/vps/config') {
