@@ -65,6 +65,8 @@ const manualNodeViewMode = ref('card');
 const showQRCodeModal = ref(false);
 const qrCodeUrl = ref('');
 const qrCodeTitle = ref('');
+const showCopyModal = ref(false);
+const showCopyModalProfile = ref(null);
 
 const handleQRCode = (id, type = 'subscription') => {
   if (type === 'subscription') {
@@ -89,6 +91,14 @@ const handleQRCode = (id, type = 'subscription') => {
       qrCodeTitle.value = profile.name || '订阅组二维码';
       showQRCodeModal.value = true;
     }
+  }
+};
+
+const handleOpenCopy = (profileId) => {
+  const profile = profiles.value.find(p => p.id === profileId || p.customId === profileId);
+  if (profile) {
+    showCopyModalProfile.value = profile;
+    showCopyModal.value = true;
   }
 };
 
@@ -377,7 +387,7 @@ import SavePrompt from '../../ui/SavePrompt.vue';
           @edit="(id) => handleEditSubscription(subscriptions.find(s => s.id === id))"
           @toggle-sort="isSortingSubs = !isSortingSubs" @mark-dirty="markDirty" @delete-all="showDeleteSubsModal = true"
           @preview="handlePreviewSubscription" @reorder="reorderSubscriptions" 
-          @qrcode="(id) => handleQRCode(id, 'subscription')" @import="showBulkImportModal = true" />
+          @qrcode="(id) => handleQRCode(id, 'subscription')" />
 
         <!-- Manual Node Panel -->
         <ManualNodePanel :manual-nodes="manualNodes" :paginated-manual-nodes="paginatedManualNodes"
@@ -401,7 +411,7 @@ import SavePrompt from '../../ui/SavePrompt.vue';
         <RightPanel :config="config" :profiles="profiles" @qrcode="(url, title) => { qrCodeUrl = url; qrCodeTitle = title; showQRCodeModal = true; }" />
         <ProfilePanel :profiles="profiles" @add="handleAddProfile" @edit="handleEditProfile"
           @delete="handleDeleteProfile" @deleteAll="showDeleteProfilesModal = true" @toggle="handleProfileToggle"
-          @copyLink="copyProfileLink" @copyClashLink="copyClashLink" @preview="handlePreviewProfile" @reorder="handleProfileReorder" 
+          @open-copy="handleOpenCopy" @copyLink="copyProfileLink" @copyClashLink="copyClashLink" @preview="handlePreviewProfile" @reorder="handleProfileReorder" 
           @qrcode="(id) => handleQRCode(id, 'profile')" />
       </div>
     </div>
@@ -461,6 +471,13 @@ import SavePrompt from '../../ui/SavePrompt.vue';
     v-model:show="showQRCodeModal" 
     :url="qrCodeUrl" 
     :title="qrCodeTitle" 
+  />
+
+  <CopyLinkModal 
+    v-if="showCopyModal && showCopyModalProfile" 
+    v-model:show="showCopyModal" 
+    :profile="showCopyModalProfile" 
+    :token="settings?.profileToken" 
   />
 </template>
 
