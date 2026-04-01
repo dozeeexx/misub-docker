@@ -159,6 +159,7 @@ const showDeleteSubsModal = ref(false);
 const showDeleteNodesModal = ref(false);
 const showSubscriptionImportModal = ref(false);
 const showLogModal = ref(false);
+const logProfileName = ref('');
 const showBatchDeleteModal = ref(false);
 const batchDeleteIds = ref([]);
 const showDedupModal = ref(false);
@@ -341,6 +342,14 @@ const handlePreviewProfile = (profileId) => {
   }
 };
 
+const handleViewLogs = (profileId) => {
+  const profile = profiles.value.find(p => p.id === profileId || p.customId === profileId);
+  if (profile) {
+    logProfileName.value = profile.name;
+    showLogModal.value = true;
+  }
+};
+
 const handleProfileReorder = (fromIndex, toIndex) => {
   // 使用 splice 方法保持响应性,而不是直接赋值
   const [item] = profiles.value.splice(fromIndex, 1);
@@ -411,7 +420,7 @@ import SavePrompt from '../../ui/SavePrompt.vue';
         <RightPanel :config="config" :profiles="profiles" @qrcode="(url, title) => { qrCodeUrl = url; qrCodeTitle = title; showQRCodeModal = true; }" />
         <ProfilePanel :profiles="profiles" @add="handleAddProfile" @edit="handleEditProfile"
           @delete="handleDeleteProfile" @deleteAll="showDeleteProfilesModal = true" @toggle="handleProfileToggle"
-          @open-copy="handleOpenCopy" @copyLink="copyProfileLink" @copyClashLink="copyClashLink" @preview="handlePreviewProfile" @reorder="handleProfileReorder" 
+          @open-copy="handleOpenCopy" @copyLink="copyProfileLink" @copyClashLink="copyClashLink" @preview="handlePreviewProfile" @viewLogs="handleViewLogs" @reorder="handleProfileReorder" 
           @qrcode="(id) => handleQRCode(id, 'profile')" />
       </div>
     </div>
