@@ -204,6 +204,14 @@ wrangler d1 execute misub --file=schema.sql --remote
 
 在 `设置` → `环境变量` 中添加 **生产环境** 变量：
 
+**必需（推荐）：**
+
+| 变量名 | 说明 | 示例 |
+|--------|------|------|
+| `ENABLE_CRON` | 启用定时同步功能 | `true` (默认启用) |
+| `CRON_MAX_SYNC_COUNT` | 每次最多同步订阅数 | `50` (默认) |
+| `CRON_SYNC_TIMEOUT` | 单个订阅同步超时(毫秒) | `30000` (默认30秒) |
+
 **可选：**
 
 | 变量名 | 说明 | 示例 |
@@ -218,6 +226,8 @@ wrangler d1 execute misub --file=schema.sql --remote
 | `CORS_ORIGINS` | 允许跨域访问的来源(逗号分隔)，同域可不填 | `https://example.com,http://localhost:5173` |
 | `MISUB_PUBLIC_URL` | 对外访问的公开域名，用于订阅转换回调（Docker/反代必填） | `https://your-domain.com` |
 | `MISUB_CALLBACK_URL` | 订阅转换回调基础地址（优先级高于 MISUB_PUBLIC_URL） | `http://misub:8080` |
+| `CRON_TYPE` | Cron任务类型 | `hourly-subscription-sync` (默认) |
+| `CRON_ENABLE_PARALLEL` | 启用并行同步 | `true` (默认) |
 
 **前端构建变量（可选）：**
 
@@ -227,7 +237,20 @@ wrangler d1 execute misub --file=schema.sql --remote
 
 > 提示：启用错误上报后会发送页面地址与浏览器信息等运行数据，请根据隐私与合规要求进行评估与披露。
 
-### 4. 重新部署
+### 4. 配置 Cron Triggers
+
+**自动启用**：部署后 Cron 功能默认启用，每小时自动同步订阅。
+
+**自定义时间表**：
+1. 进入 `设置` → `函数` → `Cron Triggers`
+2. 添加时间表：
+   - `0 * * * *` - 每小时（推荐）
+   - `0 */2 * * *` - 每2小时
+   - `*/30 * * * *` - 每30分钟
+
+**配置说明**：详见 [Cron 配置指南](docs/CRON_SETUP_FOR_USERS.md)
+
+### 5. 重新部署
 
 完成配置后,在 `部署` 选项卡重新部署项目。
 

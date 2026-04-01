@@ -126,8 +126,8 @@ watch(() => props.settings.profileToken, (val) => {
           class="p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 misub-radius-lg">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">订阅自动更新间隔</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">页面打开时自动刷新订阅节点数和流量</p>
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">📊 页面数据自动刷新间隔</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">在浏览器打开期间自动刷新订阅数据显示（后端同步独立进行，24小时持续运行）</p>
             </div>
           </div>
           <div class="mt-3 flex flex-wrap gap-3">
@@ -162,8 +162,8 @@ watch(() => props.settings.profileToken, (val) => {
               {{ option.label }}
             </button>
           </div>
-          <p v-if="settings.autoUpdateInterval === 0" class="text-xs text-amber-600 dark:text-amber-400 mt-2">
-            ⚠️ 自动更新已禁用，订阅信息需手动刷新
+          <p v-if="settings.autoUpdateInterval === 0" class="text-xs text-blue-600 dark:text-blue-400 mt-2">
+            ℹ️ 页面自动刷新已禁用，但后端仍在持续同步数据
           </p>
         </div>
 
