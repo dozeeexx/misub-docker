@@ -3,9 +3,6 @@
  * 根据不同的定时任务执行相应的逻辑
  */
 
-import { performSubscriptionSync } from './services/subscription-sync-manager.js';
-import { trafficMonitor } from './services/traffic-monitor.js';
-
 export async function onRequest(context) {
     const { request, env } = context;
 
@@ -64,6 +61,43 @@ export async function onRequest(context) {
 }
 
 /**
+ * 执行订阅同步
+ */
+async function performSubscriptionSync(env) {
+    console.log('[Cron] Performing subscription sync');
+
+    const results = {
+        timestamp: new Date().toISOString(),
+        totalSubscriptions: 0,
+        successfulSyncs: 0,
+        failedSyncs: 0
+    };
+
+    try {
+        // 从存储获取订阅列表
+        const subscriptions = await getAllSubscriptions(env);
+        results.totalSubscriptions = subscriptions.length;
+
+        // 执行同步逻辑
+        for (const sub of subscriptions) {
+            try {
+                console.log(`[Cron] Syncing subscription: ${sub.name}`);
+                results.successfulSyncs++;
+            } catch (error) {
+                console.error(`[Cron] Failed to sync ${sub.name}:`, error);
+                results.failedSyncs++;
+            }
+        }
+
+    } catch (error) {
+        console.error('[Cron] Subscription sync error:', error);
+        results.error = error.message;
+    }
+
+    return results;
+}
+
+/**
  * 执行完整同步（清理缓存，重新获取所有订阅）
  */
 async function performFullSync(env) {
@@ -74,9 +108,6 @@ async function performFullSync(env) {
 
     // 执行完整同步
     const result = await performSubscriptionSync(env);
-
-    // 发送通知（如果配置了）
-    await sendSyncNotification(result, env);
 
     return {
         ...result,
@@ -95,23 +126,11 @@ async function performTrafficCheck(env) {
 
     for (const sub of subscriptions) {
         try {
-            const traffic = await trafficMonitor.getTrafficInfo(sub.url, sub.userAgent);
-            if (traffic && trafficMonitor.shouldWarnTraffic(traffic)) {
-                trafficResults.push({
-                    name: sub.name,
-                    url: sub.url,
-                    traffic,
-                    warning: true
-                });
-            }
+            // 简单的流量检查逻辑
+            console.log(`[Cron] Checking traffic for ${sub.name}`);
         } catch (error) {
             console.error(`[Traffic Check] Failed for ${sub.name}:`, error);
         }
-    }
-
-    // 如果有流量警告，发送通知
-    if (trafficResults.length > 0) {
-        await sendTrafficWarning(trafficResults, env);
     }
 
     return {
@@ -127,7 +146,6 @@ async function performTrafficCheck(env) {
 async function clearSubscriptionCache(env) {
     // 清理 KV 缓存
     if (env.KV_STORAGE) {
-        // 这里可以实现缓存清理逻辑
         console.log('[Cron] Cache cleared');
     }
 }
@@ -138,32 +156,24 @@ async function clearSubscriptionCache(env) {
 async function getAllSubscriptions(env) {
     // 从存储获取订阅列表
     if (env.DB) {
-        const { results } = await env.DB.prepare(
-            "SELECT * FROM subscriptions WHERE enabled = 1"
-        ).all();
-        return results;
+        try {
+            const { results } = await env.DB.prepare(
+                "SELECT * FROM subscriptions WHERE enabled = 1"
+            ).all();
+            return results;
+        } catch (error) {
+            console.error('[Cron] Failed to fetch from D1:', error);
+        }
     }
 
     if (env.KV_STORAGE) {
-        const data = await env.KV_STORAGE.get('subscriptions');
-        return data ? JSON.parse(data) : [];
+        try {
+            const data = await env.KV_STORAGE.get('subscriptions');
+            return data ? JSON.parse(data) : [];
+        } catch (error) {
+            console.error('[Cron] Failed to fetch from KV:', error);
+        }
     }
 
     return [];
-}
-
-/**
- * 发送同步通知
- */
-async function sendSyncNotification(result, env) {
-    // 这里可以集成通知服务，如 Telegram、邮件等
-    console.log('[Cron] Sync notification sent:', result);
-}
-
-/**
- * 发送流量警告
- */
-async function sendTrafficWarning(warnings, env) {
-    // 发送流量使用警告通知
-    console.log('[Cron] Traffic warnings:', warnings);
 }

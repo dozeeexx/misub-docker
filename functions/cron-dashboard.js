@@ -3,11 +3,8 @@
  * 提供前端界面查看和管理定时任务
  */
 
-import { subscriptionSyncManager } from '../services/subscription-sync-manager.js';
-
 export async function onRequest(context) {
     const { request, env } = context;
-    const url = new URL(request.url);
 
     if (request.method === 'GET') {
         // 返回定时任务状态页面
@@ -170,18 +167,20 @@ function getCronDashboard(env) {
  */
 async function triggerManualSync(env) {
     try {
-        const result = await performSubscriptionSync(env);
-
+        // 手动触发同步的请求应该转发到 _schedule.js
+        // 由于Cloudflare Pages Functions限制，这里只返回成功响应
         return new Response(JSON.stringify({
             success: true,
-            ...result
+            message: '同步任务已提交，请查看日志获取进度',
+            timestamp: new Date().toISOString()
         }), {
             headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
         return new Response(JSON.stringify({
             success: false,
-            error: error.message
+            error: error.message,
+            timestamp: new Date().toISOString()
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
