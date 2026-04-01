@@ -35,6 +35,7 @@ const NodePreviewModal = defineAsyncComponent(() => import('../../modals/NodePre
 
 const BatchGroupModal = defineAsyncComponent(() => import('../../modals/BatchGroupModal.vue'));
 const QRCodeModal = defineAsyncComponent(() => import('../../modals/QRCodeModal.vue'));
+const CopyLinkModal = defineAsyncComponent(() => import('../../modals/CopyLinkModal.vue'));
 
 // --- 基礎 Props 和狀態 ---
 const props = defineProps({ data: Object });
