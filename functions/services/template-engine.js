@@ -87,23 +87,23 @@ mode: Rule
 log-level: info
 external-controller: :9090
 
-proxies: \${proxies}
+proxies: ${proxies}
 
 proxy-groups:
   - name: 🚀 节点选择
     type: select
     proxies:
       - ♻️ 自动选择
-      \${proxies.map(p => `- \${p.name}`).join('\\n      ')}
+      ${proxies.map(p => `- ${p.name}`).join('\n      ')}
 
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 300
     proxies:
-      \${proxies.map(p => `- \${p.name}`).join('\\n      ')}
+      ${proxies.map(p => `- ${p.name}`).join('\n      ')}
 
-rules: \${rules}
+rules: ${rules}
 `;
 
         return this.render('clash_template', context);
