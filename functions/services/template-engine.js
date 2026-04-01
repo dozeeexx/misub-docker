@@ -79,32 +79,30 @@ class TemplateEngine {
             ...options
         };
 
-        const template = this.getTemplate('clash') || `
-port: 7890
-socks-port: 7891
-allow-lan: true
-mode: Rule
-log-level: info
-external-controller: :9090
-
-proxies: ${proxies}
-
-proxy-groups:
-  - name: 🚀 节点选择
-    type: select
-    proxies:
-      - ♻️ 自动选择
-      ${proxies.map(p => `- ${p.name}`).join('\n      ')}
-
-  - name: ♻️ 自动选择
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    proxies:
-      ${proxies.map(p => `- ${p.name}`).join('\n      ')}
-
-rules: ${rules}
-`;
+        // 使用普通字符串而不是模板字符串，避免esbuild解析问题
+        let template = this.getTemplate('clash');
+        if (!template) {
+            template = 'port: 7890\n' +
+                'socks-port: 7891\n' +
+                'allow-lan: true\n' +
+                'mode: Rule\n' +
+                'log-level: info\n' +
+                'external-controller: :9090\n\n' +
+                'proxies: ${proxies}\n\n' +
+                'proxy-groups:\n' +
+                '  - name: 🚀 节点选择\n' +
+                '    type: select\n' +
+                '    proxies:\n' +
+                '      - ♻️ 自动选择\n' +
+                '      ${proxies}\n\n' +
+                '  - name: ♻️ 自动选择\n' +
+                '    type: url-test\n' +
+                '    url: http://www.gstatic.com/generate_204\n' +
+                '    interval: 300\n' +
+                '    proxies:\n' +
+                '      ${proxies}\n\n' +
+                'rules: ${rules}';
+        }
 
         return this.render('clash_template', context);
     }
@@ -125,32 +123,28 @@ rules: ${rules}
 export const templateEngine = new TemplateEngine();
 
 // 注册默认模板
-templateEngine.registerTemplate('clash', `
-port: 7890
-socks-port: 7891
-allow-lan: true
-mode: Rule
-log-level: info
-external-controller: :9090
+const clashTemplate = 'port: 7890\n' +
+    'socks-port: 7891\n' +
+    'allow-lan: true\n' +
+    'mode: Rule\n' +
+    'log-level: info\n' +
+    'external-controller: :9090\n\n' +
+    'proxies: ${proxies}\n\n' +
+    'proxy-groups:\n' +
+    '  - name: 🚀 节点选择\n' +
+    '    type: select\n' +
+    '    proxies:\n' +
+    '      - ♻️ 自动选择\n' +
+    '      ${proxies}\n\n' +
+    '  - name: ♻️ 自动选择\n' +
+    '    type: url-test\n' +
+    '    url: http://www.gstatic.com/generate_204\n' +
+    '    interval: 300\n' +
+    '    proxies:\n' +
+    '      ${proxies}\n\n' +
+    'rules: ${rules}';
 
-proxies: \${proxies}
-
-proxy-groups:
-  - name: 🚀 节点选择
-    type: select
-    proxies:
-      - ♻️ 自动选择
-      \${proxies.map(p => `- \${p.name}`).join('\\n      ')}
-
-  - name: ♻️ 自动选择
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    proxies:
-      \${proxies.map(p => `- \${p.name}`).join('\\n      ')}
-
-rules: \${rules}
-`);
+templateEngine.registerTemplate('clash', clashTemplate);
 
 // 定期清理缓存
 setInterval(() => {
