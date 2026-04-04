@@ -44,10 +44,11 @@ export async function handleDataRequest(env) {
             console.error('[API Error /data] KV binding missing while storageType=kv');
         }
         const storageAdapter = StorageFactory.createAdapter(env, storageType);
+        const cachedSettings = await SettingsCache.get(env);
         const [misubs, profiles, settings] = await Promise.all([
             storageAdapter.get(KV_KEY_SUBS).then(res => res || []),
             storageAdapter.get(KV_KEY_PROFILES).then(res => res || []),
-            storageAdapter.get(KV_KEY_SETTINGS).then(res => res || {})
+            Promise.resolve(cachedSettings || {}).then(res => res || {})
         ]);
 
         // 自动迁移旧版 profile ID（去除 'profile_' 前缀）
@@ -231,8 +232,7 @@ export async function handleMisubsSave(request, env) {
  */
 export async function handleSettingsGet(env) {
     try {
-        const storageAdapter = await getStorageAdapter(env);
-        const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+        const settings = await SettingsCache.get(env) || {};
         return createJsonResponse({ ...defaultSettings, ...settings });
     } catch (e) {
         if (isStorageUnavailableError(e)) {
@@ -353,9 +353,10 @@ export async function handleSettingsSave(request, env) {
 export async function handlePublicProfilesRequest(env) {
     try {
         const storageAdapter = await getStorageAdapter(env);
+        const cachedSettings = await SettingsCache.get(env);
         const [profiles, settings] = await Promise.all([
             storageAdapter.get(KV_KEY_PROFILES).then(res => res || []),
-            storageAdapter.get(KV_KEY_SETTINGS).then(res => res || {})
+            Promise.resolve(cachedSettings || {}).then(res => res || {})
         ]);
 
         const profileToken = settings.profileToken || 'profiles';

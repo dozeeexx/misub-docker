@@ -46,6 +46,7 @@ export async function handleMisubRequest(context) {
     }
     // 关键：我们在这里定义了 `config`，后续都应该使用它
     const config = migrateConfigSettings({ ...defaultSettings, ...settings });
+    context.accessLogPersistenceMode = config.accessLogPersistenceMode || 'light';
 
 
 
