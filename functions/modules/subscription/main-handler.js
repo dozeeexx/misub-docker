@@ -25,11 +25,8 @@ export async function handleMisubRequest(context) {
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
-    // [Debug Logging Entry]
-    if (!env.workers) {
-        console.log(`\n[MiSub Request] ${request.method} ${url.pathname}${url.search}`);
-        console.log(`[MiSub UA] ${userAgentHeader}`);
-    }
+    console.log(`\n[MiSub Request] ${request.method} ${url.pathname}${url.search}`);
+    console.log(`[MiSub UA] ${userAgentHeader}`);
 
     const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
     const [settingsData, misubsData, profilesData] = await Promise.all([
@@ -54,10 +51,7 @@ export async function handleMisubRequest(context) {
 
     const isBrowser = isBrowserAgent(userAgentHeader);
 
-    // [Debug Logging Logic]
-    if (!env.workers) {
-        console.log(`[MiSub Logic] isBrowser: ${isBrowser}, Disguise: ${config.disguise?.enabled}`);
-    }
+    console.log(`[MiSub Logic] isBrowser: ${isBrowser}, Disguise: ${config.disguise?.enabled}`);
 
     const isAuthenticated = await authMiddleware(request, env);
 
@@ -70,10 +64,7 @@ export async function handleMisubRequest(context) {
 
     const { token, profileIdentifier } = resolveRequestContext(url, config, allProfiles);
 
-    // [Debug Logging Parse]
-    if (!env.workers) {
-        console.log(`[MiSub Parse] Token: ${token}, Profile: ${profileIdentifier}`);
-    }
+    console.log(`[MiSub Parse] Token: ${token}, Profile: ${profileIdentifier}`);
     const shouldSkipLogging = shouldSkipAccessLog(userAgentHeader);
 
     let targetMisubs;
@@ -331,9 +322,7 @@ export async function handleMisubRequest(context) {
         targetMisubsCount: targetMisubs.length
     });
 
-    if (!env.workers) {
-        console.log(`[MiSub Nodes] Count/Length: ${combinedNodeList ? combinedNodeList.length : 0}`);
-    }
+    console.log(`[MiSub Nodes] Count/Length: ${combinedNodeList ? combinedNodeList.length : 0}`);
 
     const domain = url.hostname;
 
@@ -391,11 +380,8 @@ export async function handleMisubRequest(context) {
     const publicBaseUrl = getPublicBaseUrl(env, url);
     const callbackUrl = `${publicBaseUrl.origin}${callbackPath}?target=base64&callback_token=${callbackToken}`;
 
-    // [Debug Logging for non-Workers runtimes]
-    if (!env.workers) {
-        console.log(`[MiSub Debug] Profile: ${profileIdentifier}, Token: ${token}`);
-        console.log(`[MiSub Debug] Callback URL: ${callbackUrl}`);
-    }
+    console.log(`[MiSub Debug] Profile: ${profileIdentifier}, Token: ${token}`);
+    console.log(`[MiSub Debug] Callback URL: ${callbackUrl}`);
     if (url.searchParams.get('callback_token') === callbackToken) {
         const headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
         return new Response(base64Content, { headers });

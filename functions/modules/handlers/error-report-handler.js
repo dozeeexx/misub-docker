@@ -12,9 +12,7 @@ const MAX_STACK_LENGTH = 2000;
 const MAX_ADDITIONAL_LENGTH = 2000;
 
 function getKV(env) {
-    if (env?.MISUB_KV) return env.MISUB_KV;
-    try { if (typeof MISUB_KV !== 'undefined' && MISUB_KV) return MISUB_KV; } catch (_) {} // eslint-disable-line no-undef
-    return null;
+    return env?.MISUB_KV || null;
 }
 
 function safeString(value, limit) {

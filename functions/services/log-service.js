@@ -9,9 +9,7 @@ const MAX_LOG_AGE_DAYS = 30;
 const MAX_LOG_AGE_MS = MAX_LOG_AGE_DAYS * 24 * 60 * 60 * 1000;
 
 function getKV(env) {
-    if (env?.MISUB_KV) return env.MISUB_KV;
-    try { if (typeof MISUB_KV !== 'undefined' && MISUB_KV) return MISUB_KV; } catch (_) {} // eslint-disable-line no-undef
-    return null;
+    return env?.MISUB_KV || null;
 }
 // 全局内存队列，用于削峰填谷和防写竞争
 let logBatch = [];

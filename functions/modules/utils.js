@@ -33,22 +33,16 @@ export function hasDataChanged(oldData, newData) {
 
 /**
  * 获取 KV namespace。
- * 优先读取 Cloudflare Pages 的 env 绑定，同时兼容全局变量注入。
+ * 仅从 Cloudflare Pages 的 env 绑定读取。
  * @param {Object} env
  * @returns {Object|null}
  */
 function getKV(env) {
-    // Cloudflare 方式
-    if (env?.MISUB_KV) return env.MISUB_KV;
-    // 兼容全局变量注入
-    try {
-        if (typeof MISUB_KV !== 'undefined' && MISUB_KV) return MISUB_KV; // eslint-disable-line no-undef
-    } catch (_) {}
-    return null;
+    return env?.MISUB_KV || null;
 }
 
 /**
- * 读取运行时环境变量（优先 env，同时兼容全局变量注入）
+ * 读取运行时环境变量。
  * @param {Object} env
  * @param {string} key
  * @returns {string|undefined}
@@ -58,13 +52,6 @@ function getRuntimeEnvValue(env, key) {
     if (envValue !== undefined && envValue !== null && String(envValue).trim() !== '') {
         return String(envValue);
     }
-
-    try {
-        const globalValue = globalThis?.[key];
-        if (globalValue !== undefined && globalValue !== null && String(globalValue).trim() !== '') {
-            return String(globalValue);
-        }
-    } catch (_) {}
 
     return undefined;
 }
