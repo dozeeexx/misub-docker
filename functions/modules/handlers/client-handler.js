@@ -376,7 +376,7 @@ export async function handleClientRequest(request, env) {
     } catch (e) {
         console.error('[Client Handler Error]', e);
         if (isStorageUnavailableError(e)) {
-            return createErrorResponse('KV 存储已暂停，客户端配置当前无法保存。若为 EdgeOne 部署，请先恢复 KV；若为 Cloudflare 部署，可改用 D1。', 503);
+            return createErrorResponse('KV 存储已暂停，客户端配置当前无法保存。请先恢复 KV 绑定，或改用 D1。', 503);
         }
         return createErrorResponse(`Operation failed: ${e.message}`, 500);
     }

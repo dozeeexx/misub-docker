@@ -258,7 +258,7 @@ export async function handleSettingsSave(request, env) {
 
         const reservedPathRoots = new Set([
             'settings', 'login', 'groups', 'nodes', 'subscriptions', 'dashboard',
-            'api', 'explore', 'sub', 'cron', 'assets', '@vite', 'public', 'profile', 'offline',
+            'api', 'explore', 'sub', 'cron', 'assets', '@vite', 'public', 'profile',
             'vps', 'monitor', 'logout', 'auth_debug', 'auth_check', 'data', 'kv_test',
             'clients', 'system', 'github', 'telegram', 'test_notification', 'test_subconverter',
             'misubs', 'node_count', 'nodes', 'fetch_external_url', 'batch_update_nodes',
@@ -308,7 +308,7 @@ export async function handleSettingsSave(request, env) {
             if (isStorageUnavailableError(storageError)) {
                 return createJsonResponse({
                     success: false,
-                    message: 'KV 存储已暂停，设置当前无法保存。若为 EdgeOne 部署，请先恢复 KV；若为 Cloudflare 部署，可配置 D1 后切换到 D1 存储。'
+                    message: 'KV 存储已暂停，设置当前无法保存。请先恢复 KV 绑定，或配置 D1 后切换到 D1 存储。'
                 }, 503);
             }
             throw storageError;

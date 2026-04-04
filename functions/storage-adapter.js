@@ -315,7 +315,7 @@ class D1StorageAdapter {
 }
 
 /**
- * 无存储降级适配器（EdgeOne 纯环境变量模式，不读写持久数据）
+ * 无存储降级适配器（无可用持久化存储时，不读写持久数据）
  */
 class NoopStorageAdapter {
     async get() { return null; }
@@ -336,10 +336,8 @@ function isKVNamespace(val) {
 }
 
 /**
- * 解析 KV 命名空间
- * EdgeOne Pages: KV 作为全局变量注入（globalThis.MISUB_KV），而非通过 env
- * Cloudflare Pages: KV 通过 env.MISUB_KV 注入
- * 同时支持自动探测，兼容任意绑定名
+ * 解析 KV 命名空间。
+ * 优先读取 Cloudflare Pages 的 env 绑定，同时兼容基于全局变量的运行时注入。
  * @param {Object} env
  * @returns {Object|null}
  */
@@ -347,7 +345,7 @@ function resolveKV(env) {
     // 1. Cloudflare Pages 方式：env.MISUB_KV
     if (env && isKVNamespace(env.MISUB_KV)) return env.MISUB_KV;
 
-    // 2. EdgeOne Pages 方式：KV 作为全局变量注入
+    // 2. 兼容全局变量注入
     if (typeof MISUB_KV !== 'undefined' && isKVNamespace(MISUB_KV)) return MISUB_KV;  // eslint-disable-line no-undef
 
     // 3. 自动探测 env 中其他 KV 绑定（仅允许变量名包含 KV，避免误识别）

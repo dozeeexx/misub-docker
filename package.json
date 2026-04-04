@@ -8,7 +8,6 @@
     "dev:server": "npx wrangler pages dev public --port 8787",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
-    "build:edgeone": "vite build --mode edgeone",
     "preview": "vite preview",
     "start": "node server/index.mjs",
     "start:vps": "node server/index.mjs",
