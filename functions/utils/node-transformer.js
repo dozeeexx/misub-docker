@@ -328,13 +328,15 @@ function isUselessNode(record) {
 
 export function applyRegexRename(name, rules) {
     let result = String(name || '');
+    if (!Array.isArray(rules)) return result;
+
     for (const rule of rules) {
         if (!rule) continue;
         
         // 兼容规则既可以是对象 {pattern: "...", flags: "...", replacement: "..."} 也可以是纯字符串
         const pattern = typeof rule === 'string' ? rule : rule.pattern;
         const replacement = typeof rule === 'string' ? '' : (rule.replacement || '');
-        const flags = typeof rule === 'string' ? 'g' : (rule.flags || 'g');
+        const flags = typeof rule === 'string' ? 'gi' : (rule.flags || 'gi');
 
         if (!pattern) continue;
         

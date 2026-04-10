@@ -16,17 +16,25 @@ function opFilter(nodes, params) {
 
     if (include?.enabled && Array.isArray(include.rules)) {
         result = result.filter(r => {
-            // 优先尝试匹配原始名称，如果元数据中有纯净版名称则也尝试匹配
+            // [智能化过滤同步] 确保已提取区域信息以供匹配
+            const enriched = NodeUtils.ensureRegionInfo(r, false);
             const matchRaw = NodeUtils.matchesRegexRules(r.name, include.rules);
             const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, include.rules) : false;
-            return matchRaw || matchClean;
+            const matchRegion = NodeUtils.matchesRegexRules(enriched.regionZh, include.rules) || 
+                                NodeUtils.matchesRegexRules(enriched.region, include.rules);
+            
+            return matchRaw || matchClean || matchRegion;
         });
     }
     if (exclude?.enabled && Array.isArray(exclude.rules)) {
         result = result.filter(r => {
+            const enriched = NodeUtils.ensureRegionInfo(r, false);
             const matchRaw = NodeUtils.matchesRegexRules(r.name, exclude.rules);
             const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, exclude.rules) : false;
-            return !(matchRaw || matchClean);
+            const matchRegion = NodeUtils.matchesRegexRules(enriched.regionZh, exclude.rules) || 
+                                NodeUtils.matchesRegexRules(enriched.region, exclude.rules);
+                                
+            return !(matchRaw || matchClean || matchRegion);
         });
     }
     if (protocols?.enabled && Array.isArray(protocols.values)) {
