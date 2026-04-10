@@ -5,11 +5,12 @@
 
 // [修复] 使用正确的相对路径引用 modules/utils 下的 geo-utils
 import { extractNodeRegion, getRegionEmoji } from '../modules/utils/geo-utils.js';
+import { extractNodeMetadata } from '../modules/utils/metadata-extractor.js';
 
 /**
  * 节点协议正则表达式
  */
-export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|snell|anytls|socks5|socks|wireguard):\/\//g;
+export const NODE_PROTOCOL_REGEX = /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|snell|anytls|socks5|socks|wireguard|naive\+https?|naive\+quic):\/\//i;
 
 /**
  * 为节点名称添加前缀
@@ -76,14 +77,15 @@ export function addFlagEmoji(link) {
     if (!link) return link;
 
     const appendEmoji = (name) => {
-        // [修复] 先将台湾旗帜替换为中国国旗
-        let processedName = name.replace(/🇹🇼/g, '🇨🇳');
-
-        const region = extractNodeRegion(processedName);
-        const emoji = getRegionEmoji(region);
-        if (!emoji) return processedName;
-        if (processedName.includes(emoji)) return processedName;
-        return `${emoji} ${processedName}`;
+        if (!name) return name;
+        const metadata = extractNodeMetadata(name);
+        if (!metadata.flag) return name;
+        
+        // 如果已经有国旗了，就不重复加
+        const HAS_EMOJI_REGEX = /[\u{1F1E6}-\u{1F1FF}]{2}/u;
+        if (HAS_EMOJI_REGEX.test(name)) return name;
+        
+        return `${metadata.flag} ${name}`;
     };
 
     if (link.startsWith('vmess://')) {

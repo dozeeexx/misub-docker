@@ -4,6 +4,7 @@
  */
 
 import { parseNodeList } from '../modules/utils/node-parser.js';
+import { parseNodeInfo } from '../modules/utils/geo-utils.js';
 import { getProcessedUserAgent } from '../utils/format-utils.js';
 import { prependNodeName, removeFlagEmoji, fixNodeUrlEncoding, sanitizeNodeForYaml } from '../utils/node-utils.js';
 import { runOperatorChain } from '../utils/operator-runner.js';
@@ -296,7 +297,17 @@ return '';
     // [Sanitize] Always sanitize node names for YAML compatibility (Subconverter issue with unquoted special chars)
     const sanitizedLines = normalizedLines.map(line => sanitizeNodeForYaml(line));
 
-    const outputLines = [...new Set(sanitizedLines)];
+    // [智能增强] 对所有输出行进行国旗补全（如果原本缺失）
+    // 只有在没有启用“模板重命名”的情况下才这样做，因为模板重命名有自己的控制逻辑
+    const finalEnhancedLines = skipPrefixDueToRenaming 
+        ? sanitizedLines 
+        : sanitizedLines.map(line => {
+            const withFlag = addFlagEmoji(line);
+            // 这里也可以做其他智能增强，例如 multiplier 标识等
+            return withFlag;
+        });
+
+    const outputLines = [...new Set(finalEnhancedLines)];
 
     // --- 统一转换引擎 (Unified Transformation Engine) ---
     // 优先级: 订阅组 Operator Chain > 全局默认 Operator Chain > 旧版 Node Pipeline (桥接模式)
@@ -595,8 +606,9 @@ function filterNodes(nodes, rules, mode = 'exclude') {
     const isInclude = mode === 'include';
 
     return nodes.filter(nodeLink => {
-        const protocol = extractProtocol(nodeLink);
-        const nodeName = extractNodeName(nodeLink, protocol);
+        const nodeInfo = parseNodeInfo(nodeLink);
+        const protocol = nodeInfo.protocol || '';
+        const nodeName = nodeInfo.name || '';
 
         const protocolHit = protocol && rules.protocols.has(protocol);
         const nameHit = rules.nameRegex ? rules.nameRegex.test(nodeName) : false;
@@ -608,49 +620,6 @@ function filterNodes(nodes, rules, mode = 'exclude') {
     });
 }
 
-function extractProtocol(nodeLink) {
-    const match = nodeLink.match(/^([a-z0-9.+-]+):\/\//i);
-    return match ? match[1].toLowerCase() : '';
-}
-
-function extractNodeName(nodeLink, protocol) {
-    const hashIndex = nodeLink.lastIndexOf('#');
-    if (hashIndex !== -1) {
-        try {
-            return decodeURIComponent(nodeLink.substring(hashIndex + 1));
-        } catch (e) {
-            return nodeLink.substring(hashIndex + 1);
-        }
-    }
-
-    if (protocol === 'vmess') {
-        return decodeVmessName(nodeLink);
-    }
-    return '';
-}
-
-function decodeVmessName(nodeLink) {
-    try {
-        let base64Part = nodeLink.substring('vmess://'.length);
-        if (base64Part.includes('%')) {
-            base64Part = decodeURIComponent(base64Part);
-        }
-        base64Part = base64Part.replace(/-/g, '+').replace(/_/g, '/');
-        while (base64Part.length % 4 !== 0) {
-            base64Part += '=';
-        }
-        const binaryString = atob(base64Part);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        const jsonString = new TextDecoder('utf-8').decode(bytes);
-        const nodeConfig = JSON.parse(jsonString);
-        return typeof nodeConfig.ps === 'string' ? nodeConfig.ps : '';
-    } catch (e) {
-        return '';
-    }
-}
 
 /**
  * 桥接模式：将旧版 NodeTransform 配置转换为新的 Operator 列表
