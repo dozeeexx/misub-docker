@@ -205,15 +205,26 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
 
         // 3. [诊断模式] 如果启用了 debug=1，在每个组头部注入组级诊断节点
         if (isDebug) {
+            // 尝试从所有可能的字段获取规则信息
+            const legacyRule = subSource?.exclude;
+            const transformRule = subSource?.nodeTransform?.exclude;
+            const deepRule = subSource?.nodeTransform?.filter?.exclude;
+            const activeRule = legacyRule || transformRule || deepRule || (subOperators.length > 0 ? 'Workflow' : 'None');
+            
+            // 获取对象的所有键，定位是否存在拼写或大小写差异
+            const subKeys = Object.keys(subSource || {}).join(',');
+            
             const diagInfo = {
                 name: subSource?.name,
+                keys: subKeys,
                 ops: subOperators.length,
-                excludeText: subSource?.exclude,
-                nodeTransform: subSource?.nodeTransform,
-                // 将整个对象记录下来以便查看真实字段名
+                legacyRule,
+                transformRule,
+                deepRule,
                 rawSub: subSource 
             };
-            const groupInfo = `[GROUP DIAGNOSTIC] ${subSource?.name || 'Manual'} | Ops: ${subOperators.length} | Rule: ${subSource?.exclude || 'None'}`;
+
+            const groupInfo = `[GROUP DIAGNOSTIC] ${subSource?.name || 'Manual'} | Rule: ${activeRule} | Keys: ${subKeys}`;
             const groupDiagNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443?debug=${encodeURIComponent(JSON.stringify(diagInfo))}#${encodeURIComponent(groupInfo)}`;
             currentNodes = [groupDiagNode, ...currentNodes];
         }
