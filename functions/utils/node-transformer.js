@@ -326,6 +326,42 @@ function isUselessNode(record) {
     return /(?:流量剩余|剩余流量|已用流量|总流量|套餐到期|到期时间|过期时间|订阅已失效|订阅已到期|已过期|官网|群组|频道|联系客服|测试节点|回车更新|点击订阅|剩余套餐|订阅信息)/i.test(name);
 }
 
+/**
+ * [核心引擎] 将新名称写回不同协议的节点 URL
+ * 支持 VMess (JSON-Base64)、VLESS/Trojan/SS (Fragment)
+ */
+export function setNodeName(url, protocol, newName) {
+    if (!url || !newName) return url;
+    const proto = String(protocol || '').toLowerCase();
+
+    try {
+        if (proto === 'vmess') {
+            let base64Part = url.replace('vmess://', '');
+            // 处理 URL-Safe Base64
+            let safeBody = base64Part.replace(/-/g, '+').replace(/_/g, '/');
+            while (safeBody.length % 4) safeBody += '=';
+            
+            const decoded = new TextDecoder().decode(Uint8Array.from(atob(safeBody), c => c.charCodeAt(0)));
+            const config = JSON.parse(decoded);
+            config.ps = newName;
+            
+            // 重新编码为标准 Base64 (非 URL-Safe 以保持最大兼容性)
+            const newJson = JSON.stringify(config);
+            const newBase64 = btoa(unescape(encodeURIComponent(newJson)));
+            return 'vmess://' + newBase64;
+        } else {
+            // VLESS / Trojan / SS / Shadowsocks / Hysteria2 / Snell
+            // 处理 # 后缀即可
+            const hashIndex = url.lastIndexOf('#');
+            const baseUrl = hashIndex !== -1 ? url.substring(0, hashIndex) : url;
+            return baseUrl + '#' + encodeURIComponent(newName);
+        }
+    } catch (e) {
+        console.warn('[NodeUtils] setNodeName failed:', e);
+        return url;
+    }
+}
+
 export function applyRegexRename(name, rules) {
     let result = String(name || '');
     if (!Array.isArray(rules)) return result;
@@ -735,9 +771,10 @@ export function nodeUrlsToRecords(nodeUrls, options = {}) {
  * 将 Record 列表写回 URL 列表
  */
 export function recordsToNodeUrls(records) {
+    if (!Array.isArray(records)) return [];
     return records.map(r => {
-        // 如果名称发生变化，同步更新 URL 中的 fragment/ps
-        if (r.name !== r.originalName) {
+        // 如果名称发生变化（例如被正则重命名或脚本重命名），同步更新 URL
+        if (r.name && r.name !== r.originalName) {
             return setNodeName(r.url, r.protocol, r.name);
         }
         return r.url;
