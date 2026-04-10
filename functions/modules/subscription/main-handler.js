@@ -125,6 +125,7 @@ export async function handleMisubRequest(context) {
         return createDisguiseResponse(config.disguise, request.url);
     }
 
+    context.url = url; // [核心修复] 将 url 挂载到 context，确保后续服务能获取到 debug 参数
     const { token, profileIdentifier } = resolveRequestContext(url, config, allProfiles);
 
     console.log(`[MiSub Parse] Token: ${token}, Profile: ${profileIdentifier}`);

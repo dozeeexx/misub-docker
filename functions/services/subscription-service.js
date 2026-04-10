@@ -393,7 +393,11 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     let result = finalNodeList.length > 0 ? (finalNodeList.endsWith('\n') ? finalNodeList : finalNodeList + '\n') : '';
 
     // [诊断模式] 如果启用了 debug=1，在最前端注入诊断节点
-    if (context?.url?.searchParams?.get('debug') === '1') {
+    // 兼容多种方式获取 URL 参数
+    const searchParams = context?.url?.searchParams || 
+                        (context?.request?.url ? new URL(context.request.url).searchParams : null);
+    
+    if (searchParams?.get('debug') === '1') {
         const debugInfo = {
             profile: subName,
             operators: activeOperators.length,
