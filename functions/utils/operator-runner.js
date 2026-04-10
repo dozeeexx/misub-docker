@@ -109,18 +109,26 @@ async function opScript(nodes, params, context) {
     if (!scriptCode) return nodes;
 
     try {
-        // Enriched context for the script
+        // [审计增强] 脚本执行前自动补全地理元数据，确保 $proxies 包含 regionZh 等信息
+        const enrichedNodes = nodes.map(r => NodeUtils.ensureRegionInfo(r, true));
+        
         const scriptEnv = {
-            $proxies: nodes,
+            $proxies: enrichedNodes,
             $context: context,
             $utils: {
                 decodeBase64: s => atob(s),
                 encodeBase64: s => btoa(s),
-                // Add more helpers if needed
+                decodeURI: s => decodeURI(s),
+                encodeURI: s => encodeURI(s),
+                decodeURIComponent: s => decodeURIComponent(s),
+                encodeURIComponent: s => encodeURIComponent(s),
+                jsonStringify: o => JSON.stringify(o),
+                jsonParse: s => JSON.parse(s),
+                // 模拟常用 Sub-Store 辅助函数
+                getHost: url => { try { return new URL(url).hostname; } catch(e) { return ''; } }
             }
         };
 
-        // Create a wrapper to support common Sub-Store script patterns
         const wrapper = `
             return (async () => {
                 const $proxies = Array.from(arguments[0]);
@@ -130,7 +138,12 @@ async function opScript(nodes, params, context) {
                 ${scriptCode}
 
                 if (typeof operator === 'function') {
-                    return await operator($proxies, $context);
+                    const res = await operator($proxies, $context);
+                    // 兼容返回 { proxies: [] } 或 { nodes: [] } 的脚本
+                    if (res && !Array.isArray(res)) {
+                        return res.proxies || res.nodes || $proxies;
+                    }
+                    return res;
                 }
                 return $proxies;
             })();
@@ -138,7 +151,7 @@ async function opScript(nodes, params, context) {
 
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
         const runner = new AsyncFunction(wrapper);
-        const result = await runner(nodes, context, scriptEnv);
+        const result = await runner(enrichedNodes, context, scriptEnv);
         
         return Array.isArray(result) ? result : nodes;
     } catch (e) {
@@ -196,18 +209,35 @@ export async function runOperatorChain(nodeUrls, operators, context = {}) {
                 break;
             case 'sort':
                 if (params && Array.isArray(params.keys)) {
+                    // [排序审计] 如果按地区排序，先确保地区信息已提取
+                    const needsRegion = params.keys.some(k => k.key === 'region' || k.key === 'regionZh');
+                    if (needsRegion) {
+                        records = records.map(r => NodeUtils.ensureRegionInfo(r, true));
+                    }
                     records.sort(NodeUtils.makeComparator({ keys: params.keys }));
                 }
                 break;
             case 'dedup':
-                // Simple dedup by server:port
-                const seen = new Set();
-                records = records.filter(r => {
-                    const key = `${r.server}:${r.port}`;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
+                // [智能去重] 支持协议感知的去重，并允许保留首选协议
+                const includeProtocol = params?.includeProtocol !== false;
+                const seenNodes = new Map();
+                
+                for (const r of records) {
+                    const hostPort = `${r.server}:${r.port}`;
+                    const key = includeProtocol ? `${r.protocol}|${hostPort}` : hostPort;
+                    
+                    if (!seenNodes.has(key)) {
+                        seenNodes.set(key, r);
+                    } else {
+                        // 简单的优先级逻辑：保留更详细的节点（名称更长的往往包含更多元数据）
+                        const existing = seenNodes.get(key);
+                        if ((r.name || '').length > (existing.name || '').length) {
+                            seenNodes.set(key, r);
+                        }
+                    }
+                }
+                records = Array.from(seenNodes.values());
+                break;
                 break;
         }
     }
