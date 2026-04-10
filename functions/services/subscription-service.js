@@ -345,9 +345,8 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
     let result = finalNodeList.length > 0 ? (finalNodeList.endsWith('\n') ? finalNodeList : finalNodeList + '\n') : '';
 
     // 将虚假节点（如果存在）插入到列表最前面
-    let result = finalNodeList;
     if (prependedContent) {
-        result = `${prependedContent}\n${finalNodeList}`;
+        result = `${prependedContent}\n${result}`;
     }
 
     // --- 日志记录 ---
