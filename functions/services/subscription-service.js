@@ -278,18 +278,21 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
     // 使用并发控制器限制同时请求数量，避免网络拥塞
     const subPromises = httpSubs.map(sub => limiter(() => fetchSingleSubscription(sub)));
     const processedSubContents = await Promise.all(subPromises);
-    const combinedLines = (processedManualNodes + '\n' + processedSubContents.join('\n'))
+    
+    // --- 阶段 1: 原始数据汇聚 (Raw Data Aggregation) ---
+    const rawCombinedLines = (processedManualNodes + '\n' + processedSubContents.join('\n'))
         .split('\n')
         .map(line => line.trim())
         .filter(Boolean);
 
-    const normalizedLines = shouldKeepEmoji
-        ? combinedLines
-        : combinedLines.map(line => removeFlagEmoji(line));
+    // 去重，保留原始顺序中的第一次出现
+    let currentLines = [...new Set(rawCombinedLines)];
+    
+    if (!shouldKeepEmoji) {
+        currentLines = currentLines.map(line => removeFlagEmoji(line));
+    }
 
-    let outputLines = [...new Set(finalEnhancedLines)];
-
-    // --- 统一转换引擎 (Unified Transformation Engine) ---
+    // --- 阶段 2: 核心转换引擎 (Logic Transformation Engine) ---
     // 优先级: 订阅组 Operator Chain > 全局默认 Operator Chain > 旧版 Node Pipeline (桥接模式)
     
     let activeOperators = [];
@@ -299,17 +302,12 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
         console.debug(`[DEBUG] Profile: ${config?.name}, Exclude: ${config?.exclude}, Include: ${config?.include}`);
     }
 
-    // 1. 尝试获取订阅组级别的操作符
+    // 获取工作流配置
     if (profilePrefixSettings?.operators && Array.isArray(profilePrefixSettings.operators) && profilePrefixSettings.operators.length > 0) {
         activeOperators = profilePrefixSettings.operators;
-    } 
-    // 2. 尝试获取全局默认操作符
-    else if (config.defaultOperators && Array.isArray(config.defaultOperators) && config.defaultOperators.length > 0) {
+    } else if (config.defaultOperators && Array.isArray(config.defaultOperators) && config.defaultOperators.length > 0) {
         activeOperators = config.defaultOperators;
-    }
-    // 3. 进入桥接模式 (Legacy Bridge): 转换旧版配置为操作符
-    else {
-        // 优先使用订阅组自定义的旧版配置，否则使用全局默认配置
+    } else {
         const legacyConfig = nodeTransformConfig?.enabled ? nodeTransformConfig : config.defaultNodeTransform;
         activeOperators = adaptLegacyTransform(legacyConfig);
     }
@@ -318,40 +316,33 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
         console.debug(`[DEBUG] Active Operators Count: ${activeOperators.length}`);
     }
 
-    // 执行链式处理 (要在 Sanitization 和 Emoji 补全之前执行，以保证正则匹配的准确性)
-    let processedLines = outputLines;
+    // 2.1 执行 Workflow 链式处理 (算子操作)
     if (activeOperators.length > 0) {
-        processedLines = await runOperatorChain(outputLines, activeOperators, {
+        currentLines = await runOperatorChain(currentLines, activeOperators, {
             subName: profilePrefixSettings?.name,
             userAgent,
             config,
-            debug // 传递调试标志
+            debug
         });
     }
 
-    // [核心安全修复] 再次应用全局过滤逻辑，确保没有任何漏网之鱼
+    // 2.2 [安全保险] 再次应用订阅级别的全局过滤逻辑
     if (config && (config.exclude || config.include)) {
-        processedLines = applyFilterRules(processedLines, config);
+        currentLines = applyFilterRules(currentLines, config);
     }
 
-    // --- 后置处理阶段 (Post-Processing Stage) ---
-    // 在所有转换和过滤完成后，再进行最后的格式净化和视觉增强
+    // --- 阶段 3: 后置格式化与增强 (Post-Formatting & Enhancement) ---
     
-    // 1. YAML 兼容性净化
-    const sanitizedLines = processedLines.map(line => sanitizeNodeForYaml(line));
+    // 3.1 YAML 兼容性净化
+    currentLines = currentLines.map(line => sanitizeNodeForYaml(line));
 
-    // 2. 国旗补全（智能化引擎核心出口）
-    const finalEnhancedLines = sanitizedLines.map(line => {
+    // 3.2 最终智能化补齐 (Flag Emoji)
+    const finalLines = currentLines.map(line => {
         return addFlagEmoji(line);
     });
 
-    const uniqueNodesString = finalEnhancedLines.join('\n');
-
-    // 确保最终的字符串在非空时以换行符结束，以兼容 subconverter
-    let finalNodeList = uniqueNodesString;
-    if (finalNodeList.length > 0 && !finalNodeList.endsWith('\n')) {
-        finalNodeList += '\n';
-    }
+    const finalNodeList = finalLines.join('\n');
+    let result = finalNodeList.length > 0 ? (finalNodeList.endsWith('\n') ? finalNodeList : finalNodeList + '\n') : '';
 
     // 将虚假节点（如果存在）插入到列表最前面
     let result = finalNodeList;
