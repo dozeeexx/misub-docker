@@ -399,7 +399,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     
     if (searchParams?.get('debug') === '1') {
         const debugInfo = {
-            profile: subName,
+            profile: profilePrefixSettings?.name || 'Default',
             operators: activeOperators.length,
             subs: httpSubs.length,
             rules: {
@@ -408,7 +408,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             },
             timestamp: new Date().toISOString()
         };
-        const debugNodeName = `[DIAGNOSTIC] ${subName} | Ops: ${activeOperators.length} | Rules: ${config?.exclude || 'None'}`;
+        const debugNodeName = `[DIAGNOSTIC] ${profilePrefixSettings?.name || 'Default'} | Ops: ${activeOperators.length} | Rules: ${config?.exclude || 'None'}`;
         const diagnosticNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443?debug=${encodeURIComponent(JSON.stringify(debugInfo))}#${encodeURIComponent(debugNodeName)}`;
         result = `${diagnosticNode}\n${result}`;
     }
