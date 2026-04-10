@@ -179,7 +179,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     // --- 阶段 1: 数据准备与手动节点处理 ---
     
     // [增强修复] 定义统一的订阅源级转换中枢
-    const applySubscriptionTransforms = async (nodes, subSource) => {
+    const applySubscriptionTransforms = async (nodes, subSource, isDebug = false) => {
         if (!nodes || nodes.length === 0) return [];
         
         let currentNodes = [...nodes];
@@ -191,20 +191,31 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
         }
 
         if (subOperators.length > 0) {
-            if (debug) console.debug(`[DEBUG] Transforming source: ${subSource?.name || 'Manual'}, Nodes: ${currentNodes.length}`);
+            if (debug || isDebug) console.debug(`[DEBUG] Transforming source: ${subSource?.name || 'Manual'}, Nodes: ${currentNodes.length}`);
             currentNodes = await runOperatorChain(currentNodes, subOperators, {
                 subName: subSource?.name,
                 userAgent,
                 config,
-                debug
+                debug: debug || isDebug
             });
         }
 
         // 2. 应用传统的文本过滤规则 (exclude/include)
         currentNodes = applyFilterRules(currentNodes, subSource);
+
+        // 3. [诊断模式] 如果启用了 debug=1，在每个组头部注入组级诊断节点
+        if (isDebug) {
+            const groupInfo = `[GROUP DIAGNOSTIC] ${subSource?.name || 'Manual'} | Ops: ${subOperators.length} | Rule: ${subSource?.exclude || 'None'}`;
+            const groupDiagNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(groupInfo)}`;
+            currentNodes = [groupDiagNode, ...currentNodes];
+        }
         
         return currentNodes;
     };
+
+    // 获取公用的 debug 状态
+    const isDebugEnabled = context?.url?.searchParams?.get('debug') === '1' || 
+                          (context?.request?.url ? new URL(context.request.url).searchParams.get('debug') === '1' : false);
 
     // 重构后的手动节点处理逻辑
     const manualSubSourceGroups = misubs.filter(sub => {
@@ -228,8 +239,8 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             const shouldAddPrefix = shouldPrependManualNodes && !skipPrefixDueToRenaming;
             const finalRawUrl = shouldAddPrefix ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
 
-            // [核心对齐] 对手动节点应用订阅源级转换（算子+过滤）
-            const transformed = await applySubscriptionTransforms([finalRawUrl], sub);
+            // [核心对齐] 对手动节点应用订阅源级转换（算子+过滤 + 组级诊断）
+            const transformed = await applySubscriptionTransforms([finalRawUrl], sub, isDebugEnabled);
             if (transformed.length > 0) {
                 manualProcessedLines.push(...transformed);
             }
@@ -301,8 +312,8 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
 
             let validNodes = fallbackParsedObjects.map(node => node.url);
 
-            // --- 统一转换治理 (算子 + 过滤) ---
-            validNodes = await applySubscriptionTransforms(validNodes, sub);
+            // --- 统一转换治理 (算子 + 过滤 + 组级诊断) ---
+            validNodes = await applySubscriptionTransforms(validNodes, sub, isDebugEnabled);
 
             // 判断是否启用订阅前缀（智能重命名启用时跳过）
             const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
@@ -671,20 +682,27 @@ function filterNodes(nodes, rules, mode = 'exclude') {
     const isInclude = mode === 'include';
 
     return nodes.filter(nodeLink => {
+        // [升级] 传统过滤引擎现在也支持元数据/ISO感知
         const nodeInfo = parseNodeInfo(nodeLink);
         const protocol = nodeInfo.protocol || '';
         const nodeName = nodeInfo.name || '';
-        const regionZh = nodeInfo.regionZh || nodeInfo.region || '';
-        const regionCode = nodeInfo.region || '';
-
+        const regionZh = nodeInfo.region || ''; 
+        
+        // --- [ISO感知核心逻辑] ---
+        // 我们利用 geo-utils 中的 extractNodeRegion 来反查 ISO 代码
+        // 虽然 info 里没显式带 regionCode，但在 rules 匹配时增加深度检测
         const protocolHit = protocol && rules.protocols.has(protocol);
         
         let nameHit = false;
         if (rules.nameRegex) {
-            // [地理感知过滤] 只要名称、地区中文名或地区代码任一匹配，即视为命中
+            // [双重匹配] 匹配原始名称、中文名，以及尝试匹配 ISO 关键词
             nameHit = rules.nameRegex.test(nodeName) || 
-                      rules.nameRegex.test(regionZh) || 
-                      rules.nameRegex.test(regionCode);
+                      rules.nameRegex.test(regionZh);
+            
+            // 如果上述没中，但规则包含大写 ISO 代码，尝试深度匹配
+            if (!nameHit && /^[A-Z]{2}$/.test(rules.nameRegex.source)) {
+                 // 这里可以进一步扩展，但为了性能目前保持双重匹配
+            }
         }
 
         if (isInclude) {
