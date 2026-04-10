@@ -165,39 +165,33 @@ const url = typeof sub?.url === 'string' ? sub.url.trim() : '';
 return Boolean(url) && !url.toLowerCase().startsWith('http');
 })
 .map(node => {
-try {
-const rawUrl = typeof node?.url === 'string' ? node.url.trim() : '';
-if (!rawUrl) return '';
-
-if (node.isExpiredNode) {
-return rawUrl; // Directly use the URL for expired node
-}
-
-// 修复手动SS节点中的URL编码问题（以及 Hysteria2 等其他协议）
+    // ... (keep existing logic)
+    const resultUrl = (function() {
+        try {
+            const rawUrl = typeof node?.url === 'string' ? node.url.trim() : '';
+            if (!rawUrl) return '';
+            if (node.isExpiredNode) return rawUrl;
+            
             let processedUrl = fixNodeUrlEncoding(rawUrl, { plusAsSpace: Boolean(node?.plusAsSpace) });
-if (typeof processedUrl !== 'string' || !processedUrl) {
-processedUrl = rawUrl;
-}
-
-// 如果用户设置了手动节点名称，则替换链接中的原始名称
-const customNodeName = typeof node.name === 'string' ? node.name.trim() : '';
-if (customNodeName) {
-processedUrl = applyManualNodeName(processedUrl, customNodeName);
-}
-
-// 如果启用了分组名称前缀，且节点有分组信息，则添加分组名称
-const nodeGroup = typeof node.group === 'string' ? node.group.trim() : '';
-if (prependGroupName && nodeGroup && !skipPrefixDueToRenaming) {
-processedUrl = prependNodeName(processedUrl, nodeGroup);
-}
-
-// 只有在智能重命名未启用时才添加前缀
-const shouldAddPrefix = shouldPrependManualNodes && !skipPrefixDueToRenaming;
-return shouldAddPrefix ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
-} catch (error) {
-console.warn('[Subscription] 手动节点处理失败，已跳过:', error?.message || error);
-return '';
-}
+            if (typeof processedUrl !== 'string' || !processedUrl) processedUrl = rawUrl;
+            
+            const customNodeName = typeof node.name === 'string' ? node.name.trim() : '';
+            if (customNodeName) processedUrl = applyManualNodeName(processedUrl, customNodeName);
+            
+            const nodeGroup = typeof node.group === 'string' ? node.group.trim() : '';
+            if (prependGroupName && nodeGroup && !skipPrefixDueToRenaming) processedUrl = prependNodeName(processedUrl, nodeGroup);
+            
+            const shouldAddPrefix = shouldPrependManualNodes && !skipPrefixDueToRenaming;
+            return shouldAddPrefix ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
+        } catch (e) { return ''; }
+    })();
+    
+    // [重要修复] 对手动节点也应用其所属源的过滤规则
+    if (resultUrl && node) {
+        const filteredList = applyFilterRules([resultUrl], node);
+        return filteredList.length > 0 ? filteredList[0] : '';
+    }
+    return resultUrl;
 })
 .filter(Boolean)
 .join('\n');
