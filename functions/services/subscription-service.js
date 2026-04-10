@@ -299,9 +299,9 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
     let outputLines = [...new Set(finalEnhancedLines)];
 
     // [核心安全修复] 再次应用全局过滤逻辑，确保没有任何漏网之鱼（如漏掉过滤的手动节点或异常源节点）
-    // 这里的 sub 是当前的 Profile 配置对象，包含了全局的 exclude/include 规则
-    if (sub && (sub.exclude || sub.include)) {
-        outputLines = applyFilterRules(outputLines, sub);
+    // 这里的 config 是当前的 Profile 配置对象，包含了全局的 exclude/include 规则
+    if (config && (config.exclude || config.include)) {
+        outputLines = applyFilterRules(outputLines, config);
     }
 
     // --- 统一转换引擎 (Unified Transformation Engine) ---
