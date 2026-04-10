@@ -65,7 +65,7 @@ function buildPolicyLine(group) {
 function buildRuleLine(rule) {
     const type = String(rule.type || '').toUpperCase();
     if (!type) return null;
-    if (type === 'RULE-SET') return `RULE-SET,${rule.value},${rule.policy}`;
+    if (type === 'RULE-SET') return null; // Remote rules moved to filter_remote
     if (type === 'MATCH' || type === 'FINAL') return `FINAL,${rule.policy}`;
     if (type === 'GEOIP') return `GEOIP,${rule.value || 'CN'},${rule.policy}`;
     return `${type},${rule.value},${rule.policy}`;
@@ -82,6 +82,11 @@ export function renderQuanxFromTemplateModel(model, options = {}) {
         ? normalizedModel.proxies
         : urlsToClashProxies(proxyUrls);
 
+    // Extraction of remote rules for Quantumult X
+    const remoteRules = normalizedModel.rules.filter(r => String(r.type).toUpperCase() === 'RULE-SET' && r.value.startsWith('http'));
+    const filterRemoteLines = remoteRules.map(r => `${r.value}, tag=${r.policy}, policy=${r.policy}, enabled=true`);
+    const localRules = normalizedModel.rules.filter(r => !remoteRules.includes(r));
+
     return [
         '[Proxy]',
         ...proxies.map(buildProxyLine).filter(Boolean),
@@ -92,8 +97,11 @@ export function renderQuanxFromTemplateModel(model, options = {}) {
             .map(buildPolicyLine)
             .filter(Boolean),
         '',
+        '[Filter Remote]',
+        ...filterRemoteLines,
+        '',
         '[Rule]',
-        ...normalizedModel.rules.map(buildRuleLine).filter(Boolean),
+        ...localRules.map(buildRuleLine).filter(Boolean),
         ''
     ].join('\n');
 }
