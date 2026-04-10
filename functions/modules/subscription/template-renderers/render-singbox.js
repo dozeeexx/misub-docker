@@ -218,7 +218,7 @@ export function renderSingboxFromTemplateModel(model, options = {}) {
         ? normalizedModel.proxies
         : urlsToClashProxies(proxyUrls);
     const proxyOutbounds = proxies.map(buildOutbound).filter(Boolean);
-    const groupOutbounds = buildGroupOutbounds(normalizedModel.groups);
+    const groupOutbounds = buildGroupOutbounds(normalizedModel.groups.filter(g => Array.isArray(g.members) && g.members.length > 0));
     const ruleSetObjects = buildRuleSets(normalizedModel.rules);
     const routeRules = normalizedModel.rules.map(mapRuleToSingbox).filter(Boolean);
 

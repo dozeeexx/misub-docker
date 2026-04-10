@@ -87,7 +87,10 @@ export function renderQuanxFromTemplateModel(model, options = {}) {
         ...proxies.map(buildProxyLine).filter(Boolean),
         '',
         '[Policy]',
-        ...normalizedModel.groups.map(buildPolicyLine).filter(Boolean),
+        ...normalizedModel.groups
+            .filter(group => Array.isArray(group.members) && group.members.length > 0)
+            .map(buildPolicyLine)
+            .filter(Boolean),
         '',
         '[Rule]',
         ...normalizedModel.rules.map(buildRuleLine).filter(Boolean),

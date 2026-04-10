@@ -120,7 +120,10 @@ export function renderLoonFromTemplateModel(model, options = {}) {
         ...proxies.map(buildProxyLine).filter(Boolean),
         '',
         '[Proxy Group]',
-        ...normalizedModel.groups.map(buildGroupLine).filter(Boolean),
+        ...normalizedModel.groups
+            .filter(group => Array.isArray(group.members) && group.members.length > 0)
+            .map(buildGroupLine)
+            .filter(Boolean),
         '',
         '[Rule]',
         ...normalizedModel.rules.map(buildRuleLine).filter(Boolean),

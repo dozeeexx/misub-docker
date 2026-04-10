@@ -128,7 +128,10 @@ export function renderSurgeFromTemplateModel(model, options = {}) {
         : urlsToClashProxies(proxyUrls);
 
     const proxyLines = proxies.map(buildProxyLine).filter(Boolean);
-    const groupLines = normalizedModel.groups.map(buildProxyGroupLine).filter(Boolean);
+    const groupLines = normalizedModel.groups
+        .filter(group => Array.isArray(group.members) && group.members.length > 0)
+        .map(buildProxyGroupLine)
+        .filter(Boolean);
     const ruleLines = normalizedModel.rules.map(buildRuleLine).filter(Boolean);
 
     return [

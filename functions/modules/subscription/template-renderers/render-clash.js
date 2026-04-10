@@ -28,13 +28,15 @@ export function renderClashFromTemplateModel(model) {
         'log-level': 'info',
         'external-controller': ':9090',
         'proxies': normalizedModel.proxies,
-        'proxy-groups': normalizedModel.groups.map(group => ({
-            name: group.name,
-            type: mapGroupType(group.type),
-            proxies: group.members,
-            filter: Array.isArray(group.filters) && group.filters.length > 0 ? group.filters.join('|') : undefined,
-            ...group.options
-        })),
+        'proxy-groups': normalizedModel.groups
+            .filter(group => Array.isArray(group.members) && group.members.length > 0)
+            .map(group => ({
+                name: group.name,
+                type: mapGroupType(group.type),
+                proxies: group.members,
+                filter: Array.isArray(group.filters) && group.filters.length > 0 ? group.filters.join('|') : undefined,
+                ...group.options
+            })),
         'rules': normalizedModel.rules.map(mapRule).filter(Boolean),
         'profile': {
             'store-selected': true,
