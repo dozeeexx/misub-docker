@@ -134,52 +134,6 @@ function parseHostPort(hostPort) {
 
 // ============ 节点解析 ============
 
-
-function setNodeName(url, protocol, name) {
-    const proto = normalizeProtocol(protocol || getProtocol(url));
-
-    if (proto === 'vmess') {
-        try {
-            const { payload, query, hasFragment } = splitSchemeQueryAndFragment(url, 8);
-            const obj = JSON.parse(base64Decode(payload));
-            obj.ps = String(name || '');
-            const rebuilt = `vmess://${base64Encode(JSON.stringify(obj))}${query}`;
-            return hasFragment ? setFragment(rebuilt, name) : rebuilt;
-        } catch { return setFragment(url, name); }
-    }
-    if (proto === 'ssr') {
-        // SSR 需要同时更新 remarks 参数和 fragment
-        try {
-            const { payload, query } = splitSchemeQueryAndFragment(url, 6);
-            const decoded = base64Decode(payload);
-            const slashQ = decoded.indexOf('/?');
-            const qIdx = slashQ !== -1 ? slashQ + 2 : (decoded.indexOf('?') !== -1 ? decoded.indexOf('?') + 1 : -1);
-            if (qIdx === -1) return setFragment(url, name);
-
-            const prefix = decoded.slice(0, qIdx);
-            const paramStr = decoded.slice(qIdx);
-            // 手动解析和重建参数，过滤空段避免非法拼接
-            const rawParts = String(paramStr || '').split('&').filter(p => p && p.trim() !== '');
-            let replaced = false;
-            const parts = rawParts.map(p => {
-                const eq = p.indexOf('=');
-                const k = eq === -1 ? p : p.slice(0, eq);
-                const v = eq === -1 ? '' : p.slice(eq + 1);
-                if (k === 'remarks') {
-                    replaced = true;
-                    return `remarks=${base64UrlEncode(String(name || ''))}`;
-                }
-                return `${k}=${v}`;
-            });
-            if (!replaced) parts.push(`remarks=${base64UrlEncode(String(name || ''))}`);
-            const rebuiltDecoded = prefix + parts.join('&');
-            const rebuilt = `ssr://${base64UrlEncode(rebuiltDecoded)}${query}`;
-            return setFragment(rebuilt, name);
-        } catch { return setFragment(url, name); }
-    }
-    return setFragment(url, name);
-}
-
 function stripLeadingEmoji(name) {
     return String(name || '').replace(/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]\s*/g, '').trim();
 }
