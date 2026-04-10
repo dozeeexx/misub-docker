@@ -12,7 +12,7 @@
 
 import { urlToClashProxy } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
-import { POLICY_GROUPS, getBuiltinRules } from './builtin-rules-provider.js';
+import { POLICY_GROUPS, getBuiltinRules, DEFAULT_SELECT_GROUP, DEFAULT_RELAY_GROUP } from './builtin-rules-provider.js';
 
 /**
  * 清理控制字符
@@ -294,9 +294,8 @@ resource-parser = https://raw.githubusercontent.com/sub-store-org/Sub-Store/mast
 
     const iconRepo = 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color';
     const groupIcons = {
-        '🚀 节点选择': `${iconRepo}/Proxy.png`,
-        '📶 节点选择': `${iconRepo}/Proxy.png`,
-        '🌍 总出口': `${iconRepo}/Proxy.png`,
+        [DEFAULT_SELECT_GROUP]: `${iconRepo}/Proxy.png`,
+        [DEFAULT_RELAY_GROUP]: `${iconRepo}/Proxy.png`,
         '♻️ 自动选择': `${iconRepo}/Speedtest.png`,
         '🔯 故障转移': `${iconRepo}/Relay.png`,
         '🎬 视频广告': `${iconRepo}/Reject.png`,
@@ -335,7 +334,7 @@ resource-parser = https://raw.githubusercontent.com/sub-store-org/Sub-Store/mast
         'IP-CIDR,172.16.0.0/12,DIRECT',
         'IP-CIDR,192.168.0.0/16,DIRECT',
         ...builtinRuleLines,
-        `FINAL,${levelKey === 'RELAY' ? '🌍 总出口' : '🚀 节点选择'}`
+        `FINAL,${levelKey === 'RELAY' ? DEFAULT_RELAY_GROUP : DEFAULT_SELECT_GROUP}`
     ];
     sections.push(`[Rule]\n${ruleLines.filter(Boolean).join('\n')}`);
 

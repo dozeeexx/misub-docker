@@ -9,7 +9,7 @@
 
 import { urlToClashProxy } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
-import { POLICY_GROUPS, getBuiltinRules } from './builtin-rules-provider.js';
+import { POLICY_GROUPS, getBuiltinRules, getRemoteProviderDefinitions, DEFAULT_SELECT_GROUP, DEFAULT_RELAY_GROUP } from './builtin-rules-provider.js';
 
 /**
  * 清理字符串中的控制字符（保留换行和制表符）
@@ -470,7 +470,7 @@ dns-server = 119.29.29.29, 223.5.5.5, system`);
         'IP-CIDR,172.16.0.0/12,DIRECT',
         'IP-CIDR,192.168.0.0/16,DIRECT',
         ...builtinRuleLines,
-        `FINAL,${levelKey === 'RELAY' ? '🌍 总出口' : '📶 节点选择'},dns-failed`
+        `FINAL,${levelKey === 'RELAY' ? DEFAULT_RELAY_GROUP : DEFAULT_SELECT_GROUP},dns-failed`
     ];
     sections.push(`[Rule]\n${ruleLines.filter(Boolean).join('\n')}`);
 

@@ -1,9 +1,12 @@
-/**
- * MiSub 统一规则提供者 (Unified Rule Provider)
- * 唯一事实来源：管理所有内置平台的策略组逻辑与分流规则
- */
-
 import { groupNodeLinesByRegion } from './region-groups.js';
+
+/**
+ * 策略组标准名称常量
+ */
+export const DEFAULT_SELECT_GROUP = '🚀 节点选择';
+export const DEFAULT_RELAY_GROUP = '🌍 总出口';
+export const AUTO_SELECT_GROUP = '♻️ 自动选择';
+export const FALLBACK_GROUP = '🔯 故障转移';
 
 /**
  * 自动生成地区策略组（通用中间格式）
@@ -23,9 +26,9 @@ export const POLICY_GROUPS = {
     BASE: (proxies) => {
         const proxyNames = proxies.map(p => p.tag || p.name);
         return [
-            { name: '🚀 节点选择', type: 'select', proxies: [...proxyNames, '♻️ 自动选择', '🔯 故障转移', 'DIRECT'] },
-            { name: '♻️ 自动选择', type: 'url-test', proxies: proxyNames },
-            { name: '🔯 故障转移', type: 'fallback', proxies: proxyNames }
+            { name: DEFAULT_SELECT_GROUP, type: 'select', proxies: [...proxyNames, AUTO_SELECT_GROUP, FALLBACK_GROUP, 'DIRECT'] },
+            { name: AUTO_SELECT_GROUP, type: 'url-test', proxies: proxyNames },
+            { name: FALLBACK_GROUP, type: 'fallback', proxies: proxyNames }
         ];
     },
     // 标准配置
@@ -34,13 +37,13 @@ export const POLICY_GROUPS = {
         const regions = generateRegionData(proxies);
         const regionNames = regions.map(r => r.name);
         return [
-            { name: '🚀 节点选择', type: 'select', proxies: [...regionNames, '♻️ 自动选择', ...proxyNames, 'DIRECT'] },
+            { name: DEFAULT_SELECT_GROUP, type: 'select', proxies: [...regionNames, AUTO_SELECT_GROUP, ...proxyNames, 'DIRECT'] },
             ...regions.map(r => ({ name: r.name, type: 'url-test', proxies: r.tags })),
-            { name: '♻️ 自动选择', type: 'url-test', proxies: proxyNames },
-            { name: '🎬 视频广告', type: 'select', proxies: ['REJECT', 'DIRECT', '🚀 节点选择'] },
-            { name: '🎥 流媒体', type: 'select', proxies: ['🚀 节点选择', '♻️ 自动选择', 'DIRECT'] },
-            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', '🚀 节点选择', '♻️ 自动选择'] },
-            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', '🚀 节点选择', '♻️ 自动选择'] }
+            { name: AUTO_SELECT_GROUP, type: 'url-test', proxies: proxyNames },
+            { name: '🎬 视频广告', type: 'select', proxies: ['REJECT', 'DIRECT', DEFAULT_SELECT_GROUP] },
+            { name: '🎥 流媒体', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, 'DIRECT'] },
+            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] },
+            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] }
         ];
     },
     // 完整配置
@@ -49,16 +52,16 @@ export const POLICY_GROUPS = {
         const regions = generateRegionData(proxies);
         const regionNames = regions.map(r => r.name);
         return [
-            { name: '🚀 节点选择', type: 'select', proxies: [...regionNames, '♻️ 自动选择', ...proxyNames, 'DIRECT'] },
+            { name: DEFAULT_SELECT_GROUP, type: 'select', proxies: [...regionNames, AUTO_SELECT_GROUP, ...proxyNames, 'DIRECT'] },
             ...regions.map(r => ({ name: r.name, type: 'url-test', proxies: r.tags })),
-            { name: '♻️ 自动选择', type: 'url-test', proxies: proxyNames },
-            { name: '🎬 视频广告', type: 'select', proxies: ['REJECT', 'DIRECT', '🚀 节点选择'] },
-            { name: '🎥 流媒体', type: 'select', proxies: ['🚀 节点选择', '♻️ 自动选择', 'DIRECT'] },
-            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', '🚀 节点选择', '♻️ 自动选择'] },
-            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', '🚀 节点选择', '♻️ 自动选择'] },
-            { name: '📲 Telegram', type: 'select', proxies: ['🚀 节点选择', '♻️ 自动选择', 'DIRECT'] },
-            { name: '🎧 Spotify', type: 'select', proxies: ['🚀 节点选择', '♻️ 自动选择', 'DIRECT'] },
-            { name: '🎮 游戏平台', type: 'select', proxies: ['DIRECT', '🚀 节点选择', '♻️ 自动选择'] }
+            { name: AUTO_SELECT_GROUP, type: 'url-test', proxies: proxyNames },
+            { name: '🎬 视频广告', type: 'select', proxies: ['REJECT', 'DIRECT', DEFAULT_SELECT_GROUP] },
+            { name: '🎥 流媒体', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, 'DIRECT'] },
+            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] },
+            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] },
+            { name: '📲 Telegram', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, 'DIRECT'] },
+            { name: '🎧 Spotify', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, 'DIRECT'] },
+            { name: '🎮 游戏平台', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] }
         ];
     },
     // 链式代理
@@ -67,17 +70,17 @@ export const POLICY_GROUPS = {
         const regions = generateRegionData(proxies);
         const regionNames = regions.map(r => r.name);
         return [
-            { name: '🌍 总出口', type: 'select', proxies: ['🔗 链式代理', '🚀 常用节点', ...regionNames, 'DIRECT'] },
+            { name: DEFAULT_RELAY_GROUP, type: 'select', proxies: ['🔗 链式代理', '🚀 常用节点', ...regionNames, 'DIRECT'] },
             { name: '🔗 链式代理', type: 'relay', proxies: ['入口节点', '落地节点'] },
             { name: '入口节点', type: 'select', proxies: [...proxyNames, 'DIRECT'] },
             { name: '落地节点', type: 'select', proxies: [...proxyNames, 'DIRECT'] },
             ...regions.map(r => ({ name: r.name, type: 'url-test', proxies: r.tags })),
-            { name: '🚀 常用节点', type: 'select', proxies: [...regionNames, '♻️ 自动选择', ...proxyNames, 'DIRECT'] },
-            { name: '♻️ 自动选择', type: 'url-test', proxies: proxyNames },
-            { name: '🎬 视频广告', type: 'select', proxies: ['REJECT', 'DIRECT', '🌍 总出口'] },
-            { name: '🎥 流媒体', type: 'select', proxies: ['🌍 总出口', '🚀 常用节点', 'DIRECT'] },
-            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', '🌍 总出口', '🚀 常用节点'] },
-            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', '🌍 总出口', '🚀 常用节点'] }
+            { name: '🚀 常用节点', type: 'select', proxies: [...regionNames, AUTO_SELECT_GROUP, ...proxyNames, 'DIRECT'] },
+            { name: AUTO_SELECT_GROUP, type: 'url-test', proxies: proxyNames },
+            { name: '🎬 视频广告', type: 'select', proxies: ['REJECT', 'DIRECT', DEFAULT_RELAY_GROUP] },
+            { name: '🎥 流媒体', type: 'select', proxies: [DEFAULT_RELAY_GROUP, '🚀 常用节点', 'DIRECT'] },
+            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', DEFAULT_RELAY_GROUP, '🚀 常用节点'] },
+            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', DEFAULT_RELAY_GROUP, '🚀 常用节点'] }
         ];
     }
 };
@@ -124,21 +127,21 @@ export const REMOTE_SOURCES = {
  */
 export const RULE_SETS = {
     BASE: [
-        'DOMAIN-SUFFIX,google.com,🚀 节点选择',
-        'DOMAIN-KEYWORD,google,🚀 节点选择',
-        'DOMAIN-SUFFIX,github.com,🚀 节点选择',
+        `DOMAIN-SUFFIX,google.com,${DEFAULT_SELECT_GROUP}`,
+        `DOMAIN-KEYWORD,google,${DEFAULT_SELECT_GROUP}`,
+        `DOMAIN-SUFFIX,github.com,${DEFAULT_SELECT_GROUP}`,
         'GEOIP,CN,DIRECT',
-        'MATCH,🚀 节点选择'
+        `MATCH,${DEFAULT_SELECT_GROUP}`
     ],
     STD: [
         'RULE-SET,ADS,🎬 视频广告',
         'RULE-SET,STREAM,🎥 流媒体',
         'RULE-SET,APPLE,🍎 Apple',
         'RULE-SET,MICROSOFT,Ⓜ️ Microsoft',
-        'DOMAIN-SUFFIX,google.com,🚀 节点选择',
-        'DOMAIN-SUFFIX,github.com,🚀 节点选择',
+        `DOMAIN-SUFFIX,google.com,${DEFAULT_SELECT_GROUP}`,
+        `DOMAIN-SUFFIX,github.com,${DEFAULT_SELECT_GROUP}`,
         'GEOIP,CN,DIRECT',
-        'MATCH,🚀 节点选择'
+        `MATCH,${DEFAULT_SELECT_GROUP}`
     ],
     FULL: [
         'RULE-SET,ADS,🎬 视频广告',
@@ -146,20 +149,20 @@ export const RULE_SETS = {
         'RULE-SET,STREAM,🎥 流媒体',
         'RULE-SET,APPLE,🍎 Apple',
         'RULE-SET,MICROSOFT,Ⓜ️ Microsoft',
-        'DOMAIN-SUFFIX,google.com,🚀 节点选择',
-        'DOMAIN-SUFFIX,github.com,🚀 节点选择',
+        `DOMAIN-SUFFIX,google.com,${DEFAULT_SELECT_GROUP}`,
+        `DOMAIN-SUFFIX,github.com,${DEFAULT_SELECT_GROUP}`,
         'GEOIP,CN,DIRECT',
-        'MATCH,🚀 节点选择'
+        `MATCH,${DEFAULT_SELECT_GROUP}`
     ],
     RELAY: [
         'RULE-SET,ADS,🎬 视频广告',
         'RULE-SET,STREAM,🎥 流媒体',
         'RULE-SET,APPLE,🍎 Apple',
         'RULE-SET,MICROSOFT,Ⓜ️ Microsoft',
-        'DOMAIN-SUFFIX,google.com,🌍 总出口',
-        'DOMAIN-SUFFIX,github.com,🌍 总出口',
+        `DOMAIN-SUFFIX,google.com,${DEFAULT_RELAY_GROUP}`,
+        `DOMAIN-SUFFIX,github.com,${DEFAULT_RELAY_GROUP}`,
         'GEOIP,CN,DIRECT',
-        'MATCH,🌍 总出口'
+        `MATCH,${DEFAULT_RELAY_GROUP}`
     ]
 };
 

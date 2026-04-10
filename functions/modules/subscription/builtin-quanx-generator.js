@@ -5,7 +5,7 @@
 
 import { urlToClashProxy } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
-import { POLICY_GROUPS, getBuiltinRules } from './builtin-rules-provider.js';
+import { POLICY_GROUPS, getBuiltinRules, DEFAULT_SELECT_GROUP, DEFAULT_RELAY_GROUP } from './builtin-rules-provider.js';
 
 const ICON_REPO = 'https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color';
 
@@ -167,9 +167,8 @@ export function generateBuiltinQuanxConfig(nodeList, options = {}) {
     const abstractGroups = policyFactory(proxiesWithMetadata);
 
     const groupIcons = {
-        '🚀 节点选择': `${ICON_REPO}/Proxy.png`,
-        '节点选择': `${ICON_REPO}/Proxy.png`,
-        '🌍 总出口': `${ICON_REPO}/Proxy.png`,
+        [DEFAULT_SELECT_GROUP]: `${ICON_REPO}/Proxy.png`,
+        [DEFAULT_RELAY_GROUP]: `${ICON_REPO}/Proxy.png`,
         '自动选择': `${ICON_REPO}/Speedtest.png`,
         '🔯 故障转移': `${ICON_REPO}/Relay.png`,
         '🎬 视频广告': `${ICON_REPO}/Reject.png`,
@@ -212,7 +211,7 @@ export function generateBuiltinQuanxConfig(nodeList, options = {}) {
         'IP-CIDR, 172.16.0.0/12, DIRECT',
         'IP-CIDR, 192.168.0.0/16, DIRECT',
         ...localRules,
-        `FINAL, ${levelKey === 'RELAY' ? '🌍 总出口' : '🚀 节点选择'}`
+        `FINAL, ${levelKey === 'RELAY' ? DEFAULT_RELAY_GROUP : DEFAULT_SELECT_GROUP}`
     ];
 
     sections.push(`[filter_remote]\n${remoteRules.join('\n')}`);

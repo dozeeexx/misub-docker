@@ -6,7 +6,7 @@
 import { urlToClashProxy } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
 import { groupNodeLinesByRegion } from './region-groups.js';
-import { POLICY_GROUPS, getBuiltinRules, getRemoteProviderDefinitions } from './builtin-rules-provider.js';
+import { POLICY_GROUPS, getBuiltinRules, getRemoteProviderDefinitions, DEFAULT_SELECT_GROUP, DEFAULT_RELAY_GROUP } from './builtin-rules-provider.js';
 
 function cleanControlChars(str) {
     if (typeof str !== 'string') return str;
@@ -273,8 +273,8 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
             strategy: 'prefer_ipv4',
             servers: [
                 { tag: 'dns-ali', address: '223.5.5.5', detour: 'DIRECT' },
-                { tag: 'dns-google', address: '8.8.8.8', detour: '🚀 节点选择' },
-                { tag: 'doh-cloudflare', address: 'https://1.1.1.1/dns-query', detour: '🚀 节点选择' }
+                { tag: 'dns-google', address: '8.8.8.8', detour: DEFAULT_SELECT_GROUP },
+                { tag: 'doh-cloudflare', address: 'https://1.1.1.1/dns-query', detour: DEFAULT_SELECT_GROUP }
             ]
         },
         rule_sets: ruleSets,
@@ -286,7 +286,7 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
         ],
         route: {
             auto_detect_interface: true,
-            final: levelKey === 'RELAY' ? '🌍 总出口' : '🚀 节点选择',
+            final: levelKey === 'RELAY' ? DEFAULT_RELAY_GROUP : DEFAULT_SELECT_GROUP,
             rules: routeRules
         }
     };

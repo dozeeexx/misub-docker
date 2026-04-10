@@ -7,7 +7,7 @@
 import { urlsToClashProxies } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
 import { clashFix } from '../../utils/format-utils.js';
-import { POLICY_GROUPS, RULE_SETS, getBuiltinRules, getRemoteProviderDefinitions } from './builtin-rules-provider.js';
+import { POLICY_GROUPS, RULE_SETS, getBuiltinRules, getRemoteProviderDefinitions, DEFAULT_SELECT_GROUP, DEFAULT_RELAY_GROUP } from './builtin-rules-provider.js';
 import yaml from 'js-yaml';
 
 /**
@@ -108,58 +108,57 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         return '# No valid proxies found\nproxies: []\n';
     }
 
-    // 从统一规则库获取分流规则
-    const levelKey = (ruleLevel || 'std').toUpperCase();
-    const rawRules = getBuiltinRules(levelKey, 'clash');
-
-    // 生成策略组
-    const policyGroupsFactory = POLICY_GROUPS[levelKey] || POLICY_GROUPS.STD;
-    const proxyGroups = policyGroupsFactory(proxies);
-    
-    // 提取远程 Provider 定义
-    const ruleProviders = getRemoteProviderDefinitions('clash', rawRules);
-    
-    // 转换规则行为最终字符串
-    const clashRules = rawRules.map(r => {
-        if (typeof r === 'string') return r;
-        if (r.type === 'rule-provider') return `RULE-SET,${r.provider},${r.target}`;
-        return null;
-    }).filter(Boolean);
-
-    // 基础配置
-    const config = {
-        'mixed-port': 7890,
-        'allow-lan': true,
-        'mode': 'rule',
-        'log-level': 'info',
-        'external-controller': ':9090',
-
-        'dns': {
-            'enable': true,
-            'listen': '0.0.0.0:1053',
-            'default-nameserver': ['223.5.5.5', '1.1.1.1'],
-            'enhanced-mode': 'fake-ip',
-            'fake-ip-range': '198.18.0.1/16',
-            'fake-ip-filter': ['*.lan', '*.localhost'],
-            'nameserver': [
-                'https://dns.alidns.com/dns-query',
-                'https://doh.pub/dns-query'
-            ]
-        },
-
-        'proxies': proxies,
-        'profile': {
-            'store-selected': true,
-            'subscription-url': options.managedConfigUrl || ''
-        },
-
-        'proxy-groups': proxyGroups,
-        'rule-providers': ruleProviders,
-        'rules': clashRules
-    };
-
     // 生成 YAML
     try {
+        const levelKey = (ruleLevel || 'std').toUpperCase();
+        const rawRules = getBuiltinRules(levelKey, 'clash');
+
+        // 生成策略组
+        const policyGroupsFactory = POLICY_GROUPS[levelKey] || POLICY_GROUPS.STD;
+        const proxyGroups = policyGroupsFactory(proxies);
+        
+        // 提取远程 Provider 定义
+        const ruleProviders = getRemoteProviderDefinitions('clash', rawRules);
+        
+        // 转换规则行为最终字符串
+        const clashRules = rawRules.map(r => {
+            if (typeof r === 'string') return r;
+            if (r.type === 'rule-provider') return `RULE-SET,${r.provider},${r.target}`;
+            return null;
+        }).filter(Boolean);
+
+        // 基础配置
+        const config = {
+            'mixed-port': 7890,
+            'allow-lan': true,
+            'mode': 'rule',
+            'log-level': 'info',
+            'external-controller': ':9090',
+
+            'dns': {
+                'enable': true,
+                'listen': '0.0.0.0:1053',
+                'default-nameserver': ['223.5.5.5', '1.1.1.1'],
+                'enhanced-mode': 'fake-ip',
+                'fake-ip-range': '198.18.0.1/16',
+                'fake-ip-filter': ['*.lan', '*.localhost'],
+                'nameserver': [
+                    'https://dns.alidns.com/dns-query',
+                    'https://doh.pub/dns-query'
+                ]
+            },
+
+            'proxies': proxies,
+            'profile': {
+                'store-selected': true,
+                'subscription-url': options.managedConfigUrl || ''
+            },
+
+            'proxy-groups': proxyGroups,
+            'rule-providers': ruleProviders,
+            'rules': clashRules
+        };
+
         let yamlStr = yaml.dump(config, {
             indent: 2,
             lineWidth: -1,
@@ -174,10 +173,14 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         // 最终清理，确保输出没有控制字符
         return cleanControlChars(yamlStr);
     } catch (e) {
-        console.error('[BuiltinClash] YAML generation failed:', e);
-        // Fallback: 使用简单的对象手动序列化，确保是一个 Map 结构
+        console.error('[BuiltinClash] Generation failed:', e);
+        // Fallback: 至少返回包含节点的有效 YAML 结构，而不是传回会导致 Clash 报错的 Base64
         const fallbackProxies = Array.isArray(proxies) ? proxies : [];
-        return `proxies:\n${fallbackProxies.map(p => `  - ${JSON.stringify(p)}`).join('\n')}\n`;
+        const selectGroup = (ruleLevel || '').toUpperCase() === 'RELAY' ? DEFAULT_RELAY_GROUP : DEFAULT_SELECT_GROUP;
+        const fallbackYaml = `proxies:\n${fallbackProxies.map(p => `  - ${JSON.stringify(p)}`).join('\n')}\n` +
+                             `proxy-groups:\n  - name: ${selectGroup}\n    type: select\n    proxies: ${JSON.stringify(fallbackProxies.map(p => p.name))}\n` +
+                             `rules:\n  - MATCH,${selectGroup}\n`;
+        return fallbackYaml;
     }
 }
 
