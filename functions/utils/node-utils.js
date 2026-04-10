@@ -74,16 +74,15 @@ export function extractRegionFromNodeName(nodeName) {
  * 为节点链接添加国旗 Emoji
  */
 export function addFlagEmoji(link) {
-    if (!link) return link;
-
     const appendEmoji = (name) => {
         if (!name) return name;
+        
+        // [修复] 补全 Emoji 检测的鲁棒性：涵盖多组国旗编码范围
+        const HAS_EMOJI_REGEX = /[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[\u{E0061}-\u{E007A}]{2,}\u{E007F}|\u{1F3F3}\uFE0F?\u200D/u;
+        if (HAS_EMOJI_REGEX.test(name)) return name;
+
         const metadata = extractNodeMetadata(name);
         if (!metadata.flag) return name;
-        
-        // 如果已经有国旗了，就不重复加
-        const HAS_EMOJI_REGEX = /[\u{1F1E6}-\u{1F1FF}]{2}/u;
-        if (HAS_EMOJI_REGEX.test(name)) return name;
         
         return `${metadata.flag} ${name}`;
     };
@@ -91,13 +90,9 @@ export function addFlagEmoji(link) {
     if (link.startsWith('vmess://')) {
         try {
             const base64Part = link.substring('vmess://'.length);
-            const binaryString = atob(base64Part);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            const jsonString = new TextDecoder('utf-8').decode(bytes);
-            const nodeConfig = JSON.parse(jsonString);
+            const binaryString = atob(normalizeBase64(base64Part));
+            const decodedStr = new TextDecoder('utf-8').decode(new Uint8Array(Array.from(binaryString, c => c.charCodeAt(0))));
+            const nodeConfig = JSON.parse(decodedStr);
             if (nodeConfig.ps) {
                 nodeConfig.ps = appendEmoji(nodeConfig.ps);
                 const newJsonString = JSON.stringify(nodeConfig);
@@ -117,22 +112,21 @@ export function addFlagEmoji(link) {
             basePart = link.substring(0, hashIndex);
             const rawName = link.substring(hashIndex + 1);
             try {
-                // 处理可能被多次编码或非法编码的情况
+                // 确保解码，否则元数据提取器无法匹配中文关键词
                 originalName = decodeURIComponent(rawName);
             } catch (e) {
                 originalName = rawName;
             }
         } else {
-            // 如果没有 # 且是已知协议，尝试从 URL 解析一个基础名（如 host 或 server 参数）
-            const nodeInfo = extractNodeMetadata(link); // 借用提取器的部分逻辑或者直接解析
-            // 简单的回退逻辑：提取 host 前缀
+            // 没有 # 片段，根据协议和主机信息生成基础名称
             const protocolMatch = link.match(/^(.*?):\/\//);
             if (protocolMatch) {
                 const protocol = protocolMatch[1];
                 const rest = link.substring(protocol.length + 3);
                 const atIdx = rest.lastIndexOf('@');
-                const hostPort = atIdx !== -1 ? rest.substring(atIdx + 1) : rest;
-                originalName = hostPort.split(/[?#:]/)[0] || 'Node';
+                const hostPortPart = atIdx !== -1 ? rest.substring(atIdx + 1) : rest;
+                // 提取域名或 IP
+                originalName = hostPortPart.split(/[?#:]/)[0] || 'Node';
             }
         }
 

@@ -165,7 +165,6 @@ const url = typeof sub?.url === 'string' ? sub.url.trim() : '';
 return Boolean(url) && !url.toLowerCase().startsWith('http');
 })
 .map(node => {
-    // ... (keep existing logic)
     const resultUrl = (function() {
         try {
             const rawUrl = typeof node?.url === 'string' ? node.url.trim() : '';
@@ -291,15 +290,11 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
     // [Sanitize] Always sanitize node names for YAML compatibility (Subconverter issue with unquoted special chars)
     const sanitizedLines = normalizedLines.map(line => sanitizeNodeForYaml(line));
 
-    // [智能增强] 对所有输出行进行国旗补全（如果原本缺失）
-    // 只有在没有启用“模板重命名”的情况下才这样做，因为模板重命名有自己的控制逻辑
-    const finalEnhancedLines = skipPrefixDueToRenaming 
-        ? sanitizedLines 
-        : sanitizedLines.map(line => {
-            const withFlag = addFlagEmoji(line);
-            // 这里也可以做其他智能增强，例如 multiplier 标识等
-            return withFlag;
-        });
+    // [智能增强] 对所有输出行进行国旗补全（智能化引擎核心出口）
+    const finalEnhancedLines = sanitizedLines.map(line => {
+        // 始终尝试补全，addFlagEmoji 内部会自动检测是否已有国旗
+        return addFlagEmoji(line);
+    });
 
     const outputLines = [...new Set(finalEnhancedLines)];
 
