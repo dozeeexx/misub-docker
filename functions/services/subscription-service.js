@@ -372,7 +372,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     
     // [调试] 输出当前的 Profile 配置状态
     if (debug) {
-        console.debug(`[DEBUG] Profile: ${config?.name}, Exclude: ${config?.exclude}, Include: ${config?.include}`);
+        console.debug(`[DEBUG] Profile: ${profilePrefixSettings?.name}, Exclude: ${profilePrefixSettings?.exclude}, Include: ${profilePrefixSettings?.include}`);
     }
 
     // 获取工作流配置（支持字符串自动解析）
@@ -403,7 +403,12 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
         });
     }
 
-    // 2.2 [安全保险] 再次应用订阅级别的全局过滤逻辑
+    // 2.2 [安全保险] 再次应用订阅组级别的全局过滤逻辑 (Profile-level)
+    if (profilePrefixSettings && (profilePrefixSettings.exclude || profilePrefixSettings.include)) {
+        currentLines = applyFilterRules(currentLines, profilePrefixSettings);
+    }
+    
+    // 2.3 [兜底] 应用 Worker 级别的全局过滤逻辑 (Global-level)
     if (config && (config.exclude || config.include)) {
         currentLines = applyFilterRules(currentLines, config);
     }
@@ -432,13 +437,16 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             profile: profilePrefixSettings?.name || 'Default',
             operators: activeOperators.length,
             subs: httpSubs.length,
+            // [修复] 诊断信息显示订阅组级别的规则
             rules: {
-                exclude: config?.exclude,
-                include: config?.include
+                exclude: profilePrefixSettings?.exclude,
+                include: profilePrefixSettings?.include,
+                globalExclude: config?.exclude
             },
             timestamp: new Date().toISOString()
         };
-        const debugNodeName = `[DIAGNOSTIC] ${profilePrefixSettings?.name || 'Default'} | Ops: ${activeOperators.length} | Rules: ${config?.exclude || 'None'}`;
+        const activeRule = profilePrefixSettings?.exclude || profilePrefixSettings?.include || config?.exclude || 'None';
+        const debugNodeName = `[DIAGNOSTIC] ${profilePrefixSettings?.name || 'Default'} | Ops: ${activeOperators.length} | Rules: ${activeRule}`;
         const diagnosticNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443?debug=${encodeURIComponent(JSON.stringify(debugInfo))}#${encodeURIComponent(debugNodeName)}`;
         result = `${diagnosticNode}\n${result}`;
     }

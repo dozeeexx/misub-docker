@@ -339,7 +339,11 @@ export async function handleMisubRequest(context) {
         const generationSettings = {
             ...effectivePrefixSettings,
             nodeTransform: effectiveNodeTransform,
-            name: subName
+            name: subName,
+            // [修复] 显式传递订阅组级别的操作符和过滤规则
+            operators: activeProfile?.operators,
+            exclude: activeProfile?.exclude,
+            include: activeProfile?.include
         };
 
         const freshNodes = await generateCombinedNodeList(
