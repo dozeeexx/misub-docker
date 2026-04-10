@@ -287,28 +287,18 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
         ? combinedLines
         : combinedLines.map(line => removeFlagEmoji(line));
 
-    // [Sanitize] Always sanitize node names for YAML compatibility (Subconverter issue with unquoted special chars)
-    const sanitizedLines = normalizedLines.map(line => sanitizeNodeForYaml(line));
-
-    // [智能增强] 对所有输出行进行国旗补全（智能化引擎核心出口）
-    const finalEnhancedLines = sanitizedLines.map(line => {
-        // 始终尝试补全，addFlagEmoji 内部会自动检测是否已有国旗
-        return addFlagEmoji(line);
-    });
-
     let outputLines = [...new Set(finalEnhancedLines)];
-
-    // [核心安全修复] 再次应用全局过滤逻辑，确保没有任何漏网之鱼（如漏掉过滤的手动节点或异常源节点）
-    // 这里的 config 是当前的 Profile 配置对象，包含了全局的 exclude/include 规则
-    if (config && (config.exclude || config.include)) {
-        outputLines = applyFilterRules(outputLines, config);
-    }
 
     // --- 统一转换引擎 (Unified Transformation Engine) ---
     // 优先级: 订阅组 Operator Chain > 全局默认 Operator Chain > 旧版 Node Pipeline (桥接模式)
     
     let activeOperators = [];
     
+    // [调试] 输出当前的 Profile 配置状态
+    if (debug) {
+        console.debug(`[DEBUG] Profile: ${config?.name}, Exclude: ${config?.exclude}, Include: ${config?.include}`);
+    }
+
     // 1. 尝试获取订阅组级别的操作符
     if (profilePrefixSettings?.operators && Array.isArray(profilePrefixSettings.operators) && profilePrefixSettings.operators.length > 0) {
         activeOperators = profilePrefixSettings.operators;
@@ -324,17 +314,38 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
         activeOperators = adaptLegacyTransform(legacyConfig);
     }
 
-    // 执行链式处理
-    let finalLines = outputLines;
+    if (debug) {
+        console.debug(`[DEBUG] Active Operators Count: ${activeOperators.length}`);
+    }
+
+    // 执行链式处理 (要在 Sanitization 和 Emoji 补全之前执行，以保证正则匹配的准确性)
+    let processedLines = outputLines;
     if (activeOperators.length > 0) {
-        finalLines = await runOperatorChain(outputLines, activeOperators, {
+        processedLines = await runOperatorChain(outputLines, activeOperators, {
             subName: profilePrefixSettings?.name,
             userAgent,
-            config
+            config,
+            debug // 传递调试标志
         });
     }
 
-    const uniqueNodesString = finalLines.join('\n');
+    // [核心安全修复] 再次应用全局过滤逻辑，确保没有任何漏网之鱼
+    if (config && (config.exclude || config.include)) {
+        processedLines = applyFilterRules(processedLines, config);
+    }
+
+    // --- 后置处理阶段 (Post-Processing Stage) ---
+    // 在所有转换和过滤完成后，再进行最后的格式净化和视觉增强
+    
+    // 1. YAML 兼容性净化
+    const sanitizedLines = processedLines.map(line => sanitizeNodeForYaml(line));
+
+    // 2. 国旗补全（智能化引擎核心出口）
+    const finalEnhancedLines = sanitizedLines.map(line => {
+        return addFlagEmoji(line);
+    });
+
+    const uniqueNodesString = finalEnhancedLines.join('\n');
 
     // 确保最终的字符串在非空时以换行符结束，以兼容 subconverter
     let finalNodeList = uniqueNodesString;
