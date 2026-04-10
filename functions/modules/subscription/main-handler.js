@@ -352,9 +352,7 @@ export async function handleMisubRequest(context) {
             userAgentHeader,
             targetMisubs,
             prependedContentForSubconverter,
-            generationSettings,
-            isDebugToken,
-            shouldSkipCertificateVerify
+            generationSettings
         );
         const sourceNames = targetMisubs
             .filter(s => typeof s?.url === 'string' && s.url.startsWith('http'))
