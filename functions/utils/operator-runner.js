@@ -41,11 +41,12 @@ function opFilter(nodes, params) {
         const rules = normalizeRules(include.rules);
         if (rules.length > 0) {
             result = result.filter(r => {
-                const enriched = NodeUtils.ensureRegionInfo(r, false);
+                const enriched = NodeUtils.ensureRegionInfo(r, true); // 强制获取元数据
                 const matchRaw = NodeUtils.matchesRegexRules(r.name, rules);
                 const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, rules) : false;
                 const matchRegion = NodeUtils.matchesRegexRules(enriched.regionZh, rules) || 
-                                    NodeUtils.matchesRegexRules(enriched.region, rules);
+                                    NodeUtils.matchesRegexRules(enriched.region, rules) ||
+                                    NodeUtils.matchesRegexRules(enriched.regionCode, rules); // [新增] ISO 代码匹配
                 
                 return matchRaw || matchClean || matchRegion;
             });
@@ -55,11 +56,12 @@ function opFilter(nodes, params) {
         const rules = normalizeRules(exclude.rules);
         if (rules.length > 0) {
             result = result.filter(r => {
-                const enriched = NodeUtils.ensureRegionInfo(r, false);
+                const enriched = NodeUtils.ensureRegionInfo(r, true); // 强制获取元数据
                 const matchRaw = NodeUtils.matchesRegexRules(r.name, rules);
                 const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, rules) : false;
                 const matchRegion = NodeUtils.matchesRegexRules(enriched.regionZh, rules) || 
-                                    NodeUtils.matchesRegexRules(enriched.region, rules);
+                                    NodeUtils.matchesRegexRules(enriched.region, rules) ||
+                                    NodeUtils.matchesRegexRules(enriched.regionCode, rules); // [新增] ISO 代码匹配
                                     
                 return !(matchRaw || matchClean || matchRegion);
             });

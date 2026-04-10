@@ -388,8 +388,26 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
         return addFlagEmoji(line);
     });
 
+    // --- 阶段 4: 结果拼装与诊断注入 ---
     const finalNodeList = finalLines.join('\n');
     let result = finalNodeList.length > 0 ? (finalNodeList.endsWith('\n') ? finalNodeList : finalNodeList + '\n') : '';
+
+    // [诊断模式] 如果启用了 debug=1，在最前端注入诊断节点
+    if (context?.url?.searchParams?.get('debug') === '1') {
+        const debugInfo = {
+            profile: subName,
+            operators: activeOperators.length,
+            subs: httpSubs.length,
+            rules: {
+                exclude: config?.exclude,
+                include: config?.include
+            },
+            timestamp: new Date().toISOString()
+        };
+        const debugNodeName = `[DIAGNOSTIC] ${subName} | Ops: ${activeOperators.length} | Rules: ${config?.exclude || 'None'}`;
+        const diagnosticNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443?debug=${encodeURIComponent(JSON.stringify(debugInfo))}#${encodeURIComponent(debugNodeName)}`;
+        result = `${diagnosticNode}\n${result}`;
+    }
 
     // 将虚假节点（如果存在）插入到列表最前面
     if (prependedContent) {
