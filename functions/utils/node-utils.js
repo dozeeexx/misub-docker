@@ -77,8 +77,8 @@ export function addFlagEmoji(link) {
     const appendEmoji = (name) => {
         if (!name) return name;
         
-        // [修复] 补全 Emoji 检测的鲁棒性：涵盖多组国旗编码范围
-        const HAS_EMOJI_REGEX = /[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[\u{E0061}-\u{E007A}]{2,}\u{E007F}|\u{1F3F3}\uFE0F?\u200D/u;
+        // 更全面的 Emoji 检测正则 (涵盖国旗、地区符号等)
+        const HAS_EMOJI_REGEX = /[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[\u{E0061}-\u{E007A}]{2,}\u{E007F}/u;
         if (HAS_EMOJI_REGEX.test(name)) return name;
 
         const metadata = extractNodeMetadata(name);
@@ -94,7 +94,9 @@ export function addFlagEmoji(link) {
             const decodedStr = new TextDecoder('utf-8').decode(new Uint8Array(Array.from(binaryString, c => c.charCodeAt(0))));
             const nodeConfig = JSON.parse(decodedStr);
             if (nodeConfig.ps) {
-                nodeConfig.ps = appendEmoji(nodeConfig.ps);
+                const updatedPs = appendEmoji(nodeConfig.ps);
+                if (updatedPs === nodeConfig.ps) return link;
+                nodeConfig.ps = updatedPs;
                 const newJsonString = JSON.stringify(nodeConfig);
                 const newBase64Part = btoa(unescape(encodeURIComponent(newJsonString)));
                 return 'vmess://' + newBase64Part;
@@ -112,24 +114,27 @@ export function addFlagEmoji(link) {
             basePart = link.substring(0, hashIndex);
             const rawName = link.substring(hashIndex + 1);
             try {
-                // 确保解码，否则元数据提取器无法匹配中文关键词
+                // [关键修复] VLESS/Trojan 节点名通常被层层编码，这里需要确保解码透彻
                 originalName = decodeURIComponent(rawName);
+                if (originalName.includes('%')) {
+                     originalName = decodeURIComponent(originalName);
+                }
             } catch (e) {
                 originalName = rawName;
             }
         } else {
-            // 没有 # 片段，根据协议和主机信息生成基础名称
+            // 没有 # 片段，根据 URL 结构提取一个逻辑名称以便注入国旗
             const protocolMatch = link.match(/^(.*?):\/\//);
             if (protocolMatch) {
                 const protocol = protocolMatch[1];
                 const rest = link.substring(protocol.length + 3);
                 const atIdx = rest.lastIndexOf('@');
-                const hostPortPart = atIdx !== -1 ? rest.substring(atIdx + 1) : rest;
-                // 提取域名或 IP
-                originalName = hostPortPart.split(/[?#:]/)[0] || 'Node';
+                const hostPortPart = (atIdx !== -1 ? rest.substring(atIdx + 1) : rest).split(/[?#]/)[0];
+                originalName = hostPortPart.split(':')[0] || 'Node';
             }
         }
 
+        if (!originalName) return link;
         const newName = appendEmoji(originalName);
         if (newName === originalName && hashIndex === -1) return link;
         
