@@ -95,6 +95,23 @@ async function fetchWithRetry(url, init = {}, options = {}) {
 }
 
 /**
+ * 确保配置是数组格式（处理 D1 数据库可能返回的 JSON 字符串）
+ */
+function ensureArray(data) {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (typeof data === 'string') {
+        try {
+            const parsed = JSON.parse(data);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+    return [];
+}
+
+/**
  * 并发控制器 - 限制同时进行的请求数量
  * @param {number} limit - 最大并发数
  * @returns {Function} - 包装函数
@@ -260,14 +277,14 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
             // --- 工作流与过滤阶段 ---
             
             // 1. [核心修复] 执行订阅源级别的 Workflow 算子 (操作符)
-            // 检查 sub 对象中是否存在 operators (可能在 sub.operators 或 sub.nodeTransform.operators)
-            let subOperators = sub.operators;
-            if (!subOperators && sub.nodeTransform?.enabled && sub.nodeTransform.operators) {
-                subOperators = sub.nodeTransform.operators;
+            // 检查 sub 对象中是否存在 operators，支持从字符串自动解析
+            let subOperators = ensureArray(sub.operators);
+            if (!subOperators.length && sub.nodeTransform?.enabled && sub.nodeTransform.operators) {
+                subOperators = ensureArray(sub.nodeTransform.operators);
             }
 
-            if (Array.isArray(subOperators) && subOperators.length > 0) {
-                if (debug) console.debug(`[DEBUG] Applying ${subOperators.length} operators to sub: ${sub.name}`);
+            if (subOperators.length > 0) {
+                if (debug) console.debug(`[DEBUG] Sub: ${sub.name}, Valid Operators: ${subOperators.length}`);
                 validNodes = await runOperatorChain(validNodes, subOperators, {
                     subName: sub.name,
                     userAgent,
@@ -321,12 +338,16 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
         console.debug(`[DEBUG] Profile: ${config?.name}, Exclude: ${config?.exclude}, Include: ${config?.include}`);
     }
 
-    // 获取工作流配置
-    if (profilePrefixSettings?.operators && Array.isArray(profilePrefixSettings.operators) && profilePrefixSettings.operators.length > 0) {
-        activeOperators = profilePrefixSettings.operators;
-    } else if (config.defaultOperators && Array.isArray(config.defaultOperators) && config.defaultOperators.length > 0) {
-        activeOperators = config.defaultOperators;
-    } else {
+    // 获取工作流配置（支持字符串自动解析）
+    if (profilePrefixSettings?.operators) {
+        activeOperators = ensureArray(profilePrefixSettings.operators);
+    } 
+    
+    if (!activeOperators.length && config.defaultOperators) {
+        activeOperators = ensureArray(config.defaultOperators);
+    } 
+    
+    if (!activeOperators.length) {
         const legacyConfig = nodeTransformConfig?.enabled ? nodeTransformConfig : config.defaultNodeTransform;
         activeOperators = adaptLegacyTransform(legacyConfig);
     }
