@@ -603,9 +603,18 @@ function filterNodes(nodes, rules, mode = 'exclude') {
         const nodeInfo = parseNodeInfo(nodeLink);
         const protocol = nodeInfo.protocol || '';
         const nodeName = nodeInfo.name || '';
+        const regionZh = nodeInfo.regionZh || nodeInfo.region || '';
+        const regionCode = nodeInfo.region || '';
 
         const protocolHit = protocol && rules.protocols.has(protocol);
-        const nameHit = rules.nameRegex ? rules.nameRegex.test(nodeName) : false;
+        
+        let nameHit = false;
+        if (rules.nameRegex) {
+            // [地理感知过滤] 只要名称、地区中文名或地区代码任一匹配，即视为命中
+            nameHit = rules.nameRegex.test(nodeName) || 
+                      rules.nameRegex.test(regionZh) || 
+                      rules.nameRegex.test(regionCode);
+        }
 
         if (isInclude) {
             return protocolHit || nameHit;

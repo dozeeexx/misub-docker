@@ -110,14 +110,36 @@ export function addFlagEmoji(link) {
         }
     } else {
         const hashIndex = link.lastIndexOf('#');
-        if (hashIndex === -1) return link;
-        try {
-            const originalName = decodeURIComponent(link.substring(hashIndex + 1));
-            const newName = appendEmoji(originalName);
-            return link.substring(0, hashIndex + 1) + encodeURIComponent(newName);
-        } catch (e) {
-            return link;
+        let originalName = '';
+        let basePart = link;
+        
+        if (hashIndex !== -1) {
+            basePart = link.substring(0, hashIndex);
+            const rawName = link.substring(hashIndex + 1);
+            try {
+                // 处理可能被多次编码或非法编码的情况
+                originalName = decodeURIComponent(rawName);
+            } catch (e) {
+                originalName = rawName;
+            }
+        } else {
+            // 如果没有 # 且是已知协议，尝试从 URL 解析一个基础名（如 host 或 server 参数）
+            const nodeInfo = extractNodeMetadata(link); // 借用提取器的部分逻辑或者直接解析
+            // 简单的回退逻辑：提取 host 前缀
+            const protocolMatch = link.match(/^(.*?):\/\//);
+            if (protocolMatch) {
+                const protocol = protocolMatch[1];
+                const rest = link.substring(protocol.length + 3);
+                const atIdx = rest.lastIndexOf('@');
+                const hostPort = atIdx !== -1 ? rest.substring(atIdx + 1) : rest;
+                originalName = hostPort.split(/[?#:]/)[0] || 'Node';
+            }
         }
+
+        const newName = appendEmoji(originalName);
+        if (newName === originalName && hashIndex === -1) return link;
+        
+        return `${basePart}#${encodeURIComponent(newName)}`;
     }
 }
 
