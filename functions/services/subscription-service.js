@@ -257,7 +257,26 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
 
             let validNodes = fallbackParsedObjects.map(node => node.url);
 
-            // 应用过滤规则
+            // --- 工作流与过滤阶段 ---
+            
+            // 1. [核心修复] 执行订阅源级别的 Workflow 算子 (操作符)
+            // 检查 sub 对象中是否存在 operators (可能在 sub.operators 或 sub.nodeTransform.operators)
+            let subOperators = sub.operators;
+            if (!subOperators && sub.nodeTransform?.enabled && sub.nodeTransform.operators) {
+                subOperators = sub.nodeTransform.operators;
+            }
+
+            if (Array.isArray(subOperators) && subOperators.length > 0) {
+                if (debug) console.debug(`[DEBUG] Applying ${subOperators.length} operators to sub: ${sub.name}`);
+                validNodes = await runOperatorChain(validNodes, subOperators, {
+                    subName: sub.name,
+                    userAgent,
+                    config, // 共享全局配置环境
+                    debug
+                });
+            }
+
+            // 2. 应用传统的文本过滤规则 (exclude/include)
             validNodes = applyFilterRules(validNodes, sub);
 
 
