@@ -209,7 +209,16 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             const legacyRule = subSource?.exclude;
             const transformRule = subSource?.nodeTransform?.exclude;
             const deepRule = subSource?.nodeTransform?.filter?.exclude;
-            const activeRule = legacyRule || transformRule || deepRule || (subOperators.length > 0 ? 'Workflow' : 'None');
+            // [修复显示] 诊断规则显示逻辑：优先源规则，其次 Profile 分组规则
+            let activeRuleDisplay = legacyRule || transformRule || deepRule;
+            if (!activeRuleDisplay) {
+                const profileRule = profilePrefixSettings?.exclude || profilePrefixSettings?.include;
+                if (profileRule) {
+                    activeRuleDisplay = `(Inherited) ${profileRule.split('\n')[0].substring(0, 15)}`;
+                } else {
+                    activeRuleDisplay = subOperators.length > 0 ? 'Workflow' : 'None';
+                }
+            }
             
             // 获取对象的所有键，定位是否存在拼写或大小写差异
             const subKeys = Object.keys(subSource || {}).join(',');
@@ -224,7 +233,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
                 rawSub: subSource 
             };
 
-            const groupInfo = `[GROUP DIAGNOSTIC] ${subSource?.name || 'Manual'} | Rule: ${activeRule} | Keys: ${subKeys}`;
+            const groupInfo = `[GROUP DIAGNOSTIC] ${subSource?.name || 'Manual'} | Rule: ${activeRuleDisplay} | Keys: ${subKeys}`;
             const groupDiagNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443?debug=${encodeURIComponent(JSON.stringify(diagInfo))}#${encodeURIComponent(groupInfo)}`;
             currentNodes = [groupDiagNode, ...currentNodes];
         }
