@@ -205,8 +205,16 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
 
         // 3. [诊断模式] 如果启用了 debug=1，在每个组头部注入组级诊断节点
         if (isDebug) {
+            const diagInfo = {
+                name: subSource?.name,
+                ops: subOperators.length,
+                excludeText: subSource?.exclude,
+                nodeTransform: subSource?.nodeTransform,
+                // 将整个对象记录下来以便查看真实字段名
+                rawSub: subSource 
+            };
             const groupInfo = `[GROUP DIAGNOSTIC] ${subSource?.name || 'Manual'} | Ops: ${subOperators.length} | Rule: ${subSource?.exclude || 'None'}`;
-            const groupDiagNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(groupInfo)}`;
+            const groupDiagNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443?debug=${encodeURIComponent(JSON.stringify(diagInfo))}#${encodeURIComponent(groupInfo)}`;
             currentNodes = [groupDiagNode, ...currentNodes];
         }
         
