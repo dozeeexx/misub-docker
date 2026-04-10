@@ -15,10 +15,19 @@ function opFilter(nodes, params) {
     let result = [...nodes];
 
     if (include?.enabled && Array.isArray(include.rules)) {
-        result = result.filter(r => NodeUtils.matchesRegexRules(r.name, include.rules));
+        result = result.filter(r => {
+            // 优先尝试匹配原始名称，如果元数据中有纯净版名称则也尝试匹配
+            const matchRaw = NodeUtils.matchesRegexRules(r.name, include.rules);
+            const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, include.rules) : false;
+            return matchRaw || matchClean;
+        });
     }
     if (exclude?.enabled && Array.isArray(exclude.rules)) {
-        result = result.filter(r => !NodeUtils.matchesRegexRules(r.name, exclude.rules));
+        result = result.filter(r => {
+            const matchRaw = NodeUtils.matchesRegexRules(r.name, exclude.rules);
+            const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, exclude.rules) : false;
+            return !(matchRaw || matchClean);
+        });
     }
     if (protocols?.enabled && Array.isArray(protocols.values)) {
         const allowed = new Set(protocols.values.map(p => p.toLowerCase()));

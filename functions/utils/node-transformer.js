@@ -3,7 +3,8 @@
  * 支持：正则过滤、正则重命名、模板重命名、智能去重、排序
  */
 
-import { extractNodeRegion, getRegionEmoji, REGION_KEYWORDS, REGION_EMOJI } from '../modules/utils/geo-utils.js';
+import { parseNodeInfo, extractNodeRegion, getRegionEmoji, REGION_KEYWORDS, REGION_EMOJI } from '../modules/utils/geo-utils.js';
+import { extractNodeMetadata } from '../modules/utils/metadata-extractor.js';
 
 // ============ 默认配置 ============
 
@@ -133,128 +134,6 @@ function parseHostPort(hostPort) {
 
 // ============ 节点解析 ============
 
-function parseSsrServerPort(decoded) {
-    const s = String(decoded || '');
-    const m1 = s.match(/^\[([^\]]+)\]:(\d+):/);
-    if (m1) return { server: m1[1], port: m1[2] };
-    const m2 = s.match(/^(.+):(\d+):/);
-    if (!m2) return { server: '', port: '' };
-    return { server: m2[1], port: m2[2] };
-}
-
-function extractSsrRemarks(decoded) {
-    const s = String(decoded || '');
-    const slashQ = s.indexOf('/?');
-    const q = slashQ !== -1 ? slashQ + 2 : (s.indexOf('?') !== -1 ? s.indexOf('?') + 1 : -1);
-    if (q === -1) return '';
-    const params = s.slice(q);
-    const m = params.match(/(?:^|&)remarks=([^&]*)/);
-    if (!m) return '';
-    const raw = safeDecodeURI(m[1]).replace(/\s+/g, '');
-    try { return base64Decode(raw).trim(); } catch { return ''; }
-}
-
-function extractServerPort(url, protocol) {
-    const proto = normalizeProtocol(protocol || getProtocol(url));
-
-    if (proto === 'vmess') {
-        try {
-            const payload = getSchemePayload(url, 8);
-            const obj = JSON.parse(base64Decode(payload));
-            return { server: String(obj.add || ''), port: String(obj.port || '') };
-        } catch { return { server: '', port: '' }; }
-    }
-
-    if (proto === 'ssr') {
-        try {
-            const payload = getSchemePayload(url, 6);
-            const decoded = base64Decode(payload);
-            return parseSsrServerPort(decoded);
-        } catch { return { server: '', port: '' }; }
-    }
-
-    try {
-        const parsed = new URL(url);
-        if (parsed.hostname) {
-            if (!(proto === 'ss' && !parsed.port && !parsed.username && !url.includes('@'))) {
-                return { server: parsed.hostname, port: parsed.port || '' };
-            }
-        }
-    } catch (error) {
-        console.debug('[NodeTransform] URL parse failed, falling back to manual parsing:', error);
-    }
-
-    try {
-        const main = url.split('#')[0];
-        const protocolEnd = main.indexOf('://');
-        if (protocolEnd === -1) return { server: '', port: '' };
-        let rest = main.slice(protocolEnd + 3).split('?')[0].split('/')[0];
-
-        if (proto === 'ss' && !rest.includes('@')) {
-            try {
-                const decoded = base64Decode(rest);
-                if (decoded.includes('@')) rest = decoded;
-            } catch (error) {
-                console.debug('[NodeTransform] SS base64 decode failed, using raw host segment:', error);
-            }
-        }
-
-        // [新增] 处理 VLESS Base64 编码格式：vless://Base64(auto:uuid@host:port)?...
-        if (proto === 'vless' && !rest.includes('@') && rest.length > 20) {
-            try {
-                const decoded = base64Decode(rest);
-                if (decoded.includes('@')) rest = decoded;
-            } catch (error) {
-                console.debug('[NodeTransform] VLESS base64 decode failed (expected for standard format)');
-            }
-        }
-
-        const at = rest.lastIndexOf('@');
-        return parseHostPort(at === -1 ? rest : rest.slice(at + 1));
-    } catch { return { server: '', port: '' }; }
-}
-
-function getNodeName(url, protocol) {
-    const proto = normalizeProtocol(protocol || getProtocol(url));
-    const fragmentName = getFragment(url);
-    if (fragmentName) return fragmentName;
-
-    // [修复] 如果 fragment 为空，尝试从 URL 查询参数中提取名称
-    // 支持 remarks, des, remark 等常见参数（部分订阅源使用）
-    const remarksMatch = String(url || '').match(/[?&](remarks|des|remark)=([^&#]+)/i);
-    if (remarksMatch && remarksMatch[2]) {
-        try {
-            return decodeURIComponent(remarksMatch[2]).trim();
-        } catch {
-            return remarksMatch[2].trim();
-        }
-    }
-
-    const nameMatch = String(url || '').match(/[?&](name|tag)=([^&#]+)/i);
-    if (nameMatch && nameMatch[2]) {
-        try {
-            return decodeURIComponent(nameMatch[2]).trim();
-        } catch {
-            return nameMatch[2].trim();
-        }
-    }
-
-    if (proto === 'vmess') {
-        try {
-            const payload = getSchemePayload(url, 8);
-            const obj = JSON.parse(base64Decode(payload));
-            return String(obj.ps || '').trim();
-        } catch { return ''; }
-    }
-    if (proto === 'ssr') {
-        try {
-            const payload = getSchemePayload(url, 6);
-            const decoded = base64Decode(payload);
-            return extractSsrRemarks(decoded);
-        } catch { return ''; }
-    }
-    return '';
-}
 
 function setNodeName(url, protocol, name) {
     const proto = normalizeProtocol(protocol || getProtocol(url));
@@ -392,12 +271,19 @@ function normalizeConfig(cfg) {
 export function matchesRegexRules(name, rules) {
     const value = String(name || '');
     for (const rule of rules) {
-        if (!rule?.pattern) continue;
+        if (!rule) continue;
+        
+        // 兼容规则既可以是对象 {pattern: "...", flags: "..."} 也可以是纯字符串
+        const pattern = typeof rule === 'string' ? rule : rule.pattern;
+        const flags = typeof rule === 'string' ? 'i' : (rule.flags || 'i');
+        
+        if (!pattern) continue;
+        
         try {
-            const re = new RegExp(rule.pattern, rule.flags || 'i');
+            const re = new RegExp(pattern, flags);
             if (re.test(value)) return true;
         } catch (error) {
-            warnInvalidRegex(rule, error);
+            warnInvalidRegex(typeof rule === 'string' ? { pattern: rule } : rule, error);
         }
     }
     return false;
@@ -405,12 +291,20 @@ export function matchesRegexRules(name, rules) {
 
 export function ensureRegionInfo(record, enableEmoji = false) {
     if (record.regionZh) return record;
-    let regionZh = extractNodeRegion(record.name);
+    
+    // 优先使用预解析的元数据
+    let regionZh = record.metadata?.regionZh || extractNodeRegion(record.name);
+    let regionCode = record.metadata?.region || '';
+
     if (regionZh === '其他' && record.server) {
         regionZh = extractNodeRegion(record.server);
     }
-    const regionCode = toRegionCode(regionZh);
-    const emoji = enableEmoji ? getRegionEmoji(regionZh) : '';
+    
+    if (!regionCode) {
+        regionCode = toRegionCode(regionZh);
+    }
+    
+    const emoji = enableEmoji ? (record.metadata?.flag || getRegionEmoji(regionZh)) : '';
     return { ...record, region: regionCode, regionZh, emoji };
 }
 
@@ -435,12 +329,20 @@ function isUselessNode(record) {
 export function applyRegexRename(name, rules) {
     let result = String(name || '');
     for (const rule of rules) {
-        if (!rule?.pattern) continue;
+        if (!rule) continue;
+        
+        // 兼容规则既可以是对象 {pattern: "...", flags: "...", replacement: "..."} 也可以是纯字符串
+        const pattern = typeof rule === 'string' ? rule : rule.pattern;
+        const replacement = typeof rule === 'string' ? '' : (rule.replacement || '');
+        const flags = typeof rule === 'string' ? 'g' : (rule.flags || 'g');
+
+        if (!pattern) continue;
+        
         try {
-            const re = new RegExp(rule.pattern, rule.flags || 'g');
-            result = result.replace(re, rule.replacement || '');
+            const re = new RegExp(pattern, flags);
+            result = result.replace(re, replacement);
         } catch (error) {
-            warnInvalidRegex(rule, error);
+            warnInvalidRegex(typeof rule === 'string' ? { pattern: rule } : rule, error);
         }
     }
     return result.trim();
@@ -806,14 +708,23 @@ export function nodeUrlsToRecords(nodeUrls, options = {}) {
         ? nodeUrls.map(s => String(s || '').trim()).filter(Boolean)
         : [];
     
-    // 预判需求项
-    const needServerPort = options.needServerPort !== false;
-
     return input.map(url => {
-        const protocol = normalizeProtocol(getProtocol(url));
-        const name = getNodeName(url, protocol);
-        const { server, port } = needServerPort ? extractServerPort(url, protocol) : { server: '', port: '' };
-        const record = { url, protocol, name, originalName: name, region: '', emoji: '', server, port };
+        // 使用统一的解析引擎
+        const nodeInfo = parseNodeInfo(url);
+        const metadata = extractNodeMetadata(nodeInfo.name);
+        
+        const record = { 
+            url, 
+            protocol: nodeInfo.protocol, 
+            name: nodeInfo.name, 
+            originalName: nodeInfo.name, 
+            region: '', 
+            emoji: '', 
+            server: nodeInfo.server || '', 
+            port: nodeInfo.port || '',
+            metadata: metadata // 注入完整元数据
+        };
+        
         return options.ensureRegion ? ensureRegionInfo(record, options.enableEmoji) : record;
     });
 }
