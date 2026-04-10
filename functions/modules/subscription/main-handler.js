@@ -267,7 +267,7 @@ export async function handleMisubRequest(context) {
     );
 
     // 检查是否强制刷新（通过 URL 参数）
-    const forceRefresh = url.searchParams.has('refresh') || url.searchParams.has('nocache');
+    const forceRefresh = url.searchParams.has('refresh') || url.searchParams.has('nocache') || url.searchParams.has('debug');
 
     // 定义刷新函数（用于后台刷新）
     const refreshNodes = async (isBackground = false) => {
