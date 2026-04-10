@@ -179,7 +179,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     // --- 阶段 1: 数据准备与手动节点处理 ---
     
     // [增强修复] 定义统一的订阅源级转换中枢
-    const applySubscriptionTransforms = async (nodes, subSource, isDebug = false) => {
+    const applySubscriptionTransforms = async (nodes, subSource) => {
         if (!nodes || nodes.length === 0) return [];
         
         let currentNodes = [...nodes];
@@ -191,59 +191,18 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
         }
 
         if (subOperators.length > 0) {
-            if (debug || isDebug) console.debug(`[DEBUG] Transforming source: ${subSource?.name || 'Manual'}, Nodes: ${currentNodes.length}`);
             currentNodes = await runOperatorChain(currentNodes, subOperators, {
                 subName: subSource?.name,
                 userAgent,
-                config,
-                debug: debug || isDebug
+                config
             });
         }
 
         // 2. 应用传统的文本过滤规则 (exclude/include)
         currentNodes = applyFilterRules(currentNodes, subSource);
-
-        // 3. [诊断模式] 如果启用了 debug=1，在每个组头部注入组级诊断节点
-        if (isDebug) {
-            // 尝试从所有可能的字段获取规则信息
-            const legacyRule = subSource?.exclude;
-            const transformRule = subSource?.nodeTransform?.exclude;
-            const deepRule = subSource?.nodeTransform?.filter?.exclude;
-            // [修复显示] 诊断规则显示逻辑：优先源规则，其次 Profile 分组规则
-            let activeRuleDisplay = legacyRule || transformRule || deepRule;
-            if (!activeRuleDisplay) {
-                const profileRule = profilePrefixSettings?.exclude || profilePrefixSettings?.include;
-                if (profileRule) {
-                    activeRuleDisplay = `(Inherited) ${profileRule.split('\n')[0].substring(0, 15)}`;
-                } else {
-                    activeRuleDisplay = subOperators.length > 0 ? 'Workflow' : 'None';
-                }
-            }
-            
-            // 获取对象的所有键，定位是否存在拼写或大小写差异
-            const subKeys = Object.keys(subSource || {}).join(',');
-            
-            const diagInfo = {
-                name: subSource?.name,
-                keys: subKeys,
-                ops: subOperators.length,
-                legacyRule,
-                transformRule,
-                deepRule,
-                rawSub: subSource 
-            };
-
-            const groupInfo = `[GROUP DIAGNOSTIC] ${subSource?.name || 'Manual'} | Rule: ${activeRuleDisplay} | Keys: ${subKeys}`;
-            const groupDiagNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443?debug=${encodeURIComponent(JSON.stringify(diagInfo))}#${encodeURIComponent(groupInfo)}`;
-            currentNodes = [groupDiagNode, ...currentNodes];
-        }
         
         return currentNodes;
     };
-
-    // 获取公用的 debug 状态
-    const isDebugEnabled = context?.url?.searchParams?.get('debug') === '1' || 
-                          (context?.request?.url ? new URL(context.request.url).searchParams.get('debug') === '1' : false);
 
     // 重构后的手动节点处理逻辑
     const manualSubSourceGroups = misubs.filter(sub => {
@@ -268,12 +227,12 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             const finalRawUrl = shouldAddPrefix ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
 
             // [核心对齐] 对手动节点应用订阅源级转换（算子+过滤 + 组级诊断）
-            const transformed = await applySubscriptionTransforms([finalRawUrl], sub, isDebugEnabled);
+            const transformed = await applySubscriptionTransforms([finalRawUrl], sub);
             if (transformed.length > 0) {
                 manualProcessedLines.push(...transformed);
             }
         } catch (e) {
-            if (debug) console.error(`[DEBUG] Error processing manual node:`, e);
+            // Ignore
         }
     }
     const processedManualNodes = manualProcessedLines.join('\n');
@@ -288,9 +247,6 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
      */
     const fetchSingleSubscription = async (sub) => {
         try {
-            if (debug) {
-                console.debug(`[DEBUG] Fetching subscription: ${sub.url}`);
-            }
             const processedUserAgent = getProcessedUserAgent(userAgent, sub.url);
             const requestHeaders = { 'User-Agent': processedUserAgent };
 
@@ -300,9 +256,6 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
                 const proxyPrefix = sub.fetchProxy.trim();
                 // 将被代理的 URL 进行编码，拼接到代理前缀之后
                 requestUrl = `${proxyPrefix}${encodeURIComponent(sub.url)}`;
-                if (debug) {
-                    console.debug(`[DEBUG] Fetching via proxy: ${requestUrl}`);
-                }
             }
 
             const response = await fetchWithRetry(requestUrl, {
@@ -318,7 +271,6 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             });
 
             if (!response.ok) {
-                console.warn(`订阅请求失败: ${requestUrl}, 状态: ${response.status}`);
                 return '';
             }
             const buffer = await response.arrayBuffer();
@@ -341,7 +293,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             let validNodes = fallbackParsedObjects.map(node => node.url);
 
             // --- 统一转换治理 (算子 + 过滤 + 组级诊断) ---
-            validNodes = await applySubscriptionTransforms(validNodes, sub, isDebugEnabled);
+            validNodes = await applySubscriptionTransforms(validNodes, sub);
 
             // 判断是否启用订阅前缀（智能重命名启用时跳过）
             const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
@@ -351,8 +303,6 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
         } catch (e) {
-            // 订阅处理错误：直接跳过失败源，避免污染最终订阅
-            console.warn(`订阅获取失败 [${sub.name || sub.url}]:`, e.message);
             return '';
         }
     };
@@ -379,11 +329,6 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     
     let activeOperators = [];
     
-    // [调试] 输出当前的 Profile 配置状态
-    if (debug) {
-        console.debug(`[DEBUG] Profile: ${profilePrefixSettings?.name}, Exclude: ${profilePrefixSettings?.exclude}, Include: ${profilePrefixSettings?.include}`);
-    }
-
     // 获取工作流配置（支持字符串自动解析）
     if (profilePrefixSettings?.operators) {
         activeOperators = ensureArray(profilePrefixSettings.operators);
@@ -398,17 +343,12 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
         activeOperators = adaptLegacyTransform(legacyConfig);
     }
 
-    if (debug) {
-        console.debug(`[DEBUG] Active Operators Count: ${activeOperators.length}`);
-    }
-
     // 2.1 执行 Workflow 链式处理 (算子操作)
     if (activeOperators.length > 0) {
         currentLines = await runOperatorChain(currentLines, activeOperators, {
             subName: profilePrefixSettings?.name,
             userAgent,
-            config,
-            debug
+            config
         });
     }
 
@@ -432,33 +372,9 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
         return addFlagEmoji(line);
     });
 
-    // --- 阶段 4: 结果拼装与诊断注入 ---
+    // --- 阶段 4: 结果拼装与返回 ---
     const finalNodeList = finalLines.join('\n');
     let result = finalNodeList.length > 0 ? (finalNodeList.endsWith('\n') ? finalNodeList : finalNodeList + '\n') : '';
-
-    // [诊断模式] 如果启用了 debug=1，在最前端注入诊断节点
-    // 兼容多种方式获取 URL 参数
-    const searchParams = context?.url?.searchParams || 
-                        (context?.request?.url ? new URL(context.request.url).searchParams : null);
-    
-    if (searchParams?.get('debug') === '1') {
-        const debugInfo = {
-            profile: profilePrefixSettings?.name || 'Default',
-            operators: activeOperators.length,
-            subs: httpSubs.length,
-            // [修复] 诊断信息显示订阅组级别的规则
-            rules: {
-                exclude: profilePrefixSettings?.exclude,
-                include: profilePrefixSettings?.include,
-                globalExclude: config?.exclude
-            },
-            timestamp: new Date().toISOString()
-        };
-        const activeRule = profilePrefixSettings?.exclude || profilePrefixSettings?.include || config?.exclude || 'None';
-        const debugNodeName = `[DIAGNOSTIC] ${profilePrefixSettings?.name || 'Default'} | Ops: ${activeOperators.length} | Rules: ${activeRule}`;
-        const diagnosticNode = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443?debug=${encodeURIComponent(JSON.stringify(debugInfo))}#${encodeURIComponent(debugNodeName)}`;
-        result = `${diagnosticNode}\n${result}`;
-    }
 
     // 将虚假节点（如果存在）插入到列表最前面
     if (prependedContent) {
