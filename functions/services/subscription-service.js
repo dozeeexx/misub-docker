@@ -6,7 +6,7 @@
 import { parseNodeList } from '../modules/utils/node-parser.js';
 import { getProcessedUserAgent } from '../utils/format-utils.js';
 import { prependNodeName, removeFlagEmoji, fixNodeUrlEncoding, sanitizeNodeForYaml } from '../utils/node-utils.js';
-import { applyNodeTransformPipeline } from '../utils/node-transformer.js';
+import { runOperatorChain } from '../utils/operator-runner.js';
 import { createTimeoutFetch } from '../modules/utils.js';
 
 /**
@@ -275,10 +275,9 @@ return '';
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
         } catch (e) {
-            // 订阅处理错误，生成错误节点
+            // 订阅处理错误：直接跳过失败源，避免污染最终订阅
             console.warn(`订阅获取失败 [${sub.name || sub.url}]:`, e.message);
-            const errorNodeName = `连接错误-${sub.name || '未知'}`;
-            return `trojan://error@127.0.0.1:8888?security=tls&allowInsecure=1&type=tcp#${encodeURIComponent(errorNodeName)}`;
+            return '';
         }
     };
 
@@ -297,10 +296,39 @@ return '';
     // [Sanitize] Always sanitize node names for YAML compatibility (Subconverter issue with unquoted special chars)
     const sanitizedLines = normalizedLines.map(line => sanitizeNodeForYaml(line));
 
-    const outputLines = nodeTransformConfig?.enabled
-        ? applyNodeTransformPipeline(sanitizedLines, { ...nodeTransformConfig, enableEmoji: templateContainsEmoji })
-        : [...new Set(sanitizedLines)];
-    const uniqueNodesString = outputLines.join('\n');
+    const outputLines = [...new Set(sanitizedLines)];
+
+    // --- 统一转换引擎 (Unified Transformation Engine) ---
+    // 优先级: 订阅组 Operator Chain > 全局默认 Operator Chain > 旧版 Node Pipeline (桥接模式)
+    
+    let activeOperators = [];
+    
+    // 1. 尝试获取订阅组级别的操作符
+    if (profilePrefixSettings?.operators && Array.isArray(profilePrefixSettings.operators) && profilePrefixSettings.operators.length > 0) {
+        activeOperators = profilePrefixSettings.operators;
+    } 
+    // 2. 尝试获取全局默认操作符
+    else if (config.defaultOperators && Array.isArray(config.defaultOperators) && config.defaultOperators.length > 0) {
+        activeOperators = config.defaultOperators;
+    }
+    // 3. 进入桥接模式 (Legacy Bridge): 转换旧版配置为操作符
+    else {
+        // 优先使用订阅组自定义的旧版配置，否则使用全局默认配置
+        const legacyConfig = nodeTransformConfig?.enabled ? nodeTransformConfig : config.defaultNodeTransform;
+        activeOperators = adaptLegacyTransform(legacyConfig);
+    }
+
+    // 执行链式处理
+    let finalLines = outputLines;
+    if (activeOperators.length > 0) {
+        finalLines = await runOperatorChain(outputLines, activeOperators, {
+            subName: profilePrefixSettings?.name,
+            userAgent,
+            config
+        });
+    }
+
+    const uniqueNodesString = finalLines.join('\n');
 
     // 确保最终的字符串在非空时以换行符结束，以兼容 subconverter
     let finalNodeList = uniqueNodesString;
@@ -622,6 +650,91 @@ function decodeVmessName(nodeLink) {
     } catch (e) {
         return '';
     }
+}
+
+/**
+ * 桥接模式：将旧版 NodeTransform 配置转换为新的 Operator 列表
+ * @param {Object} config - 旧版配置对象
+ * @returns {Array} - 转换后的操作符列表
+ */
+function adaptLegacyTransform(config) {
+    if (!config || !config.enabled) return [];
+    
+    const ops = [];
+
+    // 1. 过滤器 (Filter)
+    const filter = config.filter;
+    if (filter && (filter.include?.enabled || filter.exclude?.enabled || filter.protocols?.enabled || filter.regions?.enabled || filter.script?.enabled || filter.useless?.enabled)) {
+        ops.push({ 
+            id: 'legacy-filter',
+            type: 'filter', 
+            enabled: true, 
+            params: { ...filter } 
+        });
+    }
+
+    // 2. 正则重命名 (Regex Rename)
+    const regex = config.rename?.regex;
+    if (regex?.enabled && regex.rules?.length > 0) {
+        ops.push({ 
+            id: 'legacy-rename-regex',
+            type: 'rename', 
+            enabled: true, 
+            params: { regex: { ...regex } } 
+        });
+    }
+
+    // 3. 模板重命名 (Template Rename)
+    const template = config.rename?.template;
+    if (template?.enabled) {
+        ops.push({ 
+            id: 'legacy-rename-template',
+            type: 'rename', 
+            enabled: true, 
+            params: { 
+                template: { 
+                    enabled: true, 
+                    text: template.template || '{emoji}{region}-{protocol}-{index}', 
+                    offset: template.indexStart || 1 
+                } 
+            } 
+        });
+    }
+
+    // 4. 重命名脚本 (Script Rename)
+    const renameScript = config.rename?.script;
+    if (renameScript?.enabled && renameScript.expression) {
+        ops.push({
+            id: 'legacy-rename-script',
+            type: 'script',
+            enabled: true,
+            params: { code: `return ($nodes) => { return $nodes.map(n => { n.name = (${renameScript.expression})(n.name, n); return n; }); }` }
+        });
+    }
+
+    // 5. 去重 (Dedup)
+    const dedup = config.dedup;
+    if (dedup?.enabled) {
+        ops.push({ 
+            id: 'legacy-dedup',
+            type: 'dedup', 
+            enabled: true, 
+            params: { ...dedup } 
+        });
+    }
+
+    // 6. 排序 (Sort)
+    const sort = config.sort;
+    if (sort?.enabled && sort.keys?.length > 0) {
+        ops.push({ 
+            id: 'legacy-sort',
+            type: 'sort', 
+            enabled: true, 
+            params: { ...sort } 
+        });
+    }
+
+    return ops;
 }
 
 /**

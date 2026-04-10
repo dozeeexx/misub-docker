@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import { api, APIError } from '../../../lib/http.js';
+import { useToastStore } from '../../../stores/toast.js';
+import { useDataStore } from '../../../stores/useDataStore.js';
 import NodeFilters from './components/NodeFilters.vue';
 import NodeList from './components/NodeList.vue';
 import NodeCard from './components/NodeCard.vue';
@@ -56,6 +58,73 @@ const availableRegions = ref([]);
 
 // 复制状态
 const copiedNodeId = ref('');
+
+// [New] Selection Mode State
+const pickingMode = ref(false);
+const selectedUrls = ref(new Set());
+
+const toggleNodeSelection = (url) => {
+  if (selectedUrls.value.has(url)) {
+    selectedUrls.value.delete(url);
+  } else {
+    selectedUrls.value.add(url);
+  }
+};
+
+const selectAll = () => {
+  filteredNodes.value.forEach(node => selectedUrls.value.add(node.url));
+};
+
+const clearSelection = () => {
+  selectedUrls.value.clear();
+};
+
+const { showToast } = useToastStore();
+const dataStore = useDataStore();
+
+const handleSaveSelection = async () => {
+  if (selectedUrls.value.size === 0) {
+    showToast('请先选择至少一个节点', 'warning');
+    return;
+  }
+
+  try {
+    const urls = Array.from(selectedUrls.value);
+    
+    // Add nodes to data store as manual nodes
+    // You can also add logic here to associate them specifically with props.profileId
+    // For now, we'll use bulk import logic to create manual nodes
+    const nodesToAdd = urls.map(url => {
+        // Try to find full node object from allNodes
+        const originalNode = allNodes.value.find(n => n.url === url);
+        return {
+            name: (originalNode?.name || 'Pick').split('#')[0].trim(),
+            url: url,
+            enabled: true
+        };
+    });
+
+    dataStore.addNodes(nodesToAdd);
+    
+    // If we are in profile mode, we might want to also add these new nodes to the profile
+    if (props.profileId) {
+        const profile = dataStore.profiles.find(p => p.id === props.profileId || p.customId === props.profileId);
+        if (profile) {
+            // Wait for nodes to be added to get their IDs (or we generate them)
+            // Since dataStore.addNodes generates IDs, we need to be careful.
+            // Simplified: showToast and guide user to save.
+            showToast(`已成功提取 ${urls.length} 个节点至手动列表，请手动在订阅组中勾选或保存。`, 'success');
+        }
+    } else {
+        showToast(`已成功提取 ${urls.length} 个节点至手动列表，请记得保存更改。`, 'success');
+    }
+    
+    pickingMode.value = false;
+    selectedUrls.value.clear();
+  } catch (err) {
+    showToast('保存选择失败: ' + err.message, 'error');
+  }
+};
 
 // 计算属性
 const title = computed(() => {
@@ -395,14 +464,24 @@ const handleKeydown = (e) => {
           <h3 class="text-xl font-bold text-gray-900 dark:text-white">
             {{ title }}
           </h3>
-          <button
-            @click="$emit('update:show', false)"
-            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="profileId"
+                @click="pickingMode = !pickingMode"
+                class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
+                :class="pickingMode ? 'bg-indigo-600 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'"
+              >
+                {{ pickingMode ? '退出选择' : '挑选节点' }}
+              </button>
+              <button
+                @click="$emit('update:show', false)"
+                class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
         </div>
       </div>
 
@@ -515,7 +594,10 @@ const handleKeydown = (e) => {
               :copied-node-id="copiedNodeId"
               :parse-node-info="parseNodeInfo"
               :get-protocol-style="getProtocolStyle"
+              :selection-mode="pickingMode"
+              :selected-urls="selectedUrls"
               @copy="copyNodeUrl"
+              @toggle-select="toggleNodeSelection"
             />
 
             <!-- 卡片视图 container -->
@@ -525,7 +607,10 @@ const handleKeydown = (e) => {
               :copied-node-id="copiedNodeId"
               :parse-node-info="parseNodeInfo"
               :get-protocol-style="getProtocolStyle"
+              :selection-mode="pickingMode"
+              :selected-urls="selectedUrls"
               @copy="copyNodeUrl"
+              @toggle-select="toggleNodeSelection"
             />
           </div>
         </div>
@@ -540,5 +625,38 @@ const handleKeydown = (e) => {
         @go-to-page="goToPage"
       />
     </div>
+
+    <!-- [New] Floating Selection Bar -->
+    <Transition name="slide-up">
+      <div v-if="pickingMode" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-lg">
+        <div class="bg-indigo-600 text-white rounded-2xl shadow-2xl p-4 flex items-center justify-between gap-4 border border-white/20 backdrop-blur-md">
+          <div class="flex flex-col">
+            <span class="text-xs opacity-80 uppercase tracking-widest font-bold">Picking Mode</span>
+            <span class="text-sm font-medium">已选择 <span class="text-lg font-black">{{ selectedUrls.size }}</span> 个节点</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button @click="selectAll" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs transition-colors">全选</button>
+            <button @click="clearSelection" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs transition-colors">清空</button>
+            <button @click="handleSaveSelection" class="px-4 py-2 bg-white text-indigo-600 hover:bg-indigo-50 rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">
+              保存选择
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.slide-up-enter-from {
+  transform: translate(-50%, 100%);
+  opacity: 0;
+}
+.slide-up-leave-to {
+  transform: translate(-50%, 100%);
+  opacity: 0;
+}
+</style>

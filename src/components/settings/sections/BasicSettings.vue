@@ -21,8 +21,8 @@ const { showToast } = useToastStore();
 const RESERVED_PATHS = [
   'settings', 'login', 'groups', 'nodes', 'subscriptions', 'dashboard',
   'api', 'explore', 'sub', 'cron', 'assets', '@vite', 'public', 'profile', 'offline',
-  'vps', 'monitor', 'logout', 'auth_debug', 'auth_check', 'data', 'kv_test',
-  'clients', 'system', 'github', 'telegram', 'test_notification', 'test_subconverter',
+  'logout', 'auth_debug', 'auth_check', 'data', 'kv_test',
+  'clients', 'system', 'github', 'telegram', 'test_notification',
   'misubs', 'node_count', 'fetch_external_url', 'batch_update_nodes',
   'subscription_nodes', 'debug_subscription', 'preview'
 ];
@@ -60,11 +60,11 @@ watch(() => props.settings.customLoginPath, (val) => {
 });
 
 watch(() => props.settings.mytoken, (val) => {
-  if (!rejectReservedToken('mytoken', val, '"/monitor" 和 "/vps" 是系统保留路径，不可用作自定义订阅Token')) return;
+  if (!rejectReservedToken('mytoken', val, '系统保留路径不可用作自定义订阅Token')) return;
 });
 
 watch(() => props.settings.profileToken, (val) => {
-  if (!rejectReservedToken('profileToken', val, '"/monitor" 和 "/vps" 是系统保留路径，不可用作订阅组分享Token')) return;
+  if (!rejectReservedToken('profileToken', val, '系统保留路径不可用作订阅组分享Token')) return;
 });
 
 
@@ -272,7 +272,7 @@ watch(() => props.settings.profileToken, (val) => {
                设置后，只有访问此路径才能进入登录页面。默认路径 <code>/login</code> 将失效（除非未设置）。
              </p>
               <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                ⚠️ 不可使用系统保留路径：/settings, /login, /groups, /nodes, /subscriptions, /dashboard, /monitor, /vps, /logout, /auth_debug, /auth_check
+                ⚠️ 不可使用系统保留路径：/settings, /login, /groups, /nodes, /subscriptions, /dashboard, /logout, /auth_debug, /auth_check
               </p>
            </div>
 

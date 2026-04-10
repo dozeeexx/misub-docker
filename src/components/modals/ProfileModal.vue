@@ -6,8 +6,10 @@ import SubscriptionSelector from './ProfileModal/SubscriptionSelector.vue';
 import NodeSelector from './ProfileModal/NodeSelector.vue';
 import { useManualNodes } from '../../composables/useManualNodes.js';
 import { useDataStore } from '../../stores/useDataStore.js';
+import { useSettingsStore } from '../../stores/settings.js';
 
 const dataStore = useDataStore();
+const settingsStore = useSettingsStore();
 const { manualNodeGroups } = useManualNodes(dataStore.markDirty);
 
 const props = defineProps({
@@ -31,8 +33,7 @@ const uiText = {
   manualPrefixToggle: '\u624b\u52a8\u8282\u70b9\u524d\u7f00',
   subscriptionPrefixToggle: '\u673a\u573a\u8ba2\u9605\u524d\u7f00',
   enable: '\u542f\u7528',
-  disable: '\u7981\u7528',
-  nodeTransformTitle: '\u8282\u70b9\u51c0\u5316\u7ba1\u9053'
+  disable: '\u7981\u7528'
 };
 const prefixToggleOptions = [
 { label: '默认(全局)', value: null },
@@ -46,36 +47,6 @@ const groupPrefixToggleOptions = [
 { label: '禁用', value: false }
 ];
 
-const createDefaultNodeTransform = () => ({
-  enabled: false,
-  rename: {
-    regex: { enabled: false, rules: [] },
-    template: {
-      enabled: false,
-      template: '{emoji}{region}-{protocol}-{index}',
-      indexStart: 1,
-      indexPad: 2,
-      indexScope: 'regionProtocol',
-      regionAlias: {},
-      protocolAlias: { hysteria2: 'hy2' }
-    }
-  },
-  dedup: {
-    enabled: false,
-    mode: 'serverPort',
-    includeProtocol: false,
-    prefer: { protocolOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] }
-  },
-  sort: {
-    enabled: false,
-    nameIgnoreEmoji: true,
-    keys: [
-      { key: 'region', order: 'asc', customOrder: ['香港', '台湾', '日本', '新加坡', '美国', '韩国', '英国', '德国', '法国', '加拿大'] },
-      { key: 'protocol', order: 'asc', customOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] },
-      { key: 'name', order: 'asc' }
-    ]
-  }
-});
 
 
 // 国家/地区代码到旗帜和中文名称的映射
@@ -212,37 +183,37 @@ watch(() => props.profile, (newProfile) => {
     if (!profileCopy.prefixSettings || typeof profileCopy.prefixSettings !== 'object') {
       profileCopy.prefixSettings = {};
     }
-profileCopy.prefixSettings.enableManualNodes =
-profileCopy.prefixSettings.enableManualNodes ?? null;
-profileCopy.prefixSettings.enableSubscriptions =
-profileCopy.prefixSettings.enableSubscriptions ?? null;
-profileCopy.prefixSettings.manualNodePrefix =
-profileCopy.prefixSettings.manualNodePrefix ?? '';
-profileCopy.prefixSettings.prependGroupName =
-profileCopy.prefixSettings.prependGroupName ?? null;
+    profileCopy.prefixSettings.enableManualNodes = profileCopy.prefixSettings.enableManualNodes ?? null;
+    profileCopy.prefixSettings.enableSubscriptions = profileCopy.prefixSettings.enableSubscriptions ?? null;
+    profileCopy.prefixSettings.manualNodePrefix = profileCopy.prefixSettings.manualNodePrefix ?? '';
+    profileCopy.prefixSettings.prependGroupName = profileCopy.prefixSettings.prependGroupName ?? null;
+    
     if (Object.prototype.hasOwnProperty.call(profileCopy.prefixSettings, 'enableNodeEmoji')) {
       delete profileCopy.prefixSettings.enableNodeEmoji;
     }
-    profileCopy.nodeTransform = profileCopy.nodeTransform ?? null;
+    
+    // 确保 operators 数组存在
+    profileCopy.operators = Array.isArray(profileCopy.operators) ? profileCopy.operators : [];
+    
     localProfile.value = profileCopy;
   } else {
-localProfile.value = {
-name: '',
-enabled: true,
-subscriptions: [],
-manualNodes: [],
-customId: '',
-expiresAt: '',
-isPublic: true, // [新增] 默认为 true
-description: '', // [新增]
-prefixSettings: {
-enableManualNodes: null,
-enableSubscriptions: null,
-manualNodePrefix: '',
-prependGroupName: null
-},
-nodeTransform: null
-};
+    localProfile.value = {
+      name: '',
+      enabled: true,
+      subscriptions: [],
+      manualNodes: [],
+      customId: '',
+      expiresAt: '',
+      isPublic: true,
+      description: '',
+      prefixSettings: {
+        enableManualNodes: null,
+        enableSubscriptions: null,
+        manualNodePrefix: '',
+        prependGroupName: null
+      },
+      operators: []
+    };
   }
 }, { deep: true, immediate: true });
 
@@ -313,7 +284,6 @@ const updateSelectedIds = (listName, newIds) => {
       <div v-if="localProfile" class="space-y-6">
 <ProfileForm :local-profile="localProfile" :show-advanced="showAdvanced" :ui-text="uiText"
 :prefix-toggle-options="prefixToggleOptions" :group-prefix-toggle-options="groupPrefixToggleOptions"
-:create-default-node-transform="createDefaultNodeTransform"
 @toggle-advanced="showAdvanced = !showAdvanced" />
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

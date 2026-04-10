@@ -26,7 +26,7 @@ const { theme } = storeToRefs(themeStore);
 const { initTheme } = themeStore;
 
 const sessionStore = useSessionStore();
-const { sessionState, publicHeaderFooter } = storeToRefs(sessionStore);
+const { sessionState } = storeToRefs(sessionStore);
 const { checkSession, login, logout } = sessionStore;
 
 const toastStore = useToastStore();
@@ -40,20 +40,16 @@ const { layoutMode } = storeToRefs(uiStore);
 const isLoggedIn = computed(() => sessionState.value === 'loggedIn');
 const isPublicRoute = computed(() => route.meta.isPublic);
 const isSessionLoading = computed(() => sessionState.value === 'loading');
-const isVpsPublicRoute = computed(() =>
-  isPublicRoute.value && (route.name === 'PublicVpsMonitor' || route.path === '/vps')
-);
 
 const showModernNavBar = computed(() => isLoggedIn.value && layoutMode.value === 'modern');
 const showLegacyHeader = computed(() => {
   if (showModernNavBar.value) return false;
   if (isLoggedIn.value) return true;
   if (isSessionLoading.value || !isPublicRoute.value) return false;
-  return !isVpsPublicRoute.value || publicHeaderFooter.value?.vpsPublicHeaderEnabled !== false;
+  return true;
 });
 const showPublicFooter = computed(() => {
-  if (!isVpsPublicRoute.value) return true;
-  return publicHeaderFooter.value?.vpsPublicFooterEnabled !== false;
+  return true;
 });
 const shouldShowFooter = computed(() => !isSessionLoading.value && (!isPublicRoute.value || showPublicFooter.value));
 

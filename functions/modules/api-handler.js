@@ -259,8 +259,8 @@ export async function handleSettingsSave(request, env) {
         const reservedPathRoots = new Set([
             'settings', 'login', 'groups', 'nodes', 'subscriptions', 'dashboard',
             'api', 'explore', 'sub', 'cron', 'assets', '@vite', 'public', 'profile',
-            'vps', 'monitor', 'logout', 'auth_debug', 'auth_check', 'data', 'kv_test',
-            'clients', 'system', 'github', 'telegram', 'test_notification', 'test_subconverter',
+            'logout', 'auth_debug', 'auth_check', 'data', 'kv_test',
+            'clients', 'system', 'github', 'telegram', 'test_notification',
             'misubs', 'node_count', 'nodes', 'fetch_external_url', 'batch_update_nodes',
             'subscription_nodes', 'debug_subscription', 'preview'
         ]);
@@ -429,9 +429,7 @@ export async function handlePublicConfig(env) {
 
         return createJsonResponse({
             enablePublicPage: mergedSettings.enablePublicPage,
-            customLoginPath: mergedSettings.customLoginPath,
-            vpsPublicHeaderEnabled: mergedSettings?.vpsMonitor?.publicPageShowHeader !== false,
-            vpsPublicFooterEnabled: mergedSettings?.vpsMonitor?.publicPageShowFooter !== false
+            customLoginPath: mergedSettings.customLoginPath
         });
     } catch (e) {
         console.error('[API Error /public/config]', e);

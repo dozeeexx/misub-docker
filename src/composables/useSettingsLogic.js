@@ -30,7 +30,7 @@ export function useSettingsLogic() {
 
     // ========== 计算属性 ==========
     const hasWhitespace = computed(() => {
-        const fieldsCheck = ['FileName', 'mytoken', 'profileToken', 'subConverter', 'subConfig', 'BotToken', 'ChatID'];
+        const fieldsCheck = ['FileName', 'mytoken', 'profileToken', 'transformConfig', 'BotToken', 'ChatID'];
         for (const key of fieldsCheck) {
             if (settings.value[key] && /\s/.test(settings.value[key])) return true;
         }
@@ -100,9 +100,12 @@ export function useSettingsLogic() {
                 disguise: disguiseConfig.value
             };
 
+            settingsToSave.ruleLevel = settingsToSave.ruleLevel || settingsToSave.clashRuleLevel || 'std';
+
             delete settingsToSave.prefixConfig;
             delete settingsToSave.prependSubName;
             delete settingsToSave.nodeTransform;
+            delete settingsToSave.clashRuleLevel;
 
             const result = await saveSettings(settingsToSave);
             if (result.success) {

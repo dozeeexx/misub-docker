@@ -49,7 +49,14 @@ export async function handlePublicPreviewRequest(request, env) {
         }
 
         // 调用 handleProfileMode 获取节点（公开页默认显示处理后的结果）
-        const shouldSkipCertificateVerify = Boolean(profile?.subConverterScv || profile?.skipCertVerify || profile?.skipCertificateVerify || profile?.settings?.subConverterScv);
+        const shouldSkipCertificateVerify = Boolean(
+            profile?.builtinSkipCertVerify ||
+            profile?.transformBackendScv ||
+            profile?.skipCertVerify ||
+            profile?.skipCertificateVerify ||
+            profile?.settings?.builtinSkipCertVerify ||
+            profile?.settings?.transformBackendScv
+        );
         const result = await handleProfileMode(request, env, profile.id, userAgent, true, shouldSkipCertificateVerify);
 
         return createJsonResponse(result);

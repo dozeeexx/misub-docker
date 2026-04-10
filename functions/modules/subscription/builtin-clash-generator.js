@@ -7,6 +7,7 @@
 import { urlsToClashProxies } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
 import { clashFix } from '../../utils/format-utils.js';
+import { POLICY_GROUPS, RULE_SETS } from './builtin-rules-provider.js';
 import yaml from 'js-yaml';
 
 /**
@@ -69,7 +70,8 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
     const {
         fileName = 'MiSub',
         enableUdp = true,
-        skipCertVerify = false
+        skipCertVerify = false,
+        ruleLevel = 'std' // [New] 支持 base, std, full
     } = options;
 
     // 解析节点 URL 列表（先清理控制字符）
@@ -106,8 +108,23 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         return '# No valid proxies found\nproxies: []\n';
     }
 
-    // 获取所有代理名称
-    const proxyNames = proxies.map(p => p.name);
+    // 从统一规则库获取分流规则
+    const levelKey = (ruleLevel || 'std').toUpperCase();
+    const rawRules = getBuiltinRules(levelKey, 'clash');
+
+    // 生成策略组
+    const policyGroupsFactory = POLICY_GROUPS[levelKey] || POLICY_GROUPS.STD;
+    const proxyGroups = policyGroupsFactory(proxies);
+    
+    // 提取远程 Provider 定义
+    const ruleProviders = getRemoteProviderDefinitions('clash', rawRules);
+    
+    // 转换规则行为最终字符串
+    const clashRules = rawRules.map(r => {
+        if (typeof r === 'string') return r;
+        if (r.type === 'rule-provider') return `RULE-SET,${r.provider},${r.target}`;
+        return null;
+    }).filter(Boolean);
 
     // 基础配置
     const config = {
@@ -131,34 +148,14 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         },
 
         'proxies': proxies,
+        'profile': {
+            'store-selected': true,
+            'subscription-url': options.managedConfigUrl || ''
+        },
 
-        'proxy-groups': [
-            {
-                'name': '🚀 节点选择',
-                'type': 'select',
-                'proxies': [...proxyNames, '♻️ 自动选择', '🔯 故障转移']
-            },
-            {
-                'name': '♻️ 自动选择',
-                'type': 'url-test',
-                'url': 'http://www.gstatic.com/generate_204',
-                'interval': 300,
-                'tolerance': 50,
-                'proxies': proxyNames
-            },
-            {
-                'name': '🔯 故障转移',
-                'type': 'fallback',
-                'url': 'http://www.gstatic.com/generate_204',
-                'interval': 300,
-                'proxies': proxyNames
-            }
-        ],
-
-        'rules': [
-            'GEOIP,CN,DIRECT',
-            'MATCH,🚀 节点选择'
-        ]
+        'proxy-groups': proxyGroups,
+        'rule-providers': ruleProviders,
+        'rules': clashRules
     };
 
     // 生成 YAML
@@ -178,8 +175,9 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         return cleanControlChars(yamlStr);
     } catch (e) {
         console.error('[BuiltinClash] YAML generation failed:', e);
-        // Fallback: 使用简单的 JSON 转换
-        return `proxies:\n${proxies.map(p => `  - ${JSON.stringify(p)}`).join('\n')}\n`;
+        // Fallback: 使用简单的对象手动序列化，确保是一个 Map 结构
+        const fallbackProxies = Array.isArray(proxies) ? proxies : [];
+        return `proxies:\n${fallbackProxies.map(p => `  - ${JSON.stringify(p)}`).join('\n')}\n`;
     }
 }
 
