@@ -165,9 +165,15 @@ export async function handleMisubRequest(context) {
                 // 1. Add subscriptions in order defined by profile
                 const profileSubIds = profile.subscriptions || [];
                 if (Array.isArray(profileSubIds)) {
-                    profileSubIds.forEach(id => {
-                        const sub = misubMap.get(id);
-                        if (sub && sub.enabled && typeof sub.url === 'string' && sub.url.startsWith('http')) {
+                    profileSubIds.forEach(item => {
+                        // 支持两种格式：纯字符串 ID 或 带有覆盖配置的对象 { id, exclude, operators, ... }
+                        const isObject = item && typeof item === 'object';
+                        const id = isObject ? item.id : item;
+                        
+                        const baseSub = misubMap.get(id);
+                        if (baseSub && baseSub.enabled && typeof baseSub.url === 'string' && baseSub.url.startsWith('http')) {
+                            // 如果是对象，则合并覆盖配置（Profile 级别的设置优先级更高）
+                            const sub = isObject ? { ...baseSub, ...item } : baseSub;
                             targetMisubs.push(sub);
                         }
                     });
