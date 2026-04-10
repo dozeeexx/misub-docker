@@ -4,7 +4,7 @@
  */
 
 import yaml from 'js-yaml';
-import { parseNodeInfo } from './geo-utils.js';
+import { parseNodeInfo, extractNodeRegion } from './geo-utils.js';
 // [注意] node-parser.js 在 functions/modules/utils/，而 node-utils.js 在 functions/utils/
 // 所以需要向上两级找到 functions/utils/
 import { fixNodeUrlEncoding } from '../../utils/node-utils.js';
