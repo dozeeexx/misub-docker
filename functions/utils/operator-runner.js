@@ -7,6 +7,29 @@ import * as NodeUtils from './node-transformer.js';
 import { extractNodeRegion, getRegionEmoji } from '../modules/utils/geo-utils.js';
 
 /**
+ * 辅助函数：将规则模式规范化为正则表达式数组
+ */
+function normalizeRules(rules) {
+    if (!rules) return [];
+    if (!Array.isArray(rules)) {
+        if (typeof rules === 'string') return rules.split(/\r?\n/).filter(line => line.trim() !== '');
+        return [];
+    }
+    
+    let normalized = [];
+    for (const rule of rules) {
+        if (typeof rule === 'string') {
+            // 支持在单个算子输入中通过 | 或 换行符 传递多个子规则
+            const parts = rule.split(/\r?\n/).filter(p => p.trim() !== '');
+            normalized.push(...parts);
+        } else if (rule && rule.pattern) {
+            normalized.push(rule);
+        }
+    }
+    return normalized;
+}
+
+/**
  * Filter Operator
  */
 function opFilter(nodes, params) {
@@ -14,28 +37,33 @@ function opFilter(nodes, params) {
     const { include, exclude, protocols, regions } = params;
     let result = [...nodes];
 
-    if (include?.enabled && Array.isArray(include.rules)) {
-        result = result.filter(r => {
-            // [智能化过滤同步] 确保已提取区域信息以供匹配
-            const enriched = NodeUtils.ensureRegionInfo(r, false);
-            const matchRaw = NodeUtils.matchesRegexRules(r.name, include.rules);
-            const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, include.rules) : false;
-            const matchRegion = NodeUtils.matchesRegexRules(enriched.regionZh, include.rules) || 
-                                NodeUtils.matchesRegexRules(enriched.region, include.rules);
-            
-            return matchRaw || matchClean || matchRegion;
-        });
+    if (include?.enabled) {
+        const rules = normalizeRules(include.rules);
+        if (rules.length > 0) {
+            result = result.filter(r => {
+                const enriched = NodeUtils.ensureRegionInfo(r, false);
+                const matchRaw = NodeUtils.matchesRegexRules(r.name, rules);
+                const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, rules) : false;
+                const matchRegion = NodeUtils.matchesRegexRules(enriched.regionZh, rules) || 
+                                    NodeUtils.matchesRegexRules(enriched.region, rules);
+                
+                return matchRaw || matchClean || matchRegion;
+            });
+        }
     }
-    if (exclude?.enabled && Array.isArray(exclude.rules)) {
-        result = result.filter(r => {
-            const enriched = NodeUtils.ensureRegionInfo(r, false);
-            const matchRaw = NodeUtils.matchesRegexRules(r.name, exclude.rules);
-            const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, exclude.rules) : false;
-            const matchRegion = NodeUtils.matchesRegexRules(enriched.regionZh, exclude.rules) || 
-                                NodeUtils.matchesRegexRules(enriched.region, exclude.rules);
-                                
-            return !(matchRaw || matchClean || matchRegion);
-        });
+    if (exclude?.enabled) {
+        const rules = normalizeRules(exclude.rules);
+        if (rules.length > 0) {
+            result = result.filter(r => {
+                const enriched = NodeUtils.ensureRegionInfo(r, false);
+                const matchRaw = NodeUtils.matchesRegexRules(r.name, rules);
+                const matchClean = r.metadata?.cleanName ? NodeUtils.matchesRegexRules(r.metadata.cleanName, rules) : false;
+                const matchRegion = NodeUtils.matchesRegexRules(enriched.regionZh, rules) || 
+                                    NodeUtils.matchesRegexRules(enriched.region, rules);
+                                    
+                return !(matchRaw || matchClean || matchRegion);
+            });
+        }
     }
     if (protocols?.enabled && Array.isArray(protocols.values)) {
         const allowed = new Set(protocols.values.map(p => p.toLowerCase()));
@@ -58,11 +86,22 @@ function opRename(nodes, params) {
     const { regex, template } = params;
     let result = [...nodes];
 
-    if (regex?.enabled && Array.isArray(regex.rules)) {
-        result = result.map(r => ({
-            ...r,
-            name: NodeUtils.applyRegexRename(r.name, regex.rules)
-        }));
+    if (regex?.enabled) {
+        const rules = normalizeRules(regex.rules);
+        if (rules.length > 0) {
+            result = result.map(r => {
+                const newName = NodeUtils.applyRegexRename(r.name, rules);
+                if (newName !== r.name) {
+                    // [核心修复] 即时同步 URL，防止改名在不同协议间丢失
+                    return {
+                        ...r,
+                        name: newName,
+                        url: NodeUtils.setNodeName(r.url, r.protocol, newName)
+                    };
+                }
+                return r;
+            });
+        }
     }
 
     if (template?.enabled && template.text) {
@@ -78,7 +117,15 @@ function opRename(nodes, params) {
                 index: index + (template.offset || 1)
             };
             const newName = template.text.replace(/\{(\w+)\}/g, (match, key) => vars[key] || match);
-            return { ...r, name: newName };
+            
+            if (newName !== r.name) {
+                return {
+                    ...r,
+                    name: newName,
+                    url: NodeUtils.setNodeName(r.url, r.protocol, newName)
+                };
+            }
+            return r;
         });
     }
 
@@ -151,8 +198,6 @@ async function opScript(nodes, params, context) {
 
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
         const runner = new AsyncFunction(wrapper);
-        const result = await runner(enrichedNodes, context, scriptEnv);
-        
         return Array.isArray(result) ? result : nodes;
     } catch (e) {
         console.error('[Operator] Script execution failed:', e);

@@ -176,41 +176,68 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     // 用户可以在模板中使用 {name} 变量来保留原始信息
     const skipPrefixDueToRenaming = nodeTransformConfig?.enabled && nodeTransformConfig?.rename?.template?.enabled;
 
-const processedManualNodes = misubs
-.filter(sub => {
-const url = typeof sub?.url === 'string' ? sub.url.trim() : '';
-return Boolean(url) && !url.toLowerCase().startsWith('http');
-})
-.map(node => {
-    const resultUrl = (function() {
+    // --- 阶段 1: 数据准备与手动节点处理 ---
+    
+    // [增强修复] 定义统一的订阅源级转换中枢
+    const applySubscriptionTransforms = async (nodes, subSource) => {
+        if (!nodes || nodes.length === 0) return [];
+        
+        let currentNodes = [...nodes];
+        
+        // 1. [配置水合] 执行 Workflow 算子 (操作符)
+        let subOperators = ensureArray(subSource?.operators);
+        if (!subOperators.length && subSource?.nodeTransform?.enabled && subSource.nodeTransform.operators) {
+            subOperators = ensureArray(subSource.nodeTransform.operators);
+        }
+
+        if (subOperators.length > 0) {
+            if (debug) console.debug(`[DEBUG] Transforming source: ${subSource?.name || 'Manual'}, Nodes: ${currentNodes.length}`);
+            currentNodes = await runOperatorChain(currentNodes, subOperators, {
+                subName: subSource?.name,
+                userAgent,
+                config,
+                debug
+            });
+        }
+
+        // 2. 应用传统的文本过滤规则 (exclude/include)
+        currentNodes = applyFilterRules(currentNodes, subSource);
+        
+        return currentNodes;
+    };
+
+    // 重构后的手动节点处理逻辑
+    const manualSubSourceGroups = misubs.filter(sub => {
+        const url = typeof sub?.url === 'string' ? sub.url.trim() : '';
+        return Boolean(url) && !url.toLowerCase().startsWith('http');
+    });
+
+    let manualProcessedLines = [];
+    for (const sub of manualSubSourceGroups) {
         try {
-            const rawUrl = typeof node?.url === 'string' ? node.url.trim() : '';
-            if (!rawUrl) return '';
-            if (node.isExpiredNode) return rawUrl;
+            const rawUrl = typeof sub?.url === 'string' ? sub.url.trim() : '';
+            if (!rawUrl) continue;
             
-            let processedUrl = fixNodeUrlEncoding(rawUrl, { plusAsSpace: Boolean(node?.plusAsSpace) });
-            if (typeof processedUrl !== 'string' || !processedUrl) processedUrl = rawUrl;
-            
-            const customNodeName = typeof node.name === 'string' ? node.name.trim() : '';
+            let processedUrl = fixNodeUrlEncoding(rawUrl, { plusAsSpace: Boolean(sub?.plusAsSpace) });
+            const customNodeName = typeof sub.name === 'string' ? sub.name.trim() : '';
             if (customNodeName) processedUrl = applyManualNodeName(processedUrl, customNodeName);
             
-            const nodeGroup = typeof node.group === 'string' ? node.group.trim() : '';
+            const nodeGroup = typeof sub.group === 'string' ? sub.group.trim() : '';
             if (prependGroupName && nodeGroup && !skipPrefixDueToRenaming) processedUrl = prependNodeName(processedUrl, nodeGroup);
             
             const shouldAddPrefix = shouldPrependManualNodes && !skipPrefixDueToRenaming;
-            return shouldAddPrefix ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
-        } catch (e) { return ''; }
-    })();
-    
-    // [重要修复] 对手动节点也应用其所属源的过滤规则
-    if (resultUrl && node) {
-        const filteredList = applyFilterRules([resultUrl], node);
-        return filteredList.length > 0 ? filteredList[0] : '';
+            const finalRawUrl = shouldAddPrefix ? prependNodeName(processedUrl, manualNodePrefix) : processedUrl;
+
+            // [核心对齐] 对手动节点应用订阅源级转换（算子+过滤）
+            const transformed = await applySubscriptionTransforms([finalRawUrl], sub);
+            if (transformed.length > 0) {
+                manualProcessedLines.push(...transformed);
+            }
+        } catch (e) {
+            if (debug) console.error(`[DEBUG] Error processing manual node:`, e);
+        }
     }
-    return resultUrl;
-})
-.filter(Boolean)
-.join('\n');
+    const processedManualNodes = manualProcessedLines.join('\n');
 
     const httpSubs = misubs.filter(sub => sub && sub.url && sub.url.toLowerCase().startsWith('http'));
     const limiter = createConcurrencyLimiter(FETCH_CONFIG.CONCURRENCY);
@@ -274,28 +301,8 @@ return Boolean(url) && !url.toLowerCase().startsWith('http');
 
             let validNodes = fallbackParsedObjects.map(node => node.url);
 
-            // --- 工作流与过滤阶段 ---
-            
-            // 1. [核心修复] 执行订阅源级别的 Workflow 算子 (操作符)
-            // 检查 sub 对象中是否存在 operators，支持从字符串自动解析
-            let subOperators = ensureArray(sub.operators);
-            if (!subOperators.length && sub.nodeTransform?.enabled && sub.nodeTransform.operators) {
-                subOperators = ensureArray(sub.nodeTransform.operators);
-            }
-
-            if (subOperators.length > 0) {
-                if (debug) console.debug(`[DEBUG] Sub: ${sub.name}, Valid Operators: ${subOperators.length}`);
-                validNodes = await runOperatorChain(validNodes, subOperators, {
-                    subName: sub.name,
-                    userAgent,
-                    config, // 共享全局配置环境
-                    debug
-                });
-            }
-
-            // 2. 应用传统的文本过滤规则 (exclude/include)
-            validNodes = applyFilterRules(validNodes, sub);
-
+            // --- 统一转换治理 (算子 + 过滤) ---
+            validNodes = await applySubscriptionTransforms(validNodes, sub);
 
             // 判断是否启用订阅前缀（智能重命名启用时跳过）
             const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
