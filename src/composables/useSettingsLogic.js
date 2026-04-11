@@ -84,11 +84,11 @@ export function useSettingsLogic() {
     const handleSave = async () => {
         if (hasWhitespace.value) {
             showToast('输入项中不能包含空格', 'error');
-            return;
+            return false;
         }
         if (!isStorageTypeValid.value) {
             showToast('存储类型设置无效', 'error');
-            return;
+            return false;
         }
 
         isSaving.value = true;
@@ -111,11 +111,14 @@ export function useSettingsLogic() {
             if (result.success) {
                 showToast('设置已保存，页面将自动刷新...', 'success');
                 setTimeout(() => window.location.reload(), 1500);
+                return true;
             } else {
                 throw new Error(result.error || '保存失败');
             }
         } catch (error) {
             showToast(error.message, 'error');
+            return false;
+        } finally {
             isSaving.value = false;
         }
     };

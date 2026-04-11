@@ -37,19 +37,18 @@ const handleCardClick = (node) => {
 </script>
 
 <template>
-  <div class="flex-1 overflow-y-auto min-h-0">
+  <div class="min-h-0 flex-1 overflow-y-auto">
     <!-- 移动端 Mini List-Card 视图 -->
-    <div class="block lg:hidden">
+    <div class="block space-y-3 lg:hidden">
       <div 
         v-for="(node, index) in nodes" 
         :key="`${node.url}_${index}`"
         @click="handleCardClick(node)"
-        class="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors"
+        class="flex items-center justify-between rounded-xl border border-gray-200/70 bg-white p-4 shadow-sm transition-colors dark:border-white/10 dark:bg-white/5"
         :class="{ 
           'bg-indigo-50/50 dark:bg-indigo-900/20': selectionMode && selectedUrls.has(node.url),
           'cursor-pointer active:bg-gray-50 dark:active:bg-gray-700': selectionMode
         }"
-        style="height: 64px;"
       >
         <!-- 左侧：图标与信息 -->
         <div class="flex items-center gap-3 flex-1 min-w-0 pr-2">
@@ -65,7 +64,7 @@ const handleCardClick = (node) => {
           
           <div class="flex flex-col min-w-0">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
+              <span class="truncate text-sm font-semibold text-gray-900 dark:text-white">
                 {{ parseNodeInfo(node).name }}
               </span>
             </div>
@@ -76,9 +75,9 @@ const handleCardClick = (node) => {
               >
                 {{ parseNodeInfo(node).protocol }}
               </span>
-              <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">
-                {{ parseNodeInfo(node).server }}
-              </span>
+               <span class="truncate text-[10px] text-gray-400 dark:text-gray-500">
+                 {{ parseNodeInfo(node).server }}:{{ parseNodeInfo(node).port }}
+               </span>
             </div>
           </div>
         </div>
@@ -87,7 +86,7 @@ const handleCardClick = (node) => {
         <button
           v-if="!selectionMode"
           @click.stop="emit('copy', node, node.url)"
-          class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-gray-50 dark:bg-gray-700/50 text-gray-400 active:bg-indigo-50 active:text-indigo-600"
+          class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-400 transition-colors active:bg-indigo-50 active:text-indigo-600 dark:bg-gray-700/50"
           :class="{ 'text-green-600 bg-green-50': copiedNodeId === node.url }"
         >
           <svg v-if="copiedNodeId !== node.url" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,7 +100,7 @@ const handleCardClick = (node) => {
     </div>
 
     <!-- 桌面端 Bento Grid 卡片视图 -->
-    <div class="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+    <div class="hidden gap-4 p-4 lg:grid lg:grid-cols-2 xl:grid-cols-3">
       <div
         v-for="(node, index) in nodes"
         :key="`${node.url}_${index}`"

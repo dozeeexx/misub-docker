@@ -58,8 +58,8 @@ const handleChangePage = (page) => {
 <template>
   <div v-if="manualNodes.length > 0" :class="{ 'pb-48': isSelectionMode }">
     <!-- 如果有搜索词，显示搜索提示 -->
-    <div v-if="localSearchTerm && filteredNodes.length === 0" class="text-center py-8 text-gray-500">
-      <p>没有找到包含 "{{ localSearchTerm }}" 的节点</p>
+    <div v-if="localSearchTerm && filteredNodes.length === 0" class="rounded-xl border border-dashed border-gray-300 bg-white/60 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-400">
+      没有找到包含 “{{ localSearchTerm }}” 的节点
     </div>
     
     <div v-if="isSorting">
@@ -175,10 +175,10 @@ const handleChangePage = (page) => {
       @update:items-per-page="emit('update:itemsPerPage', $event)"
     />
   </div>
-  <div v-else class="py-6 border-2 border-dashed border-gray-300 dark:border-gray-700 bg-white/60 dark:bg-gray-900/50 misub-radius-lg">
-    <EmptyState 
-      title="没有手动节点" 
-      description="添加分享链接或单个节点。" 
+    <div v-else class="rounded-xl border border-dashed border-gray-300 bg-white/60 py-6 dark:border-gray-700 dark:bg-gray-900/50">
+      <EmptyState 
+        title="没有手动节点" 
+        description="添加分享链接或单个节点。" 
       icon="node" 
       :total-count="0" 
     />

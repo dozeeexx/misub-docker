@@ -51,13 +51,13 @@ const handleRowClick = (node) => {
 </script>
 
 <template>
-  <div class="hidden lg:flex flex-1 overflow-hidden">
+  <div class="hidden lg:flex flex-1 overflow-hidden rounded-xl border border-gray-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-white/5">
     <div ref="containerRef" class="h-full overflow-y-auto w-full">
-      <div class="w-full flex justify-center px-6">
-        <div style="width: 950px;">
+      <div class="w-full px-4 py-3">
+        <div class="w-full overflow-hidden rounded-xl border border-gray-200/70 dark:border-white/10">
           <!-- 表头 -->
-          <div class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div class="grid grid-cols-12 gap-2 px-4 py-3 text-xs font-medium text-gray-600 dark:text-gray-400 min-h-[3rem] flex items-center" style="width: 950px;">
+          <div class="sticky top-0 z-10 border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+            <div class="grid min-h-[3rem] grid-cols-12 gap-2 px-4 py-3 text-xs font-medium text-gray-600 dark:text-gray-400">
               <div v-if="selectionMode" class="col-span-1 flex justify-center">选中</div>
               <div :class="selectionMode ? 'col-span-3' : 'col-span-4'">节点名称</div>
               <div class="col-span-3 hidden sm:block">服务器</div>
@@ -69,7 +69,7 @@ const handleRowClick = (node) => {
           </div>
 
           <!-- 数据行 - 虚拟滚动 -->
-          <div class="bg-white dark:bg-gray-800" :style="{ height: totalHeight + 'px', width: '950px', position: 'relative' }">
+          <div class="bg-white dark:bg-gray-800" :style="{ height: totalHeight + 'px', position: 'relative' }">
             <div :style="{ transform: `translateY(${offsetY}px)` }">
               <div
                 v-for="node in visibleItems.items"
@@ -78,7 +78,7 @@ const handleRowClick = (node) => {
                 class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 :class="{ 'bg-indigo-50/50 dark:bg-indigo-900/10': selectionMode && selectedUrls.has(node.url), 'cursor-pointer': selectionMode }"
               >
-                <div class="grid grid-cols-12 gap-2 px-4 py-3 items-center min-h-[3rem]" style="width: 950px;">
+                <div class="grid min-h-[3rem] grid-cols-12 gap-2 px-4 py-3 items-center">
                   <!-- Checkbox (Selection Mode Only) -->
                   <div v-if="selectionMode" class="col-span-1 flex justify-center">
                     <div class="w-4 h-4 rounded border flex items-center justify-center transition-all"

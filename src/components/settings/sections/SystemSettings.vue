@@ -93,16 +93,20 @@ const emit = defineEmits(['migrate']);
 <template>
     <div class="space-y-8">
         <!-- 数据存储类型卡片 -->
-        <div
-            class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24"
+        <div class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
+            <div class="mb-5 flex items-start gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
                 </svg>
-                数据存储类型
-            </h3>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">数据存储类型</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">统一管理当前数据存储方式，并在需要时迁移到 D1 数据库。</p>
+                </div>
+            </div>
             <div class="space-y-3">
                 <div class="flex items-center">
                     <input type="radio" value="kv" v-model="settings.storageType"
@@ -146,16 +150,20 @@ const emit = defineEmits(['migrate']);
         </div>
 
         <!-- 备份与恢复卡片 -->
-        <div
-            class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24"
+        <div class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
+            <div class="mb-5 flex items-start gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
-                备份与恢复
-            </h3>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">备份与恢复</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">在变更前导出当前数据，必要时再导入恢复，减少误操作风险。</p>
+                </div>
+            </div>
             <div class="flex gap-4">
                 <button @click="exportBackup"
                     class="px-4 py-2 text-sm font-medium text-white misub-radius-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700">导出备份</button>
@@ -165,16 +173,20 @@ const emit = defineEmits(['migrate']);
         </div>
 
         <!-- 管理员安全设置 -->
-        <div
-            class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24"
+        <div class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
+            <div class="mb-5 flex items-start gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-600 dark:text-red-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                管理员安全设置
-            </h3>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">管理员安全设置</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">统一管理后台登录密码，建议定期更新并避免使用弱密码。</p>
+                </div>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/70 dark:bg-gray-900/50 p-6 misub-radius-lg border border-gray-200/70 dark:border-white/10">
                 <div class="space-y-4">

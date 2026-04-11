@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import TransformSelector from '@/components/forms/TransformSelector.vue';
 import Switch from '@/components/ui/Switch.vue';
+import SectionHeader from '../../SectionHeader.vue';
 
 const props = defineProps({
   settings: {
@@ -33,23 +34,20 @@ const modeHint = computed(() => {
 </script>
 
 <template>
-  <div class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300">
-    <div class="flex items-center justify-between">
-      <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24"
-          stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+  <div class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
+    <SectionHeader title="内置转换引擎" description="统一管理规则来源、模板选择和规则等级，兼顾桌面端与移动端配置体验。" tone="purple">
+      <template #icon>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
         </svg>
-        内置转换引擎 (Built-in Transformer)
-      </h3>
-    </div>
+      </template>
+    </SectionHeader>
     
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- 规则来源 (Rule Source) -->
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          1. 规则来源 (Source)
+          1. 规则来源
         </label>
         <select v-model="settings.transformConfigMode"
           class="block w-full px-4 py-2 text-sm text-gray-900 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200">
@@ -63,7 +61,7 @@ const modeHint = computed(() => {
       <!-- 模板选择 (Template Selector) -->
       <div v-if="!isBuiltin">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          2. 选择外部模板 (Remote Template)
+          2. 选择外部模板
         </label>
         <TransformSelector
           v-model="settings.transformConfig"
@@ -87,8 +85,8 @@ const modeHint = computed(() => {
       <!-- 规则等级 (Rule Level) -->
       <div :class="{ 'opacity-60': !isBuiltin }" class="transition-opacity">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1.5">
-          {{ isBuiltin ? '2.' : '3.' }} 规则等级 (Complexity)
-          <span v-if="isBuiltin" class="inline-flex items-center rounded-md bg-purple-50 dark:bg-purple-900/30 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:text-purple-400 ring-1 ring-inset ring-purple-700/10">ACTIVE</span>
+          {{ isBuiltin ? '2.' : '3.' }} 规则等级
+          <span v-if="isBuiltin" class="inline-flex items-center rounded-md bg-purple-50 dark:bg-purple-900/30 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:text-purple-400 ring-1 ring-inset ring-purple-700/10">当前生效</span>
         </label>
         <select v-model="settings.ruleLevel"
           class="block w-full px-4 py-2 text-sm text-gray-900 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200">

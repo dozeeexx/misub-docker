@@ -12,11 +12,9 @@ describe('Sing-Box 内置生成器', () => {
         expect(Array.isArray(parsed.outbounds)).toBe(true);
         expect(parsed.outbounds.some(outbound => outbound.tag === 'TestNode')).toBe(true);
         expect(parsed.outbounds.some(outbound => outbound.tag === '🚀 节点选择')).toBe(true);
-        expect(parsed.outbounds.some(outbound => outbound.tag === '🛑 故障转移')).toBe(true);
-        expect(parsed.outbounds.some(outbound => outbound.tag === '🌐 全部节点')).toBe(true);
-        expect(parsed.outbounds.some(outbound => outbound.tag === '🇯🇵 日本节点 选择')).toBe(true);
-        expect(parsed.outbounds.some(outbound => outbound.tag === '🇯🇵 日本节点 测速')).toBe(true);
-        expect(parsed.outbounds.some(outbound => outbound.tag === '🇯🇵 日本节点 兜底')).toBe(true);
+        expect(parsed.outbounds.some(outbound => outbound.tag === '🎬 视频广告')).toBe(true);
+        expect(parsed.outbounds.some(outbound => outbound.tag === '🍎 Apple')).toBe(true);
+        expect(parsed.outbounds.some(outbound => outbound.tag === '🇯🇵 日本节点' && outbound.type === 'urltest')).toBe(true);
         expect(parsed.route.final).toBe('🚀 节点选择');
     });
 

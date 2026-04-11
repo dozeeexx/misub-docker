@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import FilterEditor from './components/FilterEditor.vue';
 import RenameEditor from './components/RenameEditor.vue';
 import SortEditor from './components/SortEditor.vue';
+import DedupEditor from './components/DedupEditor.vue';
 
 const props = defineProps({
   modelValue: {
@@ -91,7 +92,8 @@ const getInitialParams = (type) => {
     case 'filter': return { include: { enabled: false, rules: [] }, exclude: { enabled: false, rules: [] }, protocols: { enabled: false, values: [] }, regions: { enabled: false, values: [] } };
     case 'rename': return { regex: { enabled: false, rules: [] }, template: { enabled: false, text: '' } };
     case 'script': return { code: '', url: '' };
-    case 'sort': return { keys: [] };
+    case 'sort': return { keys: [{ key: 'region', order: 'asc', customOrder: [] }] };
+    case 'dedup': return { mode: 'serverPort', includeProtocol: true, prefer: { protocolOrder: [] } };
     default: return {};
   }
 };
@@ -145,7 +147,7 @@ const getOperatorIcon = (type) => {
 <template>
   <div class="space-y-4">
     <!-- Migration Suggestion Card -->
-    <div v-if="canMigrate" class="group relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200/50 dark:border-amber-500/20 misub-radius-lg p-5 mb-6">
+    <div v-if="canMigrate" class="group relative mb-6 overflow-hidden rounded-xl border border-amber-200/50 bg-gradient-to-br from-amber-50 to-orange-50 p-5 dark:border-amber-500/20 dark:from-amber-900/10 dark:to-orange-900/10">
         <div class="relative z-10 flex items-center justify-between gap-4">
             <div class="flex items-center gap-4">
                 <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
@@ -153,10 +155,10 @@ const getOperatorIcon = (type) => {
                 </div>
                 <div>
                     <h4 class="text-sm font-bold text-amber-900 dark:text-amber-200">发现旧版配置</h4>
-                    <p class="text-[10px] text-amber-700/70 dark:text-amber-400/60 mt-0.5">检测到您有旧版的“节点净化”规则，建议一键迁移至新的操作符链以获得更好的体验。</p>
+                    <p class="mt-0.5 text-[10px] text-amber-700/70 dark:text-amber-400/60">检测到您有旧版的“节点净化”规则，建议一键迁移至新的操作符链以获得更好的体验。</p>
                 </div>
             </div>
-            <button @click="migrateFromLegacy" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-xl transition-all shadow-md shadow-amber-500/20 active:scale-95 whitespace-nowrap">
+            <button @click="migrateFromLegacy" class="whitespace-nowrap rounded-xl bg-amber-500 px-5 py-2 text-[11px] font-bold text-white shadow-md shadow-amber-500/20 transition-all hover:bg-amber-600 active:scale-95">
                 立即迁移
             </button>
         </div>
@@ -166,27 +168,28 @@ const getOperatorIcon = (type) => {
         </div>
     </div>
 
-    <div v-if="modelValue.length === 0 && !canMigrate" class="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl bg-gray-50/30 dark:bg-gray-900/10">
-      <div class="mx-auto w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4 text-gray-400">
+    <div v-if="modelValue.length === 0 && !canMigrate" class="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/30 py-12 text-center dark:border-gray-800 dark:bg-gray-900/10">
+      <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 dark:bg-gray-800">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
       </div>
       <h3 class="text-sm font-bold text-gray-900 dark:text-white">开始链式处理</h3>
-      <p class="text-[10px] text-gray-500 mt-1">添加操作符来定制您的订阅节点 pipeline。</p>
+      <p class="mt-1 text-[10px] text-gray-500">添加操作符来定制您的订阅节点处理工作流。</p>
     </div>
 
     <div v-else class="space-y-2">
       <div v-for="(op, index) in modelValue" :key="op.id || index" 
         :class="[
-            'bg-white dark:bg-gray-800 border rounded-2xl transition-all overflow-hidden group',
+            'group overflow-hidden rounded-2xl border bg-white transition-all dark:bg-gray-800',
             expandedIndex === index ? 'border-indigo-500/50 ring-4 ring-indigo-500/5 shadow-xl' : 'border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
             !op.enabled && 'opacity-60 grayscale-[0.5]'
         ]">
         <!-- Compact Header -->
         <div 
           @click="toggleExpand(index)"
-          class="flex items-center justify-between p-3 cursor-pointer select-none active:bg-gray-50 dark:active:bg-gray-900"
+          class="cursor-pointer select-none p-4 active:bg-gray-50 dark:active:bg-gray-900 sm:p-3"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex items-start justify-between gap-3 sm:items-center">
+          <div class="flex items-center gap-3 min-w-0">
              <div 
                 :class="[
                     'w-8 h-8 flex items-center justify-center rounded-xl border shadow-sm transition-colors',
@@ -195,26 +198,28 @@ const getOperatorIcon = (type) => {
                 v-html="getOperatorIcon(op.type)">
              </div>
              <div>
-                <div class="flex items-center gap-2">
-                    <h4 class="font-bold text-sm text-gray-900 dark:text-white">{{ operatorLabels[op.type] }}</h4>
-                    <span v-if="!op.enabled" class="text-[9px] bg-gray-100 dark:bg-gray-900 text-gray-400 px-1.5 py-0.5 rounded-full border border-gray-200 dark:border-gray-700">PAUSED</span>
-                </div>
-             </div>
-          </div>
-          
-          <div class="flex items-center gap-2">
-            <!-- Inline Actions (Visible on Hover) -->
-            <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pr-2">
-                <button @click="(e) => moveOperator(e, index, -1)" class="p-1 hover:text-indigo-600 disabled:opacity-30" :disabled="index === 0">
+                 <div class="flex items-center gap-2">
+                     <h4 class="font-bold text-sm text-gray-900 dark:text-white">{{ operatorLabels[op.type] }}</h4>
+                    <span v-if="!op.enabled" class="rounded-full border border-gray-200 bg-gray-100 px-1.5 py-0.5 text-[9px] text-gray-400 dark:border-gray-700 dark:bg-gray-900">已暂停</span>
+                 </div>
+                 <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400 sm:hidden">
+                   {{ op.enabled ? '启用中' : '未启用' }}
+                 </p>
+              </div>
+           </div>
+           
+           <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 pr-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                <button @click="(e) => moveOperator(e, index, -1)" class="rounded-md p-1 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-30 dark:hover:bg-indigo-500/10" :disabled="index === 0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
                 </button>
-                <button @click="(e) => moveOperator(e, index, 1)" class="p-1 hover:text-indigo-600 disabled:opacity-30" :disabled="index === modelValue.length - 1">
+                <button @click="(e) => moveOperator(e, index, 1)" class="rounded-md p-1 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-30 dark:hover:bg-indigo-500/10" :disabled="index === modelValue.length - 1">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <button @click="(e) => toggleOperator(e, index)" class="p-1" :class="op.enabled ? 'text-indigo-500 hover:text-orange-500' : 'text-gray-400 hover:text-indigo-500'">
+                <button @click="(e) => toggleOperator(e, index)" class="rounded-md p-1" :class="op.enabled ? 'text-indigo-500 hover:bg-orange-50 hover:text-orange-500 dark:hover:bg-orange-500/10' : 'text-gray-400 hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10'">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
-                <button @click="(e) => { e.stopPropagation(); removeOperator(index); }" class="p-1 text-gray-300 hover:text-rose-500">
+                <button @click="(e) => { e.stopPropagation(); removeOperator(index); }" class="rounded-md p-1 text-gray-300 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
@@ -226,6 +231,7 @@ const getOperatorIcon = (type) => {
             >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
+          </div>
           </div>
         </div>
 
@@ -239,19 +245,17 @@ const getOperatorIcon = (type) => {
           leave-to-class="max-h-0 opacity-0"
         >
           <div v-show="expandedIndex === index" class="border-t border-gray-100 dark:border-gray-700/50">
-            <div class="p-5">
+            <div class="p-4 sm:p-5">
               <FilterEditor v-if="op.type === 'filter'" v-model="op.params" />
               <RenameEditor v-else-if="op.type === 'rename'" v-model="op.params" />
               <SortEditor v-else-if="op.type === 'sort'" v-model="op.params" />
+              <DedupEditor v-else-if="op.type === 'dedup'" v-model="op.params" />
               
               <div v-else-if="op.type === 'script'" class="space-y-4">
-                <input v-model="op.params.url" placeholder="远程脚本 URL (GitGist / Raw 链接)" class="w-full text-xs p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500/20" />
-                <textarea v-if="!op.params.url" v-model="op.params.code" placeholder="输入 JavaScript 代码...&#10;支持 $proxies, $context, $utils" class="w-full h-40 text-[11px] font-mono p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500/20"></textarea>
+                 <input v-model="op.params.url" placeholder="远程脚本 URL（GitGist / Raw 链接）" class="w-full rounded-xl border border-gray-200 bg-gray-50 p-2.5 text-xs focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-900" />
+                 <textarea v-if="!op.params.url" v-model="op.params.code" placeholder="输入 JavaScript 代码...&#10;支持 $proxies、$context、$utils" class="h-40 w-full rounded-xl border border-gray-200 bg-gray-50 p-3 font-mono text-[11px] focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-900"></textarea>
               </div>
 
-              <div v-else-if="op.type === 'dedup'" class="py-4 text-center">
-                 <p class="text-xs text-gray-500">将基于服务器地址和端口自动移除重复项。</p>
-              </div>
             </div>
           </div>
         </transition>
@@ -259,11 +263,11 @@ const getOperatorIcon = (type) => {
     </div>
 
     <!-- Add Control (Segmented Style) -->
-    <div class="flex items-center justify-center pt-6">
-        <div class="inline-flex p-1 bg-gray-100/50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-800">
+    <div class="pt-6">
+        <div class="grid grid-cols-2 gap-2 rounded-2xl border border-gray-200 bg-gray-100/50 p-1 dark:border-gray-800 dark:bg-gray-900/50 sm:inline-flex sm:flex-wrap">
             <button v-for="(label, type) in operatorLabels" :key="type" 
                 @click="addOperator(type)"
-                class="px-4 py-2 hover:bg-white dark:hover:bg-gray-800 rounded-xl text-xs font-bold transition-all text-gray-500 hover:text-indigo-600 whitespace-nowrap"
+                class="rounded-xl px-4 py-2 text-xs font-bold text-gray-500 transition-all hover:bg-white hover:text-indigo-600 dark:hover:bg-gray-800 whitespace-nowrap"
             >
                 + {{ label.split(' ')[0] }}
             </button>

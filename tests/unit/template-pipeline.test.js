@@ -73,8 +73,8 @@ MATCH,节点选择
 
         expect(Array.isArray(parsed.outbounds)).toBe(true);
         expect(parsed.outbounds.some(outbound => outbound.tag === '🚀 节点选择')).toBe(true);
-        expect(parsed.outbounds.some(outbound => outbound.tag === 'HK-01')).toBe(true);
-        expect(parsed.outbounds.some(outbound => outbound.tag === 'JP-01' && outbound.type === 'vmess')).toBe(true);
+        expect(parsed.outbounds.some(outbound => outbound.tag === '🇭🇰 HK-01')).toBe(true);
+        expect(parsed.outbounds.some(outbound => outbound.tag === '🇯🇵 JP-01' && outbound.type === 'vmess')).toBe(true);
         expect(Array.isArray(parsed.route.rule_set)).toBe(true);
         expect(parsed.route.rule_set.length).toBeGreaterThan(0);
     });
@@ -117,18 +117,18 @@ MATCH,节点选择
         expect(loonRendered).toContain('reality=true');
         expect(loonRendered).toContain('WG-01 = wireguard');
         expect(loonRendered).toContain('RULE-SET,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Apple.list,🍎 苹果服务');
-        expect(loonRendered).toContain('♻️ 自动选择 = url-test');
+        expect(loonRendered).toContain('🚀 节点选择 = select');
         expect(quanxRendered).toContain('[Proxy]');
         expect(quanxRendered).toContain('[Policy]');
         expect(quanxRendered).toContain('[Rule]');
-        expect(quanxRendered).toContain('vmess=US-01');
-        expect(quanxRendered).toContain('RULE-SET,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Apple.list,🍎 苹果服务');
-        expect(quanxRendered).toContain('♻️ 自动选择 = url-test');
+        expect(quanxRendered).toContain('vmess=🇺🇸 US-01');
+        expect(quanxRendered).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Apple.list, tag=🍎 苹果服务, policy=🍎 苹果服务, enabled=true');
+        expect(quanxRendered).toContain('🚀 节点选择 = select');
         expect(surgeRendered).toContain('SG-01 = vless');
         expect(surgeRendered).toContain('grpc-service-name=edge');
         expect(surgeRendered).toContain('reality=true');
         expect(surgeRendered).toContain('WG-01 = wireguard');
         expect(surgeRendered).toContain('RULE-SET,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Apple.list,🍎 苹果服务');
-        expect(surgeRendered).toContain('♻️ 自动选择 = url-test');
+        expect(surgeRendered).toContain('🚀 节点选择 = select');
     });
 });

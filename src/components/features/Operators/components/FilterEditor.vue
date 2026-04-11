@@ -32,6 +32,15 @@ const addRule = (type) => {
   updateParam(type, current);
 };
 
+const normalizeRuleFlags = (type, index) => {
+  const current = { ...params.value[type] };
+  current.rules = [...(current.rules || [])];
+  const rule = current.rules[index];
+  if (!rule) return;
+  current.rules[index] = { ...rule, flags: 'i' };
+  updateParam(type, current);
+};
+
 const removeRule = (type, index) => {
   const current = { ...params.value[type] };
   current.rules = [...current.rules];
@@ -136,21 +145,15 @@ const toggleValue = (type, value) => {
             <div v-for="(rule, idx) in params[type].rules" :key="idx" class="flex items-center gap-2 group">
                 <input 
                     v-model="rule.pattern"
+                    @input="normalizeRuleFlags(type, idx)"
                     placeholder="正则表达式 (如: 香港|HK)"
                     class="flex-1 px-3 py-1.5 text-[11px] rounded-lg bg-gray-50 dark:bg-gray-900 border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-indigo-500/30 transition-all outline-none"
                 />
-                <select 
-                    v-model="rule.flags"
-                    class="w-12 px-1 py-1.5 text-[10px] rounded-lg bg-gray-50 dark:bg-gray-900 border-none outline-none"
-                >
-                    <option value="i">i</option>
-                    <option value="g">g</option>
-                    <option value="gi">gi</option>
-                </select>
                 <button @click="removeRule(type, idx)" class="p-1.5 text-gray-300 hover:text-rose-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
+            <p class="text-[10px] text-gray-400 px-1">默认忽略大小写，无需额外设置正则标志。</p>
             <div v-if="!params[type].rules?.length" class="text-center py-2 text-[10px] text-gray-400 italic">
                 点击上方“+ 添加”开始编写过滤规则
             </div>

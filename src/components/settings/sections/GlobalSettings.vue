@@ -2,6 +2,7 @@
 import { watch } from 'vue';
 import OperatorChain from '../../features/Operators/OperatorChain.vue';
 import Input from '../../ui/Input.vue';
+import SectionHeader from '../SectionHeader.vue';
 
 const props = defineProps({
   settings: {
@@ -40,29 +41,25 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
 <template>
   <div class="space-y-8">
     <!-- Announcement & Info Section -->
-    <div class="bg-indigo-50/50 dark:bg-indigo-900/10 misub-radius-lg p-6 border border-indigo-100 dark:border-indigo-500/10 shadow-sm">
-      <div class="flex items-start gap-4">
-        <div class="w-10 h-10 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        </div>
-        <div class="space-y-1">
-          <h3 class="text-base font-bold text-gray-900 dark:text-white">配置说明</h3>
-          <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+    <div class="rounded-xl border border-indigo-100 bg-indigo-50/50 p-6 shadow-sm dark:border-indigo-500/10 dark:bg-indigo-900/10">
+      <SectionHeader title="配置说明" description="这里的全局默认设置会作为所有订阅组的基础处理逻辑。" tone="indigo">
+        <template #icon>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </template>
+      </SectionHeader>
+      <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
             这里的“全局默认”设置将作为所有订阅组的基础处理逻辑。
             您可以为特定订阅组定义独立的操作符链，此时全局设置将被完全覆盖。
-          </p>
-        </div>
-      </div>
+      </p>
     </div>
 
     <!-- Node Prefix Settings -->
-    <div class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-6 space-y-6 border border-gray-100 dark:border-white/10 shadow-sm transition-shadow">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
-           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-        </div>
-        <h3 class="text-sm font-bold text-gray-900 dark:text-white">通用节点设置</h3>
-      </div>
+    <div class="rounded-xl border border-gray-100 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
+      <SectionHeader title="通用节点设置" description="统一管理手动节点前缀与默认展示策略。" tone="blue">
+        <template #icon>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </template>
+      </SectionHeader>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div class="sm:col-span-2">
@@ -102,15 +99,14 @@ watch(() => props.settings, ensureDefaults, { immediate: true });
     </div>
 
     <!-- Unified Operator Chain -->
-    <div class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-6 space-y-6 border border-gray-100 dark:border-white/10 shadow-sm">
-      <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600">
-               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10M4 18h6" /></svg>
-            </div>
-            <h3 class="text-sm font-bold text-gray-900 dark:text-white">默认转换操作符链 (Operator Chain)</h3>
-          </div>
-          <span class="text-[9px] font-bold bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full uppercase">Global Default</span>
+    <div class="rounded-xl border border-gray-100 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
+      <div class="flex items-start justify-between gap-3">
+        <SectionHeader title="默认转换操作符链" description="统一设置全局默认的节点处理流程，未单独覆盖的订阅组会继承此配置。" tone="green">
+          <template #icon>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10M4 18h6" /></svg>
+          </template>
+        </SectionHeader>
+        <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-500/15 dark:text-green-300">全局默认</span>
       </div>
 
       <OperatorChain

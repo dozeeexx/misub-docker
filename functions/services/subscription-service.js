@@ -384,7 +384,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     // --- 日志记录 ---
     try {
         const endTime = Date.now();
-        const totalNodes = outputLines.length;
+        const totalNodes = finalLines.length;
         const successCount = processedSubContents.filter(c => c.length > 0).length;
         const failCount = httpSubs.length - successCount;
 

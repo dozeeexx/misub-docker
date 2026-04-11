@@ -275,9 +275,12 @@ const updateSelectedIds = (listName, newIds) => {
               d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
         </div>
-        <h3 class="text-lg font-bold text-gray-800 dark:text-white">
-          {{ isNew ? '新增订阅组' : '编辑订阅组' }}
-        </h3>
+        <div>
+          <h3 class="text-lg font-bold text-gray-800 dark:text-white">
+            {{ isNew ? '新增订阅组' : '编辑订阅组' }}
+          </h3>
+          <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">统一管理订阅组基础信息、节点来源和处理规则。</p>
+        </div>
       </div>
     </template>
     <template #body>

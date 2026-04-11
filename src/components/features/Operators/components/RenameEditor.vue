@@ -30,6 +30,15 @@ const addRule = () => {
   updateParam('regex', current);
 };
 
+const normalizeRuleFlags = (index) => {
+  const current = { ...params.value.regex };
+  current.rules = [...(current.rules || [])];
+  const rule = current.rules[index];
+  if (!rule) return;
+  current.rules[index] = { ...rule, flags: 'gi' };
+  updateParam('regex', current);
+};
+
 const removeRule = (index) => {
   const current = { ...params.value.regex };
   current.rules = [...current.rules];
@@ -70,6 +79,7 @@ const removeRule = (index) => {
             <div class="space-y-1">
               <input 
                 v-model="rule.pattern"
+                @input="normalizeRuleFlags(idx)"
                 placeholder="查找正则 (如: 香港-(.*))"
                 class="w-full px-2 py-1.5 text-[11px] rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 outline-none focus:border-indigo-500/30"
               />
@@ -77,12 +87,14 @@ const removeRule = (index) => {
             <div class="space-y-1">
               <input 
                 v-model="rule.replacement"
+                @input="normalizeRuleFlags(idx)"
                 placeholder="替换为 (如: HK $1)"
                 class="w-full px-2 py-1.5 text-[11px] rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 outline-none focus:border-indigo-500/30"
               />
             </div>
           </div>
         </div>
+        <p class="px-1 text-[10px] text-gray-400">默认忽略大小写，并替换所有匹配内容，无需额外设置正则标志。</p>
         <div v-if="!params.regex.rules?.length" class="text-center py-2 text-[10px] text-gray-400 italic">
           暂无正则规则，点击上方“+ 添加项”
         </div>

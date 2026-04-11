@@ -235,7 +235,7 @@ class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300
 </div>
       </div>
 
-      <!-- Operator Chain (Sub-Store style) -->
+      <!-- Operator Chain -->
       <div class="bg-indigo-50/20 dark:bg-indigo-900/10 misub-radius-lg p-5 border border-indigo-100 dark:border-indigo-500/10 shadow-sm mt-4">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-3">
@@ -243,11 +243,10 @@ class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
              </div>
              <div>
-                <h3 class="text-sm font-bold text-gray-900 dark:text-white">节点处理工作流 (Processing Workflow)</h3>
-                <p class="text-[10px] text-gray-400 mt-0.5">链式处理流水线，留空则自动跟随全局操作符链。</p>
-             </div>
-          </div>
-          <a href="https://github.com/sub-store-org/Sub-Store" target="_blank" class="text-[10px] text-indigo-500 hover:underline">文档参考</a>
+                 <h3 class="text-sm font-bold text-gray-900 dark:text-white">节点处理工作流</h3>
+                 <p class="text-[10px] text-gray-400 mt-0.5">链式处理流水线，留空则自动跟随全局操作符链。</p>
+              </div>
+           </div>
         </div>
         
         <OperatorChain 

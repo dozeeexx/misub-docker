@@ -81,8 +81,9 @@ const availableKeys = [
       </div>
 
       <div v-if="params.keys.length === 0" class="text-center py-2 text-[10px] text-gray-400 italic">
-        未设置权重，将按默认顺序排序
+        暂未添加排序条件，点击上方“+ 添加条件”开始配置
       </div>
     </div>
+    <p class="text-[10px] text-gray-400">排序会按条件从上到下依次生效，排在前面的条件优先级更高。</p>
   </div>
 </template>
