@@ -304,7 +304,12 @@ class D1StorageAdapter {
     async getSubscriptionById(id) {
         try {
             const result = await this.db.prepare('SELECT data FROM subscriptions WHERE id = ?').bind(id).first();
-            return result ? JSON.parse(result.data) : null;
+            if (result) return JSON.parse(result.data);
+
+            const legacyMain = await this.db.prepare('SELECT data FROM subscriptions WHERE id = ?').bind('main').first();
+            if (!legacyMain) return null;
+            const parsed = JSON.parse(legacyMain.data);
+            return Array.isArray(parsed) ? parsed.find(item => item.id === id) || null : null;
         } catch (error) {
             console.error(`[D1] Failed to get subscription ${id}:`, error);
             return null;
@@ -314,7 +319,23 @@ class D1StorageAdapter {
     async getAllSubscriptions() {
         try {
             const results = await this.db.prepare('SELECT data FROM subscriptions').all();
-            return Array.isArray(results?.results) ? results.results.map(row => JSON.parse(row.data)) : [];
+            if (!Array.isArray(results?.results)) return [];
+
+            const all = [];
+            results.results.forEach(row => {
+                const parsed = JSON.parse(row.data);
+                if (Array.isArray(parsed)) {
+                    all.push(...parsed);
+                } else if (parsed) {
+                    all.push(parsed);
+                }
+            });
+
+            const deduped = new Map();
+            all.forEach(item => {
+                if (item?.id) deduped.set(item.id, item);
+            });
+            return Array.from(deduped.values());
         } catch (error) {
             console.error('[D1] Failed to get all subscriptions:', error);
             return [];
@@ -326,7 +347,8 @@ class D1StorageAdapter {
             const result = await this.db.prepare('SELECT data FROM profiles WHERE id = ?').bind(id).first();
             if (result) return JSON.parse(result.data);
 
-            const allProfiles = await this.get(DATA_KEYS.PROFILES);
+            const legacyMain = await this.db.prepare('SELECT data FROM profiles WHERE id = ?').bind('main').first();
+            const allProfiles = legacyMain ? JSON.parse(legacyMain.data) : await this.get(DATA_KEYS.PROFILES);
             return Array.isArray(allProfiles) ? allProfiles.find(item => item.id === id || item.customId === id) || null : null;
         } catch (error) {
             console.error(`[D1] Failed to get profile ${id}:`, error);
@@ -337,7 +359,23 @@ class D1StorageAdapter {
     async getAllProfiles() {
         try {
             const results = await this.db.prepare('SELECT data FROM profiles').all();
-            return Array.isArray(results?.results) ? results.results.map(row => JSON.parse(row.data)) : [];
+            if (!Array.isArray(results?.results)) return [];
+
+            const all = [];
+            results.results.forEach(row => {
+                const parsed = JSON.parse(row.data);
+                if (Array.isArray(parsed)) {
+                    all.push(...parsed);
+                } else if (parsed) {
+                    all.push(parsed);
+                }
+            });
+
+            const deduped = new Map();
+            all.forEach(item => {
+                if (item?.id) deduped.set(item.id, item);
+            });
+            return Array.from(deduped.values());
         } catch (error) {
             console.error('[D1] Failed to get all profiles:', error);
             return [];
@@ -386,7 +424,20 @@ class D1StorageAdapter {
         const placeholders = ids.map(() => '?').join(',');
         try {
             const results = await this.db.prepare(`SELECT data FROM subscriptions WHERE id IN (${placeholders})`).bind(...ids).all();
-            return Array.isArray(results?.results) ? results.results.map(row => JSON.parse(row.data)) : [];
+            const directHits = Array.isArray(results?.results) ? results.results.map(row => JSON.parse(row.data)) : [];
+            const foundIds = new Set(directHits.map(item => item?.id).filter(Boolean));
+            const missingIds = ids.filter(id => !foundIds.has(id));
+
+            if (missingIds.length === 0) return directHits;
+
+            const legacyMain = await this.db.prepare('SELECT data FROM subscriptions WHERE id = ?').bind('main').first();
+            if (!legacyMain) return directHits;
+
+            const parsed = JSON.parse(legacyMain.data);
+            if (!Array.isArray(parsed)) return directHits;
+
+            const legacyHits = parsed.filter(item => missingIds.includes(item.id));
+            return [...directHits, ...legacyHits];
         } catch (error) {
             console.error('[D1] Failed to get subscriptions by ids:', error);
             return [];
@@ -405,6 +456,9 @@ class D1StorageAdapter {
             return { table: 'settings', queryField: 'key', queryValue: 'main' };
         } else {
             if (String(key).startsWith(DATA_KEYS.PROFILE_DOWNLOAD_COUNT_PREFIX)) {
+                return { table: 'settings', queryField: 'key', queryValue: key };
+            }
+            if (String(key).startsWith('misub_guestbook_v1')) {
                 return { table: 'settings', queryField: 'key', queryValue: key };
             }
             // 处理其他格式的 key，默认作为 settings 表的 key，但记录警告
@@ -693,5 +747,73 @@ export class DataMigrator {
             console.error('[Migration] Failed to migrate KV to D1:', error);
             throw error;
         }
+    }
+
+    static async migrateLegacyD1MainRows(env) {
+        if (!env?.MISUB_DB) throw new Error('D1 database not available');
+
+        const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
+        await ensureD1Schema(d1Adapter.db);
+
+        const results = {
+            subscriptions: 0,
+            profiles: 0,
+            errors: []
+        };
+
+        try {
+            const legacySubs = await d1Adapter.get(DATA_KEYS.SUBSCRIPTIONS);
+            if (Array.isArray(legacySubs)) {
+                for (const item of legacySubs) {
+                    if (!item?.id) continue;
+                    await d1Adapter.putSubscription(item);
+                    results.subscriptions += 1;
+                }
+                await d1Adapter.db.prepare('DELETE FROM subscriptions WHERE id = ?').bind('main').run();
+            }
+        } catch (error) {
+            results.errors.push(`订阅主行迁移失败: ${error.message}`);
+        }
+
+        try {
+            const legacyProfiles = await d1Adapter.get(DATA_KEYS.PROFILES);
+            if (Array.isArray(legacyProfiles)) {
+                for (const item of legacyProfiles) {
+                    if (!item?.id) continue;
+                    await d1Adapter.putProfile(item);
+                    results.profiles += 1;
+                }
+                await d1Adapter.db.prepare('DELETE FROM profiles WHERE id = ?').bind('main').run();
+            }
+        } catch (error) {
+            results.errors.push(`订阅组主行迁移失败: ${error.message}`);
+        }
+
+        return results;
+    }
+
+    static async detectLegacyD1MainRows(env) {
+        if (!env?.MISUB_DB) {
+            return {
+                hasLegacySubscriptions: false,
+                hasLegacyProfiles: false,
+                hasLegacyData: false
+            };
+        }
+
+        const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
+        const [legacySubs, legacyProfiles] = await Promise.all([
+            d1Adapter.db.prepare('SELECT data FROM subscriptions WHERE id = ?').bind('main').first(),
+            d1Adapter.db.prepare('SELECT data FROM profiles WHERE id = ?').bind('main').first()
+        ]);
+
+        const hasLegacySubscriptions = Array.isArray(legacySubs ? JSON.parse(legacySubs.data) : null);
+        const hasLegacyProfiles = Array.isArray(legacyProfiles ? JSON.parse(legacyProfiles.data) : null);
+
+        return {
+            hasLegacySubscriptions,
+            hasLegacyProfiles,
+            hasLegacyData: hasLegacySubscriptions || hasLegacyProfiles
+        };
     }
 }

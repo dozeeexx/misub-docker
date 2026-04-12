@@ -50,7 +50,7 @@ const modeHint = computed(() => {
           1. 规则来源
         </label>
         <select v-model="settings.transformConfigMode"
-          class="block w-full px-4 py-2 text-sm text-gray-900 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200">
+          class="block w-full px-4 py-2 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200">
           <option v-for="option in modeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
         <p class="mt-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-500">
@@ -89,7 +89,7 @@ const modeHint = computed(() => {
           <span v-if="isBuiltin" class="inline-flex items-center rounded-md bg-purple-50 dark:bg-purple-900/30 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:text-purple-400 ring-1 ring-inset ring-purple-700/10">当前生效</span>
         </label>
         <select v-model="settings.ruleLevel"
-          class="block w-full px-4 py-2 text-sm text-gray-900 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200">
+          class="block w-full px-4 py-2 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200">
           <option value="base">精简版 Base (仅基础分流)</option>
           <option value="std">标准版 Standard (推荐，全能型)</option>
           <option value="full">全量版 Full (细化服务分类)</option>

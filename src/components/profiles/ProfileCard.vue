@@ -20,12 +20,17 @@ const emit = defineEmits(['delete', 'change', 'edit', 'open-copy', 'preview', 'm
 
 import Switch from '../ui/Switch.vue';
 
+const subscriptionCount = computed(() => Array.isArray(props.profile?.subscriptions) ? props.profile.subscriptions.length : 0);
+const manualNodeCount = computed(() => Array.isArray(props.profile?.manualNodes) ? props.profile.manualNodes.length : 0);
+const isEnabled = computed(() => props.profile?.enabled !== false);
+const isPublic = computed(() => props.profile?.isPublic === true);
+
 </script>
 
 <template>
   <div
     class="group flex min-h-[180px] flex-col rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary-500/5 dark:border-white/10 dark:bg-gray-900/70"
-    :class="[compact ? 'p-4' : 'p-5', { 'opacity-60 grayscale-[0.5]': !profile.enabled }]"
+    :class="[compact ? 'p-4' : 'p-5', { 'opacity-60 grayscale-[0.5]': !isEnabled }]"
   >
     <div class="flex items-start justify-between gap-3" :class="compact ? 'flex-col' : ''">
       <div class="min-w-0 flex-1 space-y-2">
@@ -33,10 +38,10 @@ import Switch from '../ui/Switch.vue';
           <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-white/10 dark:text-gray-300">
             订阅组
           </span>
-          <span v-if="!profile.enabled" class="rounded-full bg-gray-200 px-2.5 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-white/10 dark:text-gray-400">
+          <span v-if="!isEnabled" class="rounded-full bg-gray-200 px-2.5 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-white/10 dark:text-gray-400">
             已停用
           </span>
-          <span v-else-if="profile.isPublic" class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+          <span v-else-if="isPublic" class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
             已公开
           </span>
         </div>
@@ -44,7 +49,7 @@ import Switch from '../ui/Switch.vue';
           {{ profile.name }}
         </p>
         <p class="text-sm text-gray-500 dark:text-gray-400">
-          {{ profile.subscriptions.length }} 个订阅，{{ profile.manualNodes.length }} 个节点
+          {{ subscriptionCount }} 个订阅，{{ manualNodeCount }} 个节点
         </p>
       </div>
 
@@ -72,7 +77,7 @@ import Switch from '../ui/Switch.vue';
       <div class="flex items-center justify-between gap-3 text-gray-600 dark:text-gray-300">
         <span>启用状态</span>
         <Switch 
-          :model-value="profile.enabled"
+          :model-value="isEnabled"
           @update:model-value="(val) => $emit('change', { ...profile, enabled: val })"
           label="启用"
         />
@@ -80,7 +85,7 @@ import Switch from '../ui/Switch.vue';
       <div class="flex items-center justify-between gap-3 text-gray-600 dark:text-gray-300">
         <span>公开访问</span>
         <Switch 
-          :model-value="profile.isPublic"
+          :model-value="isPublic"
           @update:model-value="(val) => $emit('change', { ...profile, isPublic: val })"
           label="公开"
         />

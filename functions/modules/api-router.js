@@ -85,6 +85,44 @@ export async function handleApiRequest(request, env) {
         }
     }
 
+    if (path === '/detect_legacy_d1') {
+        if (!await authMiddleware(request, env)) {
+            return createJsonResponse({ error: 'Unauthorized' }, 401);
+        }
+        try {
+            const result = await DataMigrator.detectLegacyD1MainRows(env);
+            return createJsonResponse({ success: true, data: result });
+        } catch (error) {
+            console.error('[API Error /detect_legacy_d1]', error);
+            return createErrorResponse(error, 500);
+        }
+    }
+
+    if (path === '/migrate_legacy_d1') {
+        if (!await authMiddleware(request, env)) {
+            return createJsonResponse({ error: 'Unauthorized' }, 401);
+        }
+        try {
+            const migrationResult = await DataMigrator.migrateLegacyD1MainRows(env);
+            if (migrationResult.errors.length > 0) {
+                return createJsonResponse({
+                    success: false,
+                    message: '旧 D1 结构迁移过程中出现错误',
+                    details: migrationResult.errors,
+                    partialSuccess: migrationResult
+                }, 500);
+            }
+            return createJsonResponse({
+                success: true,
+                message: '旧 D1 结构已成功迁移为行级存储',
+                details: migrationResult
+            });
+        } catch (error) {
+            console.error('[API Error /migrate_legacy_d1]', error);
+            return createErrorResponse(error, 500);
+        }
+    }
+
     // [新增] 安全的、可重复执行的迁移接口
     if (path === '/migrate') {
         if (!await authMiddleware(request, env)) {

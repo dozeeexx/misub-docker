@@ -151,7 +151,7 @@ const DEFAULT_CLIENTS = [
     {
         id: 'egern',
         name: 'Egern',
-        icon: '🪺',
+        icon: '/icons/clients/egern.svg',
         description: 'iOS 平台的规则代理客户端，支持通过订阅链接快速导入配置。',
         platforms: ['ios'],
         url: 'https://apps.apple.com/us/app/egern/id1616105820',

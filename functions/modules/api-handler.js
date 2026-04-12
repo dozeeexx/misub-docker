@@ -13,6 +13,16 @@ import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defa
 
 const PROFILE_DOWNLOAD_COUNT_PREFIX = 'misub_profile_download_count_';
 
+function normalizeProfile(profile = {}) {
+    const normalized = { ...profile };
+    normalized.subscriptions = Array.isArray(profile.subscriptions) ? profile.subscriptions : [];
+    normalized.manualNodes = Array.isArray(profile.manualNodes) ? profile.manualNodes : [];
+    normalized.enabled = profile.enabled !== false;
+    normalized.isPublic = profile.isPublic === true;
+    normalized.downloadCount = Number(profile.downloadCount) || 0;
+    return normalized;
+}
+
 async function attachProfileDownloadCounts(storageAdapter, profiles) {
     if (!Array.isArray(profiles) || profiles.length === 0) return profiles;
 
@@ -20,7 +30,7 @@ async function attachProfileDownloadCounts(storageAdapter, profiles) {
         profiles.map(profile => storageAdapter.get(`${PROFILE_DOWNLOAD_COUNT_PREFIX}${profile.customId || profile.id}`))
     );
 
-    return profiles.map((profile, index) => ({
+    return profiles.map((profile, index) => normalizeProfile({
         ...profile,
         downloadCount: Number(counts[index]) || Number(profile.downloadCount) || 0,
     }));
@@ -239,6 +249,10 @@ export async function handleMisubsSave(request, env) {
                     message: 'misubs 和 profiles 必须是数组格式'
                 }, 400);
             }
+        }
+
+        if (Array.isArray(finalProfiles)) {
+            finalProfiles = finalProfiles.map(normalizeProfile);
         }
 
         // 步骤4: 获取设置（带错误处理）
@@ -495,6 +509,7 @@ export async function handlePublicProfilesRequest(env) {
 
         // 过滤出公开且启用的订阅组
         const publicProfiles = profiles
+            .map(normalizeProfile)
             .filter(p => p.isPublic && p.enabled)
             .map(p => ({
                 id: p.id,

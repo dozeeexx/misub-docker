@@ -185,6 +185,38 @@ export async function migrateToD1() {
     }
 }
 
+export async function detectLegacyD1() {
+    try {
+        return await api.get('/api/detect_legacy_d1');
+    } catch (error) {
+        return handleApiError(error, 'detectLegacyD1');
+    }
+}
+
+export async function migrateLegacyD1() {
+    try {
+        return await api.post('/api/migrate_legacy_d1');
+    } catch (error) {
+        if (error instanceof APIError) {
+            return {
+                success: false,
+                error: error.message,
+                errorType: 'server',
+                details: error.data?.details || error.data?.errors
+            };
+        }
+        return handleApiError(error, 'migrateLegacyD1');
+    }
+}
+
+export async function fetchGithubLatestRelease(repo) {
+    try {
+        return await api.get(`/api/github/release?repo=${encodeURIComponent(repo)}`);
+    } catch (error) {
+        return handleApiError(error, 'fetchGithubLatestRelease');
+    }
+}
+
 /**
  * 测试订阅链接内容
  * @param {string} url - 订阅URL
