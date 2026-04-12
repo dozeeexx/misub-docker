@@ -11,6 +11,21 @@ import { clearAllNodeCaches } from '../services/node-cache-service.js';
 
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from './config.js';
 
+const PROFILE_DOWNLOAD_COUNT_PREFIX = 'misub_profile_download_count_';
+
+async function attachProfileDownloadCounts(storageAdapter, profiles) {
+    if (!Array.isArray(profiles) || profiles.length === 0) return profiles;
+
+    const counts = await Promise.all(
+        profiles.map(profile => storageAdapter.get(`${PROFILE_DOWNLOAD_COUNT_PREFIX}${profile.customId || profile.id}`))
+    );
+
+    return profiles.map((profile, index) => ({
+        ...profile,
+        downloadCount: Number(counts[index]) || Number(profile.downloadCount) || 0,
+    }));
+}
+
 function isStorageUnavailableError(error) {
     const message = String(error?.message || error || '').toLowerCase();
     return message.includes('kv storage is paused')
@@ -26,6 +41,67 @@ function isStorageUnavailableError(error) {
 async function getStorageAdapter(env) {
     const storageType = await StorageFactory.getStorageType(env);
     return StorageFactory.createAdapter(env, storageType);
+}
+
+function isSimpleArrayDiff(diff) {
+    if (!diff || typeof diff !== 'object') return false;
+    const allowedKeys = ['added', 'updated', 'removed'];
+    if (!Object.keys(diff).every(key => allowedKeys.includes(key))) return false;
+    return ['added', 'updated', 'removed'].every(key => Array.isArray(diff[key] || []));
+}
+
+async function applyRowLevelDiff(storageAdapter, type, diff) {
+    const isProfile = type === 'profiles';
+    const putItem = isProfile ? storageAdapter.putProfile?.bind(storageAdapter) : storageAdapter.putSubscription?.bind(storageAdapter);
+    const deleteItem = isProfile ? storageAdapter.deleteProfileById?.bind(storageAdapter) : storageAdapter.deleteSubscriptionById?.bind(storageAdapter);
+
+    if (!putItem || !deleteItem || !isSimpleArrayDiff(diff)) {
+        return false;
+    }
+
+    const { added = [], updated = [], removed = [] } = diff;
+
+    await Promise.all([
+        ...added.map(item => putItem(item)),
+        ...updated.map(item => putItem(item)),
+        ...removed.map(id => deleteItem(id))
+    ]);
+
+    return true;
+}
+
+async function syncCollectionRowLevel(storageAdapter, type, finalItems) {
+    const isProfile = type === 'profiles';
+    const getAll = isProfile ? storageAdapter.getAllProfiles?.bind(storageAdapter) : storageAdapter.getAllSubscriptions?.bind(storageAdapter);
+    const putItem = isProfile ? storageAdapter.putProfile?.bind(storageAdapter) : storageAdapter.putSubscription?.bind(storageAdapter);
+    const deleteItem = isProfile ? storageAdapter.deleteProfileById?.bind(storageAdapter) : storageAdapter.deleteSubscriptionById?.bind(storageAdapter);
+
+    if (!getAll || !putItem || !deleteItem || !Array.isArray(finalItems)) {
+        return false;
+    }
+
+    const currentItems = await getAll();
+    const currentMap = new Map(currentItems.map(item => [item.id, item]));
+    const finalMap = new Map(finalItems.map(item => [item.id, item]));
+
+    const puts = [];
+    const deletes = [];
+
+    for (const item of finalItems) {
+        const existing = currentMap.get(item.id);
+        if (!existing || JSON.stringify(existing) !== JSON.stringify(item)) {
+            puts.push(putItem(item));
+        }
+    }
+
+    for (const existing of currentItems) {
+        if (!finalMap.has(existing.id)) {
+            deletes.push(deleteItem(existing.id));
+        }
+    }
+
+    await Promise.all([...puts, ...deletes]);
+    return true;
 }
 
 /**
@@ -45,11 +121,16 @@ export async function handleDataRequest(env) {
         }
         const storageAdapter = StorageFactory.createAdapter(env, storageType);
         const cachedSettings = await SettingsCache.get(env);
-        const [misubs, profiles, settings] = await Promise.all([
-            storageAdapter.get(KV_KEY_SUBS).then(res => res || []),
-            storageAdapter.get(KV_KEY_PROFILES).then(res => res || []),
+        const [misubs, rawProfiles, settings] = await Promise.all([
+            typeof storageAdapter.getAllSubscriptions === 'function'
+                ? storageAdapter.getAllSubscriptions()
+                : storageAdapter.get(KV_KEY_SUBS).then(res => res || []),
+            typeof storageAdapter.getAllProfiles === 'function'
+                ? storageAdapter.getAllProfiles()
+                : storageAdapter.get(KV_KEY_PROFILES).then(res => res || []),
             Promise.resolve(cachedSettings || {}).then(res => res || {})
         ]);
+        const profiles = await attachProfileDownloadCounts(storageAdapter, rawProfiles);
 
         // 自动迁移旧版 profile ID（去除 'profile_' 前缀）
         if (migrateProfileIds(profiles)) {
@@ -115,8 +196,12 @@ export async function handleMisubsSave(request, env) {
             console.info('[API] Processing Diff Patch...');
             // 获取当前数据
             const [currentMisubs, currentProfiles] = await Promise.all([
-                storageAdapter.get(KV_KEY_SUBS).then(res => res || []),
-                storageAdapter.get(KV_KEY_PROFILES).then(res => res || [])
+                typeof storageAdapter.getAllSubscriptions === 'function'
+                    ? storageAdapter.getAllSubscriptions()
+                    : storageAdapter.get(KV_KEY_SUBS).then(res => res || []),
+                typeof storageAdapter.getAllProfiles === 'function'
+                    ? storageAdapter.getAllProfiles()
+                    : storageAdapter.get(KV_KEY_PROFILES).then(res => res || [])
             ]);
 
             // 应用补丁
@@ -185,10 +270,31 @@ export async function handleMisubsSave(request, env) {
 
         // 步骤6: 保存数据到存储（使用存储适配器）
         try {
-            await Promise.all([
-                storageAdapter.put(KV_KEY_SUBS, finalMisubs),
-                storageAdapter.put(KV_KEY_PROFILES, finalProfiles)
-            ]);
+            if (diff) {
+                const [subsHandled, profilesHandled] = await Promise.all([
+                    diff.subscriptions ? applyRowLevelDiff(storageAdapter, 'subscriptions', diff.subscriptions) : false,
+                    diff.profiles ? applyRowLevelDiff(storageAdapter, 'profiles', diff.profiles) : false
+                ]);
+
+                const saveTasks = [];
+                if (!subsHandled) saveTasks.push(storageAdapter.put(KV_KEY_SUBS, finalMisubs));
+                if (!profilesHandled) saveTasks.push(storageAdapter.put(KV_KEY_PROFILES, finalProfiles));
+                if (saveTasks.length > 0) {
+                    await Promise.all(saveTasks);
+                }
+            } else {
+                const [subsHandled, profilesHandled] = await Promise.all([
+                    syncCollectionRowLevel(storageAdapter, 'subscriptions', finalMisubs),
+                    syncCollectionRowLevel(storageAdapter, 'profiles', finalProfiles)
+                ]);
+
+                const saveTasks = [];
+                if (!subsHandled) saveTasks.push(storageAdapter.put(KV_KEY_SUBS, finalMisubs));
+                if (!profilesHandled) saveTasks.push(storageAdapter.put(KV_KEY_PROFILES, finalProfiles));
+                if (saveTasks.length > 0) {
+                    await Promise.all(saveTasks);
+                }
+            }
         } catch (storageError) {
             console.error('[API Error /misubs] Storage put failed:', storageError);
             return createJsonResponse({
@@ -355,7 +461,9 @@ export async function handlePublicProfilesRequest(env) {
         const storageAdapter = await getStorageAdapter(env);
         const cachedSettings = await SettingsCache.get(env);
         const [profiles, settings] = await Promise.all([
-            storageAdapter.get(KV_KEY_PROFILES).then(res => res || []),
+            typeof storageAdapter.getAllProfiles === 'function'
+                ? storageAdapter.getAllProfiles()
+                : storageAdapter.get(KV_KEY_PROFILES).then(res => res || []),
             Promise.resolve(cachedSettings || {}).then(res => res || {})
         ]);
 

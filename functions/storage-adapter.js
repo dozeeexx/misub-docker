@@ -14,7 +14,8 @@ export const STORAGE_TYPES = {
 const DATA_KEYS = {
     SUBSCRIPTIONS: 'misub_subscriptions_v1',
     PROFILES: 'misub_profiles_v1',
-    SETTINGS: 'worker_settings_v1'
+    SETTINGS: 'worker_settings_v1',
+    PROFILE_DOWNLOAD_COUNT_PREFIX: 'misub_profile_download_count_'
 };
 
 const D1_SCHEMA_STATEMENTS = [
@@ -99,6 +100,80 @@ class KVStorageAdapter {
             console.error(`[KV] Failed to list keys with prefix ${prefix}:`, error);
             return [];
         }
+    }
+
+    async getSubscriptionById(id) {
+        const all = await this.get(DATA_KEYS.SUBSCRIPTIONS);
+        return Array.isArray(all) ? all.find(item => item.id === id) || null : null;
+    }
+
+    async getAllSubscriptions() {
+        const all = await this.get(DATA_KEYS.SUBSCRIPTIONS);
+        return Array.isArray(all) ? all : [];
+    }
+
+    async getProfileById(id) {
+        const all = await this.get(DATA_KEYS.PROFILES);
+        return Array.isArray(all) ? all.find(item => item.id === id || item.customId === id) || null : null;
+    }
+
+    async getAllProfiles() {
+        const all = await this.get(DATA_KEYS.PROFILES);
+        return Array.isArray(all) ? all : [];
+    }
+
+    async updateSubscriptionById(id, updater) {
+        const all = await this.get(DATA_KEYS.SUBSCRIPTIONS) || [];
+        const index = all.findIndex(item => item.id === id);
+        if (index === -1) return null;
+        const updated = updater({ ...all[index] });
+        all[index] = updated;
+        await this.put(DATA_KEYS.SUBSCRIPTIONS, all);
+        return updated;
+    }
+
+    async putSubscription(item) {
+        const all = await this.getAllSubscriptions();
+        const index = all.findIndex(entry => entry.id === item.id);
+        if (index === -1) {
+          all.push(item);
+        } else {
+          all[index] = item;
+        }
+        await this.put(DATA_KEYS.SUBSCRIPTIONS, all);
+        return item;
+    }
+
+    async deleteSubscriptionById(id) {
+        const all = await this.getAllSubscriptions();
+        const filtered = all.filter(item => item.id !== id);
+        await this.put(DATA_KEYS.SUBSCRIPTIONS, filtered);
+        return filtered.length !== all.length;
+    }
+
+    async putProfile(item) {
+        const all = await this.getAllProfiles();
+        const index = all.findIndex(entry => entry.id === item.id);
+        if (index === -1) {
+          all.push(item);
+        } else {
+          all[index] = item;
+        }
+        await this.put(DATA_KEYS.PROFILES, all);
+        return item;
+    }
+
+    async deleteProfileById(id) {
+        const all = await this.getAllProfiles();
+        const filtered = all.filter(item => item.id !== id);
+        await this.put(DATA_KEYS.PROFILES, filtered);
+        return filtered.length !== all.length;
+    }
+
+    async getSubscriptionsByIds(ids = []) {
+        const all = await this.get(DATA_KEYS.SUBSCRIPTIONS) || [];
+        const idSet = new Set(ids);
+        return all.filter(item => idSet.has(item.id));
     }
 }
 
@@ -226,6 +301,98 @@ class D1StorageAdapter {
         }
     }
 
+    async getSubscriptionById(id) {
+        try {
+            const result = await this.db.prepare('SELECT data FROM subscriptions WHERE id = ?').bind(id).first();
+            return result ? JSON.parse(result.data) : null;
+        } catch (error) {
+            console.error(`[D1] Failed to get subscription ${id}:`, error);
+            return null;
+        }
+    }
+
+    async getAllSubscriptions() {
+        try {
+            const results = await this.db.prepare('SELECT data FROM subscriptions').all();
+            return Array.isArray(results?.results) ? results.results.map(row => JSON.parse(row.data)) : [];
+        } catch (error) {
+            console.error('[D1] Failed to get all subscriptions:', error);
+            return [];
+        }
+    }
+
+    async getProfileById(id) {
+        try {
+            const result = await this.db.prepare('SELECT data FROM profiles WHERE id = ?').bind(id).first();
+            if (result) return JSON.parse(result.data);
+
+            const allProfiles = await this.get(DATA_KEYS.PROFILES);
+            return Array.isArray(allProfiles) ? allProfiles.find(item => item.id === id || item.customId === id) || null : null;
+        } catch (error) {
+            console.error(`[D1] Failed to get profile ${id}:`, error);
+            return null;
+        }
+    }
+
+    async getAllProfiles() {
+        try {
+            const results = await this.db.prepare('SELECT data FROM profiles').all();
+            return Array.isArray(results?.results) ? results.results.map(row => JSON.parse(row.data)) : [];
+        } catch (error) {
+            console.error('[D1] Failed to get all profiles:', error);
+            return [];
+        }
+    }
+
+    async updateSubscriptionById(id, updater) {
+        const existing = await this.getSubscriptionById(id);
+        if (!existing) return null;
+        const updated = updater({ ...existing });
+        await this.db.prepare(`
+            INSERT OR REPLACE INTO subscriptions (id, data, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        `).bind(id, JSON.stringify(updated)).run();
+        return updated;
+    }
+
+    async putSubscription(item) {
+        await this.db.prepare(`
+            INSERT OR REPLACE INTO subscriptions (id, data, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        `).bind(item.id, JSON.stringify(item)).run();
+        return item;
+    }
+
+    async deleteSubscriptionById(id) {
+        const result = await this.db.prepare('DELETE FROM subscriptions WHERE id = ?').bind(id).run();
+        return Boolean(result?.success);
+    }
+
+    async putProfile(item) {
+        await this.db.prepare(`
+            INSERT OR REPLACE INTO profiles (id, data, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        `).bind(item.id, JSON.stringify(item)).run();
+        return item;
+    }
+
+    async deleteProfileById(id) {
+        const result = await this.db.prepare('DELETE FROM profiles WHERE id = ?').bind(id).run();
+        return Boolean(result?.success);
+    }
+
+    async getSubscriptionsByIds(ids = []) {
+        if (!Array.isArray(ids) || ids.length === 0) return [];
+        const placeholders = ids.map(() => '?').join(',');
+        try {
+            const results = await this.db.prepare(`SELECT data FROM subscriptions WHERE id IN (${placeholders})`).bind(...ids).all();
+            return Array.isArray(results?.results) ? results.results.map(row => JSON.parse(row.data)) : [];
+        } catch (error) {
+            console.error('[D1] Failed to get subscriptions by ids:', error);
+            return [];
+        }
+    }
+
     /**
      * 解析 key，确定对应的表、查询字段和查询值
      */
@@ -237,6 +404,9 @@ class D1StorageAdapter {
         } else if (key === DATA_KEYS.SETTINGS) {
             return { table: 'settings', queryField: 'key', queryValue: 'main' };
         } else {
+            if (String(key).startsWith(DATA_KEYS.PROFILE_DOWNLOAD_COUNT_PREFIX)) {
+                return { table: 'settings', queryField: 'key', queryValue: key };
+            }
             // 处理其他格式的 key，默认作为 settings 表的 key，但记录警告
             console.warn(`[D1 Storage] Unknown key format: ${key}, treating as settings key`);
             return { table: 'settings', queryField: 'key', queryValue: key };

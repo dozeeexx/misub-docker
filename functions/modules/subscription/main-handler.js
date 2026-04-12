@@ -20,6 +20,12 @@ import { shouldApplyExternalTemplateForTarget } from './template-compatibility.j
 import { renderClashFromIniTemplate, renderLoonFromIniTemplate, renderQuanxFromIniTemplate, renderSingboxFromIniTemplate, renderSurgeFromIniTemplate } from './template-pipeline.js';
 import { getBuiltinTemplate } from './builtin-template-registry.js';
 
+const PROFILE_DOWNLOAD_COUNT_PREFIX = 'misub_profile_download_count_';
+
+function getProfileDownloadCountKey(profile) {
+    return `${PROFILE_DOWNLOAD_COUNT_PREFIX}${profile.customId || profile.id}`;
+}
+
 function buildTemplateProxyBlock(nodeList) {
     return nodeList
         .split('\n')
@@ -159,8 +165,14 @@ export async function handleMisubRequest(context) {
             } else {
                 subName = profile.name;
                 targetMisubs = [];
-                // Create a map for quick lookup
-                const misubMap = new Map(allMisubs.map(item => [item.id, item]));
+                const relatedIds = [
+                    ...(Array.isArray(profile.subscriptions) ? profile.subscriptions.map(item => typeof item === 'object' ? item.id : item) : []),
+                    ...(Array.isArray(profile.manualNodes) ? profile.manualNodes : [])
+                ].filter(Boolean);
+                const relatedSubs = typeof storageAdapter.getSubscriptionsByIds === 'function'
+                    ? await storageAdapter.getSubscriptionsByIds(Array.from(new Set(relatedIds)))
+                    : allMisubs;
+                const misubMap = new Map(relatedSubs.map(item => [item.id, item]));
 
                 // 1. Add subscriptions in order defined by profile
                 const profileSubIds = profile.subscriptions || [];
@@ -195,23 +207,10 @@ export async function handleMisubRequest(context) {
             // 且仅当开启访问日志时才计数
             if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
                 try {
-                    // 初始化下载计数(如果不存在)
-                    if (typeof profile.downloadCount !== 'number') {
-                        profile.downloadCount = 0;
-                    }
-                    // 增加计数
-                    profile.downloadCount += 1;
-
-                    // 更新存储中的订阅组数据
-                    const updatedProfiles = allProfiles.map(p =>
-                        ((p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier)
-                            ? profile
-                            : p
-                    );
-
-                    // 异步保存,不阻塞响应
+                    const downloadCountKey = getProfileDownloadCountKey(profile);
+                    const currentCount = Number(await storageAdapter.get(downloadCountKey)) || 0;
                     context.waitUntil(
-                        storageAdapter.put(KV_KEY_PROFILES, updatedProfiles)
+                        storageAdapter.put(downloadCountKey, currentCount + 1)
                             .catch(err => console.error('[Download Count] Failed to update:', err))
                     );
 

@@ -41,8 +41,9 @@ export async function handlePublicPreviewRequest(request, env) {
 
         // 验证是否为公开订阅组
         const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
-        const allProfiles = await storageAdapter.get(KV_KEY_PROFILES) || [];
-        const profile = allProfiles.find(p => (p.customId && p.customId === profileId) || p.id === profileId);
+        const profile = typeof storageAdapter.getProfileById === 'function'
+            ? await storageAdapter.getProfileById(profileId)
+            : (await storageAdapter.get(KV_KEY_PROFILES) || []).find(p => (p.customId && p.customId === profileId) || p.id === profileId);
 
         if (!profile || !profile.enabled || !profile.isPublic) {
             return createJsonResponse({ error: 'Profile not found or not public' }, 404);
