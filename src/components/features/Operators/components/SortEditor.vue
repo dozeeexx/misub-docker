@@ -18,22 +18,41 @@ const params = computed({
   set: (val) => emit('update:modelValue', val)
 });
 
+const updateKeys = (updater) => {
+  const currentKeys = Array.isArray(params.value.keys) ? params.value.keys : [];
+  params.value = {
+    ...params.value,
+    keys: updater([...currentKeys])
+  };
+};
+
 const addKey = () => {
-  params.value.keys = [...params.value.keys, { key: 'name', order: 'asc', customOrder: [] }];
+  updateKeys(keys => [...keys, { key: 'name', order: 'asc', customOrder: [] }]);
 };
 
 const removeKey = (index) => {
-  const newList = [...params.value.keys];
-  newList.splice(index, 1);
-  params.value = { ...params.value, keys: newList };
+  updateKeys(keys => {
+    keys.splice(index, 1);
+    return keys;
+  });
 };
 
 const moveKey = (index, dir) => {
-  const newList = [...params.value.keys];
-  const target = index + dir;
-  if (target < 0 || target >= newList.length) return;
-  [newList[index], newList[target]] = [newList[target], newList[index]];
-  params.value = { ...params.value, keys: newList };
+  updateKeys(keys => {
+    const target = index + dir;
+    if (target < 0 || target >= keys.length) return keys;
+    [keys[index], keys[target]] = [keys[target], keys[index]];
+    return keys;
+  });
+};
+
+const updateKeyField = (index, field, value) => {
+  updateKeys(keys => {
+    const current = keys[index];
+    if (!current) return keys;
+    keys[index] = { ...current, [field]: value };
+    return keys;
+  });
 };
 
 const availableKeys = [
@@ -66,11 +85,11 @@ const availableKeys = [
           </button>
         </div>
 
-        <select v-model="item.key" class="flex-1 bg-transparent border-none p-0 text-[11px] font-medium focus:ring-0 outline-none">
+        <select :value="item.key" @change="updateKeyField(idx, 'key', $event.target.value)" class="flex-1 bg-transparent border-none p-0 text-[11px] font-medium text-gray-900 dark:text-gray-100 focus:ring-0 outline-none">
           <option v-for="k in availableKeys" :key="k.value" :value="k.value">{{ k.label }}</option>
         </select>
 
-        <select v-model="item.order" class="w-14 bg-transparent border-none p-0 text-[11px] text-gray-500 focus:ring-0 outline-none">
+        <select :value="item.order" @change="updateKeyField(idx, 'order', $event.target.value)" class="w-14 bg-transparent border-none p-0 text-[11px] text-gray-600 dark:text-gray-300 focus:ring-0 outline-none">
           <option value="asc">升序</option>
           <option value="desc">降序</option>
         </select>
