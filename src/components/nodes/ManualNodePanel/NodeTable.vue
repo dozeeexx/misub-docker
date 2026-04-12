@@ -22,7 +22,8 @@ const props = defineProps({
   draggableManualNodes: { type: Array, default: () => [] },
   itemsPerPage: { type: Number, default: 24 }, // Added
   pingResults: { type: Object, default: () => ({}) },
-  pingingNodes: { type: Object, default: () => new Set() }
+  pingingNodes: { type: Object, default: () => new Set() },
+  compactGrid: { type: Boolean, default: false }
 });
 
 const emit = defineEmits([
@@ -67,7 +68,8 @@ const handleChangePage = (page) => {
       <div v-if="viewMode === 'card'">
         <draggable 
           tag="div" 
-          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4" 
+          class="grid gap-4"
+          :class="compactGrid ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3'"
           v-model="draggableModel" 
           item-key="id" 
           animation="300" 
@@ -121,7 +123,7 @@ const handleChangePage = (page) => {
 
     <div v-else>
       <!-- Flat List Display (No Groups) -->
-      <div v-if="viewMode === 'card'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
+      <div v-if="viewMode === 'card'" class="grid gap-4" :class="compactGrid ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3'">
         <div 
           v-for="(node, index) in paginatedNodes" 
           :key="node.id"

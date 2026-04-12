@@ -78,7 +78,10 @@ function buildProxyLine(proxy) {
 
 function buildGroupLine(group) {
     const type = String(group.type || 'select').toLowerCase();
-    const members = Array.isArray(group.members) ? group.members.filter(Boolean).join(', ') : '';
+    const rawMembers = Array.isArray(group.members) ? group.members.filter(Boolean) : [];
+    const members = (['url-test', 'fallback', 'load-balance'].includes(type)
+        ? rawMembers.filter(member => !['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'].includes(String(member).toUpperCase()))
+        : rawMembers).join(', ');
     const filter = Array.isArray(group.filters) && group.filters.length > 0 ? group.filters.join('|') : '';
     const tolerance = group.options?.tolerance;
     if (type === 'url-test') {

@@ -15,7 +15,7 @@ export function isBrowserAgent(userAgent) {
     // [Updated] Explicitly added: Firefox, Via, UCBrowser, Quark, MQQBrowser (QQ), Konqueror
     const isBrowser = /Mozilla|Chrome|Safari|Edge|Opera|Firefox|Via|UCBrowser|Quark|MQQBrowser|Konqueror/i.test(userAgent);
     // Common proxy client keywords to exclude
-    const isProxyClient = /clash|v2ray|surge|loon|shadowrocket|quantumult|stash|shadowsocks|mihomo|meta|nekobox|nekoray|sfi|sfa|sfra|sing-box|surfboard|hiddify/i.test(userAgent);
+    const isProxyClient = /clash|v2ray|surge|loon|shadowrocket|quantumult|stash|shadowsocks|mihomo|meta|nekobox|nekoray|sfi|sfa|sfra|sing-box|surfboard|hiddify|egern/i.test(userAgent);
 
     return isBrowser && !isProxyClient;
 }
@@ -92,6 +92,7 @@ export function determineTargetFormat(userAgent, searchParams) {
         ['surfboard', 'clash'],
         ['cfw', 'clash'],
         ['clashforwindows', 'clash'],
+        ['egern', 'clash'],
         ['sing-box', 'singbox'],
         ['singbox', 'singbox'],
         ['hiddify', 'singbox'],

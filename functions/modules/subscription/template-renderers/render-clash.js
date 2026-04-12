@@ -10,6 +10,15 @@ function mapGroupType(type) {
     return 'select';
 }
 
+function filterAutoSelectMembers(group) {
+    const type = mapGroupType(group.type);
+    const members = Array.isArray(group.members) ? group.members.filter(Boolean) : [];
+    if (!['url-test', 'fallback', 'load-balance'].includes(type)) {
+        return members;
+    }
+    return members.filter(member => !['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'].includes(String(member).toUpperCase()));
+}
+
 function mapRule(rule, ruleProviderMap) {
     const type = String(rule.type || '').toUpperCase();
     if (!type) return null;
@@ -70,7 +79,7 @@ export function renderClashFromTemplateModel(model) {
             .map(group => ({
                 name: group.name,
                 type: mapGroupType(group.type),
-                proxies: group.members,
+                proxies: filterAutoSelectMembers(group),
                 filter: Array.isArray(group.filters) && group.filters.length > 0 ? group.filters.join('|') : undefined,
                 ...group.options
             })),

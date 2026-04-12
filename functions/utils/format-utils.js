@@ -99,6 +99,7 @@ export function determineFormatByUserAgent(userAgentHeader) {
 
         // 其他客戶端
         ['stash', 'clash'],
+        ['egern', 'clash'],
         ['nekoray', 'clash'],
         ['sing-box', 'singbox'],
         ['shadowrocket', 'base64'],

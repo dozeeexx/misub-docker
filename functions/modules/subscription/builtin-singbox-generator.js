@@ -263,7 +263,6 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
             if (r.type === 'rule_set') return { rule_set: [r.tag], outbound: r.outbound };
             return r; // 已经是 Sing-Box 格式的普通规则
         }),
-        { geoip: ['cn'], outbound: 'DIRECT' },
         { domain_suffix: ['cn'], outbound: 'DIRECT' }
     ];
 
@@ -277,7 +276,6 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
                 { tag: 'doh-cloudflare', address: 'https://1.1.1.1/dns-query', detour: DEFAULT_SELECT_GROUP }
             ]
         },
-        rule_sets: ruleSets,
         outbounds: [
             { tag: 'DIRECT', type: 'direct' },
             { tag: 'REJECT', type: 'block' },
@@ -287,6 +285,7 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
         route: {
             auto_detect_interface: true,
             final: levelKey === 'RELAY' ? DEFAULT_RELAY_GROUP : DEFAULT_SELECT_GROUP,
+            rule_set: ruleSets,
             rules: routeRules
         }
     };

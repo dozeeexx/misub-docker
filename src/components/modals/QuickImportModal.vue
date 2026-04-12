@@ -37,6 +37,7 @@ const urlSchemeMap = {
     'nekobox': 'nekobox://install-config?name={name}&type=SUBSCRIPTION&url={url}',
     'stash': 'stash://install-config?url={url}&name={name}',
     'loon': 'loon://import?sub={url}&name={name}',
+    'egern': 'egern://subscribe?url={url}&name={name}',
     'surge': 'surge:///install-config?url={url}',
     'flclash': 'clash://install-config?url={url}&name={name}',
     'clashmi': 'clash://install-config?url={url}&name={name}',

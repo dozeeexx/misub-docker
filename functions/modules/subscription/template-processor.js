@@ -75,6 +75,67 @@ function pruneEmptyGroups(model) {
     }
 }
 
+function normalizeGroupSemanticName(name = '') {
+    return String(name)
+        .replace(/^[^\u4e00-\u9fa5A-Za-z0-9]+/, '')
+        .replace(/[\s_-]+/g, '')
+        .replace(/节点/g, '')
+        .toLowerCase();
+}
+
+function hasEquivalentRegionGroup(model, region) {
+    const regionTags = new Set(region.tags || []);
+    const normalizedRegionName = normalizeGroupSemanticName(region.name);
+
+    return model.groups.some(group => {
+        const normalizedGroupName = normalizeGroupSemanticName(group.name);
+        if (normalizedGroupName === normalizedRegionName) return true;
+
+        const members = Array.isArray(group.members) ? group.members : [];
+        if (members.length === 0) return false;
+
+        const overlapCount = members.filter(member => regionTags.has(member)).length;
+        return overlapCount > 0 && overlapCount === members.length && overlapCount === regionTags.size;
+    });
+}
+
+function dedupeGroupsByName(model) {
+    const mergedGroups = [];
+    const seen = new Map();
+
+    model.groups.forEach(group => {
+        const name = String(group.name || '').trim();
+        if (!name) return;
+
+        if (!seen.has(name)) {
+            const normalized = {
+                ...group,
+                name,
+                members: Array.isArray(group.members) ? Array.from(new Set(group.members.filter(Boolean))) : [],
+                filters: Array.isArray(group.filters) ? Array.from(new Set(group.filters.filter(Boolean))) : [],
+                options: typeof group.options === 'object' && group.options !== null ? { ...group.options } : {}
+            };
+            seen.set(name, normalized);
+            mergedGroups.push(normalized);
+            return;
+        }
+
+        const existing = seen.get(name);
+        existing.members = Array.from(new Set([...(existing.members || []), ...((group.members || []).filter(Boolean))]));
+        existing.filters = Array.from(new Set([...(existing.filters || []), ...((group.filters || []).filter(Boolean))]));
+        existing.options = {
+            ...(existing.options || {}),
+            ...((typeof group.options === 'object' && group.options !== null) ? group.options : {})
+        };
+
+        if ((!existing.type || existing.type === 'select') && group.type) {
+            existing.type = group.type;
+        }
+    });
+
+    model.groups = mergedGroups;
+}
+
 /**
  * 对模板模型进行智能化增强
  * 核心逻辑：在不破坏模板原有分流规则的前提下，注入自动生成的地区策略组
@@ -107,8 +168,8 @@ export function applySmartModelOptimizations(model) {
     
     const newGroupNames = [];
     regions.forEach(region => {
-        // 避免重复定义已存在的同名分组
-        if (model.groups.some(g => g.name === region.name)) return;
+        // 避免重复注入：不仅看同名，还要看语义相同或成员完全相同的地区分组。
+        if (hasEquivalentRegionGroup(model, region)) return;
 
         model.groups.push({
             name: region.name,
@@ -138,6 +199,7 @@ export function applySmartModelOptimizations(model) {
     }
 
     // 6. 最后进行一次全局修剪，确保所有空组（包括注入失败的）都被清理
+    dedupeGroupsByName(model);
     pruneEmptyGroups(model);
 
     return model;

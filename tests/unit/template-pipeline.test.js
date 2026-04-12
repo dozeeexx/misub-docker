@@ -48,6 +48,51 @@ MATCH,节点选择
         expect(parsed.profile['subscription-url']).toBe('https://example.com/sub');
     });
 
+    it('should exclude DIRECT from auto-select groups when rendering templates', () => {
+        const rendered = renderClashFromIniTemplate(`
+[Proxy Group]
+节点选择 = select, 自动选择, DIRECT
+自动选择 = url-test, HK-01, JP-01, DIRECT
+
+[Rule]
+MATCH,节点选择
+        `, {
+            proxies: [
+                { name: 'HK-01', type: 'trojan', server: '1.1.1.1', port: 443, password: 'pass' },
+                { name: 'JP-01', type: 'trojan', server: '2.2.2.2', port: 443, password: 'pass' }
+            ]
+        });
+
+        const parsed = yaml.load(rendered);
+        const autoSelectGroup = parsed['proxy-groups'].find(group => group.name === '自动选择');
+        expect(autoSelectGroup.proxies).toEqual(['HK-01', 'JP-01']);
+        expect(autoSelectGroup.proxies).not.toContain('DIRECT');
+    });
+
+    it('should merge duplicate proxy groups with the same name before rendering', () => {
+        const rendered = renderClashFromIniTemplate(`
+[Proxy Group]
+节点选择 = select, HK-01
+节点选择 = select, JP-01, DIRECT
+自动选择 = url-test, HK-01, JP-01
+
+[Rule]
+MATCH,节点选择
+        `, {
+            proxies: [
+                { name: 'HK-01', type: 'trojan', server: '1.1.1.1', port: 443, password: 'pass' },
+                { name: 'JP-01', type: 'trojan', server: '2.2.2.2', port: 443, password: 'pass' }
+            ]
+        });
+
+        const parsed = yaml.load(rendered);
+        const selectGroups = parsed['proxy-groups'].filter(group => group.name === '节点选择');
+        expect(selectGroups).toHaveLength(1);
+        expect(selectGroups[0].proxies).toContain('HK-01');
+        expect(selectGroups[0].proxies).toContain('JP-01');
+        expect(selectGroups[0].proxies).toContain('DIRECT');
+    });
+
     it('should parse builtin ACL4SSR custom template registry entry', () => {
         const builtinTemplate = getBuiltinTemplate('clash_acl4ssr_full');
         const model = parseIniTemplate(builtinTemplate.content, {

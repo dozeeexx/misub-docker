@@ -17,6 +17,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  compact: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['add', 'edit', 'delete', 'deleteAll', 'toggle', 'openCopy', 'preview', 'reorder', 'changePage', 'viewLogs', 'qrcode', 'toggle-sort']);
@@ -68,7 +72,7 @@ const handleMoveDown = (profileId) => {
 <template>
   <div>
     <div class="list-item-animation mb-4" style="--delay-index: 0">
-      <div class="rounded-xl border border-gray-100/80 bg-white/85 p-4 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
+      <div class="rounded-xl border border-gray-100/80 bg-white/85 shadow-sm dark:border-white/10 dark:bg-gray-900/70" :class="compact ? 'p-3' : 'p-4'">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div class="flex items-center gap-3 shrink-0">
             <h2 class="text-xl font-bold text-gray-900 dark:text-white">我的订阅组</h2>
@@ -93,10 +97,7 @@ const handleMoveDown = (profileId) => {
       <div v-if="isSorting" class="mb-4 rounded-xl border border-indigo-200/70 bg-indigo-50/80 px-4 py-3 text-sm text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300">
         当前为排序模式，已显示全部订阅组。使用卡片右下角的上下箭头调整顺序，完成后点击“完成排序”。
       </div>
-      <div 
-        class="grid gap-4" 
-        :class="[displayProfiles.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1']"
-      >
+      <div class="grid gap-4" :class="compact ? 'grid-cols-1' : (displayProfiles.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')">
         <div 
           v-for="(profile, index) in displayProfiles"
           :key="profile.id"
@@ -106,6 +107,7 @@ const handleMoveDown = (profileId) => {
           <ProfileCard
             :profile="profile"
             :is-sorting="isSorting"
+            :compact="compact"
             @edit="handleEdit(profile.id)"
             @delete="handleDelete(profile.id)"
             @change="handleToggle($event)"

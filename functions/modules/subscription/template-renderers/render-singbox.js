@@ -142,10 +142,13 @@ function mapGroupType(type) {
 function buildGroupOutbounds(groups) {
     return groups.map(group => {
         const mappedType = mapGroupType(group.type);
+        const rawMembers = Array.isArray(group.members) ? group.members.filter(Boolean) : [];
         const outbound = {
             tag: sanitizeTag(group.name),
             type: mappedType,
-            outbounds: Array.isArray(group.members) ? group.members.filter(Boolean) : []
+            outbounds: ['urltest'].includes(mappedType)
+                ? rawMembers.filter(member => !['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'].includes(String(member).toUpperCase()))
+                : rawMembers
         };
 
         if (mappedType === 'urltest') {
