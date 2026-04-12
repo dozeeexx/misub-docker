@@ -46,15 +46,18 @@ async function openMenu() {
 
 function toggleMenu() {
   if (isOpen.value) {
-    closeMenu();
+    closeMenu({ restoreFocus: true });
   } else {
     openMenu();
   }
 }
 
-function closeMenu() {
+function closeMenu(options = {}) {
+  const { restoreFocus = false } = options;
   isOpen.value = false;
-  triggerRef.value?.querySelector('button')?.focus();
+  if (restoreFocus) {
+    triggerRef.value?.querySelector('button')?.focus();
+  }
 }
 
 function handleClickOutside(event) {
@@ -88,7 +91,7 @@ function handleTriggerKeydown(event) {
 function handleMenuKeydown(event) {
   if (event.key === 'Escape') {
     event.preventDefault();
-    closeMenu();
+    closeMenu({ restoreFocus: true });
   }
 }
 
