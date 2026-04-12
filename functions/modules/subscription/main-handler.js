@@ -447,6 +447,7 @@ export async function handleMisubRequest(context) {
 
     const shouldUseBuiltin = useBuiltin && (
         targetFormat === 'clash' ||
+        targetFormat === 'egern' ||
         targetFormat.startsWith('surge') ||
         targetFormat === 'loon' ||
         targetFormat === 'quanx' ||

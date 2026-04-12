@@ -30,7 +30,7 @@ export function determineTargetFormat(userAgent, searchParams) {
     // 1. Check URL parameters first
     let targetFormat = searchParams.get('target');
     if (!targetFormat) {
-        const supportedFormats = ['clash', 'singbox', 'surge', 'loon', 'base64', 'v2ray', 'trojan', 'quanx'];
+        const supportedFormats = ['clash', 'singbox', 'surge', 'loon', 'base64', 'v2ray', 'trojan', 'quanx', 'egern'];
         for (const format of supportedFormats) {
             if (searchParams.has(format)) {
                 // Normalize v2ray/trojan to base64 as they share the output format
@@ -92,7 +92,7 @@ export function determineTargetFormat(userAgent, searchParams) {
         ['surfboard', 'clash'],
         ['cfw', 'clash'],
         ['clashforwindows', 'clash'],
-        ['egern', 'clash'],
+        ['egern', 'egern'],
         ['sing-box', 'singbox'],
         ['singbox', 'singbox'],
         ['hiddify', 'singbox'],

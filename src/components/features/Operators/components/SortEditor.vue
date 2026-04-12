@@ -86,12 +86,12 @@ const availableKeys = [
         </div>
 
         <select :value="item.key" @change="updateKeyField(idx, 'key', $event.target.value)" class="flex-1 bg-transparent border-none p-0 text-[11px] font-medium text-gray-900 dark:text-gray-100 focus:ring-0 outline-none">
-          <option v-for="k in availableKeys" :key="k.value" :value="k.value">{{ k.label }}</option>
+          <option v-for="k in availableKeys" :key="k.value" :value="k.value" class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">{{ k.label }}</option>
         </select>
 
         <select :value="item.order" @change="updateKeyField(idx, 'order', $event.target.value)" class="w-14 bg-transparent border-none p-0 text-[11px] text-gray-600 dark:text-gray-300 focus:ring-0 outline-none">
-          <option value="asc">升序</option>
-          <option value="desc">降序</option>
+          <option value="asc" class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">升序</option>
+          <option value="desc" class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">降序</option>
         </select>
 
         <button @click="removeKey(idx)" class="p-1 text-gray-300 hover:text-rose-500">

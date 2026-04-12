@@ -5,7 +5,7 @@
 
 import { generateCombinedNodeList } from './subscription-service.js';
 import { transformBuiltinSubscription } from '../modules/subscription/transformer-factory.js';
-import { renderClashFromIniTemplate, renderSingboxFromIniTemplate, renderSurgeFromIniTemplate, renderLoonFromIniTemplate, renderQuanxFromIniTemplate } from '../modules/subscription/template-pipeline.js';
+import { renderClashFromIniTemplate, renderSingboxFromIniTemplate, renderSurgeFromIniTemplate, renderLoonFromIniTemplate, renderQuanxFromIniTemplate, renderEgernFromIniTemplate } from '../modules/subscription/template-pipeline.js';
 import { getBuiltinTemplate } from '../modules/subscription/builtin-template-registry.js';
 import { fetchTransformTemplate } from '../modules/subscription/transform-template-cache.js';
 
@@ -125,13 +125,17 @@ export class ProcessorService {
                     case 'quanx':
                         finalContent = renderQuanxFromIniTemplate(templateText, renderParams);
                         break;
+                    case 'egern':
+                        finalContent = renderEgernFromIniTemplate(templateText, renderParams);
+                        contentType = 'application/x-yaml; charset=utf-8';
+                        break;
                 }
             }
         }
 
         // Set proper content type for built-in formats if not set by template
         if (contentType === 'text/plain; charset=utf-8') {
-             if (targetFormat === 'clash') contentType = 'application/x-yaml; charset=utf-8';
+             if (targetFormat === 'clash' || targetFormat === 'egern') contentType = 'application/x-yaml; charset=utf-8';
              else if (targetFormat === 'singbox' || targetFormat === 'sing-box') contentType = 'application/json; charset=utf-8';
         }
 
