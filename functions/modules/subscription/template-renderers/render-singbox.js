@@ -173,8 +173,16 @@ function mapRuleToSingbox(rule) {
         };
     }
     if (type === 'geoip') {
+        const value = String(rule.value || 'cn').toLowerCase();
         return {
-            geoip: [String(rule.value || 'CN').toLowerCase()],
+            rule_set: [`geoip-${value}`],
+            outbound: rule.policy
+        };
+    }
+    if (type === 'geosite') {
+        const value = String(rule.value || 'cn').toLowerCase();
+        return {
+            rule_set: [`geosite-${value}`],
             outbound: rule.policy
         };
     }
@@ -199,7 +207,7 @@ function mapRuleToSingbox(rule) {
 }
 
 function buildRuleSets(rules) {
-    return rules
+    const remoteRuleSets = rules
         .filter(rule => String(rule.type || '').toLowerCase() === 'rule-set' && rule.source === 'remote')
         .map(rule => ({
             tag: sanitizeTag(`${rule.policy}_${rule.value}`),
@@ -208,6 +216,31 @@ function buildRuleSets(rules) {
             url: rule.value,
             download_detour: 'DIRECT'
         }));
+
+    const implicitRuleSets = [];
+    const seen = new Set();
+
+    rules.forEach(rule => {
+        const type = String(rule.type || '').toLowerCase();
+        if (type === 'geoip' || type === 'geosite') {
+            const value = String(rule.value || 'cn').toLowerCase();
+            const tag = `${type}-${value}`;
+            if (!seen.has(tag)) {
+                seen.add(tag);
+                implicitRuleSets.push({
+                    tag,
+                    type: 'remote',
+                    format: 'binary',
+                    url: type === 'geoip'
+                        ? `https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-${value}.srs`
+                        : `https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-${value}.srs`,
+                    download_detour: 'DIRECT'
+                });
+            }
+        }
+    });
+
+    return [...remoteRuleSets, ...implicitRuleSets];
 }
 
 export function renderSingboxFromTemplateModel(model, options = {}) {
