@@ -58,9 +58,7 @@ function buildProxyLine(proxy) {
     }
     if (type === 'hysteria2' || type === 'hy2') return `${name} = hysteria2, ${server}, ${port}, ${proxy.password || ''}`;
     if (type === 'tuic') {
-        const extras = [];
-        if (proxy.uuid) extras.push(`uuid=${proxy.uuid}`);
-        if (proxy.password) extras.push(`password=${proxy.password}`);
+        const extras = ['version=5'];
         
         const sni = proxy.servername ?? proxy.sni;
         if (sni !== undefined) extras.push(`sni=${sni}`);
@@ -72,7 +70,7 @@ function buildProxyLine(proxy) {
             extras.push(`alpn=${alpn}`);
         }
         
-        // 拥塞控制 (Loon 使用 congestion-control)
+        // 拥塞控制 (Loon 标准写法是 congestion-control)
         const cg = proxy['congestion-control'] || proxy['congestion-controller'] || 'bbr';
         extras.push(`congestion-control=${cg}`);
         
@@ -82,7 +80,8 @@ function buildProxyLine(proxy) {
         extras.push('reduce-rtt=true');
         if (proxy['fast-open']) extras.push('fast-open=true');
         
-        return `${name} = tuic, ${server}, ${port}, ${extras.join(', ')}`;
+        // Loon TUIC 语法: Name = tuic, Server, Port, Password, UUID, key=value, ...
+        return `${name} = tuic, ${server}, ${port}, ${proxy.password || ''}, ${proxy.uuid || ''}, ${extras.join(', ')}`;
     }
     if (type === 'wireguard') {
         const extras = [proxy['private-key'] || ''];
