@@ -176,8 +176,10 @@ function parseVlessUrl(url) {
 
 // SNI (支持 sni 和 peer 两种参数名，Shadowrocket 使用 peer)
       if (params.get('sni')) {
+        proxy.servername = params.get('sni');
         proxy.sni = params.get('sni');
       } else if (params.get('peer')) {
+        proxy.servername = params.get('peer');
         proxy.sni = params.get('peer');
       }
 
@@ -270,8 +272,10 @@ function parseTrojanUrl(url) {
 
         // SNI (支持 sni 和 peer 两种参数名，Shadowrocket 使用 peer)
         if (params.get('sni')) {
+            proxy.servername = params.get('sni');
             proxy.sni = params.get('sni');
         } else if (params.get('peer')) {
+            proxy.servername = params.get('peer');
             proxy.sni = params.get('peer');
         }
 
@@ -552,6 +556,7 @@ function parseHysteria2Url(url) {
 
         // SNI
         if (params.get('sni')) {
+            proxy.servername = params.get('sni');
             proxy.sni = params.get('sni');
         }
 
@@ -622,6 +627,7 @@ function parseTuicUrl(url) {
 
         // SNI
         if (params.get('sni')) {
+            proxy.servername = params.get('sni');
             proxy.sni = params.get('sni');
         }
 
@@ -846,8 +852,10 @@ function parseAnytlsUrl(url) {
         const proxy = { name: name || `AnyTLS-${server}`, type: 'anytls', server, port, password };
         
         if (params.get('sni')) {
+            proxy.servername = params.get('sni');
             proxy.sni = params.get('sni');
         } else if (params.get('peer')) {
+            proxy.servername = params.get('peer');
             proxy.sni = params.get('peer');
         }
         
@@ -909,8 +917,10 @@ function parseHttpsUrl(url) {
         };
 
         if (params.get('sni')) {
+            proxy.servername = params.get('sni');
             proxy.sni = params.get('sni');
         } else if (params.get('peer')) {
+            proxy.servername = params.get('peer');
             proxy.sni = params.get('peer');
         }
 
@@ -975,8 +985,10 @@ function parseSocks5Url(url) {
         };
 
         if (params.get('sni')) {
+            proxy.servername = params.get('sni');
             proxy.sni = params.get('sni');
         } else if (params.get('peer')) {
+            proxy.servername = params.get('peer');
             proxy.sni = params.get('peer');
         }
 
@@ -1049,7 +1061,8 @@ export function urlsToClashProxies(urls) {
             proxy.metadata = extractNodeMetadata(proxy.name);
             
             // [自动补全] 仅在名称中完全没有国旗 Emoji 时才尝试补全，避免干扰用户通过正则重命名后的结果
-            const HAS_EMOJI_REGEX = /[\u{1F1E6}-\u{1F1FF}]{2}/u;
+            // [自动补全] 仅在名称中完全没有国旗/地球 Emoji 时才尝试补全，避免重复添加或干扰用户重命名
+            const HAS_EMOJI_REGEX = /([\u{1F1E6}-\u{1F1FF}]{2}|[\u{1F30D}-\u{1F30F}])/u;
             if (proxy.metadata.flag && !HAS_EMOJI_REGEX.test(proxy.name)) {
                 proxy.name = `${proxy.metadata.flag} ${proxy.name}`;
             }
