@@ -491,6 +491,8 @@ class NoopStorageAdapter {
     async put() { return true; }
     async delete() { return true; }
     async list() { return []; }
+    async getAllSubscriptions() { return []; }
+    async getAllProfiles() { return []; }
 }
 
 
