@@ -149,8 +149,15 @@ export const useDataStore = defineStore('data', () => {
                 }
             }, 2000);
 
-            // Update cache
-            dataCache.set(payload); // Note: ideally we cache the RESULT from backend, but payload is close enough for simple cache
+            // Update cache with the most recent merged data
+            dataCache.set({
+                misubs: subscriptions.value.map(s => {
+                    const { isUpdating, ...rest } = s;
+                    return rest;
+                }),
+                profiles: profiles.value,
+                config: settingsStore.config
+            });
 
         } catch (error) {
             console.error('[Store] Failed to save data:', error);
@@ -199,6 +206,7 @@ export const useDataStore = defineStore('data', () => {
     // --- Proxy Actions (Mutators) ---
     function addSubscription(subscription) {
         subscriptions.value.unshift(subscription);
+        markDirty();
     }
 
     function overwriteSubscriptions(items) {
@@ -216,6 +224,7 @@ export const useDataStore = defineStore('data', () => {
         const index = subscriptions.value.findIndex(s => s.id === id);
         if (index !== -1) {
             subscriptions.value[index] = { ...subscriptions.value[index], ...updates };
+            markDirty();
         }
     }
 
