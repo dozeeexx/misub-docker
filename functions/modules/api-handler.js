@@ -252,7 +252,17 @@ export async function handleMisubsSave(request, env) {
         }
 
         if (Array.isArray(finalProfiles)) {
-            finalProfiles = finalProfiles.map(normalizeProfile);
+            finalProfiles = finalProfiles.map((p, index) => ({
+                ...normalizeProfile(p),
+                sortIndex: index
+            }));
+        }
+
+        if (Array.isArray(finalMisubs)) {
+            finalMisubs = finalMisubs.map((s, index) => ({
+                ...s,
+                sortIndex: index
+            }));
         }
 
         // 步骤4: 获取设置（带错误处理）

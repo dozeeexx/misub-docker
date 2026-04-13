@@ -42,6 +42,7 @@ export function convertClashProxyToUrl(proxy) {
 
         if (type === 'vmess') {
             const uuid = proxy.uuid || proxy.UUID || '';
+            const network = proxy.network || 'tcp';
             const vmessConfig = {
                 v: '2',
                 ps: name,
@@ -49,12 +50,40 @@ export function convertClashProxyToUrl(proxy) {
                 port,
                 id: uuid,
                 aid: proxy.alterId || 0,
-                net: proxy.network || 'tcp',
+                net: network,
                 type: 'none',
-                host: proxy.servername || proxy.wsOpts?.headers?.Host || proxy['ws-opts']?.headers?.Host || '',
-                path: proxy.wsOpts?.path || proxy['ws-opts']?.path || '',
-                tls: proxy.tls ? 'tls' : ''
+                host: '',
+                path: '',
+                tls: proxy.tls ? 'tls' : '',
+                sni: proxy.sni || proxy.servername || '',
+                fp: proxy['client-fingerprint'] || ''
             };
+
+            // Mapping network specific options
+            if (network === 'ws') {
+                const wsOpts = proxy['ws-opts'] || proxy.wsOpts;
+                if (wsOpts) {
+                    vmessConfig.path = wsOpts.path || '';
+                    if (wsOpts.headers?.Host) vmessConfig.host = wsOpts.headers.Host;
+                }
+            } else if (network === 'grpc') {
+                const grpcOpts = proxy['grpc-opts'] || proxy.grpcOpts;
+                if (grpcOpts) vmessConfig.path = grpcOpts['grpc-service-name'] || '';
+            } else if (network === 'h2' || network === 'http') {
+                const opts = proxy[`${network}-opts`] || proxy[`${network}Opts`];
+                if (opts) {
+                    vmessConfig.path = opts.path || '';
+                    vmessConfig.host = Array.isArray(opts.host) ? opts.host.join(',') : (opts.host || '');
+                }
+            } else if (network === 'quic') {
+                const quicOpts = proxy['quic-opts'] || proxy.quicOpts;
+                if (quicOpts) {
+                    vmessConfig.type = quicOpts.header?.type || 'none';
+                    vmessConfig.host = quicOpts.security || '';
+                    vmessConfig.path = quicOpts.key || '';
+                }
+            }
+
             return `vmess://${base64Encode(JSON.stringify(vmessConfig))}`;
         }
 

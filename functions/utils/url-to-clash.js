@@ -336,11 +336,54 @@ function parseVmessUrl(url) {
             }
         }
 
+        // gRPC 配置
+        if (network === 'grpc') {
+            const grpcOpts = {};
+            if (config.path) grpcOpts['grpc-service-name'] = config.path; // vmess json sometimes use path for serviceName
+            if (config.host) grpcOpts['grpc-service-name'] = config.host; 
+            if (Object.keys(grpcOpts).length > 0) {
+                proxy['grpc-opts'] = grpcOpts;
+            }
+        }
+
+        // H2 (HTTP/2) 配置
+        if (network === 'h2') {
+            const h2Opts = {};
+            if (config.path) h2Opts.path = config.path;
+            if (config.host) h2Opts.host = config.host.split(',').map(h => h.trim());
+            if (Object.keys(h2Opts).length > 0) {
+                proxy['h2-opts'] = h2Opts;
+            }
+        }
+
+        // HTTP 配置
+        if (network === 'http') {
+            const httpOpts = {
+                path: config.path || '/',
+                headers: {
+                    Host: config.host ? config.host.split(',').map(h => h.trim()) : []
+                }
+            };
+            proxy['http-opts'] = httpOpts;
+        }
+
+        // QUIC 配置
+        if (network === 'quic') {
+            const quicOpts = {};
+            if (config.type) quicOpts.header = { type: config.type };
+            if (config.host) quicOpts.security = config.host;
+            if (config.path) quicOpts.key = config.path;
+            if (Object.keys(quicOpts).length > 0) {
+                proxy['quic-opts'] = quicOpts;
+            }
+        }
+
         // TLS
-        if (config.tls === 'tls') {
+        if (config.tls === 'tls' || config.tls === 'reality') {
             proxy.tls = true;
             if (config.sni) proxy.servername = config.sni;
             if (config.fp) proxy['client-fingerprint'] = config.fp;
+            if (config.alpn) proxy.alpn = String(config.alpn).split(',').map(s => s.trim());
         }
 
         // UDP
