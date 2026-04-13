@@ -58,157 +58,183 @@ function mapProxy(proxy) {
     const type = String(proxy.type || '').toLowerCase();
     const name = proxy.name;
 
-    const base = {
-        name,
-        type: type === 'ss' ? 'shadowsocks' : type,
-        server: proxy.server,
-        port: proxy.port,
-        tfo: Boolean(proxy.tfo),
-        udp_relay: proxy.udp !== false
-    };
-
     if (type === 'trojan') {
-        Object.assign(base, {
-            password: proxy.password,
-            skip_tls_verify: Boolean(proxy['skip-cert-verify'])
-        });
+        const mapped = {
+            trojan: {
+                name,
+                server: proxy.server,
+                port: proxy.port,
+                password: proxy.password,
+                tfo: Boolean(proxy.tfo),
+                udp_relay: proxy.udp !== false,
+                skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
+            }
+        };
         const sni = proxy.servername ?? proxy.sni ?? proxy.server;
-        if (sni) base.sni = sni;
+        if (sni) mapped.trojan.sni = sni;
         const transport = mapTransport(proxy);
-        if (transport) base.transport = transport;
-        return base;
+        if (transport) mapped.trojan.transport = transport;
+        return mapped;
     }
 
     if (type === 'vless') {
-        Object.assign(base, { user_id: proxy.uuid });
-        if (proxy.flow) base.flow = proxy.flow;
+        const mapped = {
+            vless: {
+                name,
+                server: proxy.server,
+                port: proxy.port,
+                user_id: proxy.uuid,
+                tfo: Boolean(proxy.tfo),
+                udp_relay: proxy.udp !== false
+            }
+        };
+        if (proxy.flow) mapped.vless.flow = proxy.flow;
         const transport = mapTransport(proxy);
-        if (transport) base.transport = transport;
-        return base;
+        if (transport) mapped.vless.transport = transport;
+        return mapped;
     }
 
     if (type === 'vmess') {
-        Object.assign(base, {
-            user_id: proxy.uuid,
-            security: proxy.cipher || 'auto',
-            legacy: Number(proxy.alterId || 0) > 0
-        });
+        const mapped = {
+            vmess: {
+                name,
+                server: proxy.server,
+                port: proxy.port,
+                user_id: proxy.uuid,
+                security: proxy.cipher || 'auto',
+                legacy: Number(proxy.alterId || 0) > 0,
+                tfo: Boolean(proxy.tfo),
+                udp_relay: proxy.udp !== false
+            }
+        };
         const transport = mapTransport(proxy);
-        if (transport) base.transport = transport;
-        return base;
+        if (transport) mapped.vmess.transport = transport;
+        return mapped;
     }
 
     if (type === 'ss' || type === 'shadowsocks') {
-        Object.assign(base, {
-            method: proxy.cipher || proxy.method,
-            password: proxy.password
-        });
+        const mapped = {
+            shadowsocks: {
+                name,
+                server: proxy.server,
+                port: proxy.port,
+                method: proxy.cipher || proxy.method,
+                password: proxy.password,
+                udp_relay: proxy.udp !== false,
+                tfo: Boolean(proxy.tfo)
+            }
+        };
         if (proxy.plugin === 'obfs') {
-            base.obfs = proxy['plugin-opts']?.mode || 'http';
-            base.obfs_host = proxy['plugin-opts']?.host || proxy.server;
+            mapped.shadowsocks.obfs = proxy['plugin-opts']?.mode || 'http';
+            mapped.shadowsocks.obfs_host = proxy['plugin-opts']?.host || proxy.server;
         }
-        return base;
+        return mapped;
     }
 
     if (type === 'hysteria2' || type === 'hy2') {
-        const h2 = {
-            ...base,
-            type: 'hysteria2',
-            auth: proxy.password,
-            skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
+        const mapped = {
+            hysteria2: {
+                name,
+                server: proxy.server,
+                port: proxy.port,
+                auth: proxy.password,
+                skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
+            }
         };
         const sni = proxy.servername ?? proxy.sni ?? proxy.server;
-        if (sni) h2.sni = sni;
+        if (sni) mapped.hysteria2.sni = sni;
         if (proxy.obfs || proxy['obfs-opts']) {
-            h2.obfuscation = {
+            mapped.hysteria2.obfuscation = {
                 type: proxy.obfs || proxy['obfs-opts']?.type || 'salamander',
                 password: proxy.password || proxy['obfs-opts']?.password || ''
             };
         }
         if (proxy.hop || proxy.portHopping) {
-            h2.port_hopping = String(proxy.hop || proxy.portHopping);
+            mapped.hysteria2.port_hopping = String(proxy.hop || proxy.portHopping);
         }
-        return h2;
+        return mapped;
     }
 
     if (type === 'tuic') {
-        const tuic = {
-            ...base,
-            uuid: proxy.uuid,
-            password: proxy.password,
-            alpn: proxy.alpn || ['h3'],
-            udp_relay_mode: proxy['udp-relay-mode'] || 'native',
-            congestion_control: proxy['congestion-control'] || 'cubic',
-            skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
+        const mapped = {
+            tuic: {
+                name,
+                server: proxy.server,
+                port: proxy.port,
+                uuid: proxy.uuid,
+                password: proxy.password,
+                alpn: proxy.alpn || ['h3'],
+                udp_relay_mode: proxy['udp-relay-mode'] || 'native',
+                congestion_control: proxy['congestion-control'] || 'cubic',
+                skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
+            }
         };
         const sni = proxy.servername ?? proxy.sni ?? proxy.server;
-        if (sni) tuic.sni = sni;
+        if (sni) mapped.tuic.sni = sni;
         if (proxy.hop || proxy.portHopping) {
-            tuic.port_hopping = String(proxy.hop || proxy.portHopping);
+            mapped.tuic.port_hopping = String(proxy.hop || proxy.portHopping);
         }
-        return tuic;
+        return mapped;
     }
 
     if (type === 'anytls') {
-        const any = {
-            ...base,
-            password: proxy.password,
-            skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
+        const mapped = {
+            anytls: {
+                name,
+                server: proxy.server,
+                port: proxy.port,
+                password: proxy.password,
+                skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
+            }
         };
         const sni = proxy.servername ?? proxy.sni ?? proxy.server;
-        if (sni) any.sni = sni;
-        return any;
+        if (sni) mapped.anytls.sni = sni;
+        return mapped;
     }
 
-    // Default catch-all for simpler protocols like http/socks5
-    if (type === 'http' || type === 'https' || type === 'socks5' || type === 'socks') {
-        const obj = {
-            ...base,
-            username: proxy.username || proxy.user,
-            password: proxy.password || proxy.pass
-        };
-        if (type === 'https' || type === 'http') obj.type = 'http';
-        if (type === 'socks5' || type === 'socks') obj.type = 'socks5';
-        if (type === 'https' || !!proxy.tls) obj.tls = true;
-        const sni = proxy.servername ?? proxy.sni ?? proxy.server;
-        if (sni) obj.sni = sni;
-        return obj;
-    }
-
-    return base;
+    // Default for simple ones
+    return {
+        [type]: {
+            name,
+            server: proxy.server,
+            port: proxy.port,
+            udp_relay: proxy.udp !== false
+        }
+    };
 }
 
 function mapPolicyGroup(group) {
     const type = String(group.type || 'select').toLowerCase();
     const policies = Array.isArray(group.members) ? group.members.filter(Boolean) : [];
 
-    const base = {
-        name: group.name,
-        policies
-    };
-
     if (type === 'url-test' || type === 'urltest' || type === 'auto-test') {
         return {
-            ...base,
-            type: 'url-test',
-            interval: Number(group.options?.interval) || 600,
-            tolerance: Number(group.options?.tolerance) || 100,
-            timeout: Number(group.options?.timeout) || 5
+            auto_test: {
+                name: group.name,
+                policies,
+                interval: Number(group.options?.interval) || 600,
+                tolerance: Number(group.options?.tolerance) || 100,
+                timeout: Number(group.options?.timeout) || 5
+            }
         };
     }
 
     if (type === 'fallback') {
         return {
-            ...base,
-            type: 'fallback',
-            interval: Number(group.options?.interval) || 600,
-            timeout: Number(group.options?.timeout) || 5
+            fallback: {
+                name: group.name,
+                policies,
+                interval: Number(group.options?.interval) || 600,
+                timeout: Number(group.options?.timeout) || 5
+            }
         };
     }
 
     return {
-        ...base,
-        type: 'select'
+        select: {
+            name: group.name,
+            policies
+        }
     };
 }
 
@@ -218,40 +244,28 @@ function mapRule(rule) {
     const value = rule.value;
 
     if (type === 'final' || type === 'match') {
-        return { final: policy };
+        return { default: { policy } };
     }
 
     if (type === 'rule-set' && /^https?:\/\//i.test(value || '')) {
         return {
-            type: 'rule-set',
-            match: value,
-            policy,
-            update_interval: 86400
+            rule_set: {
+                match: value,
+                policy,
+                update_interval: 86400
+            }
         };
     }
 
-    // Standardize hyphenated names
-    const typeMap = {
-        'domain-suffix': 'domain-suffix',
-        'domain_suffix': 'domain-suffix',
-        'domain-keyword': 'domain-keyword',
-        'domain_keyword': 'domain-keyword',
-        'ip-cidr': 'ip-cidr',
-        'ip_cidr': 'ip-cidr',
-        'ip-cidr6': 'ip-cidr6',
-        'ip_cidr6': 'ip-cidr6',
-        'domain-regex': 'domain-regex',
-        'domain_regex': 'domain-regex',
-        'domain': 'domain'
-    };
-
-    const targetType = typeMap[type] || type.replace(/_/g, '-');
+    // Convert to underscore format for Egern
+    const targetType = type.replace(/-/g, '_');
     
     return {
-        type: targetType,
-        match: value,
-        policy,
-        ...(rule.noResolve ? { no_resolve: true } : {})
+        [targetType]: {
+            match: value,
+            policy,
+            ...(rule.noResolve ? { no_resolve: true } : {})
+        }
     };
 }
 
