@@ -330,7 +330,7 @@ function parseVmessUrl(url) {
         const proxy = {
             name: config.ps || `VMess-${config.add}`,
             type: 'vmess',
-            server: config.add,
+            server: config.add || config.host || config.sni || '',
             port: parseInt(config.port),
             uuid: config.id,
             alterId: parseInt(config.aid) || 0,
@@ -626,7 +626,7 @@ function parseTuicUrl(url) {
         };
 
         // SNI
-        if (params.get('sni')) {
+        if (params.has('sni')) {
             proxy.servername = params.get('sni');
             proxy.sni = params.get('sni');
         }
@@ -637,13 +637,18 @@ function parseTuicUrl(url) {
         }
 
         // Skip cert verify
-        if (params.get('allowInsecure') === '1' || params.get('insecure') === '1') {
+        if (params.get('allowInsecure') === '1' || params.get('insecure') === '1' || params.get('allow_insecure') === '1') {
             proxy['skip-cert-verify'] = true;
         }
         
         // 拥塞控制
         if (params.get('congestion_control')) {
             proxy['congestion-controller'] = params.get('congestion_control');
+        }
+
+        // UDP Relay Mode
+        if (params.get('udp_relay_mode')) {
+            proxy['udp-relay-mode'] = params.get('udp_relay_mode');
         }
 
         // [重要] dialer-proxy 链式代理
@@ -851,10 +856,10 @@ function parseAnytlsUrl(url) {
 
         const proxy = { name: name || `AnyTLS-${server}`, type: 'anytls', server, port, password };
         
-        if (params.get('sni')) {
+        if (params.has('sni')) {
             proxy.servername = params.get('sni');
             proxy.sni = params.get('sni');
-        } else if (params.get('peer')) {
+        } else if (params.has('peer')) {
             proxy.servername = params.get('peer');
             proxy.sni = params.get('peer');
         }

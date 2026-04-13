@@ -34,7 +34,7 @@ function mapTransport(proxy) {
 
     if (proxy.tls || !!proxy['reality-opts']) {
         transport.tls = {
-            sni: proxy.sni || proxy.servername || proxy.server,
+            sni: proxy.servername ?? proxy.sni ?? proxy.server,
             skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify),
             alpn: proxy.alpn || ['h2', 'http/1.1']
         };
@@ -63,7 +63,7 @@ function mapProxy(proxy) {
                 server: proxy.server,
                 port: proxy.port,
                 password: proxy.password,
-                sni: proxy.sni || proxy.server,
+                sni: proxy.servername ?? proxy.sni ?? proxy.server,
                 tfo: Boolean(proxy.tfo),
                 udp_relay: proxy.udp !== false,
                 skip_tls_verify: Boolean(proxy['skip-cert-verify'])
@@ -135,7 +135,7 @@ function mapProxy(proxy) {
                 server: proxy.server,
                 port: proxy.port,
                 auth: proxy.password,
-                sni: proxy.sni || proxy.server,
+                sni: proxy.servername ?? proxy.sni ?? proxy.server,
                 skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
             }
         };
@@ -160,7 +160,7 @@ function mapProxy(proxy) {
                 auth: proxy.password || proxy.auth_str,
                 up: proxy.up || '100 Mbps',
                 down: proxy.down || '100 Mbps',
-                sni: proxy.sni || proxy.server,
+                sni: proxy.servername ?? proxy.sni ?? proxy.server,
                 skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
             }
         };
@@ -174,7 +174,7 @@ function mapProxy(proxy) {
                 port: proxy.port,
                 uuid: proxy.uuid,
                 password: proxy.password,
-                sni: proxy.sni || proxy.server,
+                sni: proxy.servername ?? proxy.sni ?? proxy.server,
                 alpn: proxy.alpn || ['h3'],
                 udp_relay_mode: proxy.udp_relay_mode || 'native',
                 congestion_control: proxy.congestion_control || 'cubic',
@@ -213,7 +213,7 @@ function mapProxy(proxy) {
                 username: proxy.username || proxy.user,
                 password: proxy.password || proxy.pass,
                 tls: type === 'https' || !!proxy.tls,
-                sni: proxy.sni || proxy.server,
+                sni: proxy.servername ?? proxy.sni ?? proxy.server,
                 skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
             }
         };
@@ -228,7 +228,7 @@ function mapProxy(proxy) {
                 username: proxy.username || proxy.user,
                 password: proxy.password || proxy.pass,
                 tls: Boolean(proxy.tls),
-                sni: proxy.sni || proxy.server,
+                sni: proxy.servername ?? proxy.sni ?? proxy.server,
                 skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
             }
         };
@@ -241,7 +241,7 @@ function mapProxy(proxy) {
                 server: proxy.server,
                 port: proxy.port,
                 password: proxy.password,
-                sni: proxy.sni || proxy.server,
+                sni: proxy.servername ?? proxy.sni ?? proxy.server,
                 skip_tls_verify: Boolean(proxy['skip-cert-verify'] || proxy.skipCertVerify)
             }
         };
