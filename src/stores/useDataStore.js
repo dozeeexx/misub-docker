@@ -258,8 +258,11 @@ export const useDataStore = defineStore('data', () => {
             }
         });
 
-        if (modified && isDev) {
-            console.debug('[DataStore] Cleaned up manual node references from profiles');
+        if (modified) {
+            profiles.value = [...profiles.value]; // 强制触发响应式更新
+            if (isDev) {
+                console.debug('[DataStore] Cleaned up manual node references from profiles');
+            }
         }
     }
 
@@ -278,8 +281,11 @@ export const useDataStore = defineStore('data', () => {
             }
         });
 
-        if (modified && isDev) {
-            console.debug('[DataStore] Cleaned up subscription references from profiles');
+        if (modified) {
+            profiles.value = [...profiles.value]; // 强制触发响应式更新
+            if (isDev) {
+                console.debug('[DataStore] Cleaned up subscription references from profiles');
+            }
         }
     }
 
