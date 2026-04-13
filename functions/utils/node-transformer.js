@@ -586,7 +586,7 @@ function applyModifier(key, value, modifier, record) {
     }
 }
 
-function renderTemplate(template, vars, record) {
+export function renderTemplate(template, vars, record) {
     return String(template || '').replace(/\{([a-zA-Z0-9_]+)(?::([a-zA-Z0-9]+))?\}/g, (_, key, modifier) => {
         let v;
         

@@ -112,11 +112,17 @@ export function convertClashProxyToUrl(proxy) {
                 if (wsOpts.path) params.push(`path=${encodeURIComponent(wsOpts.path)}`);
                 if (wsOpts.headers?.Host) params.push(`host=${encodeURIComponent(wsOpts.headers.Host)}`);
             }
+            const httpupgradeOpts = proxy['httpupgrade-opts'] || proxy.httpupgradeOpts;
+            if (httpupgradeOpts) {
+                if (httpupgradeOpts.path) params.push(`path=${encodeURIComponent(httpupgradeOpts.path)}`);
+                if (httpupgradeOpts.host) params.push(`host=${encodeURIComponent(httpupgradeOpts.host)}`);
+            }
             const realityOpts = proxy['reality-opts'];
             if (realityOpts) {
                 params.push('security=reality');
                 if (realityOpts['public-key']) params.push(`pbk=${encodeURIComponent(realityOpts['public-key'])}`);
                 if (realityOpts['short-id']) params.push(`sid=${encodeURIComponent(realityOpts['short-id'])}`);
+                if (realityOpts['spider-x']) params.push(`spx=${encodeURIComponent(realityOpts['spider-x'])}`);
             } else if (proxy.tls) {
                 params.push('security=tls');
             }
@@ -170,6 +176,7 @@ export function convertClashProxyToUrl(proxy) {
                 if (obfsOpts.mode) params.push(`obfs=${obfsOpts.mode}`);
                 if (obfsOpts.host) params.push(`obfs-host=${encodeURIComponent(obfsOpts.host)}`);
             }
+            if (proxy.ecn) params.push('ecn=true');
             const psk = proxy.psk || proxy.password || '';
             const query = params.length > 0 ? `?${params.join('&')}` : '';
             return `snell://${encodeURIComponent(psk)}@${server}:${port}${query}#${encodeURIComponent(name)}`;

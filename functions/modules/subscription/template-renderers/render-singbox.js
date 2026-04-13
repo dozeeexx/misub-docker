@@ -114,6 +114,13 @@ function buildOutbound(proxy) {
                 type: 'grpc',
                 service_name: grpcOpts?.['grpc-service-name'] || grpcOpts?.serviceName || 'grpc'
             };
+        } else if (network === 'httpupgrade') {
+            const httpupgradeOpts = proxy['httpupgrade-opts'] || proxy.httpupgradeOpts;
+            outbound.transport = {
+                type: 'httpupgrade',
+                path: httpupgradeOpts?.path || '/',
+                host: httpupgradeOpts?.host || ''
+            };
         }
 
         if (proxy.tls || proxy.sni || proxy.servername) {
@@ -122,7 +129,15 @@ function buildOutbound(proxy) {
                 server_name: proxy.sni || proxy.servername || server,
                 insecure: proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true
             };
-            
+
+            const fingerprint = proxy['client-fingerprint'] || proxy.clientFingerprint || proxy.fp;
+            if (fingerprint) {
+                outbound.tls.utls = {
+                    enabled: true,
+                    fingerprint: fingerprint
+                };
+            }
+
             const realityOpts = proxy['reality-opts'] || proxy.realityOpts;
             if (realityOpts) {
                 outbound.tls.reality = {
@@ -130,6 +145,9 @@ function buildOutbound(proxy) {
                     public_key: realityOpts['public-key'] || realityOpts.publicKey || '',
                     short_id: realityOpts['short-id'] || realityOpts.shortId || ''
                 };
+                if (realityOpts['spider-x'] || realityOpts.spiderX) {
+                    outbound.tls.reality.spider_x = realityOpts['spider-x'] || realityOpts.spiderX;
+                }
             }
         }
         return outbound;
