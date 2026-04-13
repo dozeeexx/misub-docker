@@ -627,14 +627,14 @@ function parseTuicUrl(url) {
             server,
             port,
             uuid,
-            password,
-            token // Keep for compatibility
+            password
         };
 
         // SNI
-        if (params.has('sni')) {
-            proxy.servername = params.get('sni');
-            proxy.sni = params.get('sni');
+        const sni = params.get('sni');
+        if (sni) {
+            proxy.servername = sni;
+            proxy.sni = sni;
         }
 
         // ALPN
@@ -649,7 +649,7 @@ function parseTuicUrl(url) {
         
         // 拥塞控制
         if (params.get('congestion_control')) {
-            proxy['congestion-controller'] = params.get('congestion_control');
+            proxy['congestion-control'] = params.get('congestion_control');
         }
 
         // UDP Relay Mode
@@ -869,12 +869,10 @@ function parseAnytlsUrl(url) {
             password 
         };
         
-        if (params.has('sni')) {
-            proxy.servername = params.get('sni');
-            proxy.sni = params.get('sni');
-        } else if (params.has('peer')) {
-            proxy.servername = params.get('peer');
-            proxy.sni = params.get('peer');
+        const sni = params.get('sni') || params.get('peer');
+        if (sni) {
+            proxy.servername = sni;
+            proxy.sni = sni;
         }
         
         if (params.get('alpn')) proxy.alpn = params.get('alpn').split(',');

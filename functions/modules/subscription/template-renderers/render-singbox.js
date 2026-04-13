@@ -53,6 +53,8 @@ function buildOutbound(proxy) {
             server_port: serverPort,
             uuid: proxy.uuid || '',
             security: proxy.cipher || 'auto',
+            udp_relay_mode: proxy['udp-relay-mode'] || 'native',
+            congestion_control: proxy['congestion-control'] || 'cubic',
             alter_id: Number.isFinite(Number(proxy.alterId)) ? Number(proxy.alterId) : 0
         };
 
@@ -183,7 +185,7 @@ function buildOutbound(proxy) {
             }
         };
         if (proxy.alpn) outbound.tls.alpn = Array.isArray(proxy.alpn) ? proxy.alpn : [proxy.alpn];
-        if (proxy['congestion-controller']) outbound.congestion_control = proxy['congestion-controller'];
+        if (proxy['congestion-control']) outbound.congestion_control = proxy['congestion-control'];
         if (proxy['udp-relay-mode']) outbound.udp_relay_mode = proxy['udp-relay-mode'];
         return outbound;
     }
