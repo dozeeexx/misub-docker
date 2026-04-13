@@ -210,7 +210,9 @@ export function convertClashProxyToUrl(proxy) {
         }
 
         if (type === 'tuic') {
-            const token = proxy.token || proxy.password || '';
+            const uuid = proxy.uuid || '';
+            const password = proxy.password || '';
+            const auth = password ? `${uuid}:${password}` : uuid;
             const params = [];
             if (proxy.sni !== undefined) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
             if (proxy.alpn) {
@@ -222,7 +224,7 @@ export function convertClashProxyToUrl(proxy) {
             if (proxy['udp-relay-mode']) params.push(`udp_relay_mode=${encodeURIComponent(proxy['udp-relay-mode'])}`);
             if (proxy['dialer-proxy']) params.push(`dp=${encodeURIComponent(proxy['dialer-proxy'])}`);
             const query = params.length > 0 ? `?${params.join('&')}` : '';
-            return `tuic://${encodeURIComponent(token)}@${server}:${port}${query}#${encodeURIComponent(name)}`;
+            return `tuic://${auth}@${server}:${port}${query}#${encodeURIComponent(name)}`;
         }
 
         if (type === 'wireguard') {

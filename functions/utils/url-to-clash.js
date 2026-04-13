@@ -603,6 +603,10 @@ function parseTuicUrl(url) {
             token = decodeURIComponent(token);
         } catch { }
 
+        const tokenParts = token.split(':');
+        const uuid = tokenParts[0] || '';
+        const password = tokenParts[1] || '';
+
         let serverPart = body.substring(atIndex + 1);
         const queryIndex = serverPart.indexOf('?');
         const hashIndex = serverPart.indexOf('#');
@@ -622,7 +626,9 @@ function parseTuicUrl(url) {
             type: 'tuic',
             server,
             port,
-            token
+            uuid,
+            password,
+            token // Keep for compatibility
         };
 
         // SNI
@@ -851,10 +857,17 @@ function parseAnytlsUrl(url) {
         }
 
         const { server, port } = parseHostPort(hostPortStr);
+        const safePort = isNaN(port) ? 443 : port;
         const params = parseQueryParams(url);
         const name = extractName(url);
 
-        const proxy = { name: name || `AnyTLS-${server}`, type: 'anytls', server, port, password };
+        const proxy = { 
+            name: name || `AnyTLS-${server}`, 
+            type: 'anytls', 
+            server, 
+            port: safePort, 
+            password 
+        };
         
         if (params.has('sni')) {
             proxy.servername = params.get('sni');
