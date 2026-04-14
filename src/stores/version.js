@@ -11,7 +11,7 @@ export const useVersionStore = defineStore('version', () => {
     const showUpdateNotice = ref(false);
     const upstreamRepo = 'imzyb/MiSub';
 
-    // 本地更新日志 (v2.5.2)
+    // 本地更新日志 (v2.5.3)
     const localChangelog = `✨ **核心特性**
 - **自定义配置隔离**：当检测到使用远程自定义模板时，内置规则等级将强制禁用，彻底解决内置规则对外部模板的逻辑冲突。
 
@@ -19,6 +19,7 @@ export const useVersionStore = defineStore('version', () => {
 - **智能 UI 锁定**：全局设置与预览弹窗现已支持状态自适应。启用外部配置后，系统会自动锁定受影响的选择项并提供明确的状态引导。
 
 🚀 **性能与稳定性**
+- **单 KV 模式缓存修复**：针对单 KV 存储模式下的界面回退 Bug，引入了多重边缘缓存控制头（CDN-Cache-Control/Surrogate-Control），并优化了 SPA 资源的内部重定向机制，确保 UI 更新实时生效。
 - **解析管线优化**：优化了统一模板渲染管线在无规则等级模式下的处理一致性。
 - **搜索稳定性修复**：修复了仪表盘与手工节点页面在高频搜索时可能导致的 ref 状态污染崩溃问题。
 
