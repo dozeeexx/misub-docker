@@ -147,6 +147,9 @@ function clashProxyToLoonResult(proxy) {
         parts.push(String(port));
         parts.push(loonQuote(proxy.password || ''));
         
+        // 虽然 Trojan 默认是 TLS，但在 Loon 中配 WS 传输时通常需要显式开启 over-tls
+        parts.push('over-tls:true');
+
         if (proxy.network === 'ws') {
             parts.push('transport:ws');
             const wsOpts = proxy['ws-opts'] || proxy.wsOpts;
