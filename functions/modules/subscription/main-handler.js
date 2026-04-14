@@ -467,22 +467,6 @@ export async function handleMisubRequest(context) {
 
     if (shouldUseBuiltin) {
         try {
-            const totalUserInfo = targetMisubs.reduce((acc, sub) => {
-                if (sub.enabled && sub.userInfo) {
-                    return {
-                        upload: (acc.upload || 0) + (sub.userInfo.upload || 0),
-                        download: (acc.download || 0) + (sub.userInfo.download || 0),
-                        total: (acc.total || 0) + (sub.userInfo.total || 0),
-                        expire: Math.max(acc.expire || 0, sub.userInfo.expire || 0)
-                    };
-                }
-                return acc;
-            }, { upload: 0, download: 0, total: 0, expire: 0 });
-
-            const userInfoHeader = totalUserInfo.total > 0 
-                ? `upload=${totalUserInfo.upload}; download=${totalUserInfo.download}; total=${totalUserInfo.total}; expire=${totalUserInfo.expire}`
-                : null;
-
             const { content: finalContent, contentType, headers: resultHeaders } = await ProcessorService.renderOutput({
                 targetFormat,
                 combinedNodeList,
@@ -493,9 +477,8 @@ export async function handleMisubRequest(context) {
                 managedConfigUrl,
                 storageAdapter,
                 userInfoHeader
-            });
+            }).catch(e => { throw e; });
 
-            const isJson = targetFormat === 'singbox' || targetFormat === 'sing-box';
             const responseHeaders = new Headers({
                 "Content-Disposition": `attachment; filename="${encodeURIComponent(subName)}"; filename*=utf-8''${encodeURIComponent(subName)}`,
                 'Content-Type': contentType,
@@ -512,39 +495,11 @@ export async function handleMisubRequest(context) {
             Object.entries(resultHeaders).forEach(([k, v]) => responseHeaders.set(k, v));
             Object.entries(cacheHeaders).forEach(([key, value]) => responseHeaders.set(key, value));
 
-            if (!url.searchParams.has('callback_token') && !shouldSkipLogging) {
-                const clientIp = request.headers.get('CF-Connecting-IP')
-                    || request.headers.get('X-Real-IP')
-                    || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
-                    || 'N/A';
-                context.waitUntil(
-                    sendEnhancedTgNotification(
-                        config,
-                        '🛰️ *订阅被访问* (内置转换)',
-                        clientIp,
-                        `*域名:* \`${domain}\`\n*客户端:* \`${userAgentHeader}\`\n*请求格式:* \`${targetFormat}\`\n*订阅组:* \`${subName}\``
-                    )
-                );
-
-                if (config.enableAccessLog) {
-                    logAccessSuccess({
-                        context,
-                        env,
-                        request,
-                        userAgentHeader,
-                        targetFormat: `builtin-${targetFormat}`,
-                        token,
-                        profileIdentifier,
-                        subName,
-                        domain
-                    });
-                }
-            }
-
             return new Response(finalContent, { headers: responseHeaders });
 
         } catch (e) {
-            console.error(`[Builtin${targetFormat}] Generation failed:`, e);
+            console.error(`[CRITICAL] Generation crash:`, e);
+            return new Response(`[MiSub Exception] 500 Internal Server Error\n\nDetail: ${e.message}\nStack: ${e.stack}\n\nFormat: ${targetFormat}`, { status: 500 });
         }
     }
 
