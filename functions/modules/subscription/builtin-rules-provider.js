@@ -148,22 +148,23 @@ export const POLICY_GROUPS = {
     // 链式代理：中转优化
     RELAY: (proxies) => {
         const proxyNames = proxies.map(p => p.tag || p.name);
-        const { regionPolicyGroups, regionSelectNames } = _generateRegionGroups(proxies);
+        const { regionSelectGroups, regionSupportGroups, regionNames } = _generateRegionGroups(proxies);
         
         return [
-            { name: DEFAULT_RELAY_GROUP, type: 'select', proxies: ['🔗 链式代理', '🚀 常用节点', ...regionSelectNames, 'DIRECT'] },
+            { name: DEFAULT_RELAY_GROUP, type: 'select', proxies: ['🔗 链式代理', '🚀 常用节点', ...regionNames, 'DIRECT'] },
             { name: '🔗 链式代理', type: 'relay', proxies: ['入口节点', '落地节点'] },
             { name: '入口节点', type: 'select', proxies: [AUTO_SELECT_GROUP, MANUAL_SELECT_GROUP, 'DIRECT'] },
             { name: '落地节点', type: 'select', proxies: [AUTO_SELECT_GROUP, MANUAL_SELECT_GROUP, 'DIRECT'] },
-            ...regionPolicyGroups,
-            { name: '🚀 常用节点', type: 'select', proxies: [AUTO_SELECT_GROUP, FALLBACK_GROUP, MANUAL_SELECT_GROUP, ...regionSelectNames, 'DIRECT'] },
+            ...regionSelectGroups,
+            { name: '🚀 常用节点', type: 'select', proxies: [AUTO_SELECT_GROUP, FALLBACK_GROUP, MANUAL_SELECT_GROUP, ...regionNames, 'DIRECT'] },
             { name: AUTO_SELECT_GROUP, type: 'url-test', proxies: proxyNames },
             { name: FALLBACK_GROUP, type: 'fallback', proxies: proxyNames },
             { name: MANUAL_SELECT_GROUP, type: 'select', proxies: proxyNames },
             { name: '🎬 视频广告', type: 'select', proxies: ['REJECT', 'DIRECT', DEFAULT_RELAY_GROUP] },
             { name: '🎥 流媒体', type: 'select', proxies: [DEFAULT_RELAY_GROUP, '🚀 常用节点', 'DIRECT'] },
             { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', DEFAULT_RELAY_GROUP, '🚀 常用节点'] },
-            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', DEFAULT_RELAY_GROUP, '🚀 常用节点'] }
+            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', DEFAULT_RELAY_GROUP, '🚀 常用节点'] },
+            ...regionSupportGroups
         ];
     }
 };
