@@ -406,8 +406,17 @@ export async function handleMisubRequest(context) {
                 if (regex) {
                     generationSettings.operators.push({
                         type: 'rename',
-                        regex,
-                        replace: replace || ''
+                        enabled: true,
+                        params: {
+                            regex: {
+                                enabled: true,
+                                rules: [{
+                                    pattern: regex,
+                                    replacement: replace || '',
+                                    flags: 'gi'
+                                }]
+                            }
+                        }
                     });
                 }
             });
