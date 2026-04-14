@@ -689,16 +689,22 @@ export async function handleMisubRequest(context) {
         // 返回诊断信息以辅助调试
         return new Response(JSON.stringify({
             error: e.name || 'Error',
+            type: e.constructor?.name || 'Unknown',
             message: e.message || String(e),
             stack: e.stack || '',
-            context: {
+            diagnostics: {
                 timestamp: new Date().toISOString(),
-                userAgent: context.request.headers.get('User-Agent'),
-                url: context.request.url
+                userAgent: request.headers.get('User-Agent'),
+                url: request.url,
+                method: request.method,
+                targetFormat: targetFormat || 'unknown'
             }
         }, null, 2), { 
             status: 500,
-            headers: { 'Content-Type': 'application/json; charset=utf-8' }
+            headers: { 
+                'Content-Type': 'application/json; charset=utf-8',
+                'Access-Control-Allow-Origin': '*'
+            }
         });
     }
 }
