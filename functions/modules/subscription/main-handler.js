@@ -467,6 +467,22 @@ export async function handleMisubRequest(context) {
 
     if (shouldUseBuiltin) {
         try {
+            const totalUserInfo = targetMisubs.reduce((acc, sub) => {
+                if (sub.enabled && sub.userInfo) {
+                    return {
+                        upload: (acc.upload || 0) + (sub.userInfo.upload || 0),
+                        download: (acc.download || 0) + (sub.userInfo.download || 0),
+                        total: (acc.total || 0) + (sub.userInfo.total || 0),
+                        expire: Math.max(acc.expire || 0, sub.userInfo.expire || 0)
+                    };
+                }
+                return acc;
+            }, { upload: 0, download: 0, total: 0, expire: 0 });
+
+            const userInfoHeader = totalUserInfo.total > 0 
+                ? `upload=${totalUserInfo.upload}; download=${totalUserInfo.download}; total=${totalUserInfo.total}; expire=${totalUserInfo.expire}`
+                : null;
+
             const { content: finalContent, contentType, headers: resultHeaders } = await ProcessorService.renderOutput({
                 targetFormat,
                 combinedNodeList,
