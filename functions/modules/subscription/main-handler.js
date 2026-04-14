@@ -141,12 +141,15 @@ export async function handleMisubRequest(context) {
 
     const DEFAULT_EXPIRED_NODE = `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent('您的订阅已失效')}`;
 
+    let currentProfile = null;
+
     if (profileIdentifier) {
         // [修正] 使用 config 變量
         if (!token || token !== config.profileToken) {
             return new Response('Invalid Profile Token', { status: 403 });
         }
-        const profile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
+        currentProfile = allProfiles.find(p => (p.customId && p.customId === profileIdentifier) || p.id === profileIdentifier);
+        const profile = currentProfile;
         if (profile && profile.enabled) {
             // Check if the profile has an expiration date and if it's expired
             if (profile.expiresAt) {
@@ -272,6 +275,7 @@ export async function handleMisubRequest(context) {
     const engineParam = (url.searchParams.get('engine') || '').toLowerCase();
     const effectiveEngine = engineParam || (builtinParam === 'external' ? 'external' : (builtinParam === 'true' ? 'builtin' : '')) || profileSub.engineMode || globalSub.engineMode || 'builtin';
     const isExternalMode = effectiveEngine === 'external';
+    const useBuiltin = !isExternalMode;
 
     
     const globalTemplateUrl = resolveTemplateUrl(config.transformConfigMode, config.transformConfig, '');
