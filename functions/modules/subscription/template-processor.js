@@ -190,10 +190,11 @@ function pruneInvalidMembers(model) {
 }
 
 /**
- * 递归修剪所有成员为空的策略组
+ * 模板模型智能优化器（主入口）
+ * 包含：自动解析过滤器、注入地区组、展开占位符、清理无效引用及空组
  * @param {Object} model - 统一模板模型
  */
-function pruneEmptyGroups(model) {
+export function applySmartModelOptimizations(model) {
     const { ruleLevel } = model.meta;
     
     // 1. 执行现有的正则过滤器解析
@@ -250,7 +251,7 @@ function pruneEmptyGroups(model) {
     // 7. 最后进行全局修剪与去重
     dedupeGroupsByName(model);
     pruneInvalidMembers(model); // 清理无效引用
-    pruneEmptyGroups(model);    // 清理空组
+    pruneEmptyGroups(model);    // 递归清理最终可能产生的新空组
 
     return model;
 }
