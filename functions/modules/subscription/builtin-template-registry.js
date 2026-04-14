@@ -12,13 +12,14 @@ ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/mast
 ruleset=🎯 全球直连,[]GEOIP,CN
 ruleset=🐟 漏网之鱼,[]FINAL
 
-custom_proxy_group=🚀 节点选择\`select\`[]♻️ 自动选择\`[]☑️ 手动切换\`[]DIRECT
-custom_proxy_group=♻️ 自动选择\`url-test\`[]<%regionStrategyChain%>\`http://www.gstatic.com/generate_204\`300,,50
-custom_proxy_group=☑️ 手动切换\`select\`.*
-custom_proxy_group=🎬 流媒体\`select\`[]🚀 节点选择\`[]♻️ 自动选择\`[]DIRECT
-custom_proxy_group=📲 电报消息\`select\`[]🚀 节点选择\`[]♻️ 自动选择\`[]DIRECT
-custom_proxy_group=🎯 全球直连\`select\`[]DIRECT\`[]🚀 节点选择
-custom_proxy_group=🐟 漏网之鱼\`select\`[]🚀 节点选择\`[]♻️ 自动选择\`[]DIRECT
+custom_proxy_group=🚀 节点选择`select`[]♻️ 自动选择`[]🔯 故障转移`[]<%regionStrategyChain%>`[]☑ * 手动切换`[]DIRECT
+custom_proxy_group=♻️ 自动选择`url-test`.*`http://www.gstatic.com/generate_204`300,,50
+custom_proxy_group=🔯 故障转移`fallback`.*`http://www.gstatic.com/generate_204`300,,50
+custom_proxy_group=☑ * 手动切换`select`.*
+custom_proxy_group=🎬 流媒体`select`[]🚀 节点选择`[]♻️ 自动选择`[]DIRECT
+custom_proxy_group=📲 电报消息`select`[]🚀 节点选择`[]♻️ 自动选择`[]DIRECT
+custom_proxy_group=🎯 全球直连`select`[]DIRECT`[]🚀 节点选择
+custom_proxy_group=🐟 漏网之鱼`select`[]🚀 节点选择`[]♻️ 自动选择`[]DIRECT
 
 enable_rule_generator=true
 overwrite_original_rules=true`
@@ -103,7 +104,7 @@ ruleset=🚀 节点选择,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/mast
 ruleset=🎯 全球直连,[]GEOIP,CN
 ruleset=🐟 漏网之鱼,[]FINAL
 
-custom_proxy_group=🚀 节点选择\`select\`[]♻️ 自动选择\`[]🔯 故障转移\`[]🇭🇰 香港节点\`[]🇹🇼 台湾节点\`[]🇸🇬 狮城节点\`[]🇯🇵 日本节点\`[]🇺🇲 美国节点\`[]☑️ 手动切换\`[]DIRECT
+custom_proxy_group=🚀 节点选择\`select\`[]♻️ 自动选择\`[]🔯 故障转移\`[]<%regionStrategyChain%>\`[]☑️ 手动切换\`[]DIRECT
 custom_proxy_group=☑️ 手动切换\`select\`.*
 custom_proxy_group=♻️ 自动选择\`url-test\`.*\`http://www.gstatic.com/generate_204\`300,,50
 custom_proxy_group=🔯 故障转移\`fallback\`.*\`http://www.gstatic.com/generate_204\`300,,50

@@ -20,6 +20,39 @@ function generateRegionData(proxies) {
 }
 
 /**
+ * 清理策略组中不存在的成员引用
+ * @param {Array} proxyGroups - 策略组对象数组
+ * @param {Array} proxies - 可用代理对象数组
+ * @returns {Array} 清理后的策略组数组
+ */
+export function pruneProxyGroups(proxyGroups, proxies) {
+    const validTargetNames = new Set([
+        ...proxies.map(p => p.tag || p.name),
+        ...proxyGroups.map(g => g.name),
+        ...['DIRECT', 'REJECT', 'REJECT-DROP', 'ANY'] // 各平台通用保留字
+    ]);
+
+    return proxyGroups.map(group => {
+        if (!Array.isArray(group.proxies)) return group;
+        
+        const newProxies = group.proxies.filter(p => {
+            // regex 过滤器的内容不应在此时剔除
+            if (typeof p === 'string' && (p.startsWith('(') || p.includes('.*') || p.includes('+') || p.includes('$'))) {
+                return true;
+            }
+            return validTargetNames.has(p);
+        });
+
+        // 如果该组原本由工厂生成，但剔除后变为空，不应直接删除（避免破坏上一级引用），
+        // 而是至少保留 DIRECT 作为一个兜底，除非该组本身就是子成员。
+        return {
+            ...group,
+            proxies: newProxies.length > 0 ? newProxies : ['DIRECT']
+        };
+    });
+}
+
+/**
  * 策略组工厂
  */
 export const POLICY_GROUPS = {
