@@ -29,6 +29,11 @@ export function pruneProxyGroups(proxyGroups, proxies) {
     const validTargetNames = new Set([
         ...proxies.map(p => p.tag || p.name),
         ...proxyGroups.map(g => g.name),
+        DEFAULT_SELECT_GROUP,
+        DEFAULT_RELAY_GROUP,
+        AUTO_SELECT_GROUP,
+        FALLBACK_GROUP,
+        MANUAL_SELECT_GROUP,
         ...['DIRECT', 'REJECT', 'REJECT-DROP', 'ANY'] // 各平台通用保留字
     ]);
 
@@ -107,11 +112,11 @@ export const POLICY_GROUPS = {
             { name: FALLBACK_GROUP, type: 'fallback', proxies: proxyNames },
             { name: MANUAL_SELECT_GROUP, type: 'select', proxies: proxyNames },
             ...regionPolicyGroups,
-            { name: '🤖 智能 AI', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, '🇺🇸 美国节点', '🇸🇬 狮城节点', '🇯🇵 日本节点', 'DIRECT'] },
+            { name: '🤖 智能 AI', type: 'select', proxies: ['🇺🇸 美国节点', '🇸🇬 狮城节点', '🇯🇵 日本节点', AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP, 'DIRECT'] },
             { name: '🎬 视频广告', type: 'select', proxies: ['REJECT', 'DIRECT', DEFAULT_SELECT_GROUP] },
-            { name: '🎥 流媒体', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, 'DIRECT'] },
-            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] },
-            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] }
+            { name: '🎥 流媒体', type: 'select', proxies: [AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP, 'DIRECT'] },
+            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP] },
+            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP] }
         ];
     },
     // 完整配置：细化分类
@@ -125,14 +130,14 @@ export const POLICY_GROUPS = {
             { name: FALLBACK_GROUP, type: 'fallback', proxies: proxyNames },
             { name: MANUAL_SELECT_GROUP, type: 'select', proxies: proxyNames },
             ...regionPolicyGroups,
-            { name: '🤖 智能 AI', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, '🇺🇸 美国节点', '🇸🇬 狮城节点', '🇯🇵 日本节点', 'DIRECT'] },
+            { name: '🤖 智能 AI', type: 'select', proxies: ['🇺🇸 美国节点', '🇸🇬 狮城节点', '🇯🇵 日本节点', AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP, 'DIRECT'] },
             { name: '🎬 视频广告', type: 'select', proxies: ['REJECT', 'DIRECT', DEFAULT_SELECT_GROUP] },
-            { name: '🎥 流媒体', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, 'DIRECT'] },
-            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] },
-            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] },
-            { name: '📲 Telegram', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, 'DIRECT'] },
-            { name: '🎧 Spotify', type: 'select', proxies: [DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP, 'DIRECT'] },
-            { name: '🎮 游戏平台', type: 'select', proxies: ['DIRECT', DEFAULT_SELECT_GROUP, AUTO_SELECT_GROUP] }
+            { name: '🎥 流媒体', type: 'select', proxies: [AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP, 'DIRECT'] },
+            { name: '🍎 Apple', type: 'select', proxies: ['DIRECT', AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP] },
+            { name: 'Ⓜ️ Microsoft', type: 'select', proxies: ['DIRECT', AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP] },
+            { name: '📲 Telegram', type: 'select', proxies: [AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP, 'DIRECT'] },
+            { name: '🎧 Spotify', type: 'select', proxies: [AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP, 'DIRECT'] },
+            { name: '🎮 游戏平台', type: 'select', proxies: ['DIRECT', AUTO_SELECT_GROUP, DEFAULT_SELECT_GROUP] }
         ];
     },
     // 链式代理：中转优化
