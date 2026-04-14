@@ -1,5 +1,5 @@
 import { StorageFactory } from '../../storage-adapter.js';
-import { migrateConfigSettings, formatBytes, migrateProfileIds } from '../utils.js';
+import { migrateConfigSettings, formatBytes, migrateProfileIds, base64EncodeUtf8 } from '../utils.js';
 import { generateCombinedNodeList } from '../../services/subscription-service.js';
 import { sendEnhancedTgNotification } from '../notifications.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from '../config.js';
@@ -466,7 +466,7 @@ export async function handleMisubRequest(context) {
     // 1. If 'nodes' format requested, return Base64 nodes directly (DataSource for external converters)
     if (targetFormat === 'nodes') {
         const contentToEncode = isProfileExpired ? (DEFAULT_EXPIRED_NODE + '\n') : combinedNodeList;
-        return new Response(btoa(unescape(encodeURIComponent(contentToEncode))), { 
+        return new Response(base64EncodeUtf8(contentToEncode), { 
             headers: { 
                 "Content-Type": "text/plain; charset=utf-8", 
                 'Cache-Control': 'no-store, no-cache',
@@ -553,7 +553,7 @@ export async function handleMisubRequest(context) {
             }
         }
 
-        return new Response(btoa(unescape(encodeURIComponent(contentToEncode))), { headers });
+        return new Response(base64EncodeUtf8(contentToEncode), { headers });
     }
 
 
@@ -681,5 +681,5 @@ export async function handleMisubRequest(context) {
         base64Headers[key] = value;
     });
 
-    return new Response(btoa(unescape(encodeURIComponent(combinedNodeList))), { headers: base64Headers });
+    return new Response(base64EncodeUtf8(combinedNodeList), { headers: base64Headers });
 }
