@@ -49,7 +49,9 @@ export function groupNodeLinesByRegion(nodes = []) {
             // 2. 回退到正则匹配逻辑
             for (const { name: groupName, pattern } of REGION_GROUP_PATTERNS) {
                 if (pattern.test(tagName)) {
-                    region = groupName.split(' ')[1].replace('节点', '');
+                    // [核心修复] 增强提取能力：直接由预设名称提取中文核心地名，解决 split 导致的问题
+                    const match = groupName.match(/[\u4e00-\u9fa5]+/);
+                    region = match ? match[0].replace('节点', '') : '其他';
                     break;
                 }
             }

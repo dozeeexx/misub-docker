@@ -349,7 +349,11 @@ export async function handleMisubRequest(context) {
             userAgentHeader,
             targetMisubs,
             prependedContentForSubconverter,
-            generationSettings
+            {
+                ...generationSettings,
+                // [强制透传] 确保 ruleLevel 在订阅组内能够生效
+                ruleLevel: ruleLevel || generationSettings.ruleLevel
+            }
         );
         const sourceNames = targetMisubs
             .filter(s => typeof s?.url === 'string' && s.url.startsWith('http'))
