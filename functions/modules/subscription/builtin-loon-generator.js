@@ -7,7 +7,7 @@
  * 2. 自动测速分组
  * 3. 节点与分组图标 (Icon) 支持
  * 4. #!MANAGED-CONFIG 支持
- * 5. 完善的 [General] 与 [Rule] 规则
+ * 5. 完善 of the [General] 与 [Rule] 规则
  */
 
 import { urlToClashProxy } from '../../utils/url-to-clash.js';
@@ -39,10 +39,12 @@ function sanitizeNodeName(name) {
  */
 function loonQuote(value) {
     if (!value) return '';
-    if (/[,\s"=]/.test(value)) {
-        return `"${value.replace(/"/g, '\\"')}"`;
+    const strValue = String(value);
+    // 如果包含逗号、空格、等号、引号，则需要加双引号并转义内部引号
+    if (/[,\s"=]/.test(strValue)) {
+        return `"${strValue.replace(/"/g, '\\"')}"`;
     }
-    return value;
+    return strValue;
 }
 
 /**
@@ -86,7 +88,7 @@ function clashProxyToLoonResult(proxy) {
         if (proxy.udp) parts.push('udp-relay:true');
         if (proxy.obfs) {
             parts.push(`obfs:${proxy.obfs}`);
-            if (proxy['obfs-host']) parts.push(`obfs-host:${proxy['obfs-host']}`);
+            if (proxy['obfs-host']) parts.push(`obfs-host:${loonQuote(proxy['obfs-host'])}`);
         }
     } else if (type === 'vmess') {
         parts.push(`${name} = vmess`);
@@ -99,8 +101,8 @@ function clashProxyToLoonResult(proxy) {
         if (proxy.network === 'ws') {
             parts.push('transport:ws');
             const wsOpts = proxy['ws-opts'] || proxy.wsOpts;
-            if (wsOpts?.path) parts.push(`path:${wsOpts.path}`);
-            if (wsOpts?.headers?.Host) parts.push(`host:${wsOpts.headers.Host}`);
+            if (wsOpts?.path) parts.push(`path:${loonQuote(wsOpts.path)}`);
+            if (wsOpts?.headers?.Host) parts.push(`host:${loonQuote(wsOpts.headers.Host)}`);
         }
         appendTlsParams(parts, proxy);
     } else if (type === 'vless') {
@@ -110,7 +112,7 @@ function clashProxyToLoonResult(proxy) {
         parts.push(`"${proxy.uuid || ''}"`);
 
         if (proxy.flow) {
-            parts.push(`flow:${proxy.flow}`);
+            parts.push(`flow:${loonQuote(proxy.flow)}`);
         }
 
         if (proxy.network) {
@@ -118,16 +120,16 @@ function clashProxyToLoonResult(proxy) {
             
             if (proxy.network === 'ws') {
                 const wsOpts = proxy['ws-opts'] || proxy.wsOpts;
-                if (wsOpts?.path) parts.push(`path:${wsOpts.path}`);
-                if (wsOpts?.headers?.Host) parts.push(`host:${wsOpts.headers.Host}`);
+                if (wsOpts?.path) parts.push(`path:${loonQuote(wsOpts.path)}`);
+                if (wsOpts?.headers?.Host) parts.push(`host:${loonQuote(wsOpts.headers.Host)}`);
             } else if (proxy.network === 'grpc') {
                 const grpcOpts = proxy['grpc-opts'] || proxy.grpcOpts;
-                if (grpcOpts?.['grpc-service-name']) parts.push(`grpc-service-name:${grpcOpts['grpc-service-name']}`);
+                if (grpcOpts?.['grpc-service-name']) parts.push(`grpc-service-name:${loonQuote(grpcOpts['grpc-service-name'])}`);
             } else if (proxy.network === 'xhttp') {
                 const xhttpOpts = proxy['xhttp-opts'] || proxy.xhttpOpts;
-                if (xhttpOpts?.path) parts.push(`path:${xhttpOpts.path}`);
-                if (xhttpOpts?.host) parts.push(`host:${xhttpOpts.host}`);
-                if (xhttpOpts?.mode) parts.push(`mode:${xhttpOpts.mode}`);
+                if (xhttpOpts?.path) parts.push(`path:${loonQuote(xhttpOpts.path)}`);
+                if (xhttpOpts?.host) parts.push(`host:${loonQuote(xhttpOpts.host)}`);
+                if (xhttpOpts?.mode) parts.push(`mode:${loonQuote(xhttpOpts.mode)}`);
             }
         }
 
@@ -136,8 +138,8 @@ function clashProxyToLoonResult(proxy) {
             const realityOpts = proxy['reality-opts'] || proxy.realityOpts;
             if (realityOpts) {
                 parts.push('reality:true');
-                if (realityOpts['public-key']) parts.push(`public-key:${realityOpts['public-key']}`);
-                if (realityOpts['short-id']) parts.push(`short-id:${realityOpts['short-id']}`);
+                if (realityOpts['public-key']) parts.push(`public-key:${loonQuote(realityOpts['public-key'])}`);
+                if (realityOpts['short-id']) parts.push(`short-id:${loonQuote(realityOpts['short-id'])}`);
             }
         }
         appendTlsParams(parts, proxy);
@@ -153,8 +155,8 @@ function clashProxyToLoonResult(proxy) {
         if (proxy.network === 'ws') {
             parts.push('transport:ws');
             const wsOpts = proxy['ws-opts'] || proxy.wsOpts;
-            if (wsOpts?.path) parts.push(`path:${wsOpts.path}`);
-            if (wsOpts?.headers?.Host) parts.push(`host:${wsOpts.headers.Host}`);
+            if (wsOpts?.path) parts.push(`path:${loonQuote(wsOpts.path)}`);
+            if (wsOpts?.headers?.Host) parts.push(`host:${loonQuote(wsOpts.headers.Host)}`);
         }
         appendTlsParams(parts, proxy);
     } else if (type === 'hysteria2' || type === 'hy2') {
@@ -167,8 +169,8 @@ function clashProxyToLoonResult(proxy) {
         parts.push(`${name} = tuic`);
         parts.push(server);
         parts.push(String(port));
-        parts.push(proxy.token || proxy.uuid || '');
-        if (proxy.password) parts.push(`password:${proxy.password}`);
+        parts.push(loonQuote(proxy.token || proxy.uuid || ''));
+        if (proxy.password) parts.push(`password:${loonQuote(proxy.password)}`);
         appendTlsParams(parts, proxy);
     } else if (type === 'wireguard') {
         parts.push(`${name} = wireguard`);
@@ -189,14 +191,14 @@ function clashProxyToLoonResult(proxy) {
         parts.push(`${name} = snell`);
         parts.push(server);
         parts.push(String(port));
-        parts.push(proxy.psk || proxy.password || '');
+        if (proxy.psk || proxy.password) parts.push(`psk:${loonQuote(proxy.psk || proxy.password)}`);
         if (proxy.version) parts.push(`version:${proxy.version}`);
         if (proxy.reuse !== undefined) parts.push(`reuse:${proxy.reuse}`);
         if (proxy.tfo !== undefined) parts.push(`tfo:${proxy.tfo}`);
         const obfsOpts = proxy['obfs-opts'];
         if (obfsOpts) {
-            if (obfsOpts.mode && obfsOpts.mode !== 'none') parts.push(`obfs:${obfsOpts.mode}`);
-            if (obfsOpts.host) parts.push(`obfs-host:${obfsOpts.host}`);
+            if (obfsOpts.mode && obfsOpts.mode !== 'none') parts.push(`obfs:${loonQuote(obfsOpts.mode)}`);
+            if (obfsOpts.host) parts.push(`obfs-host:${loonQuote(obfsOpts.host)}`);
         }
     } else {
         return null;
@@ -213,17 +215,17 @@ function clashProxyToLoonResult(proxy) {
 
 function appendTlsParams(parts, proxy) {
     if (proxy.sni || proxy.servername) {
-        parts.push(`tls-name:${proxy.sni || proxy.servername}`);
+        parts.push(`tls-name:${loonQuote(proxy.sni || proxy.servername)}`);
     }
     if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) {
         parts.push('skip-cert-verify:true');
     }
     if (proxy.alpn) {
         const alpnStr = Array.isArray(proxy.alpn) ? proxy.alpn[0] : proxy.alpn;
-        parts.push(`alpn:${alpnStr}`);
+        parts.push(`alpn:${loonQuote(alpnStr)}`);
     }
     if (proxy['client-fingerprint']) {
-        parts.push(`client-fingerprint:${proxy['client-fingerprint']}`);
+        parts.push(`client-fingerprint:${loonQuote(proxy['client-fingerprint'])}`);
     }
 }
 
