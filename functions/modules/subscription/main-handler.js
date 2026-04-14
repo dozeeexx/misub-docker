@@ -104,8 +104,7 @@ export function resolveTemplateSource(value) {
  * @returns {Promise<Response>} HTTP响应
  */
 export async function handleMisubRequest(context) {
-    try {
-        const { request, env } = context;
+    const { request, env } = context;
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
@@ -508,7 +507,16 @@ export async function handleMisubRequest(context) {
         // Add File Name
         externalUrl.searchParams.set('filename', subName);
 
-        return Response.redirect(externalUrl.toString(), 302);
+        // [重要修复] 使用手动构建出的 302 响应，以确保头部是可变的 (Mutable)
+        // 传统的 Response.redirect 返回的响应头是不可变的，会导致后续中间件崩溃
+        return new Response(null, {
+            status: 302,
+            headers: {
+                'Location': externalUrl.toString(),
+                'Cache-Control': 'no-store, no-cache',
+                'X-MiSub-Mode': 'external-redirect'
+            }
+        });
     }
 
     if (targetFormat === 'base64') {
@@ -684,27 +692,4 @@ export async function handleMisubRequest(context) {
     });
 
     return new Response(base64EncodeUtf8(combinedNodeList), { headers: base64Headers });
-    } catch (e) {
-        console.error('[MiSub] Global Handler Error:', e);
-        // 返回诊断信息以辅助调试
-        return new Response(JSON.stringify({
-            error: e.name || 'Error',
-            type: e.constructor?.name || 'Unknown',
-            message: e.message || String(e),
-            stack: e.stack || '',
-            diagnostics: {
-                timestamp: new Date().toISOString(),
-                userAgent: request.headers.get('User-Agent'),
-                url: request.url,
-                method: request.method,
-                targetFormat: targetFormat || 'unknown'
-            }
-        }, null, 2), { 
-            status: 500,
-            headers: { 
-                'Content-Type': 'application/json; charset=utf-8',
-                'Access-Control-Allow-Origin': '*'
-            }
-        });
-    }
 }
