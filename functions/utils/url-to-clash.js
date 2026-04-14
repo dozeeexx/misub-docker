@@ -1,9 +1,7 @@
-/**
- * URL 转 Clash 代理配置
- * 将节点 URL 转换为 Clash YAML 格式的代理对象
- * 支持：VLESS、Trojan、VMess、Shadowsocks、Hysteria2 等协议
  * 支持特殊参数：dialer-proxy、reality-opts 等
  */
+
+import { extractNodeMetadata } from '../modules/utils/metadata-extractor.js';
 
 /**
  * 解析 URL 查询参数
@@ -1181,7 +1179,6 @@ export function urlToClashProxy(url) {
     return null;
 }
 
-import { extractNodeMetadata } from '../modules/utils/metadata-extractor.js';
 
 /**
  * 批量将节点 URL 转换为 Clash 代理列表
