@@ -104,7 +104,7 @@ export const DEFAULT_SETTINGS = {
     // 订阅转换设置
     subconverter: {
         engineMode: "builtin",
-        defaultBackend: "https://sub.cmliussss.com/sub?",
+        defaultBackend: "https://subapi.cmliussss.net/sub?",
         defaultOptions: {
             udp: true,
             emoji: true,
