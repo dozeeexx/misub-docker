@@ -104,7 +104,8 @@ export function resolveTemplateSource(value) {
  * @returns {Promise<Response>} HTTP响应
  */
 export async function handleMisubRequest(context) {
-    const { request, env } = context;
+    try {
+        const { request, env } = context;
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
@@ -466,11 +467,12 @@ export async function handleMisubRequest(context) {
     // 1. If 'nodes' format requested, return Base64 nodes directly (DataSource for external converters)
     if (targetFormat === 'nodes') {
         const contentToEncode = isProfileExpired ? (DEFAULT_EXPIRED_NODE + '\n') : combinedNodeList;
-        return new Response(base64EncodeUtf8(contentToEncode), { 
+        // [兼容性优化] 第三方转换后端通常更偏好获取原始 URI 列表而非 Base64
+        return new Response(contentToEncode, { 
             headers: { 
                 "Content-Type": "text/plain; charset=utf-8", 
                 'Cache-Control': 'no-store, no-cache',
-                'X-MiSub-Mode': 'node-export'
+                'X-MiSub-Mode': 'node-export-raw'
             } 
         });
     }
@@ -682,4 +684,21 @@ export async function handleMisubRequest(context) {
     });
 
     return new Response(base64EncodeUtf8(combinedNodeList), { headers: base64Headers });
+    } catch (e) {
+        console.error('[MiSub] Global Handler Error:', e);
+        // 返回诊断信息以辅助调试
+        return new Response(JSON.stringify({
+            error: e.name || 'Error',
+            message: e.message || String(e),
+            stack: e.stack || '',
+            context: {
+                timestamp: new Date().toISOString(),
+                userAgent: context.request.headers.get('User-Agent'),
+                url: context.request.url
+            }
+        }, null, 2), { 
+            status: 500,
+            headers: { 'Content-Type': 'application/json; charset=utf-8' }
+        });
+    }
 }
