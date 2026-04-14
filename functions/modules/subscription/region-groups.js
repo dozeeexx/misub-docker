@@ -43,7 +43,9 @@ export function groupNodeLinesByRegion(nodes = []) {
             }
         }
 
-        if (region === '其他') return;
+        if (region === '其他') {
+            region = '其他';
+        }
 
         // 3. 构造标准的展示组名
         const config = REGION_DISPLAY_CONFIG[region] || { flag: '🌍', name: `${region}节点` };

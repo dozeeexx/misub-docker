@@ -256,12 +256,19 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
 
     // 将抽象分组转换为 Sing-Box Outbounds
     const groupOutbounds = proxyGroups.map(group => {
-        const type = group.type === 'url-test' ? 'urltest' : 'selector';
+        let type = 'selector';
+        if (group.type === 'url-test') type = 'urltest';
+        if (group.type === 'fallback') type = 'urltest'; // Sing-Box 暂时映射为 urltest
+        
         return {
             tag: group.name,
             type: type,
             outbounds: group.proxies,
-            ...(type === 'urltest' ? { url: 'http://www.gstatic.com/generate_204', interval: '5m' } : {})
+            ...(type === 'urltest' ? { 
+                url: 'http://www.gstatic.com/generate_204', 
+                interval: '10m',
+                tolerance: 50 
+            } : {})
         };
     });
 
