@@ -205,6 +205,10 @@ function buildOutbound(proxy) {
         outbound.tls.utls = { enabled: true, fingerprint: proxy['client-fingerprint'] };
     }
 
+    if (proxy.tfo) {
+        outbound.tcp_fast_open = true;
+    }
+
     return outbound;
 }
 
@@ -214,6 +218,7 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
         managedConfigUrl = '',
         skipCertVerify = false,
         enableUdp = false,
+        enableTfo = false,
         ruleLevel = 'std'
     } = options;
 
@@ -227,13 +232,9 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
     const usedNames = new Map();
     const nodeEntries = [];
 
-    for (const url of nodeUrls) {
-        const clashProxy = urlToClashProxy(url);
-        if (!clashProxy) continue;
+    const proxies = urlsToClashProxies(nodeUrls, options);
 
-        if (skipCertVerify) clashProxy['skip-cert-verify'] = true;
-        if (enableUdp) clashProxy.udp = true;
-
+    for (const clashProxy of proxies) {
         const baseName = sanitizeName(clashProxy.name);
         clashProxy.name = getUniqueName(baseName, usedNames);
 
