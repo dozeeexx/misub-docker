@@ -11,16 +11,15 @@ export const useVersionStore = defineStore('version', () => {
     const showUpdateNotice = ref(false);
     const upstreamRepo = 'imzyb/MiSub';
 
-    // 本地更新日志 (v2.5.1)
+    // 本地更新日志 (v2.5.2)
     const localChangelog = `✨ **核心特性**
-- **版本管理系统**：新增全局版本滚动检查逻辑，支持在页脚实时查看当前版本并一键唤起更新日志。
-
-🐛 **解析器修复**
-- **深度重构渲染管线**：修复了多个客户端（Quantumult X, Loon, Egern）在处理特定协议（VLESS, TUIC, Hysteria 2）时的参数映射错误。
-- **协议兼容性增强**：优化了 Shadowsocks 2022 与 Base64 解析逻辑，大幅提升节点订阅成功率。
+- **自定义配置隔离**：当检测到使用远程自定义模板时，内置规则等级将强制禁用，彻底解决内置规则对外部模板的逻辑冲突。
 
 🎨 **视觉与体验**
-- **交互页脚**：页脚新增版本号标签，支持悬停互动及模块化弹窗触发。`;
+- **智能 UI 锁定**：全局设置与预览弹窗现已支持状态自适应。启用外部配置后，系统会自动锁定受影响的选择项并提供明确的状态引导。
+
+🚀 **性能与稳定性**
+- **解析管线优化**：优化了统一模板渲染管线在无规则等级模式下的处理一致性。`;
 
     // --- Getters ---
     const hasUpdate = computed(() => {
