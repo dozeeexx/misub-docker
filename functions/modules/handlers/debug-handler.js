@@ -400,7 +400,7 @@ export async function handleTestNotificationRequest(request, env) {
         const { botToken, chatId } = await request.json();
         const settings = { BotToken: botToken, ChatID: chatId };
 
-        const result = await debugTgNotification(settings, '🔔 *通知测试* 🔔\n\n这是来自 MiSub 的测试消息，用于验证您的配置是否正确。');
+        const result = await debugTgNotification(settings, '🔔 <b>通知测试</b> 🔔\n\n这是来自 MiSub 的测试消息，用于验证您的配置是否正确。');
 
         if (result.success) {
             return createJsonResponse({ success: true, detail: result.response });
