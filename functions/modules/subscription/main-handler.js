@@ -478,7 +478,18 @@ export async function handleMisubRequest(context) {
 
     // 2. If external mode active, build the redirect URL and return 302
     if (isExternalMode && targetFormat !== 'base64') {
-        const backend = url.searchParams.get('backend') || profileSub.backend || globalSub.defaultBackend || "https://sub.id9.cc/sub?";
+        let backend = url.searchParams.get('backend') || profileSub.backend || globalSub.defaultBackend || "https://sub.id9.cc/sub?";
+        
+        // [加固] 防止 UI 标签泄漏到配置中（例如出现 "subconverter 后端" 字样）
+        if (typeof backend === 'string' && (backend.includes('后端') || backend.includes('参数'))) {
+            backend = "https://subapi.cmliussss.net/sub?";
+        }
+
+        // [自动纠错] 如果地址不带 http/https 协议，自动补全，防止 URL 构造失败
+        if (backend && typeof backend === 'string' && !backend.startsWith('http://') && !backend.startsWith('https://')) {
+            backend = 'http://' + backend;
+        }
+
         const externalUrl = new URL(backend);
         externalUrl.searchParams.set('target', targetFormat.includes('&') ? targetFormat.split('&')[0] : targetFormat);
         
