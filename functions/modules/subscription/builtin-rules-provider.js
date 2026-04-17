@@ -163,7 +163,7 @@ export const POLICY_GROUPS = {
         
         return [
             { name: DEFAULT_RELAY_GROUP, type: 'select', proxies: ['🔗 链式代理', '🚀 常用节点', ...regionNames, 'DIRECT'] },
-            { name: '🔗 链式代理', type: 'relay', proxies: ['入口节点', '落地节点'] },
+            { name: '🔗 链式代理', type: 'select', proxies: ['入口节点', '落地节点'] },
             { name: '入口节点', type: 'select', proxies: [AUTO_SELECT_GROUP, MANUAL_SELECT_GROUP, 'DIRECT', ...proxyNames] },
             { name: '落地节点', type: 'select', proxies: [AUTO_SELECT_GROUP, MANUAL_SELECT_GROUP, 'DIRECT', ...proxyNames] },
             ...regionSelectGroups,
