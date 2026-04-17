@@ -232,17 +232,15 @@ export async function onRequest(context) {
                 // [新增] 动态包含自定义登录路径
                 const isSpaRoute = [
                     '/',
-                    '/groups',
-                    '/nodes',
-                    '/subscriptions',
-                    '/settings',
-                    '/login',
                     '/dashboard',
-                    '/profile',
+                    '/login',
                     '/explore',
                     customLoginPath
                 ].some(route => {
                     if (route === '/') return url.pathname === '/';
+                    if (route === '/dashboard') {
+                        return url.pathname === '/dashboard' || url.pathname.startsWith('/dashboard/');
+                    }
                     return url.pathname === route || url.pathname.startsWith(route + '/');
                 });
 
