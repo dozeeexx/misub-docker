@@ -247,6 +247,7 @@ export async function onRequest(context) {
                 });
 
                 const isProtectedSpaRoute = isSpaRoute
+                    && url.pathname !== '/'
                     && url.pathname !== '/login'
                     && url.pathname !== customLoginPath
                     && !url.pathname.startsWith('/explore');

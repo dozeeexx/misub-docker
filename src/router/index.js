@@ -23,8 +23,10 @@ const routes = [
         meta: { title: '公开页', isPublic: true }
     },
     {
-        path: '/dashboard', // Explicit dashboard route redirects to home or is alias
-        redirect: '/'
+        path: '/dashboard',
+        name: 'Dashboard',
+        component: DashboardView,
+        meta: { title: '仪表盘' }
     },
     {
         path: '/groups',
