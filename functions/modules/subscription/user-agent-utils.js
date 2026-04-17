@@ -116,3 +116,16 @@ export function determineTargetFormat(userAgent, searchParams) {
     // 3. Default fallback
     return 'base64';
 }
+
+/**
+ * 判断是否为 Mihomo (Clash Meta) 核心或兼容核心
+ * 用于启用 Meta 专用语法（如 dialer-proxy）
+ * @param {string} userAgent 
+ * @returns {boolean}
+ */
+export function isMetaCore(userAgent) {
+    if (!userAgent) return false;
+    const ua = userAgent.toLowerCase();
+    // 包含 meta, mihomo, verge, flclash, stash 等通常使用 Meta 核心的客户端
+    return /mihomo|meta|verge|flclash|stash|nekoray|nekobox|cfw/i.test(ua);
+}

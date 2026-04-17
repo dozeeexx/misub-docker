@@ -9,7 +9,7 @@ import { resolveRequestContext } from './request-context.js';
 import { resolveNodeListWithCache } from './cache-manager.js';
 import { ProcessorService } from '../../services/processor-service.js';
 import { logAccessSuccess, shouldSkipLogging as shouldSkipAccessLog } from './access-logger.js';
-import { isBrowserAgent, determineTargetFormat } from './user-agent-utils.js'; // [Added] Import centralized util
+import { isBrowserAgent, determineTargetFormat, isMetaCore } from './user-agent-utils.js'; // [Added] Import centralized util
 import { authMiddleware } from '../auth-middleware.js';
 import { transformBuiltinSubscription } from './transformer-factory.js';
 import { fetchTransformTemplate } from './transform-template-cache.js';
@@ -604,7 +604,8 @@ export async function handleMisubRequest(context) {
         skipCertVerify: finalSkipCertVerify,
         enableUdp: finalEnableUdp,
         enableTfo: finalEnableTfo,
-        ruleLevel: ruleLevel // 统一后的规则等级
+        ruleLevel: ruleLevel, // 统一后的规则等级
+        isMeta: isMetaCore(userAgentHeader)
     };
 
     const managedConfigUrl = buildManagedConfigUrl(request.url);

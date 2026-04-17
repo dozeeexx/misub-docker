@@ -79,13 +79,31 @@ export function renderClashFromTemplateModel(model) {
                 (Array.isArray(group.members) && group.members.length > 0) || 
                 (Array.isArray(group.filters) && group.filters.length > 0)
             )
-            .map(group => ({
-                name: group.name,
-                type: mapGroupType(group.type),
-                proxies: filterAutoSelectMembers(group),
-                filter: Array.isArray(group.filters) && group.filters.length > 0 ? group.filters.join('|') : undefined,
-                ...group.options
-            })),
+            .map(group => {
+                const type = mapGroupType(group.type);
+                const isMeta = model.meta?.isMeta;
+                
+                // [核心兼容性修复] Mihomo (Meta) 核心移除了 relay 类型，需要转换为 dialer-proxy
+                // 格式：name: RelayName, type: select, proxies: [Landing], dialer-proxy: Entry
+                if (type === 'relay' && isMeta && Array.isArray(group.proxies) && group.proxies.length >= 2) {
+                    const members = filterAutoSelectMembers(group);
+                    return {
+                        name: group.name,
+                        type: 'select',
+                        proxies: members.slice(1), // 落地节点
+                        'dialer-proxy': members[0], // 入口节点
+                        ...group.options
+                    };
+                }
+
+                return {
+                    name: group.name,
+                    type: type,
+                    proxies: filterAutoSelectMembers(group),
+                    filter: Array.isArray(group.filters) && group.filters.length > 0 ? group.filters.join('|') : undefined,
+                    ...group.options
+                };
+            }),
         'rule-providers': Object.keys(ruleProviders).length > 0 ? ruleProviders : undefined,
         'rules': normalizedModel.rules.map(r => mapRule(r, ruleProviderMap)).filter(Boolean),
         'profile': {

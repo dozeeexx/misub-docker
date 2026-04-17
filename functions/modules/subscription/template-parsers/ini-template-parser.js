@@ -171,7 +171,8 @@ export function parseIniTemplate(templateText, options = {}) {
             target: options.targetFormat || 'clash',
             // [逻辑说明] ruleLevel 在 INI 模式下暂不直接影响生成，因为 INI 自带了 hardcoded rules。
             // 仅作为元数据打包进 TemplateModel，供未来动态模板扩展使用。
-            ruleLevel: options.ruleLevel || 'std'
+            ruleLevel: options.ruleLevel || 'std',
+            isMeta: Boolean(options.isMeta)
         },
         proxies: options.proxies || [],
         groups,
