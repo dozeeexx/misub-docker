@@ -465,13 +465,14 @@ export async function handleMisubRequest(context) {
     // [Support] External Subconverter Logic
     // 1. If 'nodes' format requested, return Base64 nodes directly (DataSource for external converters)
     if (targetFormat === 'nodes') {
-        const contentToEncode = isProfileExpired ? (DEFAULT_EXPIRED_NODE + '\n') : combinedNodeList;
-        // [兼容性优化] 绝大多数第三方转换后端默认期望收到 Base64 编码的订阅内容
-        return new Response(base64EncodeUtf8(contentToEncode), { 
+        const contentToSend = isProfileExpired ? (DEFAULT_EXPIRED_NODE + '\n') : combinedNodeList;
+        // [兼容性优化] 尽管 Base64 是订阅标准，但对于用作 subconverter 数据源的基础节点列表，
+        // 返回明文 URI 列表（一行一个）具有最佳的跨版本兼容性，特别是对于一些正则引擎较弱的后端。
+        return new Response(contentToSend, { 
             headers: { 
                 "Content-Type": "text/plain; charset=utf-8", 
                 'Cache-Control': 'no-store, no-cache',
-                'X-MiSub-Mode': 'node-export-base64'
+                'X-MiSub-Mode': 'node-export-plain'
             } 
         });
     }
@@ -499,8 +500,8 @@ export async function handleMisubRequest(context) {
         dataSourceUrl.searchParams.set('engine', 'builtin');
 
         // [关键修复] 确保后端拉取数据时包含身份令牌，否则会报 401 (No nodes found)
-        // 优先使用当前请求的 token，其次使用订阅组本身的 token，最后使用全局 token
-        if (!dataSourceUrl.searchParams.has('token')) {
+        // [优化] 如果原始路径或参数中已经包含了访问凭证 (如 /profiles/ 或 ?token=)，则不再重复注入
+        if (!dataSourceUrl.searchParams.has('token') && !url.pathname.includes(config.profileToken || 'profiles')) {
             const authToken = token || currentProfile?.token || config.mytoken;
             if (authToken) dataSourceUrl.searchParams.set('token', authToken);
         }
