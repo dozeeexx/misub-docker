@@ -132,7 +132,11 @@ async function fetchSpaEntry(request, env, next) {
             return applyNoStoreToHtmlResponse(await next());
         }
 
-        const assetsResponse = await fetchStaticAsset(new Request(indexUrl, request), env, next);
+        const assetsResponse = await fetchStaticAsset(new Request(indexUrl, {
+            method: request.method,
+            headers: headers,
+            redirect: request.redirect
+        }), env, next);
         return applyNoStoreToHtmlResponse(assetsResponse);
     }
 
