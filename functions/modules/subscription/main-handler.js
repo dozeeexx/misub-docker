@@ -500,8 +500,8 @@ export async function handleMisubRequest(context) {
         dataSourceUrl.searchParams.set('engine', 'builtin');
 
         // [关键修复] 确保后端拉取数据时包含身份令牌，否则会报 401 (No nodes found)
-        // [优化] 如果原始路径或参数中已经包含了访问凭证 (如 /profiles/ 或 ?token=)，则不再重复注入
-        if (!dataSourceUrl.searchParams.has('token') && !url.pathname.includes(config.profileToken || 'profiles')) {
+        // 恢复显式注入逻辑，以确保在所有路径下第三方转换后端都能成功访问内部数据源
+        if (!dataSourceUrl.searchParams.has('token')) {
             const authToken = token || currentProfile?.token || config.mytoken;
             if (authToken) dataSourceUrl.searchParams.set('token', authToken);
         }
