@@ -501,7 +501,7 @@ export async function handleMisubRequest(context) {
         // [关键修复] 确保后端拉取数据时包含身份令牌，否则会报 401 (No nodes found)
         // 只有当 URL 中完全没有 token 且当前请求确实需要 token 时（由前面的鉴权结果决定），才补充 token
         if (!dataSourceUrl.searchParams.has('token')) {
-            const authToken = requestToken || profileSub.token; 
+            const authToken = token || profileSub.token; 
             if (authToken) dataSourceUrl.searchParams.set('token', authToken);
         }
 
