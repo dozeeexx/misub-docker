@@ -4,7 +4,7 @@ import { normalizeUnifiedTemplateModel } from '../template-model.js';
 
 function mapGroupType(type) {
     const normalized = String(type || '').trim().toLowerCase();
-    if (normalized === 'url-test' || normalized === 'fallback' || normalized === 'load-balance' || normalized === 'relay' || normalized === 'select') {
+    if (normalized === 'url-test' || normalized === 'fallback' || normalized === 'load-balance' || normalized === 'select') {
         return normalized;
     }
     return 'select';
@@ -80,25 +80,24 @@ export function renderClashFromTemplateModel(model) {
                 (Array.isArray(group.filters) && group.filters.length > 0)
             )
             .map(group => {
-                const type = mapGroupType(group.type);
-                const isMeta = model.meta?.isMeta;
+                const rawType = String(group.type || '').trim().toLowerCase();
                 
-                // [核心兼容性修复] Mihomo (Meta) 核心移除了 relay 类型，需要转换为 dialer-proxy
-                // 格式：name: RelayName, type: select, proxies: [Landing], dialer-proxy: Entry
-                if (type === 'relay' && isMeta && Array.isArray(group.proxies) && group.proxies.length >= 2) {
+                // [统一化改造] 彻底抛弃 type: relay，统一使用现代 Mihomo (Meta) 的 dialer-proxy 语法
+                // 这种语法在现代客户端中更稳定，且符合 Mihomo 核心的标准
+                if (rawType === 'relay' && Array.isArray(group.proxies) && group.proxies.length >= 2) {
                     const members = filterAutoSelectMembers(group);
                     return {
                         name: group.name,
                         type: 'select',
-                        proxies: members.slice(1), // 落地节点
-                        'dialer-proxy': members[0], // 入口节点
+                        proxies: members.slice(1),      // 落地节点
+                        'dialer-proxy': members[0],     // 入口节点
                         ...group.options
                     };
                 }
 
                 return {
                     name: group.name,
-                    type: type,
+                    type: mapGroupType(group.type),
                     proxies: filterAutoSelectMembers(group),
                     filter: Array.isArray(group.filters) && group.filters.length > 0 ? group.filters.join('|') : undefined,
                     ...group.options
