@@ -499,9 +499,9 @@ export async function handleMisubRequest(context) {
         dataSourceUrl.searchParams.set('engine', 'builtin');
 
         // [关键修复] 确保后端拉取数据时包含身份令牌，否则会报 401 (No nodes found)
-        // 只有当 URL 中完全没有 token 且当前请求确实需要 token 时（由前面的鉴权结果决定），才补充 token
+        // 优先使用当前请求的 token，其次使用订阅组本身的 token，最后使用全局 token
         if (!dataSourceUrl.searchParams.has('token')) {
-            const authToken = token || profileSub.token; 
+            const authToken = token || currentProfile?.token || config.mytoken;
             if (authToken) dataSourceUrl.searchParams.set('token', authToken);
         }
 
@@ -510,11 +510,6 @@ export async function handleMisubRequest(context) {
         // Map Boolean Flags
         const effectiveOptions = { ...globalSub.defaultOptions, ...profileSub.options };
         const flagMap = { udp: 'udp', emoji: 'emoji', scv: 'scv', sort: 'sort', tfo: 'tfo', list: 'list' };
-
-        // [优化] 为 Clash 目标强制开启 rule_provider，防止超大规则集导致 YAML 损坏
-        if (targetFormat === 'clash') {
-            externalUrl.searchParams.set('clash.rule_provider', 'true');
-        }
         
         Object.entries(flagMap).forEach(([key, paramName]) => {
             const val = url.searchParams.has(paramName) 
@@ -525,12 +520,8 @@ export async function handleMisubRequest(context) {
 
         // Pass Remote Config if applicable
         if (templateUrl && templateSource.kind === 'remote') {
-            if (templateSource.content) {
-                // [优化] 直接传递 Base64 编码的配置内容，避免后端服务器无法访问 GitHub 或国内拉取过慢
-                externalUrl.searchParams.set('config', `base64:${base64EncodeUtf8(templateSource.content)}`);
-            } else {
-                externalUrl.searchParams.set('config', templateSource.value);
-            }
+            // [回滚] 恢复使用 URL 传递配置。虽然 Base64 更可靠，但并非所有后端都支持 base64: 前缀
+            externalUrl.searchParams.set('config', templateSource.value);
         }
 
         // Add File Name
