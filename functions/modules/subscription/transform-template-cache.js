@@ -6,7 +6,7 @@ function makeTemplateCacheKey(url) {
     return `${TEMPLATE_CACHE_PREFIX}${btoa(url).replace(/=+$/g, '')}`;
 }
 
-export async function fetchTransformTemplate(storageAdapter, templateUrl, forceRefresh = false, skipCertVerify = false) {
+export async function fetchTransformTemplate(storageAdapter, templateUrl, forceRefresh = false) {
     if (!templateUrl) return null;
 
     const cacheKey = makeTemplateCacheKey(templateUrl);
@@ -17,11 +17,11 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
         }
     }
 
-    const fetchOptions = {
-        headers: { 'User-Agent': 'MiSub-Template-Fetch/1.0' },
-        ...(skipCertVerify ? { cf: { insecureSkipVerify: true } } : {})
-    };
-    const response = await fetch(templateUrl, fetchOptions);
+    const response = await fetch(templateUrl, {
+        headers: {
+            'User-Agent': 'MiSub-Template-Fetch/1.0'
+        }
+    });
 
     if (!response.ok) {
         throw new Error(`Template fetch failed: HTTP ${response.status}`);
