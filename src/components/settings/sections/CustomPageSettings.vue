@@ -196,7 +196,7 @@ const normalizeFullPageSource = () => {
               <label class="text-sm font-bold text-gray-700 dark:text-gray-300">HTML 内容</label>
               <div class="flex gap-2">
                 <button @click="normalizeFullPageSource" class="text-[10px] px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-100 dark:border-emerald-800 hover:bg-emerald-100 transition-colors">整理整页源码</button>
-                <button v-for="p in ['profiles', 'announcements', 'hero', 'guestbook']" :key="p" @click="insertPlaceholder(p)" class="text-[10px] px-2 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 rounded border border-primary-100 dark:border-primary-800 hover:bg-primary-100 transition-colors">{&#123;{{p}}&#125;}</button>
+                <button v-for="p in ['profiles', 'announcements', 'hero', 'guestbook', 'node_count', 'profile_count', 'version']" :key="p" @click="insertPlaceholder(p)" class="text-[10px] px-2 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 rounded border border-primary-100 dark:border-primary-800 hover:bg-primary-100 transition-colors">{&#123;{{p}}&#125;}</button>
               </div>
             </div>
             <textarea v-model="props.settings.customPage.content" rows="12" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 font-mono text-sm leading-relaxed outline-none transition-all" placeholder="支持直接粘贴整份 HTML 源码，点击「整理整页源码」可自动提取 CSS。" />
@@ -219,13 +219,24 @@ const normalizeFullPageSource = () => {
           <div class="text-amber-500 shrink-0">💡</div>
           <div class="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
             <p class="font-bold mb-1">占位符功能说明：</p>
-            <ul class="list-disc list-inside space-y-1">
-              <li><strong>{&#123;profiles&#125;}</strong>: 渲染订阅组网格。</li>
-              <li><strong>{&#123;announcements&#125;}</strong>: 渲染系统公告卡片。</li>
-              <li><strong>{&#123;hero&#125;}</strong>: 渲染系统默认巨幕区域。</li>
-              <li><strong>{&#123;guestbook&#125;}</strong>: 渲染留言板入口。</li>
-            </ul>
-            <p class="mt-2 opacity-80">当前仅支持 `HTML / CSS` 模式，该模式能完美契合内置占位符体系，为您提供最佳的灵活性与渲染性能。</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+              <ul class="list-disc list-inside space-y-1">
+                <li class="font-bold text-primary-700 dark:text-primary-400">组件类 (渲染 UI):</li>
+                <li><strong>{&#123;profiles&#125;}</strong>: 订阅组网格。</li>
+                <li><strong>{&#123;announcements&#125;}</strong>: 系统公告卡片。</li>
+                <li><strong>{&#123;hero&#125;}</strong>: 系统默认巨幕区域。</li>
+                <li><strong>{&#123;guestbook&#125;}</strong>: 留言板入口。</li>
+              </ul>
+              <ul class="list-disc list-inside space-y-1">
+                <li class="font-bold text-indigo-700 dark:text-indigo-400">数据类 (渲染文本):</li>
+                <li><strong>{&#123;version&#125;}</strong>: 当前应用版本。</li>
+                <li><strong>{&#123;node_count&#125;}</strong>: 公开节点总数。</li>
+                <li><strong>{&#123;profile_count&#125;}</strong>: 公开订阅组数。</li>
+                <li><strong>{&#123;title&#125;}</strong>: 系统设置的标题。</li>
+                <li><strong>{&#123;description&#125;}</strong>: 系统设置的描述。</li>
+              </ul>
+            </div>
+            <p class="mt-2 opacity-80">当前仅支持 `HTML / CSS` 模式，占位符匹配不区分大小写。</p>
           </div>
         </div>
       </div>

@@ -322,6 +322,7 @@ onUnmounted(() => {
             :content="config.customPage.content"
             :css="config.customPage.css"
             :config="config"
+            :profiles="publicProfiles"
         >
             <template #hero>
                 <!-- Default Hero for Placeholder -->
