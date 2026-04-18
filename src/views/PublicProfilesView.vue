@@ -340,7 +340,9 @@ onUnmounted(() => {
             </template>
 
             <template #announcements>
-                <AnnouncementCard v-if="announcement && announcement.enabled" :announcement="announcement" class="mb-10" />
+                <div v-if="announcement && announcement.enabled" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+                    <AnnouncementCard :announcement="announcement" />
+                </div>
             </template>
 
             <template #profiles>
