@@ -91,7 +91,7 @@ export class ProcessorService {
         const remoteTemplateUrl = templateSource.kind === 'remote' ? templateSource.value : '';
 
         if (builtinTemplateEntry || remoteTemplateUrl) {
-            const templateText = builtinTemplateEntry?.content || await fetchTransformTemplate(storageAdapter, remoteTemplateUrl);
+            const templateText = builtinTemplateEntry?.content || await fetchTransformTemplate(storageAdapter, remoteTemplateUrl, false, builtinOptions.skipCertVerify);
             const isIniTemplate = builtinTemplateEntry?.format === 'ini' || (remoteTemplateUrl && remoteTemplateUrl.toLowerCase().endsWith('.ini'));
 
             if (templateText && isIniTemplate) {
