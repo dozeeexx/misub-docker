@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import DOMPurify from 'dompurify';
 
 const props = defineProps({
@@ -11,8 +11,8 @@ const props = defineProps({
 
 const isVisible = ref(true);
 
-const allowedContentTags = ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li'];
-const allowedContentAttrs = ['href', 'target', 'rel'];
+const allowedContentTags = ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li', 'code', 'pre'];
+const allowedContentAttrs = ['href', 'target', 'rel', 'class'];
 
 const sanitizedContent = computed(() => {
     const rawContent = props.announcement?.content?.trim()
@@ -36,7 +36,6 @@ const dismiss = (e) => {
     }
 };
 
-// 立即在 setup 阶段检查，防止 onMounted 导致的闪烁
 const checkVisibility = () => {
     if (props.announcement?.dismissible && props.announcement?.updatedAt) {
         const dismissed = localStorage.getItem(`announcement_dismissed_${props.announcement.updatedAt}`);
@@ -52,7 +51,6 @@ const checkVisibility = () => {
 
 checkVisibility();
 
-// 监听公告数据变化（如后台更新了内容），重置可见性
 watch(() => props.announcement, () => {
     checkVisibility();
 }, { deep: true });
@@ -60,32 +58,36 @@ watch(() => props.announcement, () => {
 const typeConfig = computed(() => {
     const types = {
         info: {
-            color: 'primary',
-            gradient: 'from-blue-500/10 to-indigo-500/5',
-            border: 'border-blue-200/50 dark:border-blue-800/50',
-            text: 'text-blue-700 dark:text-blue-300',
-            accent: 'bg-blue-500'
+            theme: 'blue',
+            glow: 'rgba(59, 130, 246, 0.5)',
+            gradient: 'from-blue-500/20 via-transparent to-indigo-500/10',
+            border: 'border-blue-500/20',
+            pill: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+            iconColor: 'text-blue-500'
         },
         success: {
-            color: 'emerald',
-            gradient: 'from-emerald-500/10 to-teal-500/5',
-            border: 'border-emerald-200/50 dark:border-emerald-800/50',
-            text: 'text-emerald-700 dark:text-emerald-300',
-            accent: 'bg-emerald-500'
+            theme: 'emerald',
+            glow: 'rgba(16, 185, 129, 0.5)',
+            gradient: 'from-emerald-500/20 via-transparent to-teal-500/10',
+            border: 'border-emerald-500/20',
+            pill: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+            iconColor: 'text-emerald-500'
         },
         warning: {
-            color: 'amber',
-            gradient: 'from-amber-500/10 to-orange-500/5',
-            border: 'border-amber-200/50 dark:border-amber-800/50',
-            text: 'text-amber-700 dark:text-amber-300',
-            accent: 'bg-amber-500'
+            theme: 'amber',
+            glow: 'rgba(245, 158, 11, 0.5)',
+            gradient: 'from-amber-500/20 via-transparent to-orange-500/10',
+            border: 'border-amber-500/20',
+            pill: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+            iconColor: 'text-amber-500'
         },
         error: {
-            color: 'red',
-            gradient: 'from-red-500/10 to-rose-500/5',
-            border: 'border-red-200/50 dark:border-red-800/50',
-            text: 'text-red-700 dark:text-red-300',
-            accent: 'bg-red-500'
+            theme: 'rose',
+            glow: 'rgba(244, 63, 94, 0.5)',
+            gradient: 'from-rose-500/20 via-transparent to-red-500/10',
+            border: 'border-rose-500/20',
+            pill: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+            iconColor: 'text-rose-500'
         }
     };
     return types[props.announcement.type] || types.info;
@@ -94,127 +96,157 @@ const typeConfig = computed(() => {
 </script>
 
 <template>
-    <Transition name="announcement-fade">
+    <Transition name="aurora-fade">
         <div v-if="isVisible" 
-             class="group relative overflow-hidden transition-all duration-500 misub-radius-lg border backdrop-blur-xl shadow-sm hover:shadow-xl"
+             class="aurora-card group relative overflow-hidden transition-all duration-700 misub-radius-lg border backdrop-blur-[32px] shadow-2xl hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
              :class="[
-                 typeConfig.gradient,
                  typeConfig.border,
-                 'bg-white/60 dark:bg-gray-900/40'
+                 'bg-black/40 dark:bg-black/60'
              ]">
             
-            <!-- Side Accent Line -->
-            <div class="absolute left-0 top-0 bottom-0 w-1 opacity-80 transition-all duration-300 group-hover:w-1.5"
-                 :class="typeConfig.accent"></div>
+            <!-- Animated Aurora Background -->
+            <div class="absolute inset-0 opacity-30 pointer-events-none group-hover:opacity-50 transition-opacity duration-1000">
+                <div class="absolute -inset-[100%] animate-aurora-spin"
+                     :class="['bg-gradient-to-tr', typeConfig.gradient]"></div>
+            </div>
 
-            <div class="p-4 sm:p-5">
-                <div class="flex items-center gap-4">
-                    <!-- Status Icon (Modern Style) -->
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 shadow-sm"
-                             :class="[
-                                 'bg-white/80 dark:bg-white/10',
-                                 typeConfig.text
-                             ]">
-                            <svg v-if="announcement.type === 'info'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <svg v-else-if="announcement.type === 'success'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <svg v-else-if="announcement.type === 'warning'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.268 17c-.77 1.333.192 3 1.732 3z" /></svg>
-                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </div>
-                    </div>
+            <!-- Dynamic Border Glow -->
+            <div class="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 border border-white/10 rounded-[inherit]"></div>
 
-                    <!-- Title Area -->
-                    <div class="flex-1 min-w-0 pr-2">
-                        <div class="flex flex-col">
-                            <h3 class="text-base font-bold text-gray-900 dark:text-white truncate transition-colors duration-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">
-                                {{ announcement.title || '系统公告' }}
-                            </h3>
-                            <span class="text-[10px] font-bold uppercase tracking-widest opacity-40 mt-0.5" :class="typeConfig.text">
-                                {{ announcement.type }}
+            <div class="relative p-6 sm:p-8 z-10">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
+                    <div class="flex items-center gap-4">
+                        <!-- Status Pill -->
+                        <div class="flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all duration-500 group-hover:px-4"
+                             :class="typeConfig.pill">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="'bg-' + typeConfig.theme + '-400'"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2" :class="'bg-' + typeConfig.theme + '-500'"></span>
                             </span>
+                            {{ announcement.type }}
+                        </div>
+                        
+                        <div v-if="announcement.updatedAt" class="text-[10px] font-bold text-white/20 uppercase tracking-tighter">
+                            Updated {{ new Date(announcement.updatedAt).toLocaleDateString() }}
                         </div>
                     </div>
 
-                    <!-- Actions Area -->
-                    <div class="flex items-center gap-1.5">
-                        <!-- Dismiss Button -->
-                        <button v-if="announcement.dismissible" 
-                                @click="dismiss"
-                                class="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all duration-300"
-                                title="忽略">
-                            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                    <button v-if="announcement.dismissible" 
+                            @click="dismiss"
+                            class="absolute top-6 right-6 p-2 rounded-full text-white/30 hover:text-white hover:bg-white/10 transition-all duration-300 backdrop-blur-md border border-white/5"
+                            title="Dismiss">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight group-hover:translate-x-1 transition-transform duration-500">
+                        {{ announcement.title || 'System Notification' }}
+                    </h3>
+                    
+                    <div class="prose prose-invert prose-sm max-w-none text-white/70 leading-relaxed font-medium"
+                        v-html="sanitizedContent">
                     </div>
                 </div>
 
-                <!-- Content Area (Always Visible) -->
-                <div class="mt-5 pt-5 border-t border-gray-200/50 dark:border-white/5">
-                    <div class="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 leading-relaxed"
-                        v-html="sanitizedContent">
+                <!-- Footer Accent -->
+                <div class="mt-8 pt-8 border-t border-white/5 flex items-center justify-between">
+                    <div class="flex -space-x-2">
+                        <div class="w-8 h-8 rounded-full border-2 border-black bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-[10px] font-bold text-white shadow-xl">M</div>
+                        <div class="w-8 h-8 rounded-full border-2 border-black bg-primary-600 flex items-center justify-center shadow-xl">
+                            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
                     </div>
-                    
-                    <div v-if="announcement.updatedAt"
-                        class="mt-6 flex items-center justify-between text-[10px] font-bold tracking-wider uppercase opacity-30">
-                        <span>MiSub System Update</span>
-                        <span>{{ new Date(announcement.updatedAt).toLocaleDateString() }}</span>
-                    </div>
+                    <span class="text-[9px] font-black text-white/10 uppercase tracking-[0.2em]">MiSub Identity Node</span>
                 </div>
             </div>
 
-            <!-- Bottom Gradient Glow -->
-            <div class="absolute -right-8 -bottom-8 w-32 h-32 blur-3xl rounded-full opacity-10 pointer-events-none transition-transform duration-1000 group-hover:scale-150"
-                 :class="typeConfig.accent"></div>
+            <!-- Decorative Glow Circle -->
+            <div class="absolute -left-20 -top-20 w-64 h-64 blur-[100px] rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-1000 pointer-events-none"
+                 :style="{ background: typeConfig.glow }"></div>
         </div>
     </Transition>
 </template>
 
 <style scoped>
-.announcement-fade-enter-active,
-.announcement-fade-leave-active {
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+.aurora-card {
+    background-image: 
+        radial-gradient(circle at 0% 0%, rgba(255,255,255,0.03) 0%, transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(255,255,255,0.02) 0%, transparent 50%);
 }
 
-.announcement-fade-enter-from,
-.announcement-fade-leave-to {
+.aurora-fade-enter-active,
+.aurora-fade-leave-active {
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aurora-fade-enter-from,
+.aurora-fade-leave-to {
     opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-    filter: blur(8px);
+    transform: translateY(30px) scale(0.98);
+    filter: blur(20px);
 }
 
-.animate-announcement-slide {
-    animation: announcementSlide 0.4s cubic-bezier(0, 0, 0.2, 1);
+@keyframes aurora-spin {
+    from { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.5); }
+    to { transform: rotate(360deg) scale(1); }
 }
 
-@keyframes announcementSlide {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.animate-aurora-spin {
+    animation: aurora-spin 20s linear infinite;
+}
+
+:deep(.prose) {
+    --tw-prose-invert-body: rgba(255, 255, 255, 0.7);
+    --tw-prose-invert-headings: white;
 }
 
 :deep(.prose a) {
-    color: #6366f1;
+    color: white;
     text-decoration: none;
-    font-weight: 600;
-    border-bottom: 2px solid rgba(99, 102, 241, 0.2);
-    transition: all 0.2s;
+    font-weight: 800;
+    position: relative;
+    padding: 0 2px;
 }
 
-:deep(.prose a:hover) {
-    border-bottom-color: #6366f1;
+:deep(.prose a::after) {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    opacity: 0.3;
+    transition: height 0.2s;
 }
 
-/* 移动端优化 */
+:deep(.prose a:hover::after) {
+    height: 100%;
+    z-index: -1;
+    opacity: 0.1;
+}
+
+:deep(.prose code) {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+}
+
+/* 移动端微调 */
 @media (max-width: 640px) {
-    .announcement-card {
-        margin-left: 0 !important;
-        margin-right: 0 !important;
+    .aurora-card {
+        margin: 0 -1rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
     }
 }
 </style>
