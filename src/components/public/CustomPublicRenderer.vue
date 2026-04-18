@@ -1,7 +1,9 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { onBeforeRouteLeave } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { parseCustomPageSource } from '../../utils/custom-page-source.js';
+
+const route = useRoute();
 
 const props = defineProps({
   content: {
@@ -167,11 +169,12 @@ onUnmounted(() => {
   removeScripts();
 });
 
-onBeforeRouteLeave(async () => {
-  // 路由切走前先禁用 Teleport，让插槽内容回到当前组件树，
-  // 避免目标占位符先被移除时触发 Vue 在卸载 Teleport 时访问空节点。
-  disableTeleport.value = true;
-  await nextTick();
+// 监听路由变化，在切走前提前关闭 Teleport，防止 Vue 在销毁 DOM 时因找不到目标节点而报错
+watch(() => route.path, (newPath, oldPath) => {
+  if (oldPath && newPath !== oldPath) {
+    isReady.value = false;
+    disableTeleport.value = true;
+  }
 });
 
 </script>
