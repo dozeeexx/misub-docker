@@ -10,7 +10,6 @@ const props = defineProps({
 });
 
 const isVisible = ref(true);
-const isExpanded = ref(false); 
 
 const allowedContentTags = ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li'];
 const allowedContentAttrs = ['href', 'target', 'rel'];
@@ -24,10 +23,6 @@ const sanitizedContent = computed(() => {
         ALLOWED_ATTR: allowedContentAttrs
     });
 });
-
-const toggleExpand = () => {
-    isExpanded.value = !isExpanded.value;
-};
 
 const dismiss = (e) => {
     e.stopPropagation(); 
@@ -89,8 +84,7 @@ const typeConfig = computed(() => {
 <template>
     <Transition name="announcement-fade">
         <div v-if="isVisible" 
-             @click="toggleExpand"
-             class="group relative overflow-hidden transition-all duration-500 cursor-pointer misub-radius-lg border backdrop-blur-xl shadow-sm hover:shadow-xl hover:-translate-y-0.5 announcement-card"
+             class="group relative overflow-hidden transition-all duration-500 misub-radius-lg border backdrop-blur-xl shadow-sm hover:shadow-xl"
              :class="[
                  typeConfig.gradient,
                  typeConfig.border,
@@ -131,13 +125,7 @@ const typeConfig = computed(() => {
 
                     <!-- Actions Area -->
                     <div class="flex items-center gap-1.5">
-                        <div class="p-2 rounded-xl bg-gray-500/5 hover:bg-gray-500/10 transition-all duration-300"
-                             :class="{ 'rotate-180 bg-primary-500/10': isExpanded }">
-                            <svg class="w-4 h-4 text-gray-400 transition-colors duration-300" :class="{ 'text-primary-500': isExpanded }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-
+                        <!-- Dismiss Button -->
                         <button v-if="announcement.dismissible" 
                                 @click="dismiss"
                                 class="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all duration-300"
@@ -149,9 +137,8 @@ const typeConfig = computed(() => {
                     </div>
                 </div>
 
-                <!-- Content Area -->
-                <div v-show="isExpanded" 
-                     class="mt-5 pt-5 border-t border-gray-200/50 dark:border-white/5 animate-announcement-slide">
+                <!-- Content Area (Always Visible) -->
+                <div class="mt-5 pt-5 border-t border-gray-200/50 dark:border-white/5">
                     <div class="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 leading-relaxed"
                         v-html="sanitizedContent">
                     </div>
