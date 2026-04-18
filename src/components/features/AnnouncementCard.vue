@@ -58,36 +58,32 @@ watch(() => props.announcement, () => {
 const typeConfig = computed(() => {
     const types = {
         info: {
-            theme: 'blue',
-            glow: 'rgba(59, 130, 246, 0.5)',
-            gradient: 'from-blue-500/20 via-transparent to-indigo-500/10',
-            border: 'border-blue-500/20',
-            pill: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-            iconColor: 'text-blue-500'
+            bg: 'bg-indigo-50/50 dark:bg-indigo-900/10',
+            border: 'border-indigo-100 dark:border-indigo-800/30',
+            text: 'text-indigo-700 dark:text-indigo-300',
+            iconBg: 'bg-indigo-500',
+            glow: 'rgba(99, 102, 241, 0.15)'
         },
         success: {
-            theme: 'emerald',
-            glow: 'rgba(16, 185, 129, 0.5)',
-            gradient: 'from-emerald-500/20 via-transparent to-teal-500/10',
-            border: 'border-emerald-500/20',
-            pill: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-            iconColor: 'text-emerald-500'
+            bg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
+            border: 'border-emerald-100 dark:border-emerald-800/30',
+            text: 'text-emerald-700 dark:text-emerald-300',
+            iconBg: 'bg-emerald-500',
+            glow: 'rgba(16, 185, 129, 0.15)'
         },
         warning: {
-            theme: 'amber',
-            glow: 'rgba(245, 158, 11, 0.5)',
-            gradient: 'from-amber-500/20 via-transparent to-orange-500/10',
-            border: 'border-amber-500/20',
-            pill: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-            iconColor: 'text-amber-500'
+            bg: 'bg-amber-50/50 dark:bg-amber-900/10',
+            border: 'border-amber-100 dark:border-amber-800/30',
+            text: 'text-amber-700 dark:text-amber-300',
+            iconBg: 'bg-amber-500',
+            glow: 'rgba(245, 158, 11, 0.15)'
         },
         error: {
-            theme: 'rose',
-            glow: 'rgba(244, 63, 94, 0.5)',
-            gradient: 'from-rose-500/20 via-transparent to-red-500/10',
-            border: 'border-rose-500/20',
-            pill: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-            iconColor: 'text-rose-500'
+            bg: 'bg-rose-50/50 dark:bg-rose-900/10',
+            border: 'border-rose-100 dark:border-rose-800/30',
+            text: 'text-rose-700 dark:text-rose-300',
+            iconBg: 'bg-rose-500',
+            glow: 'rgba(244, 63, 94, 0.15)'
         }
     };
     return types[props.announcement.type] || types.info;
@@ -96,157 +92,107 @@ const typeConfig = computed(() => {
 </script>
 
 <template>
-    <Transition name="aurora-fade">
+    <Transition name="fade-slide">
         <div v-if="isVisible" 
-             class="aurora-card group relative overflow-hidden transition-all duration-700 misub-radius-lg border backdrop-blur-[32px] shadow-2xl hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
-             :class="[
-                 typeConfig.border,
-                 'bg-black/40 dark:bg-black/60'
-             ]">
+             class="announcement-glass group relative overflow-hidden transition-all duration-500 misub-radius-lg border backdrop-blur-xl shadow-lg"
+             :class="[typeConfig.bg, typeConfig.border]">
             
-            <!-- Animated Aurora Background -->
-            <div class="absolute inset-0 opacity-30 pointer-events-none group-hover:opacity-50 transition-opacity duration-1000">
-                <div class="absolute -inset-[100%] animate-aurora-spin"
-                     :class="['bg-gradient-to-tr', typeConfig.gradient]"></div>
-            </div>
+            <!-- Subtle Background Glow -->
+            <div class="absolute -right-20 -top-20 w-64 h-64 blur-[80px] rounded-full opacity-20 pointer-events-none transition-transform duration-1000 group-hover:scale-125"
+                 :style="{ background: typeConfig.glow }"></div>
 
-            <!-- Dynamic Border Glow -->
-            <div class="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 border border-white/10 rounded-[inherit]"></div>
-
-            <div class="relative p-6 sm:p-8 z-10">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
-                    <div class="flex items-center gap-4">
-                        <!-- Status Pill -->
-                        <div class="flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all duration-500 group-hover:px-4"
-                             :class="typeConfig.pill">
-                            <span class="relative flex h-2 w-2">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="'bg-' + typeConfig.theme + '-400'"></span>
-                                <span class="relative inline-flex rounded-full h-2 w-2" :class="'bg-' + typeConfig.theme + '-500'"></span>
-                            </span>
-                            {{ announcement.type }}
-                        </div>
-                        
-                        <div v-if="announcement.updatedAt" class="text-[10px] font-bold text-white/20 uppercase tracking-tighter">
-                            Updated {{ new Date(announcement.updatedAt).toLocaleDateString() }}
-                        </div>
-                    </div>
-
-                    <button v-if="announcement.dismissible" 
-                            @click="dismiss"
-                            class="absolute top-6 right-6 p-2 rounded-full text-white/30 hover:text-white hover:bg-white/10 transition-all duration-300 backdrop-blur-md border border-white/5"
-                            title="Dismiss">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            <div class="relative p-5 sm:p-6 z-10 flex flex-col sm:flex-row gap-5">
+                <!-- Icon Area -->
+                <div class="shrink-0">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3"
+                         :class="typeConfig.iconBg">
+                        <svg v-if="announcement.type === 'success'" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                         </svg>
-                    </button>
+                        <svg v-else-if="announcement.type === 'warning'" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <svg v-else-if="announcement.type === 'error'" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg v-else class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
                 </div>
 
-                <div class="space-y-4">
-                    <h3 class="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight group-hover:translate-x-1 transition-transform duration-500">
-                        {{ announcement.title || 'System Notification' }}
-                    </h3>
+                <!-- Content Area -->
+                <div class="flex-1 space-y-1.5 min-w-0">
+                    <div class="flex items-center justify-between gap-4">
+                        <h3 class="text-lg font-bold truncate transition-colors duration-300"
+                            :class="[typeConfig.text]">
+                            {{ announcement.title || '系统公告' }}
+                        </h3>
+                        <button v-if="announcement.dismissible" 
+                                @click="dismiss"
+                                class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                                title="不再显示">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                     
-                    <div class="prose prose-invert prose-sm max-w-none text-white/70 leading-relaxed font-medium"
+                    <div class="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 leading-relaxed dark:prose-invert transition-colors duration-300"
                         v-html="sanitizedContent">
                     </div>
-                </div>
 
-                <!-- Footer Accent -->
-                <div class="mt-8 pt-8 border-t border-white/5 flex items-center justify-between">
-                    <div class="flex -space-x-2">
-                        <div class="w-8 h-8 rounded-full border-2 border-black bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-[10px] font-bold text-white shadow-xl">M</div>
-                        <div class="w-8 h-8 rounded-full border-2 border-black bg-primary-600 flex items-center justify-center shadow-xl">
-                            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                        </div>
+                    <div v-if="announcement.updatedAt" class="pt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                        <span class="w-1 h-1 rounded-full bg-current opacity-40"></span>
+                        最后更新于 {{ new Date(announcement.updatedAt).toLocaleString() }}
                     </div>
-                    <span class="text-[9px] font-black text-white/10 uppercase tracking-[0.2em]">MiSub Identity Node</span>
                 </div>
             </div>
-
-            <!-- Decorative Glow Circle -->
-            <div class="absolute -left-20 -top-20 w-64 h-64 blur-[100px] rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-1000 pointer-events-none"
-                 :style="{ background: typeConfig.glow }"></div>
         </div>
     </Transition>
 </template>
 
 <style scoped>
-.aurora-card {
-    background-image: 
-        radial-gradient(circle at 0% 0%, rgba(255,255,255,0.03) 0%, transparent 50%),
-        radial-gradient(circle at 100% 100%, rgba(255,255,255,0.02) 0%, transparent 50%);
+.announcement-glass {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
 }
 
-.aurora-fade-enter-active,
-.aurora-fade-leave-active {
-    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+.announcement-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.15);
 }
 
-.aurora-fade-enter-from,
-.aurora-fade-leave-to {
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
     opacity: 0;
-    transform: translateY(30px) scale(0.98);
-    filter: blur(20px);
-}
-
-@keyframes aurora-spin {
-    from { transform: rotate(0deg) scale(1); }
-    50% { transform: rotate(180deg) scale(1.5); }
-    to { transform: rotate(360deg) scale(1); }
-}
-
-.animate-aurora-spin {
-    animation: aurora-spin 20s linear infinite;
+    transform: translateY(-20px) scale(0.95);
+    filter: blur(10px);
 }
 
 :deep(.prose) {
-    --tw-prose-invert-body: rgba(255, 255, 255, 0.7);
-    --tw-prose-invert-headings: white;
+    --tw-prose-body: currentColor;
 }
 
 :deep(.prose a) {
-    color: white;
-    text-decoration: none;
-    font-weight: 800;
-    position: relative;
-    padding: 0 2px;
-}
-
-:deep(.prose a::after) {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: currentColor;
-    opacity: 0.3;
-    transition: height 0.2s;
-}
-
-:deep(.prose a:hover::after) {
-    height: 100%;
-    z-index: -1;
-    opacity: 0.1;
+    color: var(--primary-600, #4f46e5);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 600;
 }
 
 :deep(.prose code) {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 2px 6px;
-    border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 4px;
     font-size: 0.9em;
 }
 
-/* 移动端微调 */
-@media (max-width: 640px) {
-    .aurora-card {
-        margin: 0 -1rem;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-    }
+.dark :deep(.prose code) {
+    background: rgba(255, 255, 255, 0.1);
 }
 </style>
