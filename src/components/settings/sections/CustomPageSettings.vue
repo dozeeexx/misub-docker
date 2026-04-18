@@ -118,13 +118,13 @@ const normalizeFullPageSource = () => {
 
 <template>
   <div class="space-y-6 animate-fade-in">
-    <div class="bg-white dark:bg-gray-800 misub-radius-lg p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-      <div class="flex items-center justify-between mb-6">
+    <div class="bg-white dark:bg-gray-800 misub-radius-lg p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h2 class="text-lg font-bold text-gray-900 dark:text-white">自定义公开页</h2>
           <p class="text-sm text-gray-500">通过自定义 HTML/CSS 打造独一无二的公开主页。</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center self-start sm:self-center gap-2">
           <Switch v-model="props.settings.customPage.enabled" />
         </div>
       </div>
@@ -192,9 +192,9 @@ const normalizeFullPageSource = () => {
 
         <div class="space-y-4">
           <div>
-            <div class="flex items-center justify-between mb-2">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
               <label class="text-sm font-bold text-gray-700 dark:text-gray-300">HTML 内容</label>
-              <div class="flex gap-2">
+              <div class="flex flex-wrap gap-1.5 justify-start sm:justify-end">
                 <button @click="normalizeFullPageSource" class="text-[10px] px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-100 dark:border-emerald-800 hover:bg-emerald-100 transition-colors">整理整页源码</button>
                 <button v-for="p in ['profiles', 'announcements', 'hero', 'guestbook', 'node_count', 'profile_count', 'version']" :key="p" @click="insertPlaceholder(p)" class="text-[10px] px-2 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 rounded border border-primary-100 dark:border-primary-800 hover:bg-primary-100 transition-colors">{&#123;{{p}}&#125;}</button>
               </div>

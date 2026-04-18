@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import DOMPurify from 'dompurify';
 
 const props = defineProps({
@@ -36,14 +36,26 @@ const dismiss = (e) => {
     }
 };
 
-onMounted(() => {
-    if (props.announcement.dismissible && props.announcement.updatedAt) {
+// 立即在 setup 阶段检查，防止 onMounted 导致的闪烁
+const checkVisibility = () => {
+    if (props.announcement?.dismissible && props.announcement?.updatedAt) {
         const dismissed = localStorage.getItem(`announcement_dismissed_${props.announcement.updatedAt}`);
         if (dismissed) {
             isVisible.value = false;
+        } else {
+            isVisible.value = true;
         }
+    } else {
+        isVisible.value = true;
     }
-});
+};
+
+checkVisibility();
+
+// 监听公告数据变化（如后台更新了内容），重置可见性
+watch(() => props.announcement, () => {
+    checkVisibility();
+}, { deep: true });
 
 const typeConfig = computed(() => {
     const types = {
