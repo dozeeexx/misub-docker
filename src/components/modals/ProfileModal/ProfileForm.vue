@@ -76,7 +76,8 @@ const isExternalEngine = computed(() => {
   return (props.globalSettings?.subconverter?.engineMode || 'builtin') === 'external';
 });
 
-watch(isExternalEngine, (enabled) => {
+const enforceExternalSchemeConstraints = () => {
+  const enabled = isExternalEngine.value;
   if (!enabled) return;
 
   if (props.localProfile.transformConfigMode === 'builtin') {
@@ -87,7 +88,19 @@ watch(isExternalEngine, (enabled) => {
     props.localProfile.transformConfig = '';
     selectedTransformAsset.value = null;
   }
-}, { immediate: true });
+};
+
+watch(
+  () => [
+    isExternalEngine.value,
+    props.localProfile,
+    props.localProfile?.transformConfigMode,
+    props.localProfile?.transformConfig,
+    props.localProfile?.subconverter?.engineMode
+  ],
+  enforceExternalSchemeConstraints,
+  { immediate: true }
+);
 
 </script>
 
