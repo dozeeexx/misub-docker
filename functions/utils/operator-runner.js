@@ -202,10 +202,9 @@ async function opScript(nodes, params, context) {
             return $proxies;
         `;
 
-        // 使用具名参数构造函数，避免在某些环境下 arguments 对象失效
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
         const runner = new AsyncFunction('$proxies', '$context', '$utils', wrapper);
-        
+
         const processedNodes = enrichedNodes.map(n => {
             // 手动注入小写别名，确保脚本兼容性
             n.regionzh = n.regionZh;
@@ -213,7 +212,6 @@ async function opScript(nodes, params, context) {
             return n;
         });
 
-        const runner = new AsyncFunction('$proxies', '$context', '$utils', wrapper);
         const result = await runner(processedNodes, context, scriptEnv.$utils);
         
         // 彻底简化返回逻辑，直接使用结果
