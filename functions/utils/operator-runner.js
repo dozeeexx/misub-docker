@@ -206,32 +206,19 @@ async function opScript(nodes, params, context) {
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
         const runner = new AsyncFunction('$proxies', '$context', '$utils', wrapper);
         
-        const proxiedNodes = enrichedNodes.map(n => {
-            return new Proxy(n, {
-                get: (target, prop) => {
-                    if (prop === '__isProxy') return true;
-                    if (prop === '__target') return target;
-                    if (typeof prop === 'string') {
-                        const lowerProp = prop.toLowerCase();
-                        if (lowerProp === 'regionzh' || lowerProp === 'region_zh') return target.regionZh;
-                        if (lowerProp === 'cleanname' || lowerProp === 'clean_name') return target.metadata?.cleanName || target.name;
-                    }
-                    return target[prop];
-                },
-                set: (target, prop, value) => {
-                    target[prop] = value;
-                    return true;
-                }
-            });
+        const processedNodes = enrichedNodes.map(n => {
+            // 手动注入小写别名，确保脚本兼容性
+            n.regionzh = n.regionZh;
+            n.region_zh = n.regionZh;
+            return n;
         });
 
-        const result = await runner(proxiedNodes, context, scriptEnv.$utils);
+        const runner = new AsyncFunction('$proxies', '$context', '$utils', wrapper);
+        const result = await runner(processedNodes, context, scriptEnv.$utils);
         
-        // 如果脚本返回了新数组，提取其中的原始对象
+        // 彻底简化返回逻辑，直接使用结果
         if (Array.isArray(result)) {
-            return result.map(n => {
-                try { return n.__isProxy ? n.__target : n; } catch(e) { return n; }
-            });
+            return result;
         }
         return nodes;
     } catch (e) {
