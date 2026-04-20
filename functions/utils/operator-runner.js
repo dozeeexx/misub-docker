@@ -206,29 +206,31 @@ async function opScript(nodes, params, context) {
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
         const runner = new AsyncFunction('$proxies', '$context', '$utils', wrapper);
         
-        const proxyHandler = {
-            get: (target, prop) => {
-                if (prop === '__target') return target;
-                if (typeof prop === 'string') {
-                    const lowerProp = prop.toLowerCase();
-                    if (lowerProp === 'regionzh' || lowerProp === 'region_zh') return target.regionZh;
-                    if (lowerProp === 'cleanname' || lowerProp === 'clean_name') return target.metadata?.cleanName || target.name;
+        const proxiedNodes = enrichedNodes.map(n => {
+            return new Proxy(n, {
+                get: (target, prop) => {
+                    if (prop === '__isProxy') return true;
+                    if (prop === '__target') return target;
+                    if (typeof prop === 'string') {
+                        const lowerProp = prop.toLowerCase();
+                        if (lowerProp === 'regionzh' || lowerProp === 'region_zh') return target.regionZh;
+                        if (lowerProp === 'cleanname' || lowerProp === 'clean_name') return target.metadata?.cleanName || target.name;
+                    }
+                    return target[prop];
+                },
+                set: (target, prop, value) => {
+                    target[prop] = value;
+                    return true;
                 }
-                return target[prop];
-            },
-            set: (target, prop, value) => {
-                target[prop] = value;
-                return true;
-            }
-        };
+            });
+        });
 
-        const proxiedNodes = enrichedNodes.map(n => new Proxy(n, proxyHandler));
         const result = await runner(proxiedNodes, context, scriptEnv.$utils);
         
-        // 将 Proxy 映射回原始对象，确保后续处理（如 Rename）能拿到修改后的值
+        // 如果脚本返回了新数组，提取其中的原始对象
         if (Array.isArray(result)) {
             return result.map(n => {
-                try { return n.__target || n; } catch(e) { return n; }
+                try { return n.__isProxy ? n.__target : n; } catch(e) { return n; }
             });
         }
         return nodes;
