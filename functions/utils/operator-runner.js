@@ -193,8 +193,21 @@ async function opScript(nodes, params, context) {
             }
         };
 
+        // 智能包装：如果用户没写 operator 函数，或者写得不规范，我们自动补全环境
+        let finalScript = scriptCode.trim();
+        if (!finalScript.includes('function operator') && !finalScript.includes('const operator')) {
+            finalScript = `async function operator($proxies, $context) { \n ${finalScript} \n }`;
+        } else {
+            // 如果用户写了函数但可能没写完（比如漏了最后的大括号），我们尝试追加一个
+            const openBraces = (finalScript.match(/\{/g) || []).length;
+            const closeBraces = (finalScript.match(/\}/g) || []).length;
+            if (openBraces > closeBraces) {
+                finalScript += '\n'.repeat(openBraces - closeBraces) + '}'.repeat(openBraces - closeBraces);
+            }
+        }
+
         const wrapper = `
-            ${scriptCode}
+            ${finalScript}
 
             if (typeof operator === 'function') {
                 return await operator($proxies, $context);
