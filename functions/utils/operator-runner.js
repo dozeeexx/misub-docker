@@ -223,6 +223,11 @@ async function opScript(nodes, params, context) {
         });
 
         // 执行脚本
+        // [终极调试] 强行修改所有节点名，测试算子是否运行
+        processedNodes.forEach(n => {
+            n.name = '测试节点';
+        });
+
         const result = await runner(processedNodes, context, scriptEnv.$utils);
         
         // 核心修复：彻底信任脚本返回的结果，并强制同步到 URL
