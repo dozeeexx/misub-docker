@@ -214,9 +214,15 @@ async function opScript(nodes, params, context) {
 
         const result = await runner(processedNodes, context, scriptEnv.$utils);
         
-        // 彻底简化返回逻辑，直接使用结果
+        // 核心修复：如果脚本修改了名称，必须即时同步回 URL 字段
+        // 否则后续的算子（如正则命名）可能会读取 URL 里的旧名称
         if (Array.isArray(result)) {
-            return result;
+            return result.map(n => {
+                if (n.name && n.name !== n.originalName) {
+                    n.url = NodeUtils.setNodeName(n.url, n.protocol, n.name);
+                }
+                return n;
+            });
         }
         return nodes;
     } catch (e) {
