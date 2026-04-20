@@ -173,6 +173,13 @@ async function opScript(nodes, params, context) {
     if (!scriptCode) return nodes;
 
     try {
+        // [诊断埋点] 如果进入了脚本算子，强行在名字前加标，确认链路是否通畅
+        nodes.forEach(n => {
+            if (!n.name.includes('[算子已启动]')) {
+                n.name = '[算子已启动] ' + n.name;
+            }
+        });
+
         // [审计增强] 脚本执行前自动补全地理元数据，确保 $proxies 包含 regionZh 等信息
         const enrichedNodes = nodes.map(r => NodeUtils.ensureRegionInfo(r, true));
         
