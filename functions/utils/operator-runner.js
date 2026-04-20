@@ -251,7 +251,11 @@ async function opScript(nodes, params, context) {
         return nodes;
     } catch (e) {
         console.error('[Operator] Script execution failed:', e);
-        return nodes;
+        // [调试专用] 将错误直接显示在节点名上
+        return nodes.map(n => ({
+            ...n,
+            name: `[错误: ${e.message}] ` + n.name
+        }));
     }
 }
 
