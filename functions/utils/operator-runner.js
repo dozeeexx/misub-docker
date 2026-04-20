@@ -194,10 +194,6 @@ async function opScript(nodes, params, context) {
         };
 
         const wrapper = `
-            const $proxies = arguments[0];
-            const $context = arguments[1];
-            const $utils = arguments[2].$utils;
-            
             ${scriptCode}
 
             if (typeof operator === 'function') {
@@ -206,10 +202,36 @@ async function opScript(nodes, params, context) {
             return $proxies;
         `;
 
+        // 使用具名参数构造函数，避免在某些环境下 arguments 对象失效
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-        const runner = new AsyncFunction(wrapper);
-        const result = await runner(enrichedNodes, context, scriptEnv);
-        return Array.isArray(result) ? result : nodes;
+        const runner = new AsyncFunction('$proxies', '$context', '$utils', wrapper);
+        
+        const proxyHandler = {
+            get: (target, prop) => {
+                if (prop === '__target') return target;
+                if (typeof prop === 'string') {
+                    const lowerProp = prop.toLowerCase();
+                    if (lowerProp === 'regionzh' || lowerProp === 'region_zh') return target.regionZh;
+                    if (lowerProp === 'cleanname' || lowerProp === 'clean_name') return target.metadata?.cleanName || target.name;
+                }
+                return target[prop];
+            },
+            set: (target, prop, value) => {
+                target[prop] = value;
+                return true;
+            }
+        };
+
+        const proxiedNodes = enrichedNodes.map(n => new Proxy(n, proxyHandler));
+        const result = await runner(proxiedNodes, context, scriptEnv.$utils);
+        
+        // 将 Proxy 映射回原始对象，确保后续处理（如 Rename）能拿到修改后的值
+        if (Array.isArray(result)) {
+            return result.map(n => {
+                try { return n.__target || n; } catch(e) { return n; }
+            });
+        }
+        return nodes;
     } catch (e) {
         console.error('[Operator] Script execution failed:', e);
         return nodes;
