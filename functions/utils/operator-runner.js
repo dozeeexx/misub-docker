@@ -219,7 +219,9 @@ async function opScript(nodes, params, context) {
         const runner = new AsyncFunction('$proxies', '$context', '$utils', wrapper);
 
         const processedNodes = enrichedNodes.map(n => {
-            // 手动注入小写别名，确保脚本兼容性
+            // 归一化处理：将各种相似的圆点统一，确保正则匹配成功
+            if (n.name) n.name = n.name.replace(/[·•・∙]/g, '·');
+            
             n.regionzh = n.regionZh;
             n.region_zh = n.regionZh;
             return n;
@@ -227,14 +229,16 @@ async function opScript(nodes, params, context) {
 
         const result = await runner(processedNodes, context, scriptEnv.$utils);
         
-        // 核心修复：如果脚本修改了名称，必须即时同步回 URL 字段
-        // 否则后续的算子（如正则命名）可能会读取 URL 里的旧名称
+        // 核心同步：强制将脚本的修改同步到所有关键字段，确保下游算子识别
         if (Array.isArray(result)) {
             return result.map(n => {
-                if (n.name && n.name !== n.originalName) {
-                    n.url = NodeUtils.setNodeName(n.url, n.protocol, n.name);
+                // 处理可能存在的 Proxy 包装（虽然目前已移除，但保留防御性）
+                const target = n.__target || n;
+                if (target.name && target.name !== target.originalName) {
+                    target.url = NodeUtils.setNodeName(target.url, target.protocol, target.name);
+                    if (target.metadata) target.metadata.cleanName = target.name;
                 }
-                return n;
+                return target;
             });
         }
         return nodes;
