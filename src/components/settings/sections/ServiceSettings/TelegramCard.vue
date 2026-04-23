@@ -102,7 +102,30 @@ async function testNotification() {
       <div class="flex items-center justify-between gap-4">
         <div>
           <h3 class="text-base font-semibold text-gray-900 dark:text-white">Telegram 通知 Bot</h3>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">用于发送普通通知，复用现有 `BotToken` / `ChatID` 配置。</p>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">用于发送订阅更新等普通通知。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bot Token</label>
+          <input
+            v-model="settings.BotToken"
+            type="text"
+            placeholder="123456:ABC-DEF..."
+            class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 misub-radius-lg shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors"
+          >
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">用于推送订阅更新通知。</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chat ID</label>
+          <input
+            v-model="settings.ChatID"
+            type="text"
+            placeholder="123456789"
+            class="block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 misub-radius-lg shadow-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white transition-colors"
+          >
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">接收通知的 Telegram 聊天 ID。</p>
         </div>
       </div>
 
