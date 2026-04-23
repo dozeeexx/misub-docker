@@ -39,15 +39,20 @@ const allowedUsersStr = computed({
 
 const webhookUrl = computed(() => `${window.location.origin}/api/telegram/webhook`);
 
+const webhookSecret = computed(() => telegramPushConfig.value.webhook_secret?.trim() || '');
+
+const isWebhookSecretValid = computed(() => {
+  return /^[A-Za-z0-9_-]{1,256}$/.test(webhookSecret.value);
+});
+
 const setWebhookUrl = computed(() => {
   const botToken = telegramPushConfig.value.bot_token?.trim();
-  const secret = telegramPushConfig.value.webhook_secret?.trim();
 
-  if (!botToken || !secret) {
+  if (!botToken || !isWebhookSecretValid.value) {
     return '';
   }
 
-  return `https://api.telegram.org/bot${botToken}/setWebhook?url=${encodeURIComponent(webhookUrl.value)}&secret_token=${encodeURIComponent(secret)}`;
+  return `https://api.telegram.org/bot${botToken}/setWebhook?url=${encodeURIComponent(webhookUrl.value)}&secret_token=${encodeURIComponent(webhookSecret.value)}`;
 });
 
 function copyText(value) {
@@ -184,10 +189,13 @@ async function testNotification() {
             <input
               v-model="telegramPushConfig.webhook_secret"
               type="text"
-              placeholder="random-secret-token"
+              placeholder="random_secret-token"
               class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 misub-radius-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white"
             >
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">用于校验请求来源。后端在未配置时会直接拒绝 webhook 请求。</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">用于校验请求来源。只允许字母、数字、下划线和连字符，长度 1-256。</p>
+            <p v-if="webhookSecret && !isWebhookSecretValid" class="mt-1 text-xs text-red-600 dark:text-red-400">
+              当前 Secret 包含 Telegram 不允许的字符；请移除 #、@、+、空格等字符后重新保存并设置 Webhook。
+            </p>
           </div>
         </div>
 
@@ -256,7 +264,9 @@ async function testNotification() {
         </div>
 
         <div v-else class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 misub-radius-md p-3">
-          <p class="text-xs text-yellow-700 dark:text-yellow-300">填写 `Push Bot Token` 和 `Webhook Secret` 后会自动生成 setWebhook 链接。</p>
+          <p class="text-xs text-yellow-700 dark:text-yellow-300">
+            填写 `Push Bot Token` 和合法的 `Webhook Secret` 后会自动生成 setWebhook 链接。
+          </p>
         </div>
 
         <div class="flex flex-col sm:flex-row gap-2">
@@ -286,7 +296,7 @@ async function testNotification() {
         <div v-if="showSetupGuide" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 misub-radius-md p-4">
           <ol class="list-decimal list-inside space-y-2 text-sm text-blue-700 dark:text-blue-300">
             <li>在 BotFather 创建一个独立的 Push Bot，填入上方 `Push Bot Token`。</li>
-            <li>生成一段随机字符串填入 `Webhook Secret`。</li>
+            <li>生成一段只包含字母、数字、下划线或连字符的随机字符串填入 `Webhook Secret`。</li>
             <li>填写允许访问的 Telegram 用户 ID；如果不填，后端会拒绝所有请求。</li>
             <li>复制上方生成的 `setWebhook` 链接并访问一次。</li>
           </ol>
