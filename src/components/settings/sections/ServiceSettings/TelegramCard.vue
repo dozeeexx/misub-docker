@@ -55,16 +55,43 @@ const setWebhookUrl = computed(() => {
   return `https://api.telegram.org/bot${botToken}/setWebhook?url=${encodeURIComponent(webhookUrl.value)}&secret_token=${encodeURIComponent(webhookSecret.value)}`;
 });
 
-function copyText(value) {
-  if (value) {
-    navigator.clipboard.writeText(value);
-  }
-}
-
+const copyStatus = ref(null);
 const showSetupGuide = ref(false);
 const showUsageGuide = ref(false);
 const isTesting = ref(false);
 const testResult = ref(null);
+
+async function copyText(value, key) {
+  if (!value) return;
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(value);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+
+    copyStatus.value = { key, message: '已复制' };
+  } catch (error) {
+    console.error('[TelegramCard] Copy failed:', error);
+    copyStatus.value = { key, message: '复制失败，请手动选择文本复制' };
+  } finally {
+    window.setTimeout(() => {
+      if (copyStatus.value?.key === key) {
+        copyStatus.value = null;
+      }
+    }, 2500);
+  }
+}
 
 async function testNotification() {
   isTesting.value = true;
@@ -235,9 +262,9 @@ async function testNotification() {
             <button
               type="button"
               class="inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-hidden"
-              @click="copyText(webhookUrl)"
+              @click="copyText(webhookUrl, 'webhook')"
             >
-              复制
+              {{ copyStatus?.key === 'webhook' ? copyStatus.message : '复制' }}
             </button>
           </div>
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Telegram 会把更新推送到这个地址。</p>
@@ -255,9 +282,9 @@ async function testNotification() {
             <button
               type="button"
               class="inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-hidden"
-              @click="copyText(setWebhookUrl)"
+              @click="copyText(setWebhookUrl, 'setWebhook')"
             >
-              复制
+              {{ copyStatus?.key === 'setWebhook' ? copyStatus.message : '复制' }}
             </button>
           </div>
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">复制后在浏览器中访问，返回 `{"ok":true}` 即表示设置成功。</p>
