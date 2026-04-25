@@ -79,11 +79,9 @@ function buildProxyLine(proxy) {
         return `http=${server}:${port}, username=${proxy.username || ''}, password=${proxy.password || ''}${extras.length ? `, ${extras.join(', ')}` : ''}, tag=${name}`;
     }
     if (type === 'hysteria2' || type === 'hy2') {
-        const extras = [];
-        const sni = proxy.servername ?? proxy.sni;
-        if (sni !== undefined) extras.push(`tls-host=${sni}`);
-        if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) extras.push('tls-verification=false');
-        return `hysteria2=${server}:${port}, password=${proxy.password || ''}${extras.length ? `, ${extras.join(', ')}` : ''}, tag=${name}`;
+        // Quantumult X rejects the Hysteria2 server syntax emitted by MiSub; omit it
+        // from rendered QuanX templates rather than breaking the entire import.
+        return null;
     }
     if (type === 'tuic') {
         const extras = [];

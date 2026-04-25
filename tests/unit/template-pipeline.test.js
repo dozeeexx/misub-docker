@@ -246,7 +246,7 @@ custom_proxy_group=TestGroup`, {
         expect(surgeRendered).not.toContain('reality=true');
     });
 
-    it('should render QuanX hysteria2 tuic and anytls syntax', () => {
+    it('should render QuanX tuic and anytls syntax while skipping unsupported hysteria2', () => {
         const quanxRendered = renderQuanxFromIniTemplate(`
 [Proxy]
 custom_proxy_group=TestGroup`, {
@@ -258,7 +258,7 @@ custom_proxy_group=TestGroup`, {
             targetFormat: 'quanx'
         });
 
-        expect(quanxRendered).toContain('hysteria2=5.45.102.158:11416, password=a276f4e4-08b4-4a03-bfe8-f36ef17ad133, tls-host=www.bing.com, tls-verification=false, tag=🌍 HY2-QX');
+        expect(quanxRendered).not.toContain('hysteria2=');
         expect(quanxRendered).toContain('tuic=5.45.102.158:39689, a276f4e4-08b4-4a03-bfe8-f36ef17ad133, a276f4e4-08b4-4a03-bfe8-f36ef17ad133, sni=www.bing.com, congestion-controller=bbr, udp-relay=native, alpn=h3, tls-verification=false, tag=🌍 TUIC-QX');
         expect(quanxRendered).toContain('anytls=156.239.232.67:443, password=9d6c62f6-e38d-4146-ab3e-d40568555f89, sni=xkhkfree.99887766.best, alpn=h2,h3, tls-verification=false, tag=🌍 AnyTLS-QX');
     });

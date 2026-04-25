@@ -181,10 +181,9 @@ function buildQxLine(proxy) {
     }
 
     if (type === 'hysteria2' || type === 'hy2') {
-        const extraParts = [];
-        if (proxy.sni || proxy.servername) extraParts.push(`tls-host=${proxy.sni || proxy.servername}`);
-        appendQxTlsParams(extraParts, proxy);
-        return `hysteria2=${server}:${port}, password=${proxy.password || ''}${extraParts.length > 0 ? `, ${extraParts.join(', ')}` : ''}, tag=${name}`;
+        // Quantumult X rejects the Hysteria2 server syntax emitted by MiSub; omit it
+        // from full QuanX configs rather than breaking the entire subscription import.
+        return null;
     }
 
     if (type === 'tuic') {
