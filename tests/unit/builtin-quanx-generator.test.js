@@ -125,4 +125,13 @@ describe('Quantumult X 内置生成器', () => {
         expect(generated).not.toContain('tls-host=addons.mozilla.org');
         expect(generated).not.toContain('over-tls=true');
     });
+
+    it('should avoid obfs-uri when xhttp is mapped to over-tls for QuanX', () => {
+        const generated = generateBuiltinQuanxConfig([
+            'vless://67d08f0c-d864-4c58-8491-ffa03097c60b@cf.tencentapp.cn:443?type=xhttp&path=%2Fargo&xhttp-host=uk.xxxxxxxxxxxxx.xxx.kg&host=uk.xxxxxxxxxxxxx.xxx.kg&security=tls&sni=uk.xxxxxxxxxxxxx.xxx.kg&allowInsecure=1#UK-Argo-XHTTP'
+        ].join('\n'));
+
+        expect(generated).toContain('vless=cf.tencentapp.cn:443, password=67d08f0c-d864-4c58-8491-ffa03097c60b, method=none, obfs=over-tls, obfs-host=uk.xxxxxxxxxxxxx.xxx.kg');
+        expect(generated).not.toContain('obfs-uri=/argo');
+    });
 });

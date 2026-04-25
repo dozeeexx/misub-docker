@@ -143,14 +143,14 @@ function buildQxLine(proxy) {
             extraParts.push(hasTlsLayer ? 'obfs=over-tls' : 'obfs=grpc');
             if (hostValue) extraParts.push(`obfs-host=${hostValue}`);
             const grpcOpts = proxy['grpc-opts'] || proxy.grpcOpts;
-            if (grpcOpts?.['grpc-service-name']) extraParts.push(`obfs-uri=${grpcOpts['grpc-service-name']}`);
+            if (!hasTlsLayer && grpcOpts?.['grpc-service-name']) extraParts.push(`obfs-uri=${grpcOpts['grpc-service-name']}`);
         } else if (transport === 'xhttp' || proxy['xhttp-opts']) {
             // QX 不直接支持 xhttp，尝试映射为 http(s) 以提高兼容性
             extraParts.push(hasTlsLayer ? 'obfs=over-tls' : 'obfs=http');
             const xhttpOpts = proxy['xhttp-opts'] || proxy.xhttpOpts;
             if (xhttpOpts?.host) extraParts.push(`obfs-host=${xhttpOpts.host}`);
             else if (hostValue) extraParts.push(`obfs-host=${hostValue}`);
-            if (xhttpOpts?.path) extraParts.push(`obfs-uri=${xhttpOpts.path}`);
+            if (!hasTlsLayer && xhttpOpts?.path) extraParts.push(`obfs-uri=${xhttpOpts.path}`);
         } else if (hasTlsLayer) {
             extraParts.push('obfs=over-tls');
             if (hostValue) extraParts.push(`obfs-host=${hostValue}`);
