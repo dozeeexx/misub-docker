@@ -48,6 +48,24 @@ describe('Quantumult X 内置生成器', () => {
         expect(result).toContain('password');
     });
 
+    it('should use Quantumult X policy syntax without pseudo DIRECT node entries', () => {
+        const result = generateBuiltinQuanxConfig('ss://YWVzLTEyOC1nY206cGFzc3dvcmQ=@1.2.3.4:443#SSNode');
+
+        expect(result).not.toContain('DIRECT = direct');
+        expect(result).toContain('static=');
+        expect(result).toContain('url-latency-benchmark=');
+        expect(result).toContain('[filter_remote]');
+        expect(result).not.toContain('filter_remote, ');
+        expect(result).toContain('final,');
+    });
+
+    it('should avoid pseudo DIRECT node even when node list is empty', () => {
+        const result = generateBuiltinQuanxConfig('');
+
+        expect(result).not.toContain('DIRECT = direct');
+        expect(result).toContain('[server_local]');
+    });
+
     it('should round-trip back through parser', () => {
         const generated = generateBuiltinQuanxConfig([
             'vmess://eyJ2IjoiMiIsInBzIjoiVm1lc3NOb2RlIiwiYWRkIjoiMS4yLjMuNCIsInBvcnQiOiI0NDMiLCJpZCI6InV1aWQtMTIzNCIsImFpZCI6IjAiLCJuZXQiOiJ3cyIsInR5cGUiOiJub25lIiwiaG9zdCI6ImV4YW1wbGUuY29tIiwicGF0aCI6Ii93cyIsInRscyI6InRscyJ9',
