@@ -142,6 +142,10 @@ function parseQuantumultXVmess(line) {
                         break;
                     case 'obfs':
                         if (value.toLowerCase() === 'ws') vmessConfig.net = 'ws';
+                        if (value.toLowerCase() === 'wss') {
+                            vmessConfig.net = 'ws';
+                            vmessConfig.tls = 'true';
+                        }
                         break;
                     case 'obfs-host':
                     case 'tls-host':

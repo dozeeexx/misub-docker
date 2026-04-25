@@ -172,7 +172,8 @@ MATCH,节点选择
         expect(quanxRendered).toContain('[policy]');
         expect(quanxRendered).toContain('[filter_remote]');
         expect(quanxRendered).toContain('[filter_local]');
-        expect(quanxRendered).toContain('vmess=1.2.3.6:443, method=none, password=uuid-5678, obfs=ws, obfs-uri=/ws, obfs-host=example.com, over-tls=true, tag=🇺🇸 US-01');
+        expect(quanxRendered).toContain('vmess=1.2.3.6:443, method=none, password=uuid-5678, obfs=wss, obfs-uri=/ws, obfs-host=example.com, tag=🇺🇸 US-01');
+        expect(quanxRendered).not.toContain('vmess=1.2.3.6:443, method=none, password=uuid-5678, obfs=ws,');
         expect(quanxRendered).toContain('filter_remote, https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/OpenAi.list, tag=🤖 OpenAi, force-policy=🤖 OpenAi, update-interval=86400, enabled=true');
         expect(quanxRendered).toContain('🚀 节点选择 = select');
         expect(surgeRendered).not.toContain('SG-01 = vless');
@@ -275,8 +276,10 @@ custom_proxy_group=TestGroup`, {
         });
         const line = quanxRendered.split('\n').find(item => item.startsWith('vmess='));
 
-        expect(line).toBe('vmess=ip.sb:443, method=none, password=6f4e029b-099f-45f6-afd2-33f0e8f86f15, obfs=ws, obfs-uri=/vmess-argo?ed=2560, obfs-host=gbwarp.owg.dpdns.org, over-tls=true, tls-host=gbwarp.owg.dpdns.org, tag=🌍 VMESS 节点');
+        expect(line).toBe('vmess=ip.sb:443, method=none, password=6f4e029b-099f-45f6-afd2-33f0e8f86f15, obfs=wss, obfs-uri=/vmess-argo?ed=2560, obfs-host=gbwarp.owg.dpdns.org, tag=🌍 VMESS 节点');
         expect(line).not.toContain('tag=🌍 VMESS 节点, obfs=');
+        expect(line).not.toContain('over-tls=true');
+        expect(line).not.toContain('tls-host=');
     });
 
     it('should render SS2022 v2ray-plugin websocket in non-Clash template targets', () => {

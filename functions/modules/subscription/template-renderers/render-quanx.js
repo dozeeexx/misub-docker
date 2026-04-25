@@ -41,15 +41,18 @@ function buildProxyLine(proxy) {
     }
     if (type === 'vmess') {
         const extras = [];
+        const sni = proxy.servername ?? proxy.sni;
+        const hasTlsLayer = proxy.tls || sni !== undefined;
         if (proxy.network === 'ws') {
-            extras.push('obfs=ws');
+            extras.push(hasTlsLayer ? 'obfs=wss' : 'obfs=ws');
             const wsOpts = proxy['ws-opts'] || proxy.wsOpts;
             if (wsOpts?.path) extras.push(`obfs-uri=${wsOpts.path}`);
             if (wsOpts?.headers?.Host) extras.push(`obfs-host=${wsOpts.headers.Host}`);
+            else if (sni !== undefined) extras.push(`obfs-host=${sni}`);
+        } else {
+            if (hasTlsLayer) extras.push('over-tls=true');
+            if (sni !== undefined) extras.push(`tls-host=${sni}`);
         }
-        const sni = proxy.servername ?? proxy.sni;
-        if (proxy.tls || sni !== undefined) extras.push('over-tls=true');
-        if (sni !== undefined) extras.push(`tls-host=${sni}`);
         if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) extras.push('tls-verification=false');
         return `vmess=${server}:${port}, method=${normalizeQxVmessMethod(proxy.cipher)}, password=${proxy.uuid || ''}${extras.length ? `, ${extras.join(', ')}` : ''}, tag=${name}`;
     }

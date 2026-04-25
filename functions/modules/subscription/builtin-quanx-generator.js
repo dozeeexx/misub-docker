@@ -93,14 +93,18 @@ function buildQxLine(proxy) {
         const method = normalizeQxVmessMethod(proxy.cipher);
         const aid = Number.isFinite(Number(proxy.alterId)) ? Number(proxy.alterId) : 0;
         const extraParts = [];
+        const sni = proxy.sni || proxy.servername;
+        const hasTlsLayer = proxy.tls || sni;
         if (proxy.network === 'ws' || proxy['ws-opts']) {
-            extraParts.push('obfs=ws');
+            extraParts.push(hasTlsLayer ? 'obfs=wss' : 'obfs=ws');
             const wsOpts = proxy['ws-opts'] || proxy.wsOpts;
             if (wsOpts?.path) extraParts.push(`obfs-uri=${wsOpts.path}`);
             if (wsOpts?.headers?.Host) extraParts.push(`obfs-host=${wsOpts.headers.Host}`);
+            else if (sni) extraParts.push(`obfs-host=${sni}`);
+        } else {
+            if (hasTlsLayer) extraParts.push('over-tls=true');
+            if (sni) extraParts.push(`tls-host=${sni}`);
         }
-        if (proxy.tls || proxy.sni || proxy.servername) extraParts.push('over-tls=true');
-        if (proxy.sni || proxy.servername) extraParts.push(`tls-host=${proxy.sni || proxy.servername}`);
         if (proxy.tfo) extraParts.push('fast-open=true');
         appendQxTlsParams(extraParts, proxy);
         return `vmess=${server}:${port}, method=${method}, password=${uuid}${extraParts.length > 0 ? `, ${extraParts.join(', ')}` : ''}, tag=${name}`;
