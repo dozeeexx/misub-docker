@@ -242,7 +242,7 @@ export function generateBuiltinQuanxConfig(nodeList, options = {}) {
     }
 
     if (proxyLines.length === 0) {
-        return '#!MANAGED-CONFIG http://example.com interval=86400 strict=false\n[server_local]\nDIRECT = direct\n';
+        return '#!MANAGED-CONFIG http://example.com interval=86400 strict=false\n[general]\nserver_check_url = http://www.gstatic.com/generate_204\nexcluded_routes = 192.168.0.0/16, 172.16.0.0/12, 100.64.0.0/10, 10.0.0.0/8\n\n[dns]\nno-ipv6\nserver = 223.5.5.5\nserver = 119.29.29.29\n\n[server_local]\nDIRECT = direct\n';
     }
 
     const sections = [];
@@ -250,7 +250,8 @@ export function generateBuiltinQuanxConfig(nodeList, options = {}) {
         sections.push(`#!MANAGED-CONFIG ${managedConfigUrl} interval=${interval} strict=false`);
     }
 
-    sections.push(`[General]\niv6 = false\ndns-server = system, 223.5.5.5, 119.29.29.29\nskip-proxy = 127.0.0.1, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 100.64.0.0/10, localhost, *.local\nproxy-test-url = http://www.gstatic.com/generate_204`);
+    sections.push(`[general]\nserver_check_url = http://www.gstatic.com/generate_204\nexcluded_routes = 192.168.0.0/16, 172.16.0.0/12, 100.64.0.0/10, 10.0.0.0/8`);
+    sections.push(`[dns]\nno-ipv6\nserver = 223.5.5.5\nserver = 119.29.29.29`);
     sections.push(`[server_local]\nDIRECT = direct\n${proxyLines.join('\n')}`);
 
     const levelKey = (ruleLevel || 'std').toUpperCase();
@@ -298,8 +299,10 @@ export function generateBuiltinQuanxConfig(nodeList, options = {}) {
     const localRuleLines = [
         '; 基础分流',
         'HOST-SUFFIX, localhost, DIRECT',
+        'HOST-SUFFIX, local, DIRECT',
         'IP-CIDR, 127.0.0.0/8, DIRECT',
         'IP-CIDR, 10.0.0.0/8, DIRECT',
+        'IP-CIDR, 100.64.0.0/10, DIRECT',
         'IP-CIDR, 172.16.0.0/12, DIRECT',
         'IP-CIDR, 192.168.0.0/16, DIRECT',
         ...localRules

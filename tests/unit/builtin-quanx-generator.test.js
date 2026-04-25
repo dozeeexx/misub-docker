@@ -10,10 +10,17 @@ describe('Quantumult X 内置生成器', () => {
         });
 
         expect(result).toContain('#!MANAGED-CONFIG https://example.com/qx');
-        expect(result).toContain('[General]');
+        expect(result).toContain('[general]');
+        expect(result).toContain('[dns]');
         expect(result).toContain('[server_local]');
+        expect(result).toContain('server_check_url = http://www.gstatic.com/generate_204');
+        expect(result).toContain('excluded_routes = 192.168.0.0/16, 172.16.0.0/12, 100.64.0.0/10, 10.0.0.0/8');
+        expect(result).toContain('server = 223.5.5.5');
         expect(result).toContain('shadowsocks=1.2.3.4:443, method=aes-128-gcm');
         expect(result).toContain('password');
+        expect(result).not.toContain('[General]');
+        expect(result).not.toContain('dns-server =');
+        expect(result).not.toContain('proxy-test-url =');
     });
 
     it('should emit tls-verification=false when skipCertVerify is enabled', () => {

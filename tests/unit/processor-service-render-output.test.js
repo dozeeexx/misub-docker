@@ -71,6 +71,7 @@ MATCH,MyGroup
         });
 
         expect(result.content).toContain('#!MANAGED-CONFIG https://example.com/sub?target=quanx&builtin=1 interval=86400 strict=false');
-        expect(result.content).toContain('[General]');
+        expect(result.content).toContain('[general]');
+        expect(result.content).toContain('[dns]');
     });
 });
