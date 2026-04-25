@@ -50,6 +50,12 @@ function appendQxTlsParams(extraParts, proxy) {
     }
 }
 
+function normalizeQxVmessMethod(method) {
+    const normalized = String(method || '').trim().toLowerCase();
+    if (!normalized || normalized === 'auto') return 'none';
+    return normalized;
+}
+
 function buildQxLine(proxy) {
     if (!proxy || !proxy.server || !proxy.port) return null;
 
@@ -84,7 +90,7 @@ function buildQxLine(proxy) {
 
     if (type === 'vmess') {
         const uuid = proxy.uuid || '';
-        const method = proxy.cipher || 'auto';
+        const method = normalizeQxVmessMethod(proxy.cipher);
         const aid = Number.isFinite(Number(proxy.alterId)) ? Number(proxy.alterId) : 0;
         const extraParts = [];
         if (proxy.network === 'ws' || proxy['ws-opts']) {

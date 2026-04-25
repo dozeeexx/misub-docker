@@ -37,7 +37,7 @@ describe('Quantumult X 内置生成器', () => {
             'trojan://password@1.2.3.4:443#TrojanNode'
         ].join('\n'));
 
-        expect(result).toContain('vmess=1.2.3.4:443, method=auto, password=uuid-1234, tag=🌍 VmessNode');
+        expect(result).toContain('vmess=1.2.3.4:443, method=none, password=uuid-1234, tag=🌍 VmessNode');
         expect(result).toContain('trojan=1.2.3.4:443, password=password, over-tls=true, tag=🌍 TrojanNode');
     });
 
