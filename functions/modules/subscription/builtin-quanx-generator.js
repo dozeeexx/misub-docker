@@ -250,7 +250,7 @@ export function generateBuiltinQuanxConfig(nodeList, options = {}) {
     }
 
     if (proxyLines.length === 0) {
-        return '#!MANAGED-CONFIG http://example.com interval=86400 strict=false\n[general]\nserver_check_url = http://www.gstatic.com/generate_204\nexcluded_routes = 192.168.0.0/16, 172.16.0.0/12, 100.64.0.0/10, 10.0.0.0/8\n\n[dns]\nno-ipv6\nserver = 223.5.5.5\nserver = 119.29.29.29\n\n[server_local]\n';
+        return '#!MANAGED-CONFIG http://example.com interval=86400 strict=false\n[general]\nserver_check_url = http://www.gstatic.com/generate_204\nexcluded_routes = 192.168.0.0/16, 172.16.0.0/12, 100.64.0.0/10, 10.0.0.0/8\n\n[dns]\nno-ipv6\nserver = 223.5.5.5\nserver = 119.29.29.29\n\n[server_remote]\n\n[server_local]\n';
     }
 
     const sections = [];
@@ -260,6 +260,7 @@ export function generateBuiltinQuanxConfig(nodeList, options = {}) {
 
     sections.push(`[general]\nserver_check_url = http://www.gstatic.com/generate_204\nexcluded_routes = 192.168.0.0/16, 172.16.0.0/12, 100.64.0.0/10, 10.0.0.0/8`);
     sections.push(`[dns]\nno-ipv6\nserver = 223.5.5.5\nserver = 119.29.29.29`);
+    sections.push(`[server_remote]`);
     sections.push(`[server_local]\n${proxyLines.join('\n')}`);
 
     const levelKey = (ruleLevel || 'std').toUpperCase();
