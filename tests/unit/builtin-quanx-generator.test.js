@@ -113,4 +113,16 @@ describe('Quantumult X 内置生成器', () => {
         expect(parsed.some(node => node.protocol === 'tuic')).toBe(true);
         expect(parsed.some(node => node.protocol === 'anytls')).toBe(true);
     });
+
+    it('should emit Quantumult X compatible vless reality syntax', () => {
+        const generated = generateBuiltinQuanxConfig([
+            'vless://52e98ca8-0671-451a-940a-961b8k@34.21.195.221:65043?security=reality&sni=addons.mozilla.org&pbk=QpmZt9PSrjOltpKalxbwoCYTkOkRPwVnNInqTCRic&sid=0123456789abcdef&type=tcp#Gcp%20SG'
+        ].join('\n'));
+
+        expect(generated).toContain('vless=34.21.195.221:65043, password=52e98ca8-0671-451a-940a-961b8k, method=none, obfs=over-tls, obfs-host=addons.mozilla.org, reality-base64-pubkey=QpmZt9PSrjOltpKalxbwoCYTkOkRPwVnNInqTCRic, reality-hex-shortid=0123456789abcdef');
+        expect(generated).toContain('tag=');
+        expect(generated).not.toContain('reality-public-key=');
+        expect(generated).not.toContain('tls-host=addons.mozilla.org');
+        expect(generated).not.toContain('over-tls=true');
+    });
 });
