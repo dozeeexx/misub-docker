@@ -184,7 +184,7 @@ function buildQxLine(proxy) {
         const extraParts = [];
         if (proxy.sni || proxy.servername) extraParts.push(`sni=${proxy.sni || proxy.servername}`);
         appendQxTlsParams(extraParts, proxy);
-        return `hysteria2=${server}:${port}, password=${proxy.password || ''}${extraParts.length > 0 ? `, ${extraParts.join(', ')}` : ''}, tag=${name}`;
+        return `hysteria2=${name}, ${server}, ${port}, ${proxy.password || ''}${extraParts.length > 0 ? `, ${extraParts.join(', ')}` : ''}`;
     }
 
     if (type === 'tuic') {
