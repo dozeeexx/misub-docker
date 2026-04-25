@@ -182,9 +182,9 @@ function buildQxLine(proxy) {
 
     if (type === 'hysteria2' || type === 'hy2') {
         const extraParts = [];
-        if (proxy.sni || proxy.servername) extraParts.push(`sni=${proxy.sni || proxy.servername}`);
+        if (proxy.sni || proxy.servername) extraParts.push(`tls-host=${proxy.sni || proxy.servername}`);
         appendQxTlsParams(extraParts, proxy);
-        return `hysteria2=${name}, ${server}, ${port}, ${proxy.password || ''}${extraParts.length > 0 ? `, ${extraParts.join(', ')}` : ''}`;
+        return `hysteria2=${server}:${port}, password=${proxy.password || ''}${extraParts.length > 0 ? `, ${extraParts.join(', ')}` : ''}, tag=${name}`;
     }
 
     if (type === 'tuic') {

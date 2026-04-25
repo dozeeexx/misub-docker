@@ -111,7 +111,7 @@ describe('Quantumult X 内置生成器', () => {
             'anytls://pass-anytls@anytls.example.com:443/?sni=anytls.example.com&alpn=h2,h3&allowInsecure=1#AnyTLSNode'
         ].join('\n'));
 
-        expect(generated).toContain('hysteria2=🌍 HY2Node, hy2.example.com, 443, pass-hy2, sni=hy2.example.com, tls-verification=false');
+        expect(generated).toContain('hysteria2=hy2.example.com:443, password=pass-hy2, tls-host=hy2.example.com, tls-verification=false, tag=🌍 HY2Node');
         expect(generated).toContain('tuic=tuic.example.com:443, uuid-tuic, pass-tuic, sni=tuic.example.com, congestion-controller=bbr, udp-relay=native, alpn=h3, tls-verification=false, tag=🌍 TUICNode');
         expect(generated).toContain('anytls=anytls.example.com:443, password=pass-anytls, sni=anytls.example.com, alpn=h2,h3, tls-verification=false, tag=🌍 AnyTLSNode');
 
@@ -121,13 +121,13 @@ describe('Quantumult X 内置生成器', () => {
         expect(parsed.some(node => node.protocol === 'anytls')).toBe(true);
     });
 
-    it('should emit QuanX compatible hysteria2 name-first syntax', () => {
+    it('should emit QuanX compatible hysteria2 host-port syntax with tls-host', () => {
         const generated = generateBuiltinQuanxConfig('hysteria2://97fe958d-2c3e-4994-9df0-293ccdb5f39@x-mg.xueshan168.cc:20201?sni=x-mg.xueshan168.cc&allowInsecure=1#Stable%20-%20%E8%B7%9D%E7%A6%BB%E4%B8%8B%E6%AC%A1%E9%87%8D%E7%BD%AE%E5%89%A9%E4%BD%99%EF%BC%9A%2019%20%E5%A4%A9');
         const line = generated.split('\n').find(item => item.startsWith('hysteria2='));
 
-        expect(line).toBe('hysteria2=🌍 Stable - 距离下次重置剩余： 19 天, x-mg.xueshan168.cc, 20201, 97fe958d-2c3e-4994-9df0-293ccdb5f39, sni=x-mg.xueshan168.cc, tls-verification=false');
-        expect(line).not.toContain('hysteria2=x-mg.xueshan168.cc:20201');
-        expect(line).not.toContain('tag=');
+        expect(line).toBe('hysteria2=x-mg.xueshan168.cc:20201, password=97fe958d-2c3e-4994-9df0-293ccdb5f39, tls-host=x-mg.xueshan168.cc, tls-verification=false, tag=🌍 Stable - 距离下次重置剩余： 19 天');
+        expect(line).not.toContain('hysteria2=🌍 Stable');
+        expect(line).not.toContain('sni=');
     });
 
     it('should emit Quantumult X compatible vless reality syntax', () => {
