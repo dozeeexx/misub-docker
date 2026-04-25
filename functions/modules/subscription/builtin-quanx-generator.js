@@ -103,7 +103,7 @@ function buildQxLine(proxy) {
         if (proxy.sni || proxy.servername) extraParts.push(`tls-host=${proxy.sni || proxy.servername}`);
         if (proxy.tfo) extraParts.push('fast-open=true');
         appendQxTlsParams(extraParts, proxy);
-        return `vmess=${server}:${port}, method=${method}, password=${uuid}, tag=${name}${extraParts.length > 0 ? `, ${extraParts.join(', ')}` : ''}`;
+        return `vmess=${server}:${port}, method=${method}, password=${uuid}${extraParts.length > 0 ? `, ${extraParts.join(', ')}` : ''}, tag=${name}`;
     }
 
     if (type === 'trojan') {

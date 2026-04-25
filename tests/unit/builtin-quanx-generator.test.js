@@ -41,7 +41,7 @@ describe('Quantumult X 内置生成器', () => {
             'trojan://password@1.2.3.4:443#TrojanNode'
         ].join('\n'));
 
-        expect(result).toContain('vmess=1.2.3.4:443, method=none, password=uuid-1234, tag=🌍 VmessNode');
+        expect(result).toContain('vmess=1.2.3.4:443, method=none, password=uuid-1234, obfs=ws, obfs-uri=/ws, obfs-host=example.com, over-tls=true, tag=🌍 VmessNode');
         expect(result).toContain('trojan=1.2.3.4:443, password=password, over-tls=true, tag=🌍 TrojanNode');
     });
 
@@ -138,5 +138,29 @@ describe('Quantumult X 内置生成器', () => {
 
         expect(generated).toContain('vless=cf.tencentapp.cn:443, password=67d08f0c-d864-4c58-8491-ffa03097c60b, method=none, obfs=over-tls, obfs-host=uk.xxxxxxxxxxxxx.xxx.kg');
         expect(generated).not.toContain('obfs-uri=/argo');
+    });
+
+    it('should keep QuanX vmess ws tls tag at the end of the server line', () => {
+        const vmessConfig = Buffer.from(JSON.stringify({
+            v: '2',
+            ps: 'VMESS 节点',
+            add: 'ip.sb',
+            port: '443',
+            id: '6f4e029b-099f-45f6-afd2-33f0e8f86f15',
+            aid: '0',
+            scy: 'auto',
+            net: 'ws',
+            type: 'none',
+            host: 'gbwarp.owg.dpdns.org',
+            path: '/vmess-argo?ed=2560',
+            tls: 'tls',
+            sni: 'gbwarp.owg.dpdns.org'
+        })).toString('base64');
+
+        const generated = generateBuiltinQuanxConfig(`vmess://${vmessConfig}`);
+        const line = generated.split('\n').find(item => item.startsWith('vmess='));
+
+        expect(line).toBe('vmess=ip.sb:443, method=none, password=6f4e029b-099f-45f6-afd2-33f0e8f86f15, obfs=ws, obfs-uri=/vmess-argo?ed=2560, obfs-host=gbwarp.owg.dpdns.org, over-tls=true, tls-host=gbwarp.owg.dpdns.org, tag=🌍 VMESS 节点');
+        expect(line).not.toContain('tag=🌍 VMESS 节点, obfs=');
     });
 });

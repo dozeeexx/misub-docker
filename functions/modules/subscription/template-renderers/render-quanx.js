@@ -51,7 +51,7 @@ function buildProxyLine(proxy) {
         if (proxy.tls || sni !== undefined) extras.push('over-tls=true');
         if (sni !== undefined) extras.push(`tls-host=${sni}`);
         if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) extras.push('tls-verification=false');
-        return `vmess=${server}:${port}, method=${normalizeQxVmessMethod(proxy.cipher)}, password=${proxy.uuid || ''}, tag=${name}${extras.length ? `, ${extras.join(', ')}` : ''}`;
+        return `vmess=${server}:${port}, method=${normalizeQxVmessMethod(proxy.cipher)}, password=${proxy.uuid || ''}${extras.length ? `, ${extras.join(', ')}` : ''}, tag=${name}`;
     }
     if (type === 'vless') {
         const extras = [];
