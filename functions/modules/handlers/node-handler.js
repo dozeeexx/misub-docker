@@ -6,6 +6,7 @@
 import { StorageFactory } from '../../storage-adapter.js';
 import { createJsonResponse, createErrorResponse } from '../utils.js';
 import { parseNodeList } from '../utils/node-parser.js';
+import { getProcessedUserAgent } from '../../utils/format-utils.js';
 
 // 创建用于全局匹配的协议正则表达式
 const NODE_PROTOCOL_GLOBAL_REGEX = new RegExp('^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|socks):\\/\\/', 'gm');
@@ -39,8 +40,9 @@ export async function handleNodeCountRequest(request, env) {
 
         try {
             // 使用统一的User-Agent策略
+            const processedUserAgent = getProcessedUserAgent('v2rayN/7.23', subUrl);
             const fetchOptions = {
-                headers: { 'User-Agent': 'v2rayN/7.23' },
+                headers: { 'User-Agent': processedUserAgent },
                 redirect: "follow"
             };
             const trafficFetchOptions = {

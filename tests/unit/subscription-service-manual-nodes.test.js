@@ -51,6 +51,30 @@ describe('subscription-service 手动节点健壮性', () => {
         expect(result).toContain(encodeURIComponent('手动节点 - 正常节点'));
     });
 
+    it('带 clash 参数的机场订阅应使用 Clash UA 拉取', async () => {
+        const clashYaml = `proxies:\n  - name: HK 1\n    type: trojan\n    server: example.com\n    port: 443\n    password: pass\n`;
+        vi.stubGlobal('fetch', vi.fn(async (request) => {
+            const ua = request.headers.get('user-agent');
+            if (ua === 'clash-verge/v2.4.3') {
+                return new Response(clashYaml, { status: 200 });
+            }
+            return new Response('<html>504 Gateway Time-out</html>', { status: 504 });
+        }));
+
+        const result = await generateCombinedNodeList(
+            {},
+            { enableAccessLog: false },
+            'ClashMeta',
+            [{ id: 'clash-sub', name: '机场', url: 'http://example.com/link/token?clash=2', enabled: true }],
+            '',
+            { enableSubscriptions: true },
+            false
+        );
+
+        expect(result).toContain('trojan://');
+        expect(globalThis.fetch).toHaveBeenCalled();
+    });
+
     it('HTTP 订阅源返回 SSR 节点时，添加订阅名前缀和国旗后仍应保持可解析', async () => {
         const ssrUrl = convertClashProxyToUrl({
             name: '台湾 1',
