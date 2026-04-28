@@ -51,6 +51,39 @@ describe('subscription-service 手动节点健壮性', () => {
         expect(result).toContain(encodeURIComponent('手动节点 - 正常节点'));
     });
 
+    it('使用 Fetch Proxy 时应通过 ua 参数把有效 UA 传给代理', async () => {
+        const clashYaml = `proxies:\n  - name: HK 1\n    type: trojan\n    server: example.com\n    port: 443\n    password: pass\n`;
+        vi.stubGlobal('fetch', vi.fn(async (request) => {
+            const requestUrl = new URL(request.url);
+            if (requestUrl.searchParams.get('ua') === 'clash-verge/v2.4.3') {
+                return new Response(clashYaml, { status: 200 });
+            }
+            return new Response('<html>504 Gateway Time-out</html>', { status: 504 });
+        }));
+
+        const result = await generateCombinedNodeList(
+            {},
+            { enableAccessLog: false },
+            'ClashMeta',
+            [{
+                id: 'proxy-ua-sub',
+                name: '机场',
+                url: 'http://example.com/link/token?clash=2',
+                fetchProxy: 'https://fetchproxy.example/api?url=',
+                customUserAgent: 'clash-verge/v2.4.3',
+                enabled: true
+            }],
+            '',
+            { enableSubscriptions: true },
+            false
+        );
+        const calledUrl = new URL(globalThis.fetch.mock.calls[0][0].url);
+
+        expect(calledUrl.searchParams.get('ua')).toBe('clash-verge/v2.4.3');
+        expect(calledUrl.searchParams.get('url')).toBe('http://example.com/link/token?clash=2');
+        expect(result).toContain('trojan://');
+    });
+
     it('订阅源 customUserAgent 应优先于默认 UA 策略', async () => {
         const clashYaml = `proxies:\n  - name: HK 1\n    type: trojan\n    server: example.com\n    port: 443\n    password: pass\n`;
         vi.stubGlobal('fetch', vi.fn(async (request) => {
