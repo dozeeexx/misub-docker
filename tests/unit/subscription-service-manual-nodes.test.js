@@ -51,6 +51,29 @@ describe('subscription-service 手动节点健壮性', () => {
         expect(result).toContain(encodeURIComponent('手动节点 - 正常节点'));
     });
 
+    it('订阅源 customUserAgent 应优先于默认 UA 策略', async () => {
+        const clashYaml = `proxies:\n  - name: HK 1\n    type: trojan\n    server: example.com\n    port: 443\n    password: pass\n`;
+        vi.stubGlobal('fetch', vi.fn(async (request) => {
+            const ua = request.headers.get('user-agent');
+            if (ua === 'clash-verge/v2.4.3') {
+                return new Response(clashYaml, { status: 200 });
+            }
+            return new Response('<html>504 Gateway Time-out</html>', { status: 504 });
+        }));
+
+        const result = await generateCombinedNodeList(
+            {},
+            { enableAccessLog: false },
+            'ClashMeta',
+            [{ id: 'custom-ua-sub', name: '机场', url: 'http://example.com/link/token', customUserAgent: 'clash-verge/v2.4.3', enabled: true }],
+            '',
+            { enableSubscriptions: true },
+            false
+        );
+
+        expect(result).toContain('trojan://');
+    });
+
     it('带 clash 参数的机场订阅应使用 Clash UA 拉取', async () => {
         const clashYaml = `proxies:\n  - name: HK 1\n    type: trojan\n    server: example.com\n    port: 443\n    password: pass\n`;
         vi.stubGlobal('fetch', vi.fn(async (request) => {

@@ -23,7 +23,7 @@ export async function handleNodeCountRequest(request, env) {
     }
 
     try {
-        const { url: subUrl, fetchProxy, plusAsSpace } = await request.json();
+        const { url: subUrl, fetchProxy, plusAsSpace, userAgent: customUserAgent } = await request.json();
         if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
             return createErrorResponse('Invalid or missing url', 400);
         }
@@ -40,7 +40,8 @@ export async function handleNodeCountRequest(request, env) {
 
         try {
             // 使用统一的User-Agent策略
-            const processedUserAgent = getProcessedUserAgent('v2rayN/7.23', subUrl);
+            const requestedUserAgent = typeof customUserAgent === 'string' ? customUserAgent.trim() : '';
+            const processedUserAgent = requestedUserAgent || getProcessedUserAgent('v2rayN/7.23', subUrl);
             const fetchOptions = {
                 headers: { 'User-Agent': processedUserAgent },
                 redirect: "follow"
