@@ -6,6 +6,8 @@
 import { StorageFactory } from '../../storage-adapter.js';
 import { createJsonResponse, createErrorResponse } from '../utils.js';
 import { parseNodeList } from '../utils/node-parser.js';
+import { getProcessedUserAgent } from '../../utils/format-utils.js';
+import { buildFetchProxyUrl } from '../../utils/fetch-proxy-utils.js';
 
 // 创建用于全局匹配的协议正则表达式
 const NODE_PROTOCOL_GLOBAL_REGEX = new RegExp('^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|socks):\\/\\/', 'gm');
@@ -22,7 +24,7 @@ export async function handleNodeCountRequest(request, env) {
     }
 
     try {
-        const { url: subUrl, fetchProxy, plusAsSpace } = await request.json();
+        const { url: subUrl, fetchProxy, plusAsSpace, userAgent: customUserAgent } = await request.json();
         if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
             return createErrorResponse('Invalid or missing url', 400);
         }
@@ -33,14 +35,16 @@ export async function handleNodeCountRequest(request, env) {
         let fetchError = null;
 
         let requestUrl = subUrl;
+        const requestedUserAgent = typeof customUserAgent === 'string' ? customUserAgent.trim() : '';
+        const processedUserAgent = requestedUserAgent || getProcessedUserAgent('v2rayN/7.23', subUrl);
         if (fetchProxy && typeof fetchProxy === 'string' && fetchProxy.trim()) {
-            requestUrl = fetchProxy.trim() + encodeURIComponent(subUrl);
+            requestUrl = buildFetchProxyUrl(fetchProxy, subUrl, processedUserAgent);
         }
 
         try {
             // 使用统一的User-Agent策略
             const fetchOptions = {
-                headers: { 'User-Agent': 'v2rayN/7.23' },
+                headers: { 'User-Agent': processedUserAgent },
                 redirect: "follow"
             };
             const trafficFetchOptions = {
