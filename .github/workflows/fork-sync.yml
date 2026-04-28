@@ -71,11 +71,11 @@ jobs:
           if [ -z "${SYNC_PAT:-}" ]; then
             WORKFLOW_DIFF="$(git diff --name-only "${ORIGIN_SHA}" "${UPSTREAM_SHA}" -- .github/workflows || true)"
             if [ -n "${WORKFLOW_DIFF}" ]; then
-              echo "❌ 上游包含 .github/workflows 变更，但当前未配置 SYNC_PAT："
+              echo "⚠️ 上游包含 .github/workflows 变更，但当前未配置 SYNC_PAT："
               echo "${WORKFLOW_DIFF}"
               echo "GitHub 默认 GITHUB_TOKEN 不能创建/更新 workflow 文件。"
-              echo "请在 fork 仓库配置 secret：SYNC_PAT（需要 repo + workflow 权限），然后手动重新运行本 workflow。"
-              exit 1
+              echo "::notice title=Fork Sync skipped::上游包含 workflow 文件变更。请在 fork 仓库配置 secret：SYNC_PAT（repo + workflow 权限）后手动重新运行，或在 GitHub 页面使用 Sync fork/Discard commits 手动同步。"
+              exit 0
             fi
           fi
 
