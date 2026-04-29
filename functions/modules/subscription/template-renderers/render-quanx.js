@@ -118,20 +118,21 @@ function buildPolicyLine(group) {
     const members = (['url-test', 'fallback', 'load-balance'].includes(type)
         ? rawMembers.filter(member => !['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'].includes(String(member).toUpperCase()))
         : rawMembers).join(', ');
-    const filter = Array.isArray(group.filters) && group.filters.length > 0 ? group.filters.join('|') : '';
-    const tolerance = group.options?.tolerance;
-    if (type === 'url-test') {
-        const base = filter ? `${group.name} = url-test, ${members}, url=${group.options?.url || 'http://www.gstatic.com/generate_204'}, interval=${group.options?.interval || 300}, filter=${filter}` : `${group.name} = url-test, ${members}, url=${group.options?.url || 'http://www.gstatic.com/generate_204'}, interval=${group.options?.interval || 300}`;
-        return tolerance ? `${base}, tolerance=${tolerance}` : base;
+    const tolerance = group.options?.tolerance || 50;
+    const interval = group.options?.interval || 300;
+    
+    if (type === 'url-test' || type === 'url-latency-benchmark') {
+        return `url-latency-benchmark=${group.name}, ${members}, check-interval=${interval}, tolerance=${tolerance}`;
     }
-    if (type === 'fallback') {
-        const base = filter ? `${group.name} = fallback, ${members}, url=${group.options?.url || 'http://www.gstatic.com/generate_204'}, interval=${group.options?.interval || 300}, filter=${filter}` : `${group.name} = fallback, ${members}, url=${group.options?.url || 'http://www.gstatic.com/generate_204'}, interval=${group.options?.interval || 300}`;
-        return tolerance ? `${base}, tolerance=${tolerance}` : base;
+    if (type === 'fallback' || type === 'available') {
+        return `available=${group.name}, ${members}`;
     }
     if (type === 'load-balance') {
-        return filter ? `${group.name} = load-balance, ${members}, url=${group.options?.url || 'http://www.gstatic.com/generate_204'}, interval=${group.options?.interval || 300}, filter=${filter}` : `${group.name} = load-balance, ${members}`;
+        // Quantumult X round-robin/load-balance isn't natively identical, but 'available' or 'static' is usually the fallback.
+        // Or we can just fallback to static
+        return `static=${group.name}, ${members}`;
     }
-    return `${group.name} = select, ${members}`;
+    return `static=${group.name}, ${members}`;
 }
 
 function buildRuleLine(rule) {
