@@ -162,7 +162,7 @@ export const POLICY_GROUPS = {
         const { regionSelectGroups, regionSupportGroups, regionNames } = _generateRegionGroups(proxies);
         
         return [
-            { name: DEFAULT_RELAY_GROUP, type: 'select', proxies: ['🔗 链式代理', '🚀 常用节点', ...regionNames, 'DIRECT'] },
+            { name: DEFAULT_RELAY_GROUP, type: 'select', proxies: ['🔗 链式代理', AUTO_SELECT_GROUP, MANUAL_SELECT_GROUP, '🚀 常用节点', ...regionNames, 'DIRECT'] },
             // 保持 provider 层为通用 select，不在抽象层输出 relay 语义。
             // 否则模板渲染/普通 Clash 路径可能把它转换成 Mihomo 专属 dialer-proxy，导致客户端拉取失败。
             { name: '🔗 链式代理', type: 'select', proxies: ['入口节点', AUTO_SELECT_GROUP, MANUAL_SELECT_GROUP, 'DIRECT', ...proxyNames] },

@@ -19,6 +19,12 @@ describe('内置 Relay 分流等级', () => {
         expect(parsed['proxy-groups'].some(group => group.type === 'relay')).toBe(false);
         expect(parsed.proxies.some(proxy => proxy['dialer-proxy'])).toBe(false);
 
+        const defaultRelayGroup = parsed['proxy-groups'].find(group => group.name === '🌍 总出口');
+        expect(defaultRelayGroup?.type).toBe('select');
+        expect(defaultRelayGroup?.proxies).toEqual(expect.arrayContaining(['🔗 链式代理', '♻️ 自动选择', '👋 手动切换', '🚀 常用节点']));
+        expect(defaultRelayGroup?.proxies.indexOf('♻️ 自动选择')).toBeLessThan(defaultRelayGroup?.proxies.indexOf('🚀 常用节点'));
+        expect(defaultRelayGroup?.proxies.indexOf('👋 手动切换')).toBeLessThan(defaultRelayGroup?.proxies.indexOf('🚀 常用节点'));
+
         const relayGroup = parsed['proxy-groups'].find(group => group.name === '🔗 链式代理');
         expect(relayGroup?.type).toBe('select');
         expect(relayGroup?.proxies.some(name => name.startsWith('🔗 链式代理 - '))).toBe(false);
