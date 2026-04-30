@@ -71,6 +71,27 @@ MATCH,节点选择
         expect(autoSelectGroup.proxies).not.toContain('DIRECT');
     });
 
+    it('should keep Clash template relay-like groups as plain select without dialer-proxy', () => {
+        const rendered = renderClashFromIniTemplate(`
+[Proxy Group]
+🔗 链式代理 = select, 入口节点, HK-01, DIRECT
+入口节点 = select, HK-01, DIRECT
+
+[Rule]
+MATCH,🔗 链式代理
+        `, {
+            proxies: [
+                { name: 'HK-01', type: 'trojan', server: '1.1.1.1', port: 443, password: 'pass' }
+            ]
+        });
+
+        const parsed = yaml.load(rendered);
+        const relayLikeGroup = parsed['proxy-groups'].find(group => group.name === '🔗 链式代理');
+        expect(relayLikeGroup.type).toBe('select');
+        expect(relayLikeGroup.proxies).toEqual(['入口节点', 'HK-01', 'DIRECT']);
+        expect(relayLikeGroup['dialer-proxy']).toBeUndefined();
+    });
+
     it('should merge duplicate proxy groups with the same name before rendering', () => {
         const rendered = renderClashFromIniTemplate(`
 [Proxy Group]

@@ -104,20 +104,6 @@ export function renderClashFromTemplateModel(model) {
                 (Array.isArray(group.filters) && group.filters.length > 0)
             )
             .map(group => {
-                const rawType = String(group.type || '').trim().toLowerCase();
-                const isRelayGroup = rawType === 'relay' || (group.name?.includes('链式代理') && Array.isArray(group.proxies) && group.proxies.length >= 2);
-
-                if (isRelayGroup && Array.isArray(group.proxies) && group.proxies.length >= 2) {
-                    const members = filterAutoSelectMembers(group);
-                    return {
-                        name: group.name,
-                        type: 'select',
-                        proxies: members.slice(1),
-                        'dialer-proxy': members[0],
-                        ...group.options
-                    };
-                }
-
                 return {
                     name: group.name,
                     type: mapGroupType(group.type),

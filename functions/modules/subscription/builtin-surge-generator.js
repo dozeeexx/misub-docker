@@ -464,10 +464,22 @@ dns-server = 119.29.29.29, 223.5.5.5, system`);
         metadata: finalResults[index].clashProxy?.metadata || {}
     }));
     
+    // 生成策略组
     let abstractGroups = policyFactory(proxiesForGrouping);
-    abstractGroups = pruneProxyGroups(abstractGroups, proxiesForGrouping);
-
-    // 转换为 Surge [Proxy Group]
+    if (levelKey === 'RELAY') {
+        abstractGroups = abstractGroups.map(group => group.name === '🔗 链式代理'
+            ? { ...group, type: 'relay', proxies: ['入口节点', '落地节点'] }
+            : group
+        );
+        if (!abstractGroups.some(group => group.name === '落地节点')) {
+            const proxyNames = proxiesForGrouping.map(proxy => proxy.name);
+            abstractGroups.splice(abstractGroups.findIndex(group => group.name === '入口节点') + 1, 0, {
+                name: '落地节点',
+                type: 'select',
+                proxies: ['♻️ 自动选择', '👋 手动切换', 'DIRECT', ...proxyNames]
+            });
+        }
+    }
     const proxyGroupLines = abstractGroups.map(group => {
         let type = group.type === 'url-test' ? 'url-test' : 'select';
         if (group.type === 'fallback') type = 'fallback';

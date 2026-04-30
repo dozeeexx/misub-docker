@@ -171,11 +171,6 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         // 生成策略组并执行引用修剪
         const policyGroupsFactory = POLICY_GROUPS[levelKey] || POLICY_GROUPS.STD;
         let proxyGroups = policyGroupsFactory(proxies);
-        if (levelKey === 'RELAY' && !enableMihomoSyntax) {
-            // 普通 Clash 客户端不一定支持 relay 策略组；在无法确认 Meta/Mihomo 语法时，
-            // 先降级成 select，保证订阅可拉取、可导入。
-            proxyGroups = proxyGroups.map(group => group.type === 'relay' ? { ...group, type: 'select' } : group);
-        }
         proxyGroups = pruneProxyGroups(proxyGroups, proxies);
         
         // 提取远程 Provider 定义
