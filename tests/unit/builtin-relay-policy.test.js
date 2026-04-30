@@ -13,8 +13,21 @@ const RELAY_NODE_LIST = [
 ].join('\n');
 
 describe('内置 Relay 分流等级', () => {
-    it('Mihomo/Meta Relay 应隐藏落地节点分组，仅通过链式代理分组选择链式落地副本', () => {
+    it('普通 Clash Relay 应保持可导入的 select 降级，不输出 Mihomo 专属 dialer-proxy', () => {
         const parsed = yaml.load(generateBuiltinClashConfig(RELAY_NODE_LIST, { ruleLevel: 'relay' }));
+
+        expect(parsed['proxy-groups'].some(group => group.type === 'relay')).toBe(false);
+        expect(parsed.proxies.some(proxy => proxy['dialer-proxy'])).toBe(false);
+
+        const relayGroup = parsed['proxy-groups'].find(group => group.name === '🔗 链式代理');
+        expect(relayGroup?.type).toBe('select');
+        expect(relayGroup?.proxies.some(name => name.startsWith('🔗 链式代理 - '))).toBe(false);
+        expect(relayGroup?.proxies).toEqual(expect.arrayContaining(['入口节点', '落地节点']));
+        expect(parsed['proxy-groups'].some(group => group.name === '落地节点')).toBe(true);
+    });
+
+    it('Mihomo/Meta Relay 应隐藏落地节点分组，仅通过链式代理分组选择链式落地副本', () => {
+        const parsed = yaml.load(generateBuiltinClashConfig(RELAY_NODE_LIST, { ruleLevel: 'relay', isMeta: true }));
 
         expect(parsed['proxy-groups'].some(group => group.type === 'relay')).toBe(false);
         expect(parsed.proxies.some(proxy => proxy.name?.startsWith('🔗 链式代理 - ') && proxy['dialer-proxy'] === '入口节点')).toBe(true);

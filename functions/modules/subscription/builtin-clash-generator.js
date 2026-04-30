@@ -6,14 +6,15 @@
 
 import { urlsToClashProxies } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
-import { 
-    POLICY_GROUPS, 
-    RULE_SETS, 
-    getBuiltinRules, 
-    getRemoteProviderDefinitions, 
-    DEFAULT_SELECT_GROUP, 
-    DEFAULT_RELAY_GROUP, 
-    pruneProxyGroups 
+import { isMetaCore } from './user-agent-utils.js';
+import {
+    POLICY_GROUPS,
+    RULE_SETS,
+    getBuiltinRules,
+    getRemoteProviderDefinitions,
+    DEFAULT_SELECT_GROUP,
+    DEFAULT_RELAY_GROUP,
+    pruneProxyGroups
 } from './builtin-rules-provider.js';
 import yaml from 'js-yaml';
 
@@ -134,8 +135,10 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         enableUdp = true,
         enableTfo = false,
         skipCertVerify = false,
-        ruleLevel = 'std' // [New] 支持 base, std, full
+        ruleLevel = 'std', // [New] 支持 base, std, full
+        userAgent = ''
     } = options;
+    const enableMihomoSyntax = Boolean(options.isMeta) || isMetaCore(userAgent, options.searchParams);
 
     // 解析节点 URL 列表（先清理控制字符）
     const cleanedNodeList = cleanControlChars(nodeList);
@@ -168,6 +171,11 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         // 生成策略组并执行引用修剪
         const policyGroupsFactory = POLICY_GROUPS[levelKey] || POLICY_GROUPS.STD;
         let proxyGroups = policyGroupsFactory(proxies);
+        if (levelKey === 'RELAY' && !enableMihomoSyntax) {
+            // 普通 Clash 客户端不一定支持 relay 策略组；在无法确认 Meta/Mihomo 语法时，
+            // 先降级成 select，保证订阅可拉取、可导入。
+            proxyGroups = proxyGroups.map(group => group.type === 'relay' ? { ...group, type: 'select' } : group);
+        }
         proxyGroups = pruneProxyGroups(proxyGroups, proxies);
         
         // 提取远程 Provider 定义
@@ -181,7 +189,7 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
         }).filter(Boolean);
 
         let publicProxies = stripInternalProxyFields(proxies);
-        if (levelKey === 'RELAY') {
+        if (levelKey === 'RELAY' && enableMihomoSyntax) {
             const relayConfig = applyMihomoRelayDialerProxy(proxies, publicProxies, proxyGroups);
             publicProxies = relayConfig.proxies;
             proxyGroups = relayConfig.proxyGroups;
