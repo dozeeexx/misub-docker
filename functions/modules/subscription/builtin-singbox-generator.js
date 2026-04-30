@@ -289,15 +289,16 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
             if (group.name === '🔗 链式代理') {
                 return {
                     ...group,
-                    // Sing-box 通过 detour 表达链式出站，selector 仅负责选择链式落地节点。
+                    // Sing-box 通过 detour 表达链式出站。用户只需要选择入口和落地；
+                    // “链式代理”固定指向“落地节点”，避免暴露 detour 副本选择细节。
                     type: 'select',
-                    proxies: chainTags
+                    proxies: ['落地节点']
                 };
             }
             if (group.name === '落地节点') {
                 return {
                     ...group,
-                    proxies: nodeEntries.map(entry => entry.tag)
+                    proxies: chainTags
                 };
             }
             return group;

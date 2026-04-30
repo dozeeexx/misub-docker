@@ -13,7 +13,7 @@ const RELAY_NODE_LIST = [
 ].join('\n');
 
 describe('内置 Relay 分流等级', () => {
-    it('Mihomo/Meta 不应输出 relay 策略组，链式代理应通过 dialer-proxy 实现', () => {
+    it('Mihomo/Meta Relay 应通过用户选择入口节点和落地节点完成链式代理', () => {
         const parsed = yaml.load(generateBuiltinClashConfig(RELAY_NODE_LIST, { ruleLevel: 'relay' }));
 
         expect(parsed['proxy-groups'].some(group => group.type === 'relay')).toBe(false);
@@ -21,9 +21,12 @@ describe('内置 Relay 分流等级', () => {
 
         const relayGroup = parsed['proxy-groups'].find(group => group.name === '🔗 链式代理');
         expect(relayGroup?.type).toBe('select');
-        expect(relayGroup?.proxies.some(name => name.startsWith('🔗 链式代理 - '))).toBe(true);
-        expect(relayGroup?.proxies).not.toContain('入口节点');
-        expect(relayGroup?.proxies).not.toContain('落地节点');
+        expect(relayGroup?.proxies).toEqual(['落地节点']);
+
+        const landingGroup = parsed['proxy-groups'].find(group => group.name === '落地节点');
+        expect(landingGroup?.type).toBe('select');
+        expect(landingGroup?.proxies.every(name => name.startsWith('🔗 链式代理 - '))).toBe(true);
+        expect(landingGroup?.proxies.some(name => name.includes('美国落地-US-01'))).toBe(true);
     });
 
     it('Surge/Loon Relay 分流应输出原生 relay 策略组', () => {
@@ -34,13 +37,18 @@ describe('内置 Relay 分流等级', () => {
         expect(loon).toContain('🔗 链式代理 = relay, 入口节点, 落地节点');
     });
 
-    it('Sing-box Relay 分流应使用 detour 表达链式出站', () => {
+    it('Sing-box Relay 分流应通过用户选择入口节点和落地节点完成 detour 链式出站', () => {
         const parsed = JSON.parse(generateBuiltinSingboxConfig(RELAY_NODE_LIST, { ruleLevel: 'relay' }));
 
         expect(parsed.outbounds.some(outbound => outbound.tag?.startsWith('🔗 链式代理 - ') && outbound.detour === '入口节点')).toBe(true);
         const relaySelector = parsed.outbounds.find(outbound => outbound.tag === '🔗 链式代理');
         expect(relaySelector?.type).toBe('selector');
-        expect(relaySelector?.outbounds.some(tag => tag.startsWith('🔗 链式代理 - '))).toBe(true);
+        expect(relaySelector?.outbounds).toEqual(['落地节点']);
+
+        const landingSelector = parsed.outbounds.find(outbound => outbound.tag === '落地节点');
+        expect(landingSelector?.type).toBe('selector');
+        expect(landingSelector?.outbounds.every(tag => tag.startsWith('🔗 链式代理 - '))).toBe(true);
+        expect(landingSelector?.outbounds.some(tag => tag.includes('美国落地-US-01'))).toBe(true);
     });
 
     it('QuanX 不支持真链式时应保持 static 降级而不是输出 relay', () => {

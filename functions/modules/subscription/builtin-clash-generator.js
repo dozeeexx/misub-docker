@@ -93,7 +93,6 @@ function applyMihomoRelayDialerProxy(proxies, publicProxies, proxyGroups) {
         return { proxies: publicProxies, proxyGroups };
     }
 
-    const baseNames = new Set(publicProxies.map(proxy => proxy.name));
     const chainProxies = publicProxies.map(proxy => ({
         ...proxy,
         name: `🔗 链式代理 - ${proxy.name}`,
@@ -105,15 +104,16 @@ function applyMihomoRelayDialerProxy(proxies, publicProxies, proxyGroups) {
         if (group.name === '🔗 链式代理') {
             return {
                 ...group,
-                // Meta/Mihomo 不再使用 relay group，这里保留 selector UX，但成员指向带 dialer-proxy 的链式落地节点。
+                // Meta/Mihomo 不再使用 relay group。用户只需要在“入口节点”和“落地节点”分组中选择；
+                // “链式代理”作为桥接分组固定指向“落地节点”，避免暴露链式副本选择细节。
                 type: 'select',
-                proxies: chainNames
+                proxies: ['落地节点']
             };
         }
         if (group.name === '落地节点') {
             return {
                 ...group,
-                proxies: group.proxies.filter(member => baseNames.has(member))
+                proxies: chainNames
             };
         }
         return group;
