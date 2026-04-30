@@ -277,6 +277,34 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
     let proxyGroups = policyGroupsFactory(outbounds);
     proxyGroups = pruneProxyGroups(proxyGroups, outbounds);
 
+    if (levelKey === 'RELAY') {
+        const chainOutbounds = nodeEntries.map(({ tag, outbound }) => ({
+            ...outbound,
+            tag: `🔗 链式代理 - ${tag}`,
+            detour: '入口节点'
+        }));
+        const chainTags = chainOutbounds.map(outbound => outbound.tag);
+        outbounds.push(...chainOutbounds);
+        proxyGroups = proxyGroups.map(group => {
+            if (group.name === '🔗 链式代理') {
+                return {
+                    ...group,
+                    // Sing-box 通过 detour 表达链式出站，selector 仅负责选择链式落地节点。
+                    type: 'select',
+                    proxies: chainTags
+                };
+            }
+            if (group.name === '落地节点') {
+                return {
+                    ...group,
+                    proxies: nodeEntries.map(entry => entry.tag)
+                };
+            }
+            return group;
+        });
+        proxyGroups = pruneProxyGroups(proxyGroups, outbounds);
+    }
+
     // 将抽象分组转换为 Sing-Box Outbounds
     const groupOutbounds = proxyGroups.map(group => {
         let type = 'selector';

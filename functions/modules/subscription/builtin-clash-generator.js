@@ -80,6 +80,52 @@ function stripInternalProxyFields(proxies) {
 }
 
 /**
+ * 为 Mihomo/Meta 生成链式代理节点。
+ * 当前 Meta 内核不再支持 relay 策略组语义，应通过 dialer-proxy 让落地节点经由入口节点拨号。
+ * @param {Object[]} proxies 原始代理对象（保留内部 metadata）
+ * @param {Object[]} publicProxies 输出用代理对象（不含内部字段）
+ * @param {Object[]} proxyGroups 策略组定义
+ * @returns {{proxies: Object[], proxyGroups: Object[]}}
+ */
+function applyMihomoRelayDialerProxy(proxies, publicProxies, proxyGroups) {
+    const relayGroup = proxyGroups.find(group => group.name === '🔗 链式代理');
+    if (!relayGroup) {
+        return { proxies: publicProxies, proxyGroups };
+    }
+
+    const baseNames = new Set(publicProxies.map(proxy => proxy.name));
+    const chainProxies = publicProxies.map(proxy => ({
+        ...proxy,
+        name: `🔗 链式代理 - ${proxy.name}`,
+        'dialer-proxy': '入口节点'
+    }));
+    const chainNames = chainProxies.map(proxy => proxy.name);
+
+    const nextProxyGroups = proxyGroups.map(group => {
+        if (group.name === '🔗 链式代理') {
+            return {
+                ...group,
+                // Meta/Mihomo 不再使用 relay group，这里保留 selector UX，但成员指向带 dialer-proxy 的链式落地节点。
+                type: 'select',
+                proxies: chainNames
+            };
+        }
+        if (group.name === '落地节点') {
+            return {
+                ...group,
+                proxies: group.proxies.filter(member => baseNames.has(member))
+            };
+        }
+        return group;
+    });
+
+    return {
+        proxies: [...publicProxies, ...chainProxies],
+        proxyGroups: pruneProxyGroups(nextProxyGroups, [...proxies, ...chainProxies])
+    };
+}
+
+/**
  * 生成内置 Clash 配置
  * @param {string} nodeList - 节点列表（换行分隔的 URL）
  * @param {Object} options - 配置选项
@@ -137,7 +183,12 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
             return null;
         }).filter(Boolean);
 
-        const publicProxies = stripInternalProxyFields(proxies);
+        let publicProxies = stripInternalProxyFields(proxies);
+        if (levelKey === 'RELAY') {
+            const relayConfig = applyMihomoRelayDialerProxy(proxies, publicProxies, proxyGroups);
+            publicProxies = relayConfig.proxies;
+            proxyGroups = relayConfig.proxyGroups;
+        }
 
         // 基础配置
         const config = {
