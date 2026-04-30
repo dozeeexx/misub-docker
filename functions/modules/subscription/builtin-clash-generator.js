@@ -6,7 +6,6 @@
 
 import { urlsToClashProxies } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
-import { clashFix } from '../../utils/format-utils.js';
 import { 
     POLICY_GROUPS, 
     RULE_SETS, 
@@ -69,6 +68,18 @@ function deduplicateNames(proxies) {
 }
 
 /**
+ * 移除仅供内部分组使用、不能输出到 Clash/Mihomo 配置的字段。
+ * @param {Object[]} proxies
+ * @returns {Object[]}
+ */
+function stripInternalProxyFields(proxies) {
+    return proxies.map(proxy => {
+        const { metadata, ...publicProxy } = proxy;
+        return publicProxy;
+    });
+}
+
+/**
  * 生成内置 Clash 配置
  * @param {string} nodeList - 节点列表（换行分隔的 URL）
  * @param {Object} options - 配置选项
@@ -126,6 +137,8 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
             return null;
         }).filter(Boolean);
 
+        const publicProxies = stripInternalProxyFields(proxies);
+
         // 基础配置
         const config = {
             'mixed-port': 7890,
@@ -147,7 +160,7 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
                 ]
             },
 
-            'proxies': proxies,
+            'proxies': publicProxies,
             'profile': {
                 'store-selected': true,
                 'subscription-url': options.managedConfigUrl || ''
@@ -166,15 +179,12 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
             forceQuotes: false
         });
 
-        // 应用 WireGuard 修复
-        yamlStr = clashFix(yamlStr);
-
         // 最终清理，确保输出没有控制字符
         return cleanControlChars(yamlStr);
     } catch (e) {
         console.error('[BuiltinClash] Generation failed:', e);
         // Fallback: 至少返回包含节点的有效 YAML 结构，而不是传回会导致 Clash 报错的 Base64
-        const fallbackProxies = Array.isArray(proxies) ? proxies : [];
+        const fallbackProxies = Array.isArray(proxies) ? stripInternalProxyFields(proxies) : [];
         const selectGroup = (ruleLevel || '').toUpperCase() === 'RELAY' ? DEFAULT_RELAY_GROUP : DEFAULT_SELECT_GROUP;
         const fallbackYaml = `proxies:\n${fallbackProxies.map(p => `  - ${JSON.stringify(p)}`).join('\n')}\n` +
                              `proxy-groups:\n  - name: ${selectGroup}\n    type: select\n    proxies: ${JSON.stringify(fallbackProxies.map(p => p.name))}\n` +
@@ -204,17 +214,16 @@ export function generateProxiesOnly(nodeList) {
     deduplicateNames(proxies);
 
     try {
-        let yamlStr = yaml.dump({ proxies }, {
+        const publicProxies = stripInternalProxyFields(proxies);
+        let yamlStr = yaml.dump({ proxies: publicProxies }, {
             indent: 2,
             lineWidth: -1,
             noRefs: true
         });
 
-        // 应用 WireGuard 修复
-        yamlStr = clashFix(yamlStr);
-
         return cleanControlChars(yamlStr);
     } catch (e) {
-        return `proxies:\n${proxies.map(p => `  - ${JSON.stringify(p)}`).join('\n')}\n`;
+        const fallbackProxies = Array.isArray(proxies) ? stripInternalProxyFields(proxies) : [];
+        return `proxies:\n${fallbackProxies.map(p => `  - ${JSON.stringify(p)}`).join('\n')}\n`;
     }
 }

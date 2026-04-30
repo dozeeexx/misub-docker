@@ -1,10 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
 import CustomPublicRenderer from '../../src/components/public/CustomPublicRenderer.vue';
+
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ path: '/public' }),
+}));
+
+const mountRenderer = (options) => mount(CustomPublicRenderer, {
+  ...options,
+  global: {
+    plugins: [createPinia()],
+    ...(options.global || {}),
+  },
+});
 
 describe('CustomPublicRenderer iframe mode', () => {
   it('renders srcdoc iframe for iframe-srcdoc mode', () => {
-    const wrapper = mount(CustomPublicRenderer, {
+    const wrapper = mountRenderer({
       props: {
         content: '<!DOCTYPE html><html><head><title>Demo</title></head><body><div>Hello</div></body></html>',
         css: '',
@@ -32,7 +45,7 @@ describe('CustomPublicRenderer iframe mode', () => {
   });
 
   it('renders url iframe for iframe-url mode', () => {
-    const wrapper = mount(CustomPublicRenderer, {
+    const wrapper = mountRenderer({
       props: {
         content: '',
         css: '',
