@@ -17,7 +17,7 @@ export function useSubscriptionForms({ addSubscription, updateSubscription }) {
             url: '',
             enabled: true,
             exclude: '',
-            customUserAgent: 'MiSub',
+            customUserAgent: '',
             fetchProxy: '',
             plusAsSpace: false,
             notes: ''
