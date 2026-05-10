@@ -89,7 +89,8 @@ function buildProxyLine(proxy) {
         if (proxy.password) extras.push(proxy.password || '');
         const sni = proxy.servername ?? proxy.sni;
         if (sni !== undefined) extras.push(`sni=${sni}`);
-        if (proxy['congestion-control']) extras.push(`congestion-controller=${proxy['congestion-control']}`);
+        const congestionControl = proxy['congestion-control'] || proxy['congestion-controller'];
+        if (congestionControl) extras.push(`congestion-controller=${congestionControl}`);
         if (proxy['udp-relay-mode']) extras.push(`udp-relay=${proxy['udp-relay-mode']}`);
         if (proxy.alpn) {
             const alpn = Array.isArray(proxy.alpn) ? proxy.alpn.join(',') : proxy.alpn;
