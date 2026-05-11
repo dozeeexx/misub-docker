@@ -281,10 +281,14 @@ export async function handleNodeCountRequest(request, env) {
                     }
                 }
 
-                console.error(`[Node Count] Both requests failed for ${subUrl}:`, errorMessage);
-                result.error = errorMessage;
-                result.errorType = errorType;
-                return createJsonResponse(result);
+                console.error(`[Node Count] Both requests failed for ${subUrl}: ${errorMessage}`);
+                return createJsonResponse({
+                    success: false,
+                    error: errorMessage,
+                    errorType: errorType,
+                    count: 0,
+                    userInfo: null
+                });
             }
 
             // 只有在至少获取到一个有效信息时，才更新数据库
@@ -298,7 +302,9 @@ export async function handleNodeCountRequest(request, env) {
                         await storageAdapter.updateSubscriptionById(subToUpdate.id, current => ({
                             ...current,
                             nodeCount: result.count,
-                            userInfo: result.userInfo
+                            userInfo: result.userInfo,
+                            lastError: null,
+                            lastUpdate: new Date().toISOString()
                         }));
                     } else {
                         const allSubs = JSON.parse(JSON.stringify(originalSubs));
@@ -306,21 +312,30 @@ export async function handleNodeCountRequest(request, env) {
                         if (target) {
                             target.nodeCount = result.count;
                             target.userInfo = result.userInfo;
+                            target.lastError = null;
+                            target.lastUpdate = new Date().toISOString();
                             await storageAdapter.put('misub_subscriptions_v1', allSubs);
                         }
                     }
                 }
+            } else {
+                // 如果 count 为 0 且没有用户信息，但请求成功了（可能机场真的没节点），也要更新错误状态（可选，此处暂不作为错误）
             }
 
         } catch (e) {
             // 节点计数处理错误
             console.error('Node count processing error:', e);
-            result.error = `处理失败: ${e.message}`;
-            result.errorType = 'processing_error';
-            return createJsonResponse(result);
+            return createJsonResponse({
+                success: false,
+                error: `处理失败: ${e.message}`,
+                errorType: 'processing_error'
+            });
         }
 
-        return createJsonResponse(result);
+        return createJsonResponse({
+            success: true,
+            data: result
+        });
     } catch (e) {
         return createErrorResponse(`获取节点数量失败: ${e.message}`, 500);
     }
