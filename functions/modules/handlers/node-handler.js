@@ -368,14 +368,16 @@ export async function handleBatchUpdateNodesRequest(request, env) {
         // 并行获取所有订阅的节点（带超时）
         const updatePromises = targetSubscriptions.map(async (subscription) => {
             try {
+                const effectiveUserAgent = (typeof subscription.customUserAgent === 'string' && subscription.customUserAgent.trim())
+                    || getProcessedUserAgent(userAgent, subscription.url);
                 let requestUrl = subscription.url;
                 if (subscription.fetchProxy && typeof subscription.fetchProxy === 'string' && subscription.fetchProxy.trim()) {
-                    requestUrl = subscription.fetchProxy.trim() + encodeURIComponent(subscription.url);
+                    requestUrl = buildFetchProxyUrl(subscription.fetchProxy, subscription.url, effectiveUserAgent);
                 }
 
                 // 使用 Promise.race 实现超时
                 const fetchPromise = fetch(new Request(requestUrl, {
-                    headers: { 'User-Agent': userAgent },
+                    headers: { 'User-Agent': effectiveUserAgent },
                     redirect: "follow"
                 }), { cf: { insecureSkipVerify: true } });
 
