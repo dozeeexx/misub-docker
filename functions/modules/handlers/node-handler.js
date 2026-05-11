@@ -25,7 +25,7 @@ export async function handleNodeCountRequest(request, env) {
 
     try {
         const { url: subUrl, fetchProxy, plusAsSpace, userAgent: customUserAgent } = await request.json();
-        if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//.test(subUrl)) {
+        if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//i.test(subUrl)) {
             return createErrorResponse('Invalid or missing url', 400);
         }
 
