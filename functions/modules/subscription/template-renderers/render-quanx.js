@@ -168,6 +168,17 @@ export function renderQuanxFromTemplateModel(model, options = {}) {
     const localRules = normalizedModel.rules.filter(r => !remoteRules.includes(r));
 
     return [
+        '[general]',
+        '; 监听端口',
+        'network_check_url=http://www.gstatic.com/generate_204',
+        'server_check_url=http://www.gstatic.com/generate_204',
+        '',
+        '[dns]',
+        '; 优先解析 IPv4',
+        'prefer-ipv4=true',
+        'server=223.5.5.5',
+        'server=114.114.114.114',
+        '',
         '[server_local]',
         ...proxies.map(buildProxyLine).filter(Boolean),
         '',
