@@ -55,7 +55,8 @@ export function getDashboardHealthItems({
       title: '还没有机场订阅',
       description: '先添加一个机场订阅，MiSub 才能获取节点并生成可用链接。',
       actionLabel: '添加机场订阅',
-      actionRoute: '/dashboard/subscriptions'
+      actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'missing' }
     });
   } else if (enabledSubscriptions.length === 0) {
     items.push({
@@ -64,7 +65,8 @@ export function getDashboardHealthItems({
       title: '没有启用的机场订阅',
       description: '当前订阅都处于停用状态，生成的默认订阅可能为空。',
       actionLabel: '检查机场订阅',
-      actionRoute: '/dashboard/subscriptions'
+      actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'disabled' }
     });
   }
 
@@ -75,7 +77,8 @@ export function getDashboardHealthItems({
       title: '还没有组合订阅',
       description: '创建组合订阅后，可以按用途输出不同客户端链接。',
       actionLabel: '创建组合订阅',
-      actionRoute: '/dashboard/profiles'
+      actionRoute: '/dashboard/subscriptions',
+      actionQuery: { focus: 'profiles' }
     });
   } else if (activeProfiles.length === 0) {
     items.push({
@@ -84,7 +87,8 @@ export function getDashboardHealthItems({
       title: '组合订阅均未启用',
       description: '公开页和分享链接可能没有可用组合。',
       actionLabel: '检查我的订阅',
-      actionRoute: '/dashboard/profiles'
+      actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'profiles-disabled' }
     });
   }
 
@@ -95,7 +99,8 @@ export function getDashboardHealthItems({
       title: '主 Token 未配置',
       description: '固定主 Token 后，默认订阅链接才会稳定可复制。',
       actionLabel: '去设置 Token',
-      actionRoute: '/dashboard/settings'
+      actionRoute: '/dashboard/settings',
+      actionQuery: { focus: 'mytoken' }
     });
   } else if (tokenState === 'auto') {
     items.push({
@@ -104,7 +109,8 @@ export function getDashboardHealthItems({
       title: '主 Token 仍为自动模式',
       description: '自动 Token 可能变化，建议改成固定 Token 以避免客户端链接失效。',
       actionLabel: '固定 Token',
-      actionRoute: '/dashboard/settings'
+      actionRoute: '/dashboard/settings',
+      actionQuery: { focus: 'mytoken' }
     });
   }
 
@@ -115,7 +121,8 @@ export function getDashboardHealthItems({
       title: '当前没有可用节点',
       description: '请刷新订阅或检查订阅源、代理和 User-Agent 设置。',
       actionLabel: '检查机场订阅',
-      actionRoute: '/dashboard/subscriptions'
+      actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'zero-nodes' }
     });
   }
 
@@ -125,8 +132,11 @@ export function getDashboardHealthItems({
       tone: 'danger',
       title: `${errorSubscriptions.length} 个订阅最近更新失败`,
       description: '建议查看错误详情或进入订阅日志排查。',
-      actionLabel: '查看订阅日志',
-      action: 'openLog',
+      actionLabel: '查看失败订阅',
+      actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'error' },
+      secondaryActionLabel: '打开日志',
+      secondaryAction: 'openLog',
       count: errorSubscriptions.length
     });
   }
@@ -139,6 +149,7 @@ export function getDashboardHealthItems({
       description: '过期订阅可能无法继续提供节点。',
       actionLabel: '检查机场订阅',
       actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'expired' },
       count: expiredSubscriptions.length
     });
   }
@@ -151,6 +162,7 @@ export function getDashboardHealthItems({
       description: '剩余流量低于 20%，建议及时续费或切换来源。',
       actionLabel: '检查流量',
       actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'low-traffic' },
       count: lowTrafficSubscriptions.length
     });
   }
@@ -163,6 +175,7 @@ export function getDashboardHealthItems({
       description: '如需加入默认订阅，请前往机场订阅重新启用。',
       actionLabel: '管理订阅',
       actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'disabled' },
       count: disabledSubscriptions.length
     });
   }

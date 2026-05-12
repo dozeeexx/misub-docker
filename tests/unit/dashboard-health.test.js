@@ -63,4 +63,29 @@ describe('dashboard health helpers', () => {
     expect(items.map(item => item.id)).toContain('low-traffic');
     expect(items.map(item => item.id)).toContain('expired-subscriptions');
   });
+
+  it('attaches precise dashboard navigation targets for follow-up actions', () => {
+    const items = getDashboardHealthItems({
+      subscriptions: [
+        { id: 'failed', enabled: true, nodeCount: 1, lastError: 'timeout' },
+        { id: 'disabled', enabled: false, nodeCount: 2 }
+      ],
+      profiles: [{ id: 'profile', enabled: true }],
+      settings: { mytoken: 'auto' },
+      totalNodesCount: 3
+    });
+
+    expect(items.find(item => item.id === 'auto-token')).toMatchObject({
+      actionRoute: '/dashboard/settings',
+      actionQuery: { focus: 'mytoken' }
+    });
+    expect(items.find(item => item.id === 'subscription-errors')).toMatchObject({
+      actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'error' }
+    });
+    expect(items.find(item => item.id === 'disabled-subscriptions')).toMatchObject({
+      actionRoute: '/dashboard/subscriptions',
+      actionQuery: { status: 'disabled' }
+    });
+  });
 });

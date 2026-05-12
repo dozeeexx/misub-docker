@@ -105,8 +105,12 @@ const handleHealthAction = (item) => {
         return;
     }
     if (item.actionRoute) {
-        router.push(item.actionRoute);
+        router.push({ path: item.actionRoute, query: item.actionQuery || {} });
     }
+};
+
+const handleStatNavigate = (path, query = {}) => {
+    router.push({ path, query });
 };
 
 // --- Bulk Import Logic ---
@@ -196,6 +200,7 @@ const handleQRCode = (url, title) => {
         :subscriptions-count="subscriptionsCount"
         :total-nodes-count="totalNodesCount"
         :active-profiles-count="activeProfilesCount"
+        @navigate="handleStatNavigate"
       />
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -226,14 +231,24 @@ const handleQRCode = (url, title) => {
                     <p class="mt-0.5 text-sm opacity-80">{{ item.description }}</p>
                   </div>
                 </div>
-                <button
-                  v-if="item.actionLabel"
-                  type="button"
-                  class="min-h-10 shrink-0 rounded-[var(--misub-radius-md)] border border-current/20 bg-white/60 px-3 py-2 text-sm font-semibold hover:bg-white/90 dark:bg-white/10 dark:hover:bg-white/15 transition-colors"
-                  @click="handleHealthAction(item)"
-                >
-                  {{ item.actionLabel }}
-                </button>
+                <div class="flex shrink-0 flex-col sm:flex-row gap-2">
+                  <button
+                    v-if="item.actionLabel"
+                    type="button"
+                    class="min-h-10 rounded-[var(--misub-radius-md)] border border-current/20 bg-white/60 px-3 py-2 text-sm font-semibold hover:bg-white/90 dark:bg-white/10 dark:hover:bg-white/15 transition-colors"
+                    @click="handleHealthAction(item)"
+                  >
+                    {{ item.actionLabel }}
+                  </button>
+                  <button
+                    v-if="item.secondaryActionLabel"
+                    type="button"
+                    class="min-h-10 rounded-[var(--misub-radius-md)] border border-current/15 px-3 py-2 text-sm font-semibold opacity-80 hover:opacity-100 transition-opacity"
+                    @click="handleHealthAction({ action: item.secondaryAction })"
+                  >
+                    {{ item.secondaryActionLabel }}
+                  </button>
+                </div>
               </div>
             </div>
             <div v-else class="rounded-[var(--misub-radius-md)] border border-emerald-200/80 bg-emerald-50/80 p-4 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
