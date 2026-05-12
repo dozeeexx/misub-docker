@@ -113,6 +113,20 @@ export function resolveExternalTemplateConfigUrl(templateSource) {
     return templateSource.kind === 'remote' ? String(templateSource.value || '').trim() : '';
 }
 
+export function resolveBuiltinEngineFlags(config = {}, isExternalMode = false) {
+    if (isExternalMode) {
+        return {
+            shouldSkipCertificateVerify: false,
+            shouldEnableUdp: false
+        };
+    }
+
+    return {
+        shouldSkipCertificateVerify: Boolean(config.builtinSkipCertVerify),
+        shouldEnableUdp: Boolean(config.builtinEnableUdp)
+    };
+}
+
 /**
  * 处理MiSub订阅请求
  * @param {Object} context - Cloudflare上下文
@@ -269,9 +283,6 @@ export async function handleMisubRequest(context) {
         targetMisubs = allMisubs.filter(s => s.enabled);
     }
 
-    const shouldSkipCertificateVerify = Boolean(config.builtinSkipCertVerify);
-    const shouldEnableUdp = Boolean(config.builtinEnableUdp);
-
     // 使用统一的确定目标格式的方法（此方法中包含了处理各类客户端如 Surge 等对应版本的最新支持规则）
     let targetFormat = determineTargetFormat(userAgentHeader, url.searchParams);
 
@@ -316,6 +327,7 @@ export async function handleMisubRequest(context) {
     const effectiveEngine = engineParam || (builtinParam === 'external' ? 'external' : (builtinParam === 'true' ? 'builtin' : '')) || defaultEngineMode;
     const isExternalMode = effectiveEngine === 'external';
     const useBuiltin = !isExternalMode;
+    const { shouldSkipCertificateVerify, shouldEnableUdp } = resolveBuiltinEngineFlags(config, isExternalMode);
 
     
     const globalTemplateUrl = resolveTemplateUrl(config.transformConfigMode, config.transformConfig, '');
