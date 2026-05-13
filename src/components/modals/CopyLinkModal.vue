@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import Modal from '../forms/Modal.vue';
 import { useToastStore } from '@/stores/toast';
+import { buildClientQuickLinks } from '@/utils/client-quick-links.js';
 
 const props = defineProps({
   show: Boolean,
@@ -26,23 +27,27 @@ const baseUrl = computed(() => {
   return `${window.location.origin}/${props.token}/${identifier.value}`;
 });
 
+const quickLinks = computed(() => buildClientQuickLinks({
+  origin: window.location.origin,
+  token: props.token,
+  profile: props.profile
+}));
+
 const clients = computed(() => [
-  { name: '默认 (自动探测)', type: 'default', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', format: '' },
-  { name: 'Clash', type: 'clash', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', format: '?clash' },
-  { name: 'Sing-Box', type: 'singbox', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', format: '?base64' },
-  { name: 'Surge', type: 'surge', icon: 'M13 10V3L4 14h7v7l9-11h-7z', format: '?surge' },
-  { name: 'Loon', type: 'loon', icon: 'M12 19l9 2-9-18-9 18 9-2zm0 0v-8', format: '?loon' },
-  { name: 'V2Ray / Base64', type: 'base64', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4', format: '?base64' },
-  { name: 'Quantumult X', type: 'quanx', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', format: '?quanx' },
+  { name: '默认', type: 'default', format: '', description: '自动识别客户端' },
+  { name: 'Clash', type: 'clash', format: '?clash', description: 'Clash/Mihomo 通用' },
+  { name: 'Sing-Box', type: 'singbox', format: '?base64', description: '通用节点订阅' },
+  { name: 'Surge', type: 'surge', format: '?surge', description: 'Surge 托管配置' },
+  { name: 'Loon', type: 'loon', format: '?loon', description: 'Loon 兼容输出' },
+  { name: 'V2Ray / Base64', type: 'base64', format: '?base64', description: 'Base64 节点列表' },
+  { name: 'Quantumult X', type: 'quanx', format: '?quanx', description: 'QuanX 兼容输出' },
 ]);
 
-const copyToClipboard = async (format) => {
-  if (!baseUrl.value) {
+const copyLink = async (link) => {
+  if (!link) {
     showToast('请在设置中配置一个固定的"订阅组分享Token"', 'error');
     return;
   }
-  
-  const link = `${baseUrl.value}${format}`;
 
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -55,6 +60,15 @@ const copyToClipboard = async (format) => {
   } catch (err) {
     fallbackCopy(link);
   }
+};
+
+const copyToClipboard = async (format) => {
+  if (!baseUrl.value) {
+    showToast('请在设置中配置一个固定的"订阅组分享Token"', 'error');
+    return;
+  }
+
+  await copyLink(`${baseUrl.value}${format}`);
 };
 
 const fallbackCopy = (link) => {
@@ -85,7 +99,10 @@ const fallbackCopy = (link) => {
 <template>
   <Modal :show="show" @update:show="close" :show-cancel="false" :show-confirm="false">
     <template #title>
-      <h3 class="text-xl font-bold text-gray-900 dark:text-white">复制订阅链接</h3>
+      <div>
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white">复制订阅链接</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">选择客户端，MiSub 会自动给出推荐格式。</p>
+      </div>
     </template>
     
     <template #body>
@@ -94,32 +111,51 @@ const fallbackCopy = (link) => {
            检测到您未在设置中配置“订阅组分享Token”，无法生成链接。请前往设置页面配置。
          </p>
       </div>
-      <div v-else class="space-y-3 mt-4">
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          如果您使用的客户端有特殊格式要求，请点选对应的专用链接进行复制。
-        </p>
-
-        <div 
-          v-for="client in clients" 
-          :key="client.type"
-          @click="copyToClipboard(client.format)"
-          class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-all duration-200 group"
-        >
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:bg-white dark:group-hover:bg-gray-900 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" :d="client.icon" />
-              </svg>
-            </div>
+      <div v-else class="mt-4 space-y-5">
+        <section class="rounded-2xl border border-primary-100 bg-primary-50/60 p-4 dark:border-primary-500/20 dark:bg-primary-500/10">
+          <div class="mb-3 flex items-start justify-between gap-3">
             <div>
-              <p class="font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-300">{{ client.name }}</p>
+              <h4 class="text-sm font-semibold text-gray-900 dark:text-white">选择客户端，一键复制推荐链接</h4>
+              <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">已自动选择兼容格式，高级用户仍可复制指定格式。</p>
             </div>
           </div>
-          
-          <button class="px-3 py-1 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-            复制
-          </button>
-        </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <button
+              v-for="client in quickLinks"
+              :key="client.id"
+              :data-testid="`client-quick-link-${client.id}`"
+              @click="copyLink(client.url)"
+              class="group flex min-h-[88px] items-start gap-3 rounded-xl border border-white/70 bg-white/85 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900/70 dark:hover:border-primary-500/50"
+            >
+              <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl dark:bg-white/10">{{ client.icon }}</span>
+              <span class="min-w-0 flex-1">
+                <span class="flex flex-wrap items-center gap-2">
+                  <span class="font-semibold text-gray-900 dark:text-white">{{ client.name }}</span>
+                  <span v-if="client.badge" class="rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-700 dark:bg-primary-500/20 dark:text-primary-200">{{ client.badge }}</span>
+                </span>
+                <span class="mt-1 block text-xs leading-relaxed text-gray-500 dark:text-gray-400">{{ client.summary }}</span>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <section>
+          <p class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">指定格式</p>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <button
+              v-for="client in clients"
+              :key="client.type"
+              @click="copyToClipboard(client.format)"
+              class="flex items-center justify-between rounded-xl border border-gray-200 bg-white/75 p-3 text-left transition-colors hover:border-primary-300 hover:bg-primary-50 dark:border-gray-700 dark:bg-gray-800/60 dark:hover:border-primary-700 dark:hover:bg-primary-900/20"
+            >
+              <span>
+                <span class="block text-sm font-medium text-gray-900 dark:text-gray-100">{{ client.name }}</span>
+                <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{{ client.description }}</span>
+              </span>
+              <span class="rounded-lg bg-primary-100 px-3 py-1 text-sm font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">复制</span>
+            </button>
+          </div>
+        </section>
       </div>
     </template>
   </Modal>
