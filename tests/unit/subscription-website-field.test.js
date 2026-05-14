@@ -67,4 +67,32 @@ describe('subscription official website field', () => {
     expect(link.attributes('href')).toBe('https://wd-gold.net/clientarea.php');
     expect(link.text()).toContain('官网');
   });
+
+  it('shows the website link before notes on the subscription card', () => {
+    const wrapper = mount(Card, {
+      props: {
+        misub: {
+          id: 'sub_1',
+          name: '测试机场',
+          url: 'https://api.example.com/sub?target=clash',
+          website: 'https://wd-gold.net/clientarea.php',
+          notes: '30/月 IPLC专线',
+          enabled: true,
+          nodeCount: 0
+        }
+      },
+      global: {
+        stubs: {
+          Switch: { template: '<button class="switch-stub"></button>' }
+        }
+      }
+    });
+
+    const meta = wrapper.get('[data-testid="subscription-footer-meta"]');
+    const websiteLink = wrapper.get('[data-testid="subscription-website-link"]');
+    const notes = wrapper.get('[data-testid="subscription-notes"]');
+
+    expect(websiteLink.element.compareDocumentPosition(notes.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(meta.text()).toMatch(/^官网\s*30\/月 IPLC专线/);
+  });
 });
