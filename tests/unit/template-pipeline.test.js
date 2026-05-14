@@ -327,6 +327,7 @@ custom_proxy_group=TestGroup`;
         expect(quanxRendered).toContain('obfs=ws');
         expect(quanxRendered).toContain('obfs-uri=/?enc=2022-blake3-aes-256-gcm');
         expect(quanxRendered).toContain('obfs-host=ss.2227tsj.workers.dev');
+        expect(quanxRendered).not.toContain('over-tls=true');
 
         expect(ssOutbound?.method).toBe('2022-blake3-aes-256-gcm');
         expect(ssOutbound?.transport?.type).toBe('ws');
