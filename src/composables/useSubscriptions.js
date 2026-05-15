@@ -107,6 +107,10 @@ export function useSubscriptions(markDirty) {
                             userMessage = `${subToUpdate.name || '订阅'} 更新失败: ${result.error || '未知错误'}`;
                     }
 
+                    if (result.errorType === 'server' && (result.error || result.status)) {
+                        userMessage = `${subToUpdate.name || '订阅'} 更新失败: ${result.error || `HTTP ${result.status}`}`;
+                    }
+
                     // 只有非静默加载时才显示 Toast
                     if (!isInitialLoad) showToast(userMessage, 'error');
                     console.error(`[handleUpdateNodeCount] Failed for ${subToUpdate.name}:`, result.error);
