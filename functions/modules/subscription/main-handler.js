@@ -87,6 +87,37 @@ export function buildManagedConfigUrl(requestUrl) {
     return managedUrl.toString();
 }
 
+function getCurrentRequestUserInfo(context, sub) {
+    const currentInfo = context?.currentSubscriptionRuntimeInfo || {};
+    const runtimeInfo = currentInfo[sub?.id] || currentInfo[sub?.url];
+    return runtimeInfo?.userInfo || sub?.userInfo || null;
+}
+
+function buildUserInfoHeaderFromSubscriptions(context, subscriptions) {
+    const totalUserInfo = subscriptions.reduce((acc, sub) => {
+        const userInfo = sub?.enabled ? getCurrentRequestUserInfo(context, sub) : null;
+        if (!userInfo) return acc;
+
+        return {
+            upload: (acc.upload || 0) + (userInfo.upload || 0),
+            download: (acc.download || 0) + (userInfo.download || 0),
+            total: (acc.total || 0) + (userInfo.total || 0),
+            expire: Math.max(acc.expire || 0, userInfo.expire || 0)
+        };
+    }, { upload: 0, download: 0, total: 0, expire: 0 });
+
+    const safeUserInfo = {
+        upload: isFinite(totalUserInfo.upload) ? totalUserInfo.upload : 0,
+        download: isFinite(totalUserInfo.download) ? totalUserInfo.download : 0,
+        total: isFinite(totalUserInfo.total) ? totalUserInfo.total : 0,
+        expire: isFinite(totalUserInfo.expire) ? totalUserInfo.expire : 0
+    };
+
+    return safeUserInfo.total > 0
+        ? `upload=${safeUserInfo.upload}; download=${safeUserInfo.download}; total=${safeUserInfo.total}; expire=${safeUserInfo.expire}`
+        : null;
+}
+
 export function resolveTemplateUrl(mode, value, fallbackUrl = '') {
     const normalizedMode = typeof mode === 'string' ? mode.trim().toLowerCase() : '';
     const normalizedValue = typeof value === 'string' ? value.trim() : '';
@@ -541,14 +572,20 @@ export async function handleMisubRequest(context) {
     // 1. If 'nodes' format requested, return plain text nodes (DataSource for external converters)
     if (targetFormat === 'nodes') {
         const contentToReturn = isProfileExpired ? (DEFAULT_EXPIRED_NODE + '\n') : combinedNodeList;
+        const userInfoHeader = buildUserInfoHeaderFromSubscriptions(context, targetMisubs);
+        const nodeHeaders = {
+            "Content-Type": "text/plain; charset=utf-8",
+            'Cache-Control': 'no-store, no-cache',
+            'X-MiSub-Mode': 'node-export-plain'
+        };
+        if (userInfoHeader) {
+            nodeHeaders['Subscription-Userinfo'] = userInfoHeader;
+            nodeHeaders['Profile-Update-Interval'] = String(config.UpdateInterval || 24);
+        }
         // [兼容性优化] 第三方转换后端对明文列表的支持通常比 Base64 更好。
         // 同时对于 Cloudflare 而言，明文输出更有利于其边缘节点的流式处理。
         return new Response(contentToReturn, { 
-            headers: { 
-                "Content-Type": "text/plain; charset=utf-8", 
-                'Cache-Control': 'no-store, no-cache',
-                'X-MiSub-Mode': 'node-export-plain'
-            } 
+            headers: nodeHeaders
         });
     }
 
@@ -737,28 +774,7 @@ export async function handleMisubRequest(context) {
 
     if (shouldUseBuiltin) {
         try {
-            const totalUserInfo = targetMisubs.reduce((acc, sub) => {
-                if (sub.enabled && sub.userInfo) {
-                    return {
-                        upload: (acc.upload || 0) + (sub.userInfo.upload || 0),
-                        download: (acc.download || 0) + (sub.userInfo.download || 0),
-                        total: (acc.total || 0) + (sub.userInfo.total || 0),
-                        expire: Math.max(acc.expire || 0, sub.userInfo.expire || 0)
-                    };
-                }
-                return acc;
-            }, { upload: 0, download: 0, total: 0, expire: 0 });
-
-            const safeUserInfo = {
-                upload: isFinite(totalUserInfo.upload) ? totalUserInfo.upload : 0,
-                download: isFinite(totalUserInfo.download) ? totalUserInfo.download : 0,
-                total: isFinite(totalUserInfo.total) ? totalUserInfo.total : 0,
-                expire: isFinite(totalUserInfo.expire) ? totalUserInfo.expire : 0
-            };
-
-            const userInfoHeader = safeUserInfo.total > 0 
-                ? `upload=${safeUserInfo.upload}; download=${safeUserInfo.download}; total=${safeUserInfo.total}; expire=${safeUserInfo.expire}`
-                : null;
+            const userInfoHeader = buildUserInfoHeaderFromSubscriptions(context, targetMisubs);
 
             let { content: finalContent, contentType, headers: resultHeaders } = await ProcessorService.renderOutput({
                 targetFormat,
@@ -841,6 +857,11 @@ export async function handleMisubRequest(context) {
     }
 
     const base64Headers = { "Content-Type": "text/plain; charset=utf-8", 'Cache-Control': 'no-store, no-cache' };
+    const userInfoHeader = buildUserInfoHeaderFromSubscriptions(context, targetMisubs);
+    if (userInfoHeader) {
+        base64Headers['Subscription-Userinfo'] = userInfoHeader;
+        base64Headers['Profile-Update-Interval'] = String(config.UpdateInterval || 24);
+    }
     Object.entries(cacheHeaders).forEach(([key, value]) => {
         base64Headers[key] = value;
     });

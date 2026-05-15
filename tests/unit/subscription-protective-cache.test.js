@@ -128,12 +128,13 @@ describe('subscription protective node cache', () => {
                 'subscription-userinfo': 'upload=1; download=2; total=100; expire=200'
             }
         })));
+        const context = {
+            storage,
+            waitUntil: promise => waitUntilPromises.push(promise)
+        };
 
         const result = await generateCombinedNodeList(
-            {
-                storage,
-                waitUntil: promise => waitUntilPromises.push(promise)
-            },
+            context,
             { enableAccessLog: false, enableFlagEmoji: false },
             'ClashMeta',
             [sub],
@@ -144,6 +145,12 @@ describe('subscription protective node cache', () => {
 
         expect(result.trim()).toBe('trojan://pass@example.com:443#HK');
         expect(waitUntilPromises).toHaveLength(1);
+        expect(context.currentSubscriptionRuntimeInfo[sub.id].userInfo).toEqual({
+            upload: 1,
+            download: 2,
+            total: 100,
+            expire: 200
+        });
 
         await Promise.all(waitUntilPromises);
 

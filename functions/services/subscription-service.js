@@ -161,6 +161,14 @@ function scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, runtimeInf
     });
 }
 
+function recordCurrentRequestRuntimeInfo(context, sub, runtimeInfo) {
+    const key = sub?.id || sub?.url;
+    if (!context || !key) return;
+
+    context.currentSubscriptionRuntimeInfo = context.currentSubscriptionRuntimeInfo || {};
+    context.currentSubscriptionRuntimeInfo[key] = runtimeInfo;
+}
+
 /**
  * 带重试的订阅获取函数（支持网络错误和 HTTP 状态码重试）
  * @param {string} url - 请求 URL
@@ -466,10 +474,12 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
 
             if (realNodes.length > 0) {
                 const userInfo = parseSubscriptionUserInfoHeader(response.headers.get('subscription-userinfo'));
-                scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, {
+                const runtimeInfo = {
                     nodeCount: realNodes.length,
                     userInfo
-                });
+                };
+                recordCurrentRequestRuntimeInfo(context, sub, runtimeInfo);
+                scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, runtimeInfo);
             }
 
             // 判断是否启用订阅前缀（智能重命名启用时跳过）
