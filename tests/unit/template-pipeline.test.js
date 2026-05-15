@@ -357,7 +357,7 @@ custom_proxy_group=TestGroup`;
         expect(providerUrls.every(url => !String(url).endsWith('.list'))).toBe(true);
     });
 
-    it('should map ACL4SSR root Clash list rules to existing provider ruleset urls', () => {
+    it('should map ACL4SSR Clash list rules to existing provider urls', () => {
         const rendered = renderClashFromIniTemplate(`
 [custom]
 ruleset=📲 电报消息,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Telegram.list
@@ -374,5 +374,37 @@ custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
 
         expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/Telegram.yaml');
         expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ProxyGFWlist.yaml');
+    });
+
+    it('should keep ACL4SSR full root providers readable without expanding rules', () => {
+        const rendered = renderClashFromIniTemplate(`
+[custom]
+ruleset=LAN,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/LocalAreaNetwork.list
+ruleset=AD,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanAD.list
+ruleset=Media,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ProxyMedia.list
+ruleset=GoogleFCM,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/GoogleFCM.list
+ruleset=AI,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/AI.list
+ruleset=ChinaIP,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaCompanyIp.list
+ruleset=Final,[]FINAL
+custom_proxy_group=Proxy\`select\`[]DIRECT\`.*
+`, {
+            nodeList: 'trojan://password@1.2.3.4:443#HK-01',
+            targetFormat: 'clash'
+        });
+
+        const parsed = yaml.load(rendered);
+        const providers = Object.values(parsed['rule-providers'] || {});
+        const providerUrls = providers.map(provider => provider.url);
+
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/LocalAreaNetwork.yaml');
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/BanAD.yaml');
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ProxyMedia.yaml');
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/GoogleFCM.yaml');
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/AI.yaml');
+
+        const chinaCompanyIpProvider = providers.find(provider => provider.url === 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ChinaCompanyIp.yaml');
+        expect(chinaCompanyIpProvider?.behavior).toBe('ipcidr');
+        expect(providerUrls).not.toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/BanAD.yaml');
+        expect(providerUrls).not.toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/LocalAreaNetwork.yaml');
     });
 });

@@ -20,7 +20,32 @@ function filterAutoSelectMembers(group) {
 }
 
 const ACL4SSR_ROOT_PROVIDER_FILES = new Set([
-    'proxygfwlist'
+    'apple',
+    'banad',
+    'baneasylist',
+    'baneasylistchina',
+    'baneasyprivacy',
+    'banprogramad',
+    'chinacompanyip',
+    'chinadomain',
+    'chinaip',
+    'chinaipv6',
+    'chinamedia',
+    'download',
+    'localareanetwork',
+    'mjj',
+    'proxylite',
+    'proxygfwlist',
+    'proxymedia',
+    'unban'
+]);
+
+const ACL4SSR_IPCIDR_PROVIDER_FILES = new Set([
+    'amazonip',
+    'chinacompanyip',
+    'chinaip',
+    'chinaipv6',
+    'netflixip'
 ]);
 
 function toClashRuleProviderUrl(sourceUrl) {
@@ -50,6 +75,16 @@ function toClashRuleProviderUrl(sourceUrl) {
     } catch {
         return sourceUrl;
     }
+}
+
+function getRuleProviderBehavior(providerUrl) {
+    try {
+        const fileName = new URL(providerUrl).pathname.split('/').pop()?.replace(/\.(yaml|yml|list|txt|conf)$/i, '') || '';
+        if (ACL4SSR_IPCIDR_PROVIDER_FILES.has(fileName.toLowerCase())) return 'ipcidr';
+    } catch {
+        // ignore invalid provider url shapes and keep default behavior
+    }
+    return 'classical';
 }
 
 function mapRule(rule, ruleProviderMap) {
@@ -93,7 +128,7 @@ export function renderClashFromTemplateModel(model) {
         ruleProviderMap.set(providerUrl, providerName);
         ruleProviders[providerName] = {
             type: 'http',
-            behavior: 'classical',
+            behavior: getRuleProviderBehavior(providerUrl),
             url: providerUrl,
             path: `./ruleset/${providerName}.yaml`,
             interval: 86400
