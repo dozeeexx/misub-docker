@@ -117,7 +117,15 @@ export function useSubscriptions(markDirty) {
 
                     // 重要: 记录错误到本地对象中(非持久化,仅用于UI展示,直到下次持久化保存)
                     subToUpdate.lastError = result.error;
-                    return; // 失败时不更新 nodeCount,保留旧值
+                    if (subToUpdate.enableNodeCache !== true) {
+                        subToUpdate.nodeCount = 0;
+                        subToUpdate.userInfo = null;
+                        if (!isInitialLoad) {
+                            markDirty();
+                            void dataStore.saveData();
+                        }
+                    }
+                    return; // 开启保护性缓存节点时，失败保留旧值
                 }
 
                 // 成功获取数据
