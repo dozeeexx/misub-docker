@@ -222,28 +222,17 @@ async function opScript(nodes, params, context) {
             }
         }
 
-        // 尝试使用更兼容的 Function 构造器，并减少包装复杂度
-        let runner;
-        try {
-            runner = new Function('$proxies', '$context', '$utils', `
-                const operator = async ($proxies, $context) => {
-                    ${finalScript}
-                    if (typeof operator === 'function') return await operator($proxies, $context);
-                    return $proxies;
-                };
-                return operator($proxies, $context);
-            `);
-        } catch (e) {
-            // 如果 Function 被彻底封死，我们尝试最后的 eval 降级
-            console.warn('[Operator] Function constructor blocked, trying eval fallback');
-            runner = ($proxies, $context, $utils) => {
-                return (async () => {
-                    // 这里是一个非常激进的尝试
-                    const fn = eval(`(async ($proxies, $context) => { ${finalScript}; return await operator($proxies, $context); })`);
-                    return await fn($proxies, $context);
-                })();
+        // 使用 Function 构造器执行用户脚本。
+        // 注意：不要保留 direct eval fallback；esbuild 会针对 direct eval 发出 bundling 警告，
+        // 且 Cloudflare Workers 若禁用动态代码执行，eval 与 Function 都不可用，降级并不能真正兜底。
+        const runner = new Function('$proxies', '$context', '$utils', `
+            const operator = async ($proxies, $context) => {
+                ${finalScript}
+                if (typeof operator === 'function') return await operator($proxies, $context);
+                return $proxies;
             };
-        }
+            return operator($proxies, $context);
+        `);
 
         const processedNodes = enrichedNodes.map(n => {
             if (n.name) n.name = n.name.replace(/[·•・∙]/g, '·');
