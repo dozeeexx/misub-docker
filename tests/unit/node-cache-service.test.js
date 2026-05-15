@@ -6,6 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
     getCache,
     setCache,
+    clearAllNodeCaches,
     createCacheHeaders,
     triggerBackgroundRefresh,
     getCacheConfig
@@ -83,5 +84,33 @@ describe('node-cache-service', () => {
         expect(updated).toBe(false);
         expect(cached.data.nodes).toBe('trojan://password@1.2.3.4:443#HK-01\n');
         expect(cached.data.nodeCount).toBe(1);
+    });
+
+    it('preserves only requested subscription protective caches when clearing node caches', async () => {
+        const deleted = [];
+        const storage = {
+            async list() {
+                return [
+                    'node_cache_token_main',
+                    'node_cache_profile_profile-1',
+                    'node_cache_subscription_sub-keep',
+                    'node_cache_subscription_sub-drop'
+                ];
+            },
+            async delete(key) {
+                deleted.push(key);
+            }
+        };
+
+        const result = await clearAllNodeCaches(storage, {
+            preserveKeys: ['node_cache_subscription_sub-keep']
+        });
+
+        expect(result).toEqual({ cleared: 3, failed: 0, skipped: 1 });
+        expect(deleted).toEqual([
+            'node_cache_token_main',
+            'node_cache_profile_profile-1',
+            'node_cache_subscription_sub-drop'
+        ]);
     });
 });

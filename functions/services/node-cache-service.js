@@ -26,6 +26,14 @@ export function generateCacheKey(type, identifier) {
     return `${CACHE_CONFIG.KEY_PREFIX}${type}_${identifier}`;
 }
 
+function isSubscriptionNodeCacheKey(key) {
+    return typeof key === 'string'
+        && (
+            key.startsWith(`${CACHE_CONFIG.KEY_PREFIX}subscription_`)
+            || key.startsWith(`${CACHE_CONFIG.KEY_PREFIX}subscription_url_`)
+        );
+}
+
 /**
  * 缓存数据结构
  * @typedef {Object} CacheEntry
@@ -182,11 +190,17 @@ export async function clearCache(storageAdapter, cacheKey) {
  * @param {Object} storageAdapter - 存储适配器
  * @returns {Promise<{cleared: number, failed: number}>}
  */
-export async function clearAllNodeCaches(storageAdapter) {
+export async function clearAllNodeCaches(storageAdapter, options = {}) {
     try {
         let cleared = 0;
         let failed = 0;
+        let skipped = 0;
         let cursor = null;
+        const preserveKeys = new Set(
+            Array.isArray(options?.preserveKeys)
+                ? options.preserveKeys.filter(isSubscriptionNodeCacheKey)
+                : []
+        );
 
         // 循环处理分页，KV list 默认最多返回 1000 个 key
         do {
@@ -219,6 +233,10 @@ export async function clearAllNodeCaches(storageAdapter) {
             // 删除缓存
             for (const keyInfo of keys) {
                 const key = typeof keyInfo === 'string' ? keyInfo : (keyInfo.name || keyInfo);
+                if (preserveKeys.has(key)) {
+                    skipped++;
+                    continue;
+                }
                 try {
                     if (storageAdapter.kv && typeof storageAdapter.kv.delete === 'function') {
                         await storageAdapter.kv.delete(key);
@@ -238,10 +256,10 @@ export async function clearAllNodeCaches(storageAdapter) {
         } while (cursor);
 
 
-        return { cleared, failed };
+        return { cleared, failed, skipped };
     } catch (error) {
         console.error('[Cache] Failed to clear all caches:', error);
-        return { cleared: 0, failed: 0 };
+        return { cleared: 0, failed: 0, skipped: 0 };
     }
 }
 
