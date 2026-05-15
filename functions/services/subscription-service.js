@@ -96,6 +96,66 @@ async function writeSubscriptionNodeCache(storage, sub, nodes) {
     }
 }
 
+async function writeSubscriptionRuntimeInfo(storage, sub, runtimeInfo = {}) {
+    if (!storage || !sub?.id) return false;
+    const { nodeCount, userInfo } = runtimeInfo;
+    const hasUserInfo = Object.prototype.hasOwnProperty.call(runtimeInfo, 'userInfo');
+
+    try {
+        const applyUpdate = current => {
+            if (!current) return current;
+            return {
+                ...current,
+                nodeCount: Number.isFinite(nodeCount) ? nodeCount : current.nodeCount,
+                ...(hasUserInfo ? { userInfo } : {}),
+                lastError: null,
+                lastUpdate: new Date().toISOString()
+            };
+        };
+
+        if (typeof storage.updateSubscriptionById === 'function') {
+            return Boolean(await storage.updateSubscriptionById(sub.id, applyUpdate));
+        }
+
+        if (typeof storage.get === 'function' && typeof storage.put === 'function') {
+            const all = await storage.get('misub_subscriptions_v1');
+            if (!Array.isArray(all)) return false;
+            const index = all.findIndex(item => item?.id === sub.id);
+            if (index === -1) return false;
+            all[index] = applyUpdate(all[index]);
+            await storage.put('misub_subscriptions_v1', all);
+            return true;
+        }
+    } catch (error) {
+        console.warn('[SubscriptionRuntimeInfo] Failed to write subscription info:', error);
+    }
+
+    return false;
+}
+
+function scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, runtimeInfo) {
+    const promise = writeSubscriptionRuntimeInfo(storage, sub, runtimeInfo);
+
+    if (context && typeof context.waitUntil === 'function') {
+        context.waitUntil(promise.catch(error => {
+            console.warn('[SubscriptionRuntimeInfo] Async update failed:', error);
+        }));
+        return;
+    }
+
+    promise.catch(error => {
+        console.warn('[SubscriptionRuntimeInfo] Async update failed:', error);
+    });
+}
+
+function recordCurrentRequestRuntimeInfo(context, sub, runtimeInfo) {
+    const key = sub?.id || sub?.url;
+    if (!context || !key) return;
+
+    context.currentSubscriptionRuntimeInfo = context.currentSubscriptionRuntimeInfo || {};
+    context.currentSubscriptionRuntimeInfo[key] = runtimeInfo;
+}
+
 /**
  * 带重试的订阅获取函数（支持网络错误和 HTTP 状态码重试）
  * @param {string} url - 请求 URL
@@ -336,6 +396,15 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     const fetchSingleSubscription = async (sub) => {
         const cacheEnabled = sub?.enableNodeCache === true;
         const storage = context?.storage;
+        const recordEmptyRuntimeInfo = () => {
+            if (cacheEnabled) return;
+            const runtimeInfo = {
+                nodeCount: 0,
+                userInfo: null
+            };
+            recordCurrentRequestRuntimeInfo(context, sub, runtimeInfo);
+            scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, runtimeInfo);
+        };
         const readCachedNodes = async () => {
             if (!cacheEnabled) return [];
             const cached = await readSubscriptionNodeCache(storage, sub);
@@ -366,6 +435,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             });
 
             if (!response.ok) {
+                recordEmptyRuntimeInfo();
                 return (await readCachedNodes()).join('\n');
             }
             const buffer = await response.arrayBuffer();
@@ -394,6 +464,9 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             if (cacheEnabled && realNodes.length === 0) {
                 return (await readCachedNodes()).join('\n');
             }
+            if (!cacheEnabled && realNodes.length === 0) {
+                recordEmptyRuntimeInfo();
+            }
 
             if (cacheEnabled) {
                 await writeSubscriptionNodeCache(storage, sub, realNodes);
@@ -407,6 +480,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
         } catch (e) {
+            recordEmptyRuntimeInfo();
             return (await readCachedNodes()).join('\n');
         }
     };
