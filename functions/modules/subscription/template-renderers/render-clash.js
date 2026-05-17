@@ -23,6 +23,19 @@ const ACL4SSR_ROOT_PROVIDER_FILES = new Set([
     'proxygfwlist'
 ]);
 
+// ACL4SSR root list files that do not have a matching /Clash/Providers/Ruleset/*.yaml file.
+// Keep them as remote list RULE-SET entries instead of rewriting to a known 404 YAML URL.
+const ACL4SSR_ROOT_LIST_ONLY_FILES = new Set([
+    'localareanetwork',
+    'banad',
+    'banprogramad',
+    'chinamedia',
+    'proxymedia',
+    'chinadomain',
+    'chinacompanyip',
+    'unban'
+]);
+
 function toClashRuleProviderUrl(sourceUrl) {
     if (!/^https?:\/\//i.test(String(sourceUrl || ''))) return sourceUrl;
 
@@ -32,6 +45,10 @@ function toClashRuleProviderUrl(sourceUrl) {
         if (!/\/Clash\/.*\.(list|txt)$/i.test(url.pathname)) return sourceUrl;
 
         const fileName = url.pathname.split('/').pop()?.replace(/\.(list|txt)$/i, '') || '';
+        if (/\/Clash\/[^/]+\.(list|txt)$/i.test(url.pathname) && ACL4SSR_ROOT_LIST_ONLY_FILES.has(fileName.toLowerCase())) {
+            return sourceUrl;
+        }
+
         if (/\/Clash\/Ruleset\//i.test(url.pathname)) {
             url.pathname = url.pathname
                 .replace(/\/Clash\/Ruleset\//i, '/Clash/Providers/Ruleset/')
@@ -91,12 +108,14 @@ export function renderClashFromTemplateModel(model) {
 
         const providerName = `${nameHint}_${providerCounter++}`;
         ruleProviderMap.set(providerUrl, providerName);
+        const usesTextList = /\.(list|txt)$/i.test(providerUrl);
         ruleProviders[providerName] = {
             type: 'http',
             behavior: 'classical',
             url: providerUrl,
-            path: `./ruleset/${providerName}.yaml`,
-            interval: 86400
+            path: `./ruleset/${providerName}.${usesTextList ? 'list' : 'yaml'}`,
+            interval: 86400,
+            ...(usesTextList ? { format: 'text' } : {})
         };
     });
 
