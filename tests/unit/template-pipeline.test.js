@@ -397,9 +397,38 @@ custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
 
         expect(providerUrls).not.toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/LocalAreaNetwork.yaml');
         expect(providerUrls).not.toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/BanAD.yaml');
-        expect(localAreaProvider).toMatchObject({ format: 'text', path: './ruleset/localareanetwork_0.list' });
-        expect(banAdProvider).toMatchObject({ format: 'text', path: './ruleset/banad_1.list' });
+        expect(localAreaProvider).toMatchObject({ behavior: 'classical', format: 'text', path: './ruleset/localareanetwork_0.list' });
+        expect(banAdProvider).toMatchObject({ behavior: 'classical', format: 'text', path: './ruleset/banad_1.list' });
         expect(parsed.rules).toContain('RULE-SET,localareanetwork_0,🎯 全球直连');
         expect(parsed.rules).toContain('RULE-SET,banad_1,🛑 广告拦截');
+    });
+
+    it('maps ACL4SSR root IP lists to matching ipcidr provider YAML files', () => {
+        const rendered = renderClashFromIniTemplate(`
+[custom]
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaCompanyIp.list
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaIp.list
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaIpV6.list
+ruleset=🐟 漏网之鱼,[]FINAL
+custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
+`, {
+            nodeList: 'trojan://password@1.2.3.4:443#HK-01',
+            targetFormat: 'clash'
+        });
+
+        const parsed = yaml.load(rendered);
+        const providers = Object.values(parsed['rule-providers'] || {});
+        const providerUrls = providers.map(provider => provider.url);
+
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ChinaCompanyIp.yaml');
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ChinaIp.yaml');
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ChinaIpV6.yaml');
+        expect(providerUrls).not.toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaCompanyIp.list');
+
+        for (const provider of providers) {
+            expect(provider).toMatchObject({ behavior: 'ipcidr' });
+            expect(provider.path).toMatch(/\.yaml$/);
+            expect(provider.format).toBeUndefined();
+        }
     });
 });

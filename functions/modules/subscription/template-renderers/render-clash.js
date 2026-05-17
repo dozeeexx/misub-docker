@@ -57,7 +57,6 @@ const ACL4SSR_ROOT_LIST_ONLY_FILES = new Set([
     'chinamedia',
     'proxymedia',
     'chinadomain',
-    'chinacompanyip',
     'unban'
 ]);
 
