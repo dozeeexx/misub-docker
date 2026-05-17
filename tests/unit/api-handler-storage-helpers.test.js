@@ -11,6 +11,7 @@ const deleteProfileById = vi.fn();
 const createAdapter = vi.fn();
 const getStorageType = vi.fn();
 const settingsCacheGet = vi.fn();
+const clearAllNodeCaches = vi.fn();
 
 vi.mock('../../functions/storage-adapter.js', () => ({
   StorageFactory: {
@@ -51,7 +52,7 @@ vi.mock('../../functions/modules/notifications.js', () => ({
 }));
 
 vi.mock('../../functions/services/node-cache-service.js', () => ({
-  clearAllNodeCaches: vi.fn().mockResolvedValue({ cleared: 0 })
+  clearAllNodeCaches: (...args) => clearAllNodeCaches(...args)
 }));
 
 describe('api-handler storage helper usage', () => {
@@ -67,9 +68,11 @@ describe('api-handler storage helper usage', () => {
     createAdapter.mockReset();
     getStorageType.mockReset();
     settingsCacheGet.mockReset();
+    clearAllNodeCaches.mockReset();
 
     getStorageType.mockResolvedValue('d1');
     settingsCacheGet.mockResolvedValue({});
+    clearAllNodeCaches.mockResolvedValue({ cleared: 0, failed: 0, skipped: 0 });
     createAdapter.mockReturnValue({
       getAllSubscriptions,
       getAllProfiles,
@@ -126,6 +129,35 @@ describe('api-handler storage helper usage', () => {
     expect(response.status).toBe(200);
     expect(getAllSubscriptions).toHaveBeenCalled();
     expect(getAllProfiles).toHaveBeenCalled();
+  });
+
+  it('handleMisubsSave preserves protective caches only for subscriptions with node cache enabled', async () => {
+    const { handleMisubsSave } = await import('../../functions/modules/api-handler.js');
+
+    getAllSubscriptions.mockResolvedValue([]);
+    getAllProfiles.mockResolvedValue([]);
+    get.mockResolvedValue({});
+    put.mockResolvedValue(true);
+
+    const request = {
+      async json() {
+        return {
+          misubs: [
+            { id: 'sub-enabled', name: 'Enabled', url: 'https://a.example.com', enableNodeCache: true },
+            { id: 'sub-disabled', name: 'Disabled', url: 'https://b.example.com', enableNodeCache: false }
+          ],
+          profiles: []
+        };
+      }
+    };
+
+    const response = await handleMisubsSave(request, { MISUB_DB: {} });
+
+    expect(response.status).toBe(200);
+    expect(clearAllNodeCaches).toHaveBeenCalledWith(
+      expect.any(Object),
+      { preserveKeys: ['node_cache_subscription_sub-enabled'] }
+    );
   });
 
   it('handleMisubsSave uses row-level helpers for simple diffs', async () => {

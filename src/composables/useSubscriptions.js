@@ -107,13 +107,25 @@ export function useSubscriptions(markDirty) {
                             userMessage = `${subToUpdate.name || '订阅'} 更新失败: ${result.error || '未知错误'}`;
                     }
 
+                    if (result.errorType === 'server' && (result.error || result.status)) {
+                        userMessage = `${subToUpdate.name || '订阅'} 更新失败: ${result.error || `HTTP ${result.status}`}`;
+                    }
+
                     // 只有非静默加载时才显示 Toast
                     if (!isInitialLoad) showToast(userMessage, 'error');
                     console.error(`[handleUpdateNodeCount] Failed for ${subToUpdate.name}:`, result.error);
 
                     // 重要: 记录错误到本地对象中(非持久化,仅用于UI展示,直到下次持久化保存)
                     subToUpdate.lastError = result.error;
-                    return; // 失败时不更新 nodeCount,保留旧值
+                    if (subToUpdate.enableNodeCache !== true) {
+                        subToUpdate.nodeCount = 0;
+                        subToUpdate.userInfo = null;
+                        if (!isInitialLoad) {
+                            markDirty();
+                            void dataStore.saveData();
+                        }
+                    }
+                    return; // 开启保护性缓存节点时，失败保留旧值
                 }
 
                 // 成功获取数据

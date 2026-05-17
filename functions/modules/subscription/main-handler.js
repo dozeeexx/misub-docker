@@ -96,8 +96,11 @@ export function buildManagedConfigUrl(requestUrl) {
 
 function getCurrentRequestUserInfo(context, sub) {
     const currentInfo = context?.currentSubscriptionRuntimeInfo || {};
-    const runtimeInfo = currentInfo[sub?.id] || currentInfo[sub?.url];
-    return runtimeInfo?.userInfo || sub?.userInfo || null;
+    const runtimeKey = [sub?.id, sub?.url].find(key => key && Object.prototype.hasOwnProperty.call(currentInfo, key));
+    if (runtimeKey) {
+        return currentInfo[runtimeKey]?.userInfo || null;
+    }
+    return sub?.userInfo || null;
 }
 
 function buildUserInfoHeaderFromSubscriptions(context, subscriptions) {

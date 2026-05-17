@@ -188,4 +188,50 @@ describe('subscription protective node cache', () => {
 
         expect(result.trim()).toBe('');
     });
+
+    it('clears stored runtime info when protective node cache is disabled and external fetch fails', async () => {
+        const sub = {
+            id: 'sub-a',
+            name: 'Airport A',
+            url: 'https://example.com/sub',
+            enabled: true,
+            enableNodeCache: false,
+            nodeCount: 86,
+            userInfo: { upload: 1, download: 2, total: 100, expire: 200 }
+        };
+        const storage = createMemoryStorage({
+            misub_subscriptions_v1: [{ ...sub }]
+        });
+        const waitUntilPromises = [];
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('Forbidden', { status: 403 })));
+        const context = {
+            storage,
+            waitUntil: promise => waitUntilPromises.push(promise)
+        };
+
+        const result = await generateCombinedNodeList(
+            context,
+            { enableAccessLog: false, enableFlagEmoji: false },
+            'ClashMeta',
+            [sub],
+            '',
+            { enableSubscriptions: false },
+            false
+        );
+
+        expect(result.trim()).toBe('');
+        expect(context.currentSubscriptionRuntimeInfo[sub.id]).toEqual({
+            nodeCount: 0,
+            userInfo: null
+        });
+        expect(waitUntilPromises).toHaveLength(1);
+
+        await Promise.all(waitUntilPromises);
+
+        const [updatedSub] = await storage.get('misub_subscriptions_v1');
+        expect(updatedSub.nodeCount).toBe(0);
+        expect(updatedSub.userInfo).toBeNull();
+        expect(updatedSub.lastError).toBeNull();
+        expect(typeof updatedSub.lastUpdate).toBe('string');
+    });
 });

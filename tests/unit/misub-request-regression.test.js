@@ -46,7 +46,7 @@ describe('handleMisubRequest regression coverage', () => {
     it('uses the real storage adapter for per-subscription protective node cache', async () => {
         const subscriptions = [{
             id: 'sub-a',
-            name: '机场A',
+            name: '鏈哄満A',
             url: 'https://airport.example/sub',
             enabled: true,
             enableNodeCache: true
@@ -82,7 +82,7 @@ describe('handleMisubRequest regression coverage', () => {
     it('keeps external converter data-source requests in nodes format instead of UA fallback format', async () => {
         const subscriptions = [{
             id: 'sub-a',
-            name: '机场A',
+            name: '鏈哄満A',
             url: 'https://airport.example/sub',
             enabled: true
         }];
@@ -128,7 +128,7 @@ describe('handleMisubRequest regression coverage', () => {
     it('returns current fetch traffic header on the first builtin response', async () => {
         const subscriptions = [{
             id: 'sub-a',
-            name: '鏈哄満A',
+            name: 'Airport A',
             url: 'https://airport.example/sub',
             enabled: true,
             userInfo: null
@@ -160,5 +160,45 @@ describe('handleMisubRequest regression coverage', () => {
         expect(text).toContain('proxies:');
         expect(response.headers.get('Subscription-Userinfo')).toBe('upload=10; download=20; total=1000; expire=2000');
         expect(waitUntilPromises.length).toBeGreaterThan(0);
+    });
+
+    it('does not return stale traffic header when current external pull has zero nodes with protective cache disabled', async () => {
+        const subscriptions = [{
+            id: 'sub-a',
+            name: 'Airport A',
+            url: 'https://airport.example/sub',
+            enabled: true,
+            enableNodeCache: false,
+            nodeCount: 86,
+            userInfo: { upload: 10, download: 20, total: 1000, expire: 2000 }
+        }];
+        const adapter = createStorageAdapter({
+            settings: { mytoken: 'stable-token', enableFlagEmoji: false, enableTrafficNode: false },
+            subscriptions
+        });
+        createAdapter.mockReturnValue(adapter);
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('Forbidden', { status: 403 })));
+
+        const waitUntilPromises = [];
+        const { handleMisubRequest } = await import('../../functions/modules/subscription/main-handler.js');
+        const response = await handleMisubRequest({
+            request: new Request('https://misub.example/stable-token?target=nodes&refresh=1', {
+                headers: { 'User-Agent': 'ClashMeta' }
+            }),
+            env: {},
+            waitUntil: promise => waitUntilPromises.push(promise)
+        });
+        const text = await response.text();
+
+        expect(response.status).toBe(200);
+        expect(text.trim()).toBe('');
+        expect(response.headers.get('Subscription-Userinfo')).toBeNull();
+        expect(waitUntilPromises.length).toBeGreaterThan(0);
+
+        await Promise.all(waitUntilPromises);
+
+        const [updatedSub] = adapter.store.get('misub_subscriptions_v1');
+        expect(updatedSub.nodeCount).toBe(0);
+        expect(updatedSub.userInfo).toBeNull();
     });
 });

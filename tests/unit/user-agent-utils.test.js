@@ -66,7 +66,7 @@ describe('User-Agent Utils', () => {
             const params = new URLSearchParams('');
             expect(determineTargetFormat('Clash.Meta/1.0', params)).toBe('clash');
             expect(determineTargetFormat('ClashVerge/1.0', params)).toBe('clash');
-            expect(determineTargetFormat('Shadowrocket/2.0', params)).toBe('base64');
+            expect(determineTargetFormat('Shadowrocket/2.0', params)).toBe('clash');
             expect(determineTargetFormat('sing-box/1.0', params)).toBe('singbox');
             expect(determineTargetFormat('Egern/1.0.73 (iPhone; iOS 17.0)', params)).toBe('egern');
             expect(determineTargetFormat('Quantumult X', params)).toBe('quanx');

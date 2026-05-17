@@ -111,8 +111,10 @@ async function writeSubscriptionNodeCache(storage, sub, nodes) {
     }
 }
 
-async function writeSubscriptionRuntimeInfo(storage, sub, { nodeCount, userInfo } = {}) {
+async function writeSubscriptionRuntimeInfo(storage, sub, runtimeInfo = {}) {
     if (!storage || !sub?.id) return false;
+    const { nodeCount, userInfo } = runtimeInfo;
+    const hasUserInfo = Object.prototype.hasOwnProperty.call(runtimeInfo, 'userInfo');
 
     try {
         const applyUpdate = current => {
@@ -120,7 +122,7 @@ async function writeSubscriptionRuntimeInfo(storage, sub, { nodeCount, userInfo 
             return {
                 ...current,
                 nodeCount: Number.isFinite(nodeCount) ? nodeCount : current.nodeCount,
-                ...(userInfo ? { userInfo } : {}),
+                ...(hasUserInfo ? { userInfo } : {}),
                 lastError: null,
                 lastUpdate: new Date().toISOString()
             };
@@ -409,6 +411,15 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
     const fetchSingleSubscription = async (sub) => {
         const cacheEnabled = sub?.enableNodeCache === true;
         const storage = context?.storage;
+        const recordEmptyRuntimeInfo = () => {
+            if (cacheEnabled) return;
+            const runtimeInfo = {
+                nodeCount: 0,
+                userInfo: null
+            };
+            recordCurrentRequestRuntimeInfo(context, sub, runtimeInfo);
+            scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, runtimeInfo);
+        };
         const readCachedNodes = async () => {
             if (!cacheEnabled) return [];
             const cached = await readSubscriptionNodeCache(storage, sub);
@@ -439,6 +450,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             });
 
             if (!response.ok) {
+                recordEmptyRuntimeInfo();
                 return (await readCachedNodes()).join('\n');
             }
             const buffer = await response.arrayBuffer();
@@ -467,6 +479,9 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             if (cacheEnabled && realNodes.length === 0) {
                 return (await readCachedNodes()).join('\n');
             }
+            if (!cacheEnabled && realNodes.length === 0) {
+                recordEmptyRuntimeInfo();
+            }
 
             if (cacheEnabled) {
                 await writeSubscriptionNodeCache(storage, sub, realNodes);
@@ -490,6 +505,7 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
                 ? validNodes.map(node => prependNodeName(node, sub.name)).join('\n')
                 : validNodes.join('\n');
         } catch (e) {
+            recordEmptyRuntimeInfo();
             return (await readCachedNodes()).join('\n');
         }
     };
