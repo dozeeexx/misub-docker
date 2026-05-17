@@ -26,7 +26,7 @@ function handleApiError(error, context = '') {
         } else {
             errorType = 'server';
             const message = error.message || `HTTP ${error.status}`;
-            errorMessage = error.status ? `HTTP ${error.status}: ${message}` : message;
+            errorMessage = formatHttpErrorMessage(error.status, message);
         }
     } else if (error.name === 'AbortError') {
         errorType = 'timeout';
@@ -58,6 +58,15 @@ function handleApiError(error, context = '') {
 function extractHttpStatus(message = '') {
     const match = String(message).match(/HTTP\s+(\d{3})/i);
     return match ? Number(match[1]) : null;
+}
+
+function formatHttpErrorMessage(status, message = '') {
+    const normalizedMessage = String(message || '').trim();
+    if (!status) return normalizedMessage;
+    if (new RegExp(`^HTTP\\s+${status}\\b`, 'i').test(normalizedMessage)) {
+        return normalizedMessage;
+    }
+    return `HTTP ${status}: ${normalizedMessage || `HTTP ${status}`}`;
 }
 
 function normalizeApiFailure(data, fallbackMessage = '操作失败') {

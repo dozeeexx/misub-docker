@@ -55,4 +55,16 @@ describe('fetchNodeCount feedback normalization', () => {
         expect(result.error).toBe('HTTP 403: Forbidden');
         expect(result.status).toBe(403);
     });
+
+    it('does not duplicate HTTP status prefixes from APIError messages', async () => {
+        mocks.post.mockRejectedValue(new mocks.APIError('HTTP 403: Forbidden', 403, { error: 'Forbidden' }));
+
+        const { fetchNodeCount } = await import('../../src/lib/api.js');
+        const result = await fetchNodeCount('https://airport.example/sub');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('HTTP 403: Forbidden');
+        expect(result.error).not.toContain('HTTP 403: HTTP 403');
+        expect(result.status).toBe(403);
+    });
 });

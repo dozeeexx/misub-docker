@@ -4,6 +4,7 @@
  */
 
 import { StorageFactory } from '../../storage-adapter.js';
+import { DEFAULT_SETTINGS, KV_KEY_SETTINGS } from '../config.js';
 import { createJsonResponse, createErrorResponse } from '../utils.js';
 import { parseNodeList } from '../utils/node-parser.js';
 import { getProcessedUserAgent } from '../../utils/format-utils.js';
@@ -41,6 +42,19 @@ function detectSubscriptionBodyError(text) {
     const error = new Error(message);
     if (status) error.status = status;
     return error;
+}
+
+async function resolveNodeCountFetchCfOptions(env) {
+    try {
+        const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
+        const settings = await storageAdapter.get(KV_KEY_SETTINGS) || DEFAULT_SETTINGS;
+        if (settings?.builtinSkipCertVerify === true) {
+            return { cf: { insecureSkipVerify: true } };
+        }
+    } catch (error) {
+        console.warn('[NodeHandler] Failed to load certificate verification setting, using secure default:', error);
+    }
+    return {};
 }
 
 /**
@@ -83,8 +97,8 @@ export async function handleNodeCountRequest(request, env) {
                 redirect: "follow"
             };
 
-            // cf 选项需传给 fetch() 而非 Request()：Cloudflare 环境生效，Node.js 安全忽略
-            const cfOptions = { cf: { insecureSkipVerify: true } };
+            // cf 选项需传给 fetch() 而非 Request()：仅在用户显式启用跳过证书验证时传递
+            const cfOptions = await resolveNodeCountFetchCfOptions(env);
             const trafficRequest = fetch(new Request(requestUrl, trafficFetchOptions), cfOptions);
             const nodeCountRequest = fetch(new Request(requestUrl, fetchOptions), cfOptions);
 
