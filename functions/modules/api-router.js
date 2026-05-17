@@ -8,6 +8,7 @@ import { KV_KEY_SUBS } from './config.js';
 import { createJsonResponse, createErrorResponse, getAuthDebugInfo } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout, getAuthSessionDiagnostic, getLoginPasswordDiagnostic } from './auth-middleware.js';
 import { handleDataRequest, handleMisubsSave, handleSettingsGet, handleSettingsSave, handleSettingsReset, handlePublicProfilesRequest, handlePublicConfig, handleUpdatePassword } from './api-handler.js';
+import { handleRuleTemplatesRequest } from './rule-template-handler.js';
 import { handleCronTrigger } from './notifications.js';
 import {
     handleSubscriptionNodesRequest,
@@ -344,6 +345,9 @@ export async function handleApiRequest(request, env) {
     switch (path) {
         case '/misubs':
             return await handleMisubsSave(request, env);
+
+        case '/rule_templates':
+            return await handleRuleTemplatesRequest(request, env);
 
         case '/node_count':
             return await handleLegacyNodeCountRequest(request, env);

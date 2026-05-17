@@ -101,7 +101,7 @@ export function resolveTemplateUrl(mode, value, fallbackUrl = '') {
 
     if (normalizedMode === 'builtin') return '';
     if (normalizedMode === 'global') return normalizedFallback;
-    if (normalizedMode === 'preset' || normalizedMode === 'custom') return normalizedValue;
+    if (normalizedMode === 'preset' || normalizedMode === 'custom' || normalizedMode === 'custom_template') return normalizedValue;
 
     return normalizedValue;
 }
@@ -111,6 +111,9 @@ export function resolveTemplateSource(value) {
     if (!normalizedValue) return { kind: 'none', value: '' };
     if (normalizedValue.startsWith('builtin:')) {
         return { kind: 'builtin', value: normalizedValue.slice('builtin:'.length) };
+    }
+    if (normalizedValue.startsWith('custom:')) {
+        return { kind: 'custom', value: normalizedValue.slice('custom:'.length) };
     }
     return { kind: 'remote', value: normalizedValue };
 }
@@ -393,7 +396,7 @@ export async function handleMisubRequest(context) {
     const resolvedGlobalLevel = config.ruleLevel || config.clashRuleLevel || 'std';
     
     let ruleLevel;
-    if (templateSource.kind === 'remote') {
+    if (templateSource.kind === 'remote' || templateSource.kind === 'custom') {
         ruleLevel = 'none';
     } else {
         ruleLevel = url.searchParams.get('level') || url.searchParams.get('ruleLevel') || resolvedProfileLevel || resolvedGlobalLevel;
