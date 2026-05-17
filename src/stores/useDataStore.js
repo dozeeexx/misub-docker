@@ -21,6 +21,7 @@ export const useDataStore = defineStore('data', () => {
     // --- State ---
     const subscriptions = ref([]);
     const profiles = ref([]);
+    const ruleTemplates = ref([]);
     const settings = computed(() => settingsStore.config);
 
     // Store Status
@@ -39,7 +40,8 @@ export const useDataStore = defineStore('data', () => {
     // --- Internal: Snapshot for rollback/diffing ---
     let lastSavedData = {
         subscriptions: [],
-        profiles: []
+        profiles: [],
+        ruleTemplates: []
     };
 
     // --- Actions ---
@@ -52,6 +54,7 @@ export const useDataStore = defineStore('data', () => {
             const cleanSubs = (data.misubs || []).map(sub => ({ ...sub, isUpdating: false }));
             subscriptions.value = cleanSubs;
             profiles.value = data.profiles || [];
+            ruleTemplates.value = data.ruleTemplates || [];
             settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config });
 
             updateSnapshot();
@@ -160,6 +163,7 @@ export const useDataStore = defineStore('data', () => {
                     return rest;
                 }),
                 profiles: profiles.value,
+                ruleTemplates: ruleTemplates.value,
                 config: settingsStore.config
             });
 
@@ -194,12 +198,40 @@ export const useDataStore = defineStore('data', () => {
         }
     }
 
+    async function fetchRuleTemplates() {
+        const result = await api.get('/api/rule_templates');
+        ruleTemplates.value = Array.isArray(result?.data) ? result.data : [];
+        lastSavedData.ruleTemplates = JSON.parse(JSON.stringify(ruleTemplates.value));
+        return ruleTemplates.value;
+    }
+
+    async function saveRuleTemplates(items = ruleTemplates.value) {
+        editorStore.setLoading(true);
+        try {
+            const result = await api.post('/api/rule_templates', { templates: items });
+            if (!result.success) {
+                throw new Error(result.message || '保存自定义规则模板失败');
+            }
+            ruleTemplates.value = Array.isArray(result.data) ? result.data : [];
+            lastSavedData.ruleTemplates = JSON.parse(JSON.stringify(ruleTemplates.value));
+            showToast('自定义规则模板已保存', 'success');
+            return ruleTemplates.value;
+        } catch (error) {
+            console.error('Failed to save rule templates:', error);
+            showToast('保存自定义规则模板失败: ' + error.message, 'error');
+            throw error;
+        } finally {
+            editorStore.setLoading(false);
+        }
+    }
+
     // --- Helpers ---
 
     function updateSnapshot() {
         lastSavedData = {
             subscriptions: JSON.parse(JSON.stringify(subscriptions.value)),
-            profiles: JSON.parse(JSON.stringify(profiles.value))
+            profiles: JSON.parse(JSON.stringify(profiles.value)),
+            ruleTemplates: JSON.parse(JSON.stringify(ruleTemplates.value))
         };
     }
 
@@ -363,6 +395,7 @@ export const useDataStore = defineStore('data', () => {
         // State
         subscriptions,
         profiles,
+        ruleTemplates,
         settings,
         isLoading,
         saveState,
@@ -378,6 +411,8 @@ export const useDataStore = defineStore('data', () => {
         fetchData,
         saveData,
         saveSettings,
+        fetchRuleTemplates,
+        saveRuleTemplates,
         hydrateFromData,
         clearCachedData,
 

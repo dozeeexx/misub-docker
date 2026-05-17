@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import { TRANSFORM_ASSETS } from '@/constants/transform-assets';
+import { useDataStore } from '@/stores/useDataStore.js';
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -13,6 +15,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue', 'select-asset']);
+const dataStore = useDataStore();
+const { ruleTemplates } = storeToRefs(dataStore);
 
 const TEMPLATE_VARIABLE_GROUPS = [
   {
@@ -34,12 +38,26 @@ const TEMPLATE_VARIABLE_GROUPS = [
   }
 ];
 
-const assets = computed(() =>
-  TRANSFORM_ASSETS.configs.filter((item) => {
+const customTemplateAssets = computed(() =>
+  (ruleTemplates.value || [])
+    .filter(item => item && item.enabled !== false && item.id)
+    .map(item => ({
+      id: `custom:${item.id}`,
+      name: item.name || '未命名自定义规则模板',
+      url: `custom:${item.id}`,
+      group: '自定义规则模板',
+      sourceType: 'custom-template',
+      description: item.description || '本地保存的自定义规则模板'
+    }))
+);
+
+const assets = computed(() => {
+  const builtinAndRemote = TRANSFORM_ASSETS.configs.filter((item) => {
     if (!props.excludeBuiltinAssets) return true;
     return !String(item.url || '').startsWith('builtin:');
-  })
-);
+  });
+  return [...customTemplateAssets.value, ...builtinAndRemote];
+});
 
 const groupedConfigs = computed(() => {
   if (props.type !== 'config') return {};

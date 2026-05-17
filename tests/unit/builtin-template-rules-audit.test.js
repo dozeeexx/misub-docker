@@ -3,6 +3,8 @@ import { getBuiltinTemplate } from '../../functions/modules/subscription/builtin
 import { parseIniTemplate } from '../../functions/modules/subscription/template-parsers/ini-template-parser.js';
 import { applySmartModelOptimizations } from '../../functions/modules/subscription/template-processor.js';
 import { TRANSFORM_ASSETS } from '../../src/constants/transform-assets.js';
+import { getBuiltinRules, getRemoteProviderDefinitions, REMOTE_SOURCES } from '../../functions/modules/subscription/builtin-rules-provider.js';
+import { generateBuiltinSingboxConfig } from '../../functions/modules/subscription/builtin-singbox-generator.js';
 
 const sampleProxies = [
     { name: '香港 01', type: 'ss', server: 'hk.example.com', port: 443, cipher: 'aes-128-gcm', password: 'x' },
@@ -85,5 +87,27 @@ describe('Builtin template rule audit', () => {
         expect(aiGroup?.members).toContain('🔯 故障转移');
         expect(aiGroup?.members).toContain('🇺🇸 美国节点');
         expect(aiGroup?.members).not.toContain('🇺🇲 美国节点');
+    });
+
+    it('uses maintained SagerNet sing-box binary rule sets instead of deprecated Loyalsoldier JSON rules', () => {
+        const rawRules = getBuiltinRules('FULL', 'singbox');
+        const providers = getRemoteProviderDefinitions('singbox', rawRules);
+
+        expect(REMOTE_SOURCES.ADS.singbox).toBe('https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs');
+        expect(Object.values(REMOTE_SOURCES).every(source => !source.singbox?.includes('Loyalsoldier/sing-box-rules'))).toBe(true);
+        expect(Object.values(providers).every(provider => provider.format === 'binary')).toBe(true);
+        expect(providers.ADS.url).toBe(REMOTE_SOURCES.ADS.singbox);
+    });
+
+    it('emits sing-box ADS rule set as binary SRS in builtin config', () => {
+        const parsed = JSON.parse(generateBuiltinSingboxConfig('ss://YWVzLTEyOC1nY206cGFzcw@example.com:8388#HKNode', { ruleLevel: 'std' }));
+        const adsRuleSet = parsed.route.rule_set.find(ruleSet => ruleSet.tag === 'ADS');
+
+        expect(adsRuleSet).toMatchObject({
+            type: 'remote',
+            format: 'binary',
+            url: 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs',
+            download_detour: 'DIRECT'
+        });
     });
 });

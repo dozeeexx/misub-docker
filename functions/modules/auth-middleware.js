@@ -30,6 +30,11 @@ function buildRequestMeta(request, env) {
     };
 }
 
+async function isUsingDefaultAdminPassword(env) {
+    const debugInfo = await getAuthDebugInfo(env);
+    return debugInfo?.adminPassword?.isDefaultFallback === true;
+}
+
 /**
  * 创建 HMAC 签名的令牌
  * @param {string} key - 签名密钥
@@ -287,10 +292,17 @@ export async function handleLogin(request, env) {
         if (isPasswordMatched) {
             const secret = await getCookieSecret(env);
             const token = await createSignedToken(secret, String(Date.now()));
-            const headers = new Headers({ 'Content-Type': 'application/json' });
             const isSecure = request.url.startsWith('https');
             const cookieString = `${COOKIE_NAME}=${token}; Path=/; HttpOnly; ${isSecure ? 'Secure;' : ''} SameSite=Lax; Max-Age=${SESSION_DURATION / 1000}`;
-            return new Response(JSON.stringify({ success: true }), {
+            const responseBody = { success: true };
+            if (await isUsingDefaultAdminPassword(env)) {
+                responseBody.securityWarning = {
+                    type: 'default_admin_password',
+                    shouldChangePassword: true,
+                    message: '当前正在使用默认管理员密码 admin，请登录后立即修改。'
+                };
+            }
+            return new Response(JSON.stringify(responseBody), {
                 headers: {
                     'Content-Type': 'application/json',
                     'Set-Cookie': cookieString

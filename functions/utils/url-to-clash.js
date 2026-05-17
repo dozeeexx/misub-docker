@@ -645,6 +645,22 @@ function parseHysteria2Url(url) {
             }
         }
 
+        const realmId = params.get('realm-id');
+        const realmToken = params.get('realm-token') || params.get('token');
+        const realmServerUrl = params.get('realm-server') || params.get('server-url');
+        const stunServers = params.get('stun-servers');
+        if (realmId || realmToken || realmServerUrl || stunServers) {
+            proxy['realm-opts'] = {
+                enable: true
+            };
+            if (realmId) proxy['realm-opts']['realm-id'] = realmId;
+            if (realmToken) proxy['realm-opts'].token = realmToken;
+            if (realmServerUrl) proxy['realm-opts']['server-url'] = realmServerUrl;
+            if (stunServers) {
+                proxy['realm-opts']['stun-servers'] = stunServers.split(',').map(item => item.trim()).filter(Boolean);
+            }
+        }
+
         // [重要] dialer-proxy 链式代理
         if (params.get('dp')) {
             proxy['dialer-proxy'] = params.get('dp');

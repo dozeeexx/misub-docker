@@ -49,7 +49,8 @@ const globalConfigLabel = computed(() => {
 const transformModeOptions = [
   { value: 'global', label: '跟随全局设置' },
   { value: 'preset', label: '选择预设方案' },
-  { value: 'custom', label: '自定义规则模板 URL' }
+  { value: 'custom', label: '自定义规则模板 URL' },
+  { value: 'custom_template', label: '自定义规则模板' }
 ];
 
 const engineOptions = [
@@ -253,6 +254,9 @@ watch(
               :allowEmpty="false"
               :exclude-builtin-assets="isExternalEngine"
             />
+            <p v-if="localProfile.transformConfigMode === 'custom_template'" class="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-[10px] leading-relaxed text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+              使用设置页保存的本地自定义规则模板，选择 custom: 开头的模板项即可。
+            </p>
           </div>
         </div>
       </div>

@@ -187,43 +187,45 @@ export const POLICY_GROUPS = {
 /**
  * 远程规则源配置 (对齐各平台最高性能格式)
  */
+const SING_GEOSITE_BASE = 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set';
+
 export const REMOTE_SOURCES = {
     ADS: {
         name: '广告拦截',
         clash: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/BanAD.yaml',
-        singbox: 'https://raw.githubusercontent.com/Loyalsoldier/sing-box-rules/release/geosite-category-ads-all.json',
+        singbox: `${SING_GEOSITE_BASE}/geosite-category-ads-all.srs`,
         surge: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanAD.list',
         quanx: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanAD.list'
     },
     STREAM: {
         name: '流媒体',
         clash: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/Netflix.yaml', // 示例，实际使用聚合源
-        singbox: 'https://raw.githubusercontent.com/Loyalsoldier/sing-box-rules/release/geosite-netflix.json',
+        singbox: `${SING_GEOSITE_BASE}/geosite-netflix.srs`,
         surge: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Netflix.list'
     },
     SOCIAL: {
         name: '社交媒体',
         clash: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/Telegram.yaml',
-        singbox: 'https://raw.githubusercontent.com/Loyalsoldier/sing-box-rules/release/geosite-telegram.json',
+        singbox: `${SING_GEOSITE_BASE}/geosite-telegram.srs`,
         surge: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Telegram.list'
     },
     APPLE: {
         name: '苹果服务',
         clash: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/Apple.yaml',
-        singbox: 'https://raw.githubusercontent.com/Loyalsoldier/sing-box-rules/release/geosite-apple.json',
+        singbox: `${SING_GEOSITE_BASE}/geosite-apple.srs`,
         surge: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Apple.list'
     },
     MICROSOFT: {
         name: '微软服务',
         clash: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/Microsoft.yaml',
-        singbox: 'https://raw.githubusercontent.com/Loyalsoldier/sing-box-rules/release/geosite-microsoft.json',
+        singbox: `${SING_GEOSITE_BASE}/geosite-microsoft.srs`,
         surge: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Microsoft.list',
         quanx: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Microsoft.list'
     },
     AI: {
         name: '智能 AI',
         clash: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/OpenAi.yaml',
-        singbox: 'https://raw.githubusercontent.com/Loyalsoldier/sing-box-rules/release/geosite-openai.json',
+        singbox: `${SING_GEOSITE_BASE}/geosite-openai.srs`,
         surge: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/OpenAi.list',
         quanx: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/OpenAi.list'
     }
@@ -376,7 +378,7 @@ export function getRemoteProviderDefinitions(format, ruleLines) {
             providers[tag] = {
                 tag: tag,
                 type: 'remote',
-                format: 'source',
+                format: String(source.singbox || '').toLowerCase().endsWith('.srs') ? 'binary' : 'source',
                 url: source.singbox,
                 download_detour: 'DIRECT'
             };
