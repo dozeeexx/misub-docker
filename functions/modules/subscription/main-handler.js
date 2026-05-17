@@ -20,6 +20,13 @@ import { shouldApplyExternalTemplateForTarget } from './template-compatibility.j
 import { renderClashFromIniTemplate, renderLoonFromIniTemplate, renderQuanxFromIniTemplate, renderSingboxFromIniTemplate, renderSurgeFromIniTemplate } from './template-pipeline.js';
 import { getBuiltinTemplate } from './builtin-template-registry.js';
 
+function maskSensitiveLogValue(value) {
+    const text = String(value ?? '');
+    if (!text) return '';
+    if (text.length <= 8) return '***';
+    return `${text.slice(0, 4)}…${text.slice(-4)} (${text.length})`;
+}
+
 const PROFILE_DOWNLOAD_COUNT_PREFIX = 'misub_profile_download_count_';
 
 function getProfileDownloadCountKey(profile) {
@@ -179,7 +186,7 @@ export async function handleMisubRequest(context) {
     const url = new URL(request.url);
     const userAgentHeader = request.headers.get('User-Agent') || "Unknown";
 
-    console.log(`\n[MiSub Request] ${request.method} ${url.pathname}${url.search}`);
+    console.log(`\n[MiSub Request] ${request.method} ${maskSensitiveLogValue(url.pathname)}${url.search ? ' ?…' : ''}`);
     console.log(`[MiSub UA] ${userAgentHeader}`);
 
     const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
@@ -227,7 +234,7 @@ export async function handleMisubRequest(context) {
     context.url = url; // [核心修复] 将 url 挂载到 context，确保后续服务能获取到 debug 参数
     const { token, profileIdentifier } = resolveRequestContext(url, config, allProfiles);
 
-    console.log(`[MiSub Parse] Token: ${token}, Profile: ${profileIdentifier}`);
+    console.log(`[MiSub Parse] Token: ${maskSensitiveLogValue(token)}, Profile: ${maskSensitiveLogValue(profileIdentifier)}`);
     const shouldSkipLogging = shouldSkipAccessLog(userAgentHeader);
 
     let targetMisubs;
@@ -792,8 +799,7 @@ export async function handleMisubRequest(context) {
                 "Content-Disposition": `attachment; filename="${asciiSubName}"; filename*=utf-8''${encodedSubName}`,
                 'Content-Type': contentType || 'text/plain; charset=utf-8',
                 'Cache-Control': 'no-store, no-cache',
-                'X-MiSub-Mode': `builtin-${targetFormat}`,
-                'Access-Control-Allow-Origin': '*'
+                'X-MiSub-Mode': `builtin-${targetFormat}`
             });
 
             if (userInfoHeader) {

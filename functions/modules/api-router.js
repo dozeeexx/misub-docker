@@ -37,10 +37,14 @@ import {
 } from './handlers/guestbook-handler.js';
 import { handleGithubReleaseRequest } from './handlers/github-proxy-handler.js'; // [NEW] Import handler
 import { handleParseSubscription } from './parse-subscription-handler.js';
+import { safeFetchPublicUrl, validatePublicFetchUrl, redactUrl } from './security-utils.js';
 
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
 const KV_KEY_PROFILES = 'misub_profiles_v1'; // Ensure this is defined if used
+function isAuthDiagnosticsEnabled(env) {
+    return String(env?.ENABLE_AUTH_DIAGNOSTICS || '').toLowerCase() === 'true';
+}
 
 /**
  * 处理主要的API请求
@@ -222,8 +226,11 @@ export async function handleApiRequest(request, env) {
         return await handleLogout(request);
     }
 
-    // 认证调试端点（公开，不返回敏感值）
+    // 认证调试端点（默认关闭，不返回敏感值）
     if (path === '/auth_debug') {
+        if (!isAuthDiagnosticsEnabled(env)) {
+            return createErrorResponse('Not Found', 404);
+        }
         const debugInfo = await getAuthDebugInfo(env);
         const authDiagnostic = await getAuthSessionDiagnostic(request, env);
 
@@ -234,8 +241,11 @@ export async function handleApiRequest(request, env) {
         });
     }
 
-    // 登录密码调试端点（公开，不返回敏感值）
+    // 登录密码调试端点（默认关闭，不返回敏感值）
     if (path === '/auth_check') {
+        if (!isAuthDiagnosticsEnabled(env)) {
+            return createErrorResponse('Not Found', 404);
+        }
         if (request.method !== 'POST') {
             return createJsonResponse({ error: 'Method Not Allowed' }, 405);
         }
@@ -345,7 +355,7 @@ export async function handleApiRequest(request, env) {
             return await handleCleanNodesRequest(request, env);
 
         case '/fetch_external_url':
-            return await handleExternalFetchRequest(request);
+            return await handleExternalFetchRequest(request, env);
 
         case '/batch_update_nodes':
             return await handleBatchUpdateNodesRequest(request, env);
@@ -436,7 +446,7 @@ export async function handleApiRequest(request, env) {
  * @param {Object} env - Cloudflare环境对象
  * @returns {Promise<Response>} HTTP响应
  */
-async function handleExternalFetchRequest(request, env) {
+export async function handleExternalFetchRequest(request, env) {
     if (request.method !== 'POST') {
         return createErrorResponse('Method Not Allowed', 405);
     }
@@ -450,7 +460,7 @@ async function handleExternalFetchRequest(request, env) {
 
     const { url: externalUrl, timeout = 15000 } = requestData;
 
-    if (!externalUrl || typeof externalUrl !== 'string' || !/^https?:\/\/.+/.test(externalUrl)) {
+    if (!externalUrl || typeof externalUrl !== 'string') {
         return createErrorResponse('Invalid or missing URL parameter. Must be a valid HTTP/HTTPS URL.', 400);
     }
 
@@ -459,22 +469,25 @@ async function handleExternalFetchRequest(request, env) {
         return createErrorResponse('URL too long (max 2048 characters)', 400);
     }
 
+    const urlValidation = validatePublicFetchUrl(externalUrl);
+    if (!urlValidation.ok) {
+        return createErrorResponse(urlValidation.error, 400);
+    }
 
     try {
         // 创建带超时的请求
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        const response = await fetch(new Request(externalUrl, {
+        const response = await safeFetchPublicUrl(urlValidation.url.toString(), {
             method: 'GET',
             headers: {
                 'User-Agent': 'v2rayN/7.23',
                 'Accept': '*/*',
                 'Cache-Control': 'no-cache'
             },
-            redirect: "follow",
             signal: controller.signal
-        }));
+        });
 
         clearTimeout(timeoutId);
 
@@ -541,7 +554,7 @@ async function handleExternalFetchRequest(request, env) {
         }
 
         console.error(`[External Fetch] Error:`, {
-            url: externalUrl,
+            url: redactUrl(externalUrl),
             error: error.message,
             errorType: errorDetails.type
         });

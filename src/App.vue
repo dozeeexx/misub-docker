@@ -102,8 +102,13 @@ const loginComponent = computed(() => {
 });
 
 const isDefaultPassword = computed(() => {
-  return sessionStore.subscriptionConfig?.isDefaultPassword === true;
+  return sessionStore.subscriptionConfig?.isDefaultPassword === true
+    || sessionStore.securityWarning?.type === 'default_admin_password';
 });
+const defaultPasswordWarningMessage = computed(() => (
+  sessionStore.securityWarning?.message
+  || '安全警告：检测到您正在使用默认密码 "admin"。为了您的系统安全，请立即前往设置修改密码。'
+));
 
 onMounted(async () => {
   initTheme();
@@ -224,7 +229,7 @@ aria-live="polite"
 </svg>
 </div>
 <p class="text-sm font-medium">
-安全警告：检测到您正在使用默认密码 "admin"。为了您的系统安全，请立即前往设置修改密码。
+{{ defaultPasswordWarningMessage }}
 </p>
 </div>
 </div>
