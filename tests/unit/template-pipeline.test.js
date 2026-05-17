@@ -431,4 +431,51 @@ custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
             expect(provider.format).toBeUndefined();
         }
     });
+
+    it('keeps ACL4SSR Download list as a text provider because YAML comments out most rules', () => {
+        const rendered = renderClashFromIniTemplate(`
+[custom]
+ruleset=📥 下载服务,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Download.list
+ruleset=🐟 漏网之鱼,[]FINAL
+custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
+custom_proxy_group=📥 下载服务\`select\`[]🚀 节点选择\`[]DIRECT
+`, {
+            nodeList: 'trojan://password@1.2.3.4:443#HK-01',
+            targetFormat: 'clash'
+        });
+
+        const parsed = yaml.load(rendered);
+        const providers = parsed['rule-providers'] || {};
+        const downloadProvider = Object.values(providers).find(provider => provider.url.includes('/Clash/Download.list'));
+
+        expect(Object.values(providers).map(provider => provider.url)).not.toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Download.yaml');
+        expect(downloadProvider).toMatchObject({ behavior: 'classical', format: 'text', path: './ruleset/download_0.list' });
+        expect(parsed.rules).toContain('RULE-SET,download_0,📥 下载服务');
+    });
+
+    it('uses short ACL4SSR file names as rule-provider name hints instead of rs fallback names', () => {
+        const rendered = renderClashFromIniTemplate(`
+[custom]
+ruleset=🤖 AI 服务,https://rules.example.test/AI.list
+ruleset=🐟 漏网之鱼,[]FINAL
+custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
+custom_proxy_group=🤖 AI 服务\`select\`[]🚀 节点选择\`[]DIRECT
+`, {
+            nodeList: 'trojan://password@1.2.3.4:443#HK-01',
+            targetFormat: 'clash'
+        });
+
+        const parsed = yaml.load(rendered);
+        const providers = parsed['rule-providers'] || {};
+
+        expect(Object.keys(providers)).toContain('ai_0');
+        expect(Object.keys(providers)).not.toContain('rs_0');
+        expect(providers.ai_0).toMatchObject({
+            behavior: 'classical',
+            format: 'text',
+            url: 'https://rules.example.test/AI.list',
+            path: './ruleset/ai_0.list'
+        });
+        expect(parsed.rules).toContain('RULE-SET,ai_0,🤖 AI 服务');
+    });
 });

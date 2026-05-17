@@ -48,8 +48,8 @@ const ACL4SSR_IPCIDR_PROVIDER_FILES = new Set([
     'netflixip'
 ]);
 
-// ACL4SSR root list files that do not have a matching /Clash/Providers/Ruleset/*.yaml file.
-// Keep them as remote list RULE-SET entries instead of rewriting to a known 404 YAML URL.
+// ACL4SSR root list files that should stay as text providers because their YAML provider is missing
+// or does not preserve the effective raw .list rule coverage.
 const ACL4SSR_ROOT_LIST_ONLY_FILES = new Set([
     'localareanetwork',
     'banad',
@@ -57,6 +57,7 @@ const ACL4SSR_ROOT_LIST_ONLY_FILES = new Set([
     'chinamedia',
     'proxymedia',
     'chinadomain',
+    'download',
     'unban'
 ]);
 
@@ -133,7 +134,7 @@ export function renderClashFromTemplateModel(model) {
         try {
             const urlPath = new URL(providerUrl).pathname;
             const fileName = urlPath.split('/').pop()?.replace(/\.(yaml|yml|list|txt|conf)$/i, '') || '';
-            if (fileName && fileName.length > 2) {
+            if (fileName) {
                 nameHint = fileName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
             }
         } catch {
