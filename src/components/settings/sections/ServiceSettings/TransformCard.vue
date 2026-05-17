@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import TransformSelector from '@/components/forms/TransformSelector.vue';
 import Switch from '@/components/ui/Switch.vue';
 import SectionHeader from '../../SectionHeader.vue';
+import RuleTemplateManager from './RuleTemplateManager.vue';
 
 const props = defineProps({
   settings: {
@@ -14,7 +15,8 @@ const props = defineProps({
 const modeOptions = [
   { value: 'builtin', label: '使用内置自动分流' },
   { value: 'preset', label: '选择预设规则模板' },
-  { value: 'custom', label: '自定义远程规则 URL' }
+  { value: 'custom', label: '自定义远程规则 URL' },
+  { value: 'custom_template', label: '自定义规则模板' }
 ];
 
 const selectedAsset = ref(null);
@@ -59,6 +61,9 @@ const modeHint = computed(() => {
   }
   if (props.settings.transformConfigMode === 'preset') {
     return '从库中选择成熟的规则方案（如 ACL4SSR）。支持内置渲染及第三方后端转换。';
+  }
+  if (props.settings.transformConfigMode === 'custom_template') {
+    return '使用本地保存的自定义规则模板，避免依赖远程 .ini 地址。';
   }
   return '高级模式。使用您指定的远程 .ini 配置文件作为转换基准（适用于第三方后端及部分内置环境）。';
 });
@@ -207,6 +212,9 @@ watch(isExternalEngine, (enabled) => {
             :allowEmpty="settings.transformConfigMode === 'builtin'"
             :exclude-builtin-assets="isExternalEngine"
           />
+          <p v-if="settings.transformConfigMode === 'custom_template'" class="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-[10px] leading-relaxed text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+            请在下方“自定义规则模板”中新建并保存模板，然后在此处选择 custom: 开头的模板项。
+          </p>
         </div>
       </div>
     </div>
@@ -246,5 +254,6 @@ watch(isExternalEngine, (enabled) => {
         </div>
       </div>
     </div>
+    <RuleTemplateManager />
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import DOMPurify from 'dompurify';
 import { useThemeStore } from '../../stores/theme.js';
 import { parseCustomPageSource } from '../../utils/custom-page-source.js';
 
@@ -53,8 +54,23 @@ const removeScripts = () => {
 const customPageConfig = computed(() => props.config?.customPage || {});
 const customPageType = computed(() => customPageConfig.value.type || 'html');
 const isIframeMode = computed(() => ['iframe-srcdoc', 'iframe-url'].includes(customPageType.value));
-const iframeSrcdoc = computed(() => (customPageType.value === 'iframe-srcdoc' ? props.content || '' : undefined));
-const iframeSrc = computed(() => (customPageType.value === 'iframe-url' ? customPageConfig.value.iframeUrl || '' : undefined));
+const sanitizeHtml = (html) => DOMPurify.sanitize(html || '', {
+  USE_PROFILES: { html: true },
+  ADD_ATTR: ['data-slot'],
+  FORBID_TAGS: ['script', 'object', 'embed', 'link', 'style'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'style']
+});
+const iframeSandbox = 'allow-forms allow-popups allow-popups-to-escape-sandbox';
+const iframeSrcdoc = computed(() => (customPageType.value === 'iframe-srcdoc' ? sanitizeHtml(props.content || '') : undefined));
+const safeIframeUrl = (value) => {
+  try {
+    const url = new URL(String(value || ''), window.location.origin);
+    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : '';
+  } catch {
+    return '';
+  }
+};
+const iframeSrc = computed(() => (customPageType.value === 'iframe-url' ? safeIframeUrl(customPageConfig.value.iframeUrl) : undefined));
 const iframeAllowFullscreen = computed(() => (customPageConfig.value.iframeAllowFullscreen === true ? true : undefined));
 const iframeHostStyle = computed(() => ({
   paddingTop: customPageConfig.value.iframePaddingY || undefined,
@@ -102,7 +118,7 @@ const renderedHtml = computed(() => {
     html = html.replace(regex, `<div data-slot="${p}"></div>`);
   });
   
-  return html;
+  return sanitizeHtml(html);
 });
 
 // 用于检测占位符是否在 HTML 中的辅助函数
@@ -130,50 +146,14 @@ const injectStyles = () => {
 const injectExternalStylesheets = () => {
   removeExternalStylesheets();
 
-  if (props.config?.customPage?.allowExternalStylesheets !== true) {
-    return;
-  }
-
-  parsedSource.value.stylesheets.forEach((href, index) => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = href;
-    link.setAttribute(stylesheetDataAttr, 'true');
-    link.setAttribute('data-custom-page-order', String(index));
-    document.head.appendChild(link);
-  });
+  // 第二批安全加固后，公开页不再动态加载用户提供的外部资源，避免
+  // 测试/生产环境发起非预期请求，也降低公开页被用作追踪或内容注入的风险。
 };
 
 const executeScripts = async () => {
   removeScripts();
-
-  if (props.config?.customPage?.allowScripts !== true) {
-    return;
-  }
-
-  await nextTick();
-
-  for (const [index, scriptDef] of parsedSource.value.scripts.entries()) {
-    const script = document.createElement('script');
-    script.async = false;
-    script.setAttribute(scriptDataAttr, 'true');
-    script.setAttribute('data-custom-page-order', String(index));
-
-    if (scriptDef.src) {
-      script.src = scriptDef.src;
-      await new Promise((resolve, reject) => {
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error(`Failed to load script: ${scriptDef.src}`));
-        document.body.appendChild(script);
-      }).catch((error) => {
-        console.error('[CustomPublicRenderer] Script load failed', error);
-      });
-      continue;
-    }
-
-    script.textContent = scriptDef.content;
-    document.body.appendChild(script);
-  }
+  // 安全加固：自定义公开页脚本不再在主页面同源上下文执行。
+  // 需要完整第三方页面能力时，应使用已 sandbox 的 iframe 模式。
 };
 
 onMounted(injectStyles);
@@ -207,6 +187,7 @@ watch(() => route.path, (newPath, oldPath) => {
         :class="{ 'iframe-shadow': customPageConfig.iframeShadow === true }"
         :srcdoc="iframeSrcdoc"
         :style="iframeStyle"
+        :sandbox="iframeSandbox"
         :allowfullscreen="iframeAllowFullscreen"
       ></iframe>
       <iframe
@@ -215,6 +196,7 @@ watch(() => route.path, (newPath, oldPath) => {
         :class="{ 'iframe-shadow': customPageConfig.iframeShadow === true }"
         :src="iframeSrc"
         :style="iframeStyle"
+        :sandbox="iframeSandbox"
         :allowfullscreen="iframeAllowFullscreen"
       ></iframe>
     </div>

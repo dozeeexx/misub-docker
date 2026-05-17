@@ -69,4 +69,32 @@ describe('session store resilience', () => {
     expect(store.initialData).toEqual(data);
     expect(store.publicConfig.customLoginPath).toBe('login');
   });
+
+  it('keeps default-password warning from login response for immediate frontend display', async () => {
+    const { useSessionStore } = await import('../../src/stores/session.js');
+    const store = useSessionStore();
+
+    apiMocks.login.mockResolvedValue({
+      success: true,
+      data: {
+        securityWarning: {
+          type: 'default_admin_password',
+          shouldChangePassword: true,
+          message: '当前正在使用默认管理员密码 admin，请登录后立即修改。'
+        }
+      }
+    });
+    apiMocks.fetchInitialData.mockResolvedValue({
+      success: true,
+      data: { config: { isDefaultPassword: true }, misubs: [], profiles: [] }
+    });
+    apiMocks.fetchPublicConfig.mockResolvedValue({ success: true, data: { customLoginPath: 'login' } });
+
+    await store.login('admin');
+
+    expect(store.securityWarning).toMatchObject({
+      type: 'default_admin_password',
+      shouldChangePassword: true
+    });
+  });
 });

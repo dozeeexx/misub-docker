@@ -47,6 +47,21 @@ export function isRealProxyNode(node) {
     return REAL_PROXY_PROTOCOLS.some(protocol => trimmed.startsWith(protocol));
 }
 
+export function parseSubscriptionUserInfoHeader(header) {
+    if (typeof header !== 'string' || !header.trim()) return null;
+
+    const info = {};
+    header.split(';').forEach(part => {
+        const [rawKey, rawValue] = part.trim().split('=');
+        const key = rawKey?.trim();
+        const value = rawValue?.trim();
+        if (!key || value === undefined || value === '') return;
+        info[key] = /^\d+$/.test(value) ? Number(value) : value;
+    });
+
+    return Object.keys(info).length > 0 ? info : null;
+}
+
 /**
  * 构建单机场订阅源的保护性缓存 key
  */
@@ -470,6 +485,16 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
 
             if (cacheEnabled) {
                 await writeSubscriptionNodeCache(storage, sub, realNodes);
+            }
+
+            if (realNodes.length > 0) {
+                const userInfo = parseSubscriptionUserInfoHeader(response.headers.get('subscription-userinfo'));
+                const runtimeInfo = {
+                    nodeCount: realNodes.length,
+                    userInfo
+                };
+                recordCurrentRequestRuntimeInfo(context, sub, runtimeInfo);
+                scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, runtimeInfo);
             }
 
             // 判断是否启用订阅前缀（智能重命名启用时跳过）

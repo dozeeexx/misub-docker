@@ -3,7 +3,7 @@ import { fetchWithRetry } from '../../services/fetch-utils.js';
 import { buildFetchProxyUrl } from '../../utils/fetch-proxy-utils.js';
 import {
     filterNodeObjects,
-    buildRuleSet,
+    parseFilterRuleText,
     encodeArrayBufferToBase64
 } from '../utils/node-cleaner.js';
 
@@ -96,21 +96,7 @@ export async function fetchSubscriptionNodes(url, subscriptionName, userAgent, c
  */
 function applyExcludeRulesToNodes(nodes, ruleText) {
     if (!ruleText || !ruleText.trim()) return nodes;
-    const lines = ruleText
-        .split('\n')
-        .map(line => line.trim())
-        .filter(Boolean);
-
-    if (lines.length === 0) return nodes;
-
-    const dividerIndex = lines.findIndex(line => line === '---');
-    // 如果没有分隔符，默认全是 exclude
-    const includeLines = dividerIndex === -1 ? [] : lines.slice(dividerIndex + 1);
-    const excludeLines = dividerIndex === -1 ? lines : lines.slice(0, dividerIndex);
-
-    // 使用 node-cleaner 中导出的 buildRuleSet
-    const includeRules = buildRuleSet(includeLines, true);
-    const excludeRules = buildRuleSet(excludeLines);
+    const { includeRules, excludeRules } = parseFilterRuleText(ruleText);
 
     let resultNodes = nodes;
 

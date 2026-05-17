@@ -6,6 +6,7 @@
 import { parseNodeInfo, extractNodeRegion, getRegionEmoji, REGION_KEYWORDS, REGION_EMOJI } from '../modules/utils/geo-utils.js';
 import { extractNodeMetadata } from '../modules/utils/metadata-extractor.js';
 import { base64EncodeUtf8 } from '../modules/utils.js';
+import { evaluateDslExpression, renderDslTemplate } from './expression-dsl.js';
 
 // ============ 默认配置 ============
 
@@ -415,40 +416,29 @@ function safeProtocolAlias(protocolValue) {
     return aliases[protocol] || protocol;
 }
 
+function buildDslContext(record) {
+    return {
+        name: record.name,
+        originalName: record.originalName,
+        protocol: record.protocol,
+        region: record.region,
+        regionZh: record.regionZh,
+        emoji: record.emoji,
+        server: record.server,
+        port: record.port,
+        index: record.index ?? '',
+        regionAlias: safeRegionAlias(record.regionZh || record.region),
+        protocolAlias: safeProtocolAlias(record.protocol)
+    };
+}
+
 function applyScriptRename(record, expression) {
     if (!expression) return record.name;
     try {
-        const runner = new Function(
-            'ctx',
-            'helpers',
-            `"use strict"; const { name, originalName, protocol, region, regionZh, emoji, server, port, index } = ctx; const { upper, lower, title, trim, replace, contains, match, fallback, pick, regionAlias, protocolAlias } = helpers; return (${expression});`
-        );
-        const result = runner({
-            name: record.name,
-            originalName: record.originalName,
-            protocol: record.protocol,
-            region: record.region,
-            regionZh: record.regionZh,
-            emoji: record.emoji,
-            server: record.server,
-            port: record.port,
-            index: record.index ?? ''
-        }, {
-            upper: value => String(value || '').toUpperCase(),
-            lower: value => String(value || '').toLowerCase(),
-            title: value => safeTitle(value),
-            trim: value => String(value || '').trim(),
-            replace: (value, pattern, replacement, flags = 'g') => String(value || '').replace(new RegExp(pattern, flags), replacement || ''),
-            contains: (value, keyword) => safeContains(value, keyword),
-            match: (value, pattern, flags = 'i') => safeMatch(value, pattern, flags),
-            fallback: (...values) => safeFallback(...values),
-            pick: (condition, truthyValue, falsyValue = '') => safePick(condition, truthyValue, falsyValue),
-            regionAlias: value => safeRegionAlias(value),
-            protocolAlias: value => safeProtocolAlias(value)
-        });
+        const result = renderDslTemplate(String(expression).includes('{') ? expression : `{${expression}}`, buildDslContext(record));
         return String(result ?? '').trim() || record.name;
     } catch (error) {
-        console.warn('[NodeTransform] Invalid rename script expression:', error?.message || String(error));
+        console.warn('[NodeTransform] Invalid rename DSL expression:', error?.message || String(error));
         return record.name;
     }
 }
@@ -456,36 +446,9 @@ function applyScriptRename(record, expression) {
 function evaluateScriptExpression(record, expression) {
     if (!expression) return true;
     try {
-        const runner = new Function(
-            'ctx',
-            'helpers',
-            `"use strict"; const { name, originalName, protocol, region, regionZh, emoji, server, port, index } = ctx; const { upper, lower, title, trim, replace, contains, match, fallback, pick, regionAlias, protocolAlias } = helpers; return (${expression});`
-        );
-        return runner({
-            name: record.name,
-            originalName: record.originalName,
-            protocol: record.protocol,
-            region: record.region,
-            regionZh: record.regionZh,
-            emoji: record.emoji,
-            server: record.server,
-            port: record.port,
-            index: record.index ?? ''
-        }, {
-            upper: value => String(value || '').toUpperCase(),
-            lower: value => String(value || '').toLowerCase(),
-            title: value => safeTitle(value),
-            trim: value => String(value || '').trim(),
-            replace: (value, pattern, replacement, flags = 'g') => String(value || '').replace(new RegExp(pattern, flags), replacement || ''),
-            contains: (value, keyword) => safeContains(value, keyword),
-            match: (value, pattern, flags = 'i') => safeMatch(value, pattern, flags),
-            fallback: (...values) => safeFallback(...values),
-            pick: (condition, truthyValue, falsyValue = '') => safePick(condition, truthyValue, falsyValue),
-            regionAlias: value => safeRegionAlias(value),
-            protocolAlias: value => safeProtocolAlias(value)
-        });
+        return evaluateDslExpression(expression, buildDslContext(record));
     } catch (error) {
-        console.warn('[NodeTransform] Invalid filter script expression:', error?.message || String(error));
+        console.warn('[NodeTransform] Invalid filter DSL expression:', error?.message || String(error));
         return true;
     }
 }

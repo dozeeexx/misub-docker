@@ -125,6 +125,42 @@ describe('handleMisubRequest regression coverage', () => {
         expect(dataSourceText).not.toMatch(/^[A-Za-z0-9+/=]+$/);
     });
 
+    it('returns current fetch traffic header on the first builtin response', async () => {
+        const subscriptions = [{
+            id: 'sub-a',
+            name: 'Airport A',
+            url: 'https://airport.example/sub',
+            enabled: true,
+            userInfo: null
+        }];
+        const adapter = createStorageAdapter({
+            settings: { mytoken: 'stable-token', enableFlagEmoji: false, enableTrafficNode: false },
+            subscriptions
+        });
+        createAdapter.mockReturnValue(adapter);
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('trojan://pass@example.com:443#HK', {
+            status: 200,
+            headers: {
+                'subscription-userinfo': 'upload=10; download=20; total=1000; expire=2000'
+            }
+        })));
+
+        const waitUntilPromises = [];
+        const { handleMisubRequest } = await import('../../functions/modules/subscription/main-handler.js');
+        const response = await handleMisubRequest({
+            request: new Request('https://misub.example/stable-token?target=clash&refresh=1&builtin=true', {
+                headers: { 'User-Agent': 'ClashMeta' }
+            }),
+            env: {},
+            waitUntil: promise => waitUntilPromises.push(promise)
+        });
+        const text = await response.text();
+
+        expect(response.status).toBe(200);
+        expect(text).toContain('proxies:');
+        expect(response.headers.get('Subscription-Userinfo')).toBe('upload=10; download=20; total=1000; expire=2000');
+        expect(waitUntilPromises.length).toBeGreaterThan(0);
+    });
 
     it('does not return stale traffic header when current external pull has zero nodes with protective cache disabled', async () => {
         const subscriptions = [{

@@ -354,10 +354,11 @@ custom_proxy_group=TestGroup`;
         expect(providerUrls.length).toBeGreaterThan(0);
         expect(providerUrls.some(url => String(url).includes('/Clash/Providers/Ruleset/YouTube.yaml'))).toBe(true);
         expect(providerUrls.some(url => String(url).includes('/Clash/Providers/ProxyGFWlist.yaml'))).toBe(true);
-        expect(providerUrls.every(url => !String(url).endsWith('.list'))).toBe(true);
+        expect(providerUrls.some(url => String(url).includes('/Clash/BanAD.list'))).toBe(true);
+        expect(Object.values(providers).some(provider => provider.url.includes('/Clash/BanAD.list') && provider.format === 'text')).toBe(true);
     });
 
-    it('should map ACL4SSR root Clash list rules to existing provider ruleset urls', () => {
+    it('should map only ACL4SSR lists with existing provider YAML files to provider URLs', () => {
         const rendered = renderClashFromIniTemplate(`
 [custom]
 ruleset=📲 电报消息,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Telegram.list
@@ -374,5 +375,31 @@ custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
 
         expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/Telegram.yaml');
         expect(providerUrls).toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ProxyGFWlist.yaml');
+    });
+
+    it('keeps ACL4SSR root list rules inline when provider YAML files are missing', () => {
+        const rendered = renderClashFromIniTemplate(`
+[custom]
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/LocalAreaNetwork.list
+ruleset=🛑 广告拦截,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanAD.list
+ruleset=🐟 漏网之鱼,[]FINAL
+custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
+`, {
+            nodeList: 'trojan://password@1.2.3.4:443#HK-01',
+            targetFormat: 'clash'
+        });
+
+        const parsed = yaml.load(rendered);
+        const providerUrls = Object.values(parsed['rule-providers'] || {}).map(provider => provider.url);
+
+        const localAreaProvider = Object.values(parsed['rule-providers'] || {}).find(provider => provider.url.includes('/Clash/LocalAreaNetwork.list'));
+        const banAdProvider = Object.values(parsed['rule-providers'] || {}).find(provider => provider.url.includes('/Clash/BanAD.list'));
+
+        expect(providerUrls).not.toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/LocalAreaNetwork.yaml');
+        expect(providerUrls).not.toContain('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/BanAD.yaml');
+        expect(localAreaProvider).toMatchObject({ format: 'text', path: './ruleset/localareanetwork_0.list' });
+        expect(banAdProvider).toMatchObject({ format: 'text', path: './ruleset/banad_1.list' });
+        expect(parsed.rules).toContain('RULE-SET,localareanetwork_0,🎯 全球直连');
+        expect(parsed.rules).toContain('RULE-SET,banad_1,🛑 广告拦截');
     });
 });

@@ -8,6 +8,7 @@ import { transformBuiltinSubscription } from '../modules/subscription/transforme
 import { renderClashFromIniTemplate, renderSingboxFromIniTemplate, renderSurgeFromIniTemplate, renderLoonFromIniTemplate, renderQuanxFromIniTemplate, renderEgernFromIniTemplate } from '../modules/subscription/template-pipeline.js';
 import { getBuiltinTemplate } from '../modules/subscription/builtin-template-registry.js';
 import { fetchTransformTemplate } from '../modules/subscription/transform-template-cache.js';
+import { resolveRuleTemplateSource } from '../modules/rule-template-handler.js';
 import { base64EncodeUtf8 } from '../modules/utils.js';
 
 function getTemplateExtension(templateUrl) {
@@ -25,6 +26,7 @@ function getTemplateExtension(templateUrl) {
 
 export function isIniTemplateSource(templateSource, builtinTemplateEntry = null) {
     if (builtinTemplateEntry?.format === 'ini') return true;
+    if (templateSource?.kind === 'custom') return true;
     return getTemplateExtension(templateSource?.value) === 'ini';
 }
 
@@ -107,11 +109,12 @@ export class ProcessorService {
 
         const shouldApplyTemplate = !builtinOptions.hiddifyCompatible;
         const builtinTemplateEntry = shouldApplyTemplate && templateSource.kind === 'builtin' ? getBuiltinTemplate(templateSource.value) : null;
+        const customTemplateEntry = shouldApplyTemplate && templateSource.kind === 'custom' ? await resolveRuleTemplateSource(storageAdapter, templateSource) : null;
         const remoteTemplateUrl = shouldApplyTemplate && templateSource.kind === 'remote' ? templateSource.value : '';
 
-        if (builtinTemplateEntry || remoteTemplateUrl) {
-            const templateText = builtinTemplateEntry?.content || await fetchTransformTemplate(storageAdapter, remoteTemplateUrl);
-            const isIniTemplate = isIniTemplateSource(templateSource, builtinTemplateEntry);
+        if (builtinTemplateEntry || customTemplateEntry || remoteTemplateUrl) {
+            const templateText = builtinTemplateEntry?.content || customTemplateEntry?.content || await fetchTransformTemplate(storageAdapter, remoteTemplateUrl);
+            const isIniTemplate = isIniTemplateSource(templateSource, builtinTemplateEntry || customTemplateEntry);
 
             if (templateText && isIniTemplate) {
                 const renderParams = {

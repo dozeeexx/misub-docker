@@ -6,6 +6,16 @@ function base64UrlSafeEncode(str) {
     return base64Encode(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
+function appendHysteria2RealmParams(params, realmOpts) {
+    if (!realmOpts || typeof realmOpts !== 'object') return;
+    if (realmOpts['realm-id']) params.push(`realm-id=${encodeURIComponent(realmOpts['realm-id'])}`);
+    if (realmOpts.token) params.push(`realm-token=${encodeURIComponent(realmOpts.token)}`);
+    if (realmOpts['server-url']) params.push(`realm-server=${encodeURIComponent(realmOpts['server-url'])}`);
+    if (Array.isArray(realmOpts['stun-servers']) && realmOpts['stun-servers'].length > 0) {
+        params.push(`stun-servers=${encodeURIComponent(realmOpts['stun-servers'].join(','))}`);
+    }
+}
+
 export function convertClashProxyToUrl(proxy) {
     try {
         const type = (proxy.type || '').toLowerCase();
@@ -141,6 +151,7 @@ export function convertClashProxyToUrl(proxy) {
             if (proxy['obfs-password']) params.push(`obfs-password=${encodeURIComponent(proxy['obfs-password'])}`);
             if (proxy.sni !== undefined) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
             if (proxy.skipCertVerify || proxy['skip-cert-verify']) params.push('insecure=1');
+            appendHysteria2RealmParams(params, proxy['realm-opts']);
             const query = params.length > 0 ? `?${params.join('&')}` : '';
             return `hysteria2://${encodeURIComponent(password)}@${server}:${port}${query}#${encodeURIComponent(name)}`;
         }

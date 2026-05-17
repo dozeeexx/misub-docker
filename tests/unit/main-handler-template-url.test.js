@@ -34,7 +34,9 @@ describe('Main handler template url', () => {
         expect(resolveTemplateUrl('global', '', 'https://example.com/fallback.yaml')).toBe('https://example.com/fallback.yaml');
         expect(resolveTemplateUrl('preset', 'https://example.com/preset.yaml', 'https://example.com/fallback.yaml')).toBe('https://example.com/preset.yaml');
         expect(resolveTemplateUrl('custom', 'https://example.com/custom.yaml', 'https://example.com/fallback.yaml')).toBe('https://example.com/custom.yaml');
+        expect(resolveTemplateUrl('custom_template', 'custom:tpl-a', 'https://example.com/fallback.yaml')).toBe('custom:tpl-a');
         expect(resolveTemplateSource('builtin:clash_acl4ssr_full')).toEqual({ kind: 'builtin', value: 'clash_acl4ssr_full' });
+        expect(resolveTemplateSource('custom:tpl-a')).toEqual({ kind: 'custom', value: 'tpl-a' });
         expect(resolveExternalTemplateConfigUrl(resolveTemplateSource('builtin:clash_acl4ssr_full'))).toBe('');
         expect(resolveExternalTemplateConfigUrl(resolveTemplateSource('https://example.com/preset.yaml'))).toBe('https://example.com/preset.yaml');
     });
