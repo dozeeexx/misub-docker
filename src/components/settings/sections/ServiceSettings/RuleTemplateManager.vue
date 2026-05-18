@@ -4,12 +4,35 @@ import { useDataStore } from '@/stores/useDataStore.js';
 
 const dataStore = useDataStore();
 
+const DEFAULT_RULE_TEMPLATE_CONTENT = `[custom]
+ruleset=🎯 全球直连,[]GEOIP,CN
+ruleset=🎯 全球直连,[]GEOSITE,CN
+ruleset=🎯 全球直连,[]DOMAIN-SUFFIX,local
+ruleset=📲 电报消息,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Telegram.list
+ruleset=🤖 AI 服务,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/OpenAi.list
+ruleset=🎬 流媒体,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ProxyMedia.list
+ruleset=🛑 广告拦截,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanAD.list
+ruleset=🐟 漏网之鱼,[]FINAL
+
+custom_proxy_group=🚀 节点选择\`select\`[]♻️ 自动选择\`[]☑️ 手动切换\`[]DIRECT
+custom_proxy_group=♻️ 自动选择\`url-test\`.*\`http://www.gstatic.com/generate_204\`300,,50
+custom_proxy_group=☑️ 手动切换\`select\`.*
+custom_proxy_group=📲 电报消息\`select\`[]🚀 节点选择\`[]♻️ 自动选择\`[]DIRECT
+custom_proxy_group=🤖 AI 服务\`select\`[]🚀 节点选择\`[]♻️ 自动选择
+custom_proxy_group=🎬 流媒体\`select\`[]🚀 节点选择\`[]♻️ 自动选择\`[]DIRECT
+custom_proxy_group=🎯 全球直连\`select\`[]DIRECT\`[]🚀 节点选择
+custom_proxy_group=🛑 广告拦截\`select\`[]REJECT\`[]DIRECT
+custom_proxy_group=🐟 漏网之鱼\`select\`[]🚀 节点选择\`[]♻️ 自动选择\`[]DIRECT
+
+enable_rule_generator=true
+overwrite_original_rules=true`;
+
 const blankTemplate = () => ({
   id: '',
   name: '',
   description: '',
   type: 'ini',
-  content: '[Proxy Group]\n🚀 节点选择 = select, []AUTO, DIRECT\n\n[Rule]\nMATCH,🚀 节点选择',
+  content: DEFAULT_RULE_TEMPLATE_CONTENT,
   enabled: true
 });
 

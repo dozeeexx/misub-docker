@@ -135,7 +135,10 @@ export function resolveTemplateUrl(mode, value, fallbackUrl = '') {
 
     if (normalizedMode === 'builtin') return '';
     if (normalizedMode === 'global') return normalizedFallback;
-    if (normalizedMode === 'preset' || normalizedMode === 'custom' || normalizedMode === 'custom_template') return normalizedValue;
+    if (normalizedMode === 'custom_template') {
+        return normalizedValue.startsWith('custom:') ? normalizedValue : '';
+    }
+    if (normalizedMode === 'preset' || normalizedMode === 'custom') return normalizedValue;
 
     return normalizedValue;
 }

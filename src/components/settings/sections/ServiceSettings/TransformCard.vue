@@ -77,11 +77,11 @@ watch(isExternalEngine, (enabled) => {
   props.settings.builtinSkipCertVerify = false;
   props.settings.builtinEnableUdp = false;
 
-  if (props.settings.transformConfigMode === 'builtin') {
+  if (props.settings.transformConfigMode === 'builtin' || props.settings.transformConfigMode === 'custom_template') {
     props.settings.transformConfigMode = 'preset';
   }
 
-  if (String(props.settings.transformConfig || '').startsWith('builtin:')) {
+  if (/^(builtin|custom):/.test(String(props.settings.transformConfig || ''))) {
     props.settings.transformConfig = '';
     selectedAsset.value = null;
   }
@@ -144,7 +144,7 @@ watch(isExternalEngine, (enabled) => {
                 v-for="option in modeOptions"
                 :key="option.value"
                 :value="option.value"
-                :disabled="option.value === 'builtin' && isExternalEngine"
+                :disabled="(option.value === 'builtin' || option.value === 'custom_template') && isExternalEngine"
               >
                 {{ option.label }}
               </option>
@@ -153,7 +153,7 @@ watch(isExternalEngine, (enabled) => {
               {{ modeHint }}
             </p>
             <p v-if="isExternalEngine" class="mt-1 text-[10px] leading-relaxed text-amber-600 dark:text-amber-400">
-              使用第三方订阅转换时，无法兼容 MiSub 内置规则。请使用远程预设模板或自定义 URL。
+              使用第三方订阅转换时，无法兼容 MiSub 内置规则、内置预设和本地 custom: 模板。请使用远程预设模板或自定义 URL。
             </p>
           </div>
 
@@ -207,6 +207,7 @@ watch(isExternalEngine, (enabled) => {
             @select-asset="selectedAsset = $event"
             type="config"
             :force-custom="settings.transformConfigMode === 'custom'"
+            :custom-templates-only="settings.transformConfigMode === 'custom_template'"
             placeholder="选择预设规则配置..."
             custom-placeholder="输入远程 .ini 配置文件 URL"
             :allowEmpty="settings.transformConfigMode === 'builtin'"

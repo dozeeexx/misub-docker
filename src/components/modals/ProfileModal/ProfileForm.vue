@@ -81,11 +81,11 @@ const enforceExternalSchemeConstraints = () => {
   const enabled = isExternalEngine.value;
   if (!enabled) return;
 
-  if (props.localProfile.transformConfigMode === 'builtin') {
+  if (props.localProfile.transformConfigMode === 'builtin' || props.localProfile.transformConfigMode === 'custom_template') {
     props.localProfile.transformConfigMode = 'preset';
   }
 
-  if (String(props.localProfile.transformConfig || '').startsWith('builtin:')) {
+  if (/^(builtin|custom):/.test(String(props.localProfile.transformConfig || ''))) {
     props.localProfile.transformConfig = '';
     selectedTransformAsset.value = null;
   }
@@ -208,12 +208,17 @@ watch(
             >
               <option value="global">跟随全局方案</option>
               <option value="builtin" :disabled="isExternalEngine">内置自动分流</option>
-              <option v-for="option in transformModeOptions.slice(1)" :key="option.value" :value="option.value">
+              <option
+                v-for="option in transformModeOptions.slice(1)"
+                :key="option.value"
+                :value="option.value"
+                :disabled="option.value === 'custom_template' && isExternalEngine"
+              >
                 {{ option.label }}
               </option>
             </select>
             <p v-if="isExternalEngine" class="mt-1 text-[10px] leading-relaxed text-amber-600 dark:text-amber-400">
-              第三方后端不支持 MiSub 内置规则源与内置模板，请选择预设远程模板或自定义 URL。
+              第三方后端不支持 MiSub 内置规则源、内置模板和本地 custom: 模板，请选择预设远程模板或自定义 URL。
             </p>
             <div v-if="localProfile.transformConfigMode === 'global'" class="flex items-center gap-1.5 mt-1.5">
                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
@@ -251,6 +256,7 @@ watch(
               placeholder="选择预设方案..."
               custom-placeholder="输入远程 .ini 规则配置 URL"
               :force-custom="localProfile.transformConfigMode === 'custom'"
+              :custom-templates-only="localProfile.transformConfigMode === 'custom_template'"
               :allowEmpty="false"
               :exclude-builtin-assets="isExternalEngine"
             />
