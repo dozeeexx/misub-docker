@@ -97,6 +97,7 @@ const groupedConfigs = computed(() => {
 
 const isCustom = ref(false);
 const selectedUrl = ref('');
+const showTemplateVariables = ref(false);
 
 watch(
   () => props.modelValue,
@@ -284,13 +285,30 @@ const helperText = computed(() => {
 
     <div
       v-if="type === 'config'"
-      class="mt-3 rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-xs dark:border-gray-700 dark:bg-gray-800/40"
+      class="mt-3 rounded-lg border border-gray-200 bg-gray-50/80 text-xs dark:border-gray-700 dark:bg-gray-800/40"
     >
-      <div class="flex items-center justify-between gap-3">
-        <p class="font-medium text-gray-700 dark:text-gray-200">模板变量说明</p>
-        <span class="text-[11px] text-gray-400">{{ helperText }}</span>
-      </div>
-      <div class="mt-3 grid gap-3 md:grid-cols-2">
+      <button
+        type="button"
+        class="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-100/70 dark:hover:bg-gray-700/30"
+        :aria-expanded="showTemplateVariables"
+        @click="showTemplateVariables = !showTemplateVariables"
+      >
+        <span>
+          <span class="font-medium text-gray-700 dark:text-gray-200">模板变量说明</span>
+          <span class="ml-2 text-[11px] text-gray-400">{{ helperText }}</span>
+        </span>
+        <svg
+          class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+          :class="showTemplateVariables ? 'rotate-180' : ''"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div v-if="showTemplateVariables" class="grid gap-3 border-t border-gray-200 p-3 md:grid-cols-2 dark:border-gray-700">
         <div
           v-for="group in TEMPLATE_VARIABLE_GROUPS"
           :key="group.title"

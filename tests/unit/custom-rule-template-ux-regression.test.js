@@ -79,7 +79,7 @@ describe('Custom rule template UX regressions', () => {
     expect(wrapper.text()).toContain('仅可选择已保存的 custom: 自定义规则模板');
   });
 
-  it('shows renderer-supported template variables consistently in helper text', () => {
+  it('keeps template variable helper collapsed by default and expands on demand', async () => {
     const wrapper = mountWithStore(TransformSelector, {
       props: {
         modelValue: '',
@@ -87,7 +87,15 @@ describe('Custom rule template UX regressions', () => {
       }
     });
 
+    expect(wrapper.text()).toContain('模板变量说明');
+    expect(wrapper.text()).toContain('适用于统一模板渲染。');
+    expect(wrapper.text()).not.toContain('<%file_name%>');
+    expect(wrapper.find('button[aria-expanded="false"]').exists()).toBe(true);
+
+    await wrapper.find('button[aria-expanded="false"]').trigger('click');
+
     const helper = wrapper.text();
+    expect(wrapper.find('button[aria-expanded="true"]').exists()).toBe(true);
     expect(helper).toContain('<%file_name%>');
     expect(helper).toContain('<%fileName%>');
     expect(helper).toContain('<%target_format%>');
