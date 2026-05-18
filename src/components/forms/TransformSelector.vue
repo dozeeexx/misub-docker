@@ -25,16 +25,29 @@ const TEMPLATE_VARIABLE_GROUPS = [
     items: [
       { key: '<%proxies%>', example: '代理节点片段' },
       { key: '<%rules%>', example: '规则片段' },
-      { key: '<%file_name%>', example: '配置文件名' },
-      { key: '<%target_format%>', example: 'clash / surge / quanx 等' }
+      { key: '<%file_name%>', example: '配置文件名（同 <%fileName%>）' },
+      { key: '<%target_format%>', example: '目标格式（同 <%targetFormat%>）' },
+      { key: '<%node_count%>', example: '节点数量（同 <%nodeCount%>）' }
     ]
   },
   {
-    title: '分组变量',
+    title: '策略组变量',
     items: [
-      { key: '<%region_strategy_chain%>', example: '地区策略组链' },
-      { key: '<%protocol_strategy_chain%>', example: '协议策略组链' },
-      { key: '<%all_strategy_groups%>', example: '所有策略组名称集合' }
+      { key: '<%primary_strategy_chain%>', example: '主策略组完整候选链（同 <%primaryStrategyChain%>）' },
+      { key: '<%region_strategy_chain%>', example: '地区策略组候选链（同 <%regionStrategyChain%>）' },
+      { key: '<%protocol_strategy_chain%>', example: '协议策略组候选链（同 <%protocolStrategyChain%>）' },
+      { key: '<%all_strategy_groups%>', example: '所有策略组名称集合（同 <%allStrategyGroups%>）' }
+    ]
+  },
+  {
+    title: '分组明细变量',
+    items: [
+      { key: '<%region_group_names%>', example: '地区策略组名称列表（同 <%regionGroupNames%>）' },
+      { key: '<%region_group_counts%>', example: '地区策略组节点数量（同 <%regionGroupCounts%>）' },
+      { key: '<%region_group_list%>', example: '地区策略组逐行清单（同 <%regionGroupList%>）' },
+      { key: '<%protocol_group_names%>', example: '协议策略组名称列表（同 <%protocolGroupNames%>）' },
+      { key: '<%protocol_group_counts%>', example: '协议策略组节点数量（同 <%protocolGroupCounts%>）' },
+      { key: '<%protocol_group_list%>', example: '协议策略组逐行清单（同 <%protocolGroupList%>）' }
     ]
   }
 ];

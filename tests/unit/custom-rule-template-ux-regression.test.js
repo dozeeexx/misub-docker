@@ -79,6 +79,42 @@ describe('Custom rule template UX regressions', () => {
     expect(wrapper.text()).toContain('仅可选择已保存的 custom: 自定义规则模板');
   });
 
+  it('shows renderer-supported template variables consistently in helper text', () => {
+    const wrapper = mountWithStore(TransformSelector, {
+      props: {
+        modelValue: '',
+        type: 'config'
+      }
+    });
+
+    const helper = wrapper.text();
+    expect(helper).toContain('<%file_name%>');
+    expect(helper).toContain('<%fileName%>');
+    expect(helper).toContain('<%target_format%>');
+    expect(helper).toContain('<%targetFormat%>');
+    expect(helper).toContain('<%node_count%>');
+    expect(helper).toContain('<%primary_strategy_chain%>');
+    expect(helper).toContain('<%primaryStrategyChain%>');
+    expect(helper).toContain('<%region_strategy_chain%>');
+    expect(helper).toContain('<%regionStrategyChain%>');
+    expect(helper).toContain('<%protocol_strategy_chain%>');
+    expect(helper).toContain('<%protocolStrategyChain%>');
+    expect(helper).toContain('<%all_strategy_groups%>');
+    expect(helper).toContain('<%allStrategyGroups%>');
+    expect(helper).toContain('<%region_group_names%>');
+    expect(helper).toContain('<%regionGroupNames%>');
+    expect(helper).toContain('<%region_group_counts%>');
+    expect(helper).toContain('<%regionGroupCounts%>');
+    expect(helper).toContain('<%region_group_list%>');
+    expect(helper).toContain('<%regionGroupList%>');
+    expect(helper).toContain('<%protocol_group_names%>');
+    expect(helper).toContain('<%protocolGroupNames%>');
+    expect(helper).toContain('<%protocol_group_counts%>');
+    expect(helper).toContain('<%protocolGroupCounts%>');
+    expect(helper).toContain('<%protocol_group_list%>');
+    expect(helper).toContain('<%protocolGroupList%>');
+  });
+
   it('warns when a selected custom: template no longer exists or is disabled', () => {
     const wrapper = mountWithStore(TransformSelector, {
       props: {
