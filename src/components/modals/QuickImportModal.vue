@@ -72,7 +72,7 @@ const withQueryParam = (url, key, value) => {
 
 const generateDeepLink = (client) => {
     const subUrl = getSubscriptionUrl();
-    const clashSubUrl = withQueryParam(withQueryParam(subUrl, 'target', 'clash'), 'builtin', '1');
+    const clashSubUrl = withQueryParam(subUrl, 'target', 'clash');
     const scheme = urlSchemeMap[client.id];
 
     if (!scheme) return null;

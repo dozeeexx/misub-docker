@@ -28,11 +28,7 @@ const baseUrl = computed(() => {
 
 const clients = computed(() => [
   { name: '默认 (自动探测)', type: 'default', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', format: '' },
-  // Clash/Mihomo 系移动客户端常用 Dio/Flutter HTTP 栈，部分版本不会正确跟随或展示
-  // 第三方 subconverter 的 400/No nodes 错误。复制入口优先给内置 Clash YAML，避免被全局
-  // external engine 重定向到第三方转换后端导致“后端测试可用但客户端拉取失败”。
-  { name: 'Clash / Mihomo（内置）', type: 'clash', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', format: '?target=clash&builtin=1' },
-  { name: 'Clash / Mihomo（第三方转换）', type: 'clash-external', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', format: '?target=clash&engine=external' },
+  { name: 'Clash', type: 'clash', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', format: '?clash' },
   { name: 'Sing-Box', type: 'singbox', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', format: '?base64' },
   { name: 'Surge', type: 'surge', icon: 'M13 10V3L4 14h7v7l9-11h-7z', format: '?surge' },
   { name: 'Loon', type: 'loon', icon: 'M12 19l9 2-9-18-9 18 9-2zm0 0v-8', format: '?loon' },
@@ -106,7 +102,6 @@ const fallbackCopy = (link) => {
         <div 
           v-for="client in clients" 
           :key="client.type"
-          data-testid="copy-link-client"
           @click="copyToClipboard(client.format)"
           class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-all duration-200 group"
         >
