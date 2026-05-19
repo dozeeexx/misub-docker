@@ -4,6 +4,7 @@ import TransformSelector from '@/components/forms/TransformSelector.vue';
 import Switch from '@/components/ui/Switch.vue';
 import SectionHeader from '../../SectionHeader.vue';
 import RuleTemplateManager from './RuleTemplateManager.vue';
+import { DEFAULT_SUBCONVERTER_BACKEND, SUBCONVERTER_BACKENDS } from '@/constants/subconverter-backends.js';
 
 const props = defineProps({
   settings: {
@@ -32,7 +33,7 @@ const flagOptions = [
 
 if (!props.settings.subconverter) {
   props.settings.subconverter = {
-    defaultBackend: 'https://subapi.cmliussss.net/sub?',
+    defaultBackend: DEFAULT_SUBCONVERTER_BACKEND,
     defaultOptions: {
       udp: true,
       emoji: true,
@@ -234,13 +235,24 @@ watch(isExternalEngine, (enabled) => {
 
       <div class="space-y-4">
         <div>
-          <label class="mb-1.5 block text-[11px] font-medium text-gray-500">后端接口 URL (Backend API)</label>
+          <label class="mb-1.5 block text-[11px] font-medium text-gray-500">转换后端</label>
+          <select
+            v-model="settings.subconverter.defaultBackend"
+            class="mb-2 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-orange-500 focus:ring-orange-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option v-for="backend in SUBCONVERTER_BACKENDS" :key="backend.value" :value="backend.value">
+              {{ backend.label }} · {{ backend.description }}
+            </option>
+          </select>
           <input
             type="text"
             v-model="settings.subconverter.defaultBackend"
-            placeholder="https://..."
+            placeholder="subapi.cmliussss.net"
             class="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-orange-500 focus:ring-orange-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
+          <p class="mt-1.5 text-[10px] leading-relaxed text-gray-400">
+            只需填写域名，例如 subapi.cmliussss.net 或 api.v1.mk；MiSub 会自动补全为 https://域名/sub。
+          </p>
         </div>
 
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">

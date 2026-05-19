@@ -2,7 +2,7 @@ import { StorageFactory } from '../../storage-adapter.js';
 import { migrateConfigSettings, formatBytes, migrateProfileIds, base64EncodeUtf8 } from '../utils.js';
 import { generateCombinedNodeList } from '../../services/subscription-service.js';
 import { sendEnhancedTgNotification, tgEscape } from '../notifications.js';
-import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from '../config.js';
+import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings, DEFAULT_SUBCONVERTER_BACKEND } from '../config.js';
 import { createDisguiseResponse } from '../disguise-page.js';
 import { generateCacheKey, setCache } from '../../services/node-cache-service.js';
 import { resolveRequestContext } from './request-context.js';
@@ -158,6 +158,34 @@ export function resolveTemplateSource(value) {
 export function resolveExternalTemplateConfigUrl(templateSource) {
     if (!templateSource || typeof templateSource !== 'object') return '';
     return templateSource.kind === 'remote' ? String(templateSource.value || '').trim() : '';
+}
+
+export function normalizeSubconverterBackend(input, fallback = DEFAULT_SUBCONVERTER_BACKEND) {
+    let backend = String(input || fallback || DEFAULT_SUBCONVERTER_BACKEND).trim();
+
+    // 防止历史 UI 文案或标签被误保存为后端地址。
+    if (!backend || backend.includes('后端') || backend.includes('参数')) {
+        backend = fallback || DEFAULT_SUBCONVERTER_BACKEND;
+    }
+
+    // 用户只需填写 host，例如 subapi.cmliussss.net 或 api.v1.mk。
+    // 兼容历史完整 URL，但统一规范为 https://<host>/sub。
+    backend = backend.replace(/\s+/g, '');
+    if (!/^https?:\/\//i.test(backend)) {
+        backend = `https://${backend}`;
+    }
+
+    const externalUrl = new URL(backend);
+    if (externalUrl.pathname === '/' || !externalUrl.pathname) {
+        externalUrl.pathname = '/sub';
+    }
+    if (externalUrl.pathname !== '/sub') {
+        externalUrl.pathname = '/sub';
+    }
+
+    // 历史默认值可能保存为 /sub?；URL 会自动消除空 query。
+    externalUrl.hash = '';
+    return externalUrl;
 }
 
 export function resolveBuiltinEngineFlags(config = {}, isExternalMode = false) {
@@ -607,25 +635,8 @@ export async function handleMisubRequest(context) {
 
     // 2. If external mode active, build the redirect URL and return 302
     if (isExternalMode && targetFormat !== 'base64') {
-        let backend = url.searchParams.get('backend') || profileSub.backend || globalSub.defaultBackend || "https://sub.id9.cc/sub?";
-        
-        // [加固] 防止 UI 标签泄漏到配置中
-        if (typeof backend === 'string' && (backend.includes('后端') || backend.includes('参数'))) {
-            backend = "https://subapi.cmliussss.net/sub?";
-        }
-
-        // [自动纠错] 如果地址不带 http/https 协议，自动补全
-        if (backend && typeof backend === 'string' && !backend.startsWith('http://') && !backend.startsWith('https://')) {
-            backend = 'http://' + backend;
-        }
-
-        const externalUrl = new URL(backend);
-
-        // [Fix] Automatically append '/sub' if the backend URL only has a root path.
-        // Most subconverter backends (FatSheep, subapi, etc.) use /sub as the conversion endpoint.
-        if (externalUrl.pathname === '/' || !externalUrl.pathname) {
-            externalUrl.pathname = '/sub';
-        }
+        const backend = url.searchParams.get('backend') || profileSub.backend || globalSub.defaultBackend;
+        const externalUrl = normalizeSubconverterBackend(backend);
         // [优化] 解析 targetFormat，支持带参数的格式（如 surge&ver=4）
         const [targetBase, ...targetParams] = targetFormat.split('&');
         externalUrl.searchParams.set('target', targetBase);

@@ -79,7 +79,7 @@ describe('handleMisubRequest regression coverage', () => {
         );
     });
 
-    it('keeps external converter data-source requests in nodes format instead of UA fallback format', async () => {
+    it('normalizes external converter hosts and keeps data-source requests in nodes format', async () => {
         const subscriptions = [{
             id: 'sub-a',
             name: '鏈哄満A',
@@ -91,7 +91,7 @@ describe('handleMisubRequest regression coverage', () => {
                 mytoken: 'stable-token',
                 enableFlagEmoji: false,
                 enableTrafficNode: false,
-                subconverter: { engineMode: 'external', defaultBackend: 'https://sub.example/sub?' }
+                subconverter: { engineMode: 'external', defaultBackend: 'sub.example' }
             },
             subscriptions
         });
@@ -110,6 +110,7 @@ describe('handleMisubRequest regression coverage', () => {
         const dataSourceUrl = redirectUrl.searchParams.get('url');
 
         expect(initialResponse.status).toBe(302);
+        expect(redirectUrl.origin + redirectUrl.pathname).toBe('https://sub.example/sub');
         expect(dataSourceUrl).toContain('target=nodes');
 
         const dataSourceResponse = await handleMisubRequest({
@@ -123,6 +124,48 @@ describe('handleMisubRequest regression coverage', () => {
         expect(dataSourceResponse.headers.get('X-MiSub-Mode')).toBe('node-export-plain');
         expect(dataSourceText).toContain('trojan://pass@example.com:443#');
         expect(dataSourceText).not.toMatch(/^[A-Za-z0-9+/=]+$/);
+    });
+
+    it.each([
+        ['bare default backend', 'subapi.cmliussss.net', 'https://subapi.cmliussss.net/sub'],
+        ['legacy default backend URL', 'https://subapi.cmliussss.net/sub?', 'https://subapi.cmliussss.net/sub'],
+        ['FatSheep backend host', 'api.v1.mk', 'https://api.v1.mk/sub'],
+        ['FatSheep legacy URL', 'https://api.v1.mk/sub?', 'https://api.v1.mk/sub']
+    ])('normalizes %s for external converter redirects', async (_label, backend, expectedEndpoint) => {
+        const subscriptions = [{
+            id: 'sub-a',
+            name: 'Airport A',
+            url: 'https://airport.example/sub',
+            enabled: true
+        }];
+        const adapter = createStorageAdapter({
+            settings: {
+                mytoken: 'stable-token',
+                enableFlagEmoji: false,
+                enableTrafficNode: false,
+                subconverter: { engineMode: 'external', defaultBackend: backend }
+            },
+            subscriptions
+        });
+        createAdapter.mockReturnValue(adapter);
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('trojan://pass@example.com:443#HK', { status: 200 })));
+
+        const { handleMisubRequest } = await import('../../functions/modules/subscription/main-handler.js');
+        const response = await handleMisubRequest({
+            request: new Request('https://misub.example/stable-token?target=clash&refresh=1', {
+                headers: { 'User-Agent': 'ClashMeta' }
+            }),
+            env: {},
+            waitUntil: vi.fn()
+        });
+        const redirectUrl = new URL(response.headers.get('Location'));
+        const dataSourceUrl = new URL(redirectUrl.searchParams.get('url'));
+
+        expect(response.status).toBe(302);
+        expect(redirectUrl.origin + redirectUrl.pathname).toBe(expectedEndpoint);
+        expect(redirectUrl.searchParams.get('target')).toBe('clash');
+        expect(dataSourceUrl.searchParams.get('target')).toBe('nodes');
+        expect(dataSourceUrl.searchParams.get('builtin')).toBe('true');
     });
 
     it('returns current fetch traffic header on the first builtin response', async () => {

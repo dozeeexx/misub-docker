@@ -12,6 +12,7 @@ export const KV_KEY_SETTINGS = 'worker_settings_v1';
 // Auth
 export const COOKIE_NAME = 'auth_session';
 export const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours
+export const DEFAULT_SUBCONVERTER_BACKEND = 'subapi.cmliussss.net';
 
 // Default settings
 export const DEFAULT_SETTINGS = {
@@ -118,7 +119,7 @@ export const DEFAULT_SETTINGS = {
     // 订阅转换设置
     subconverter: {
         engineMode: "builtin",
-        defaultBackend: "https://subapi.cmliussss.net/sub?",
+        defaultBackend: DEFAULT_SUBCONVERTER_BACKEND,
         defaultOptions: {
             udp: true,
             emoji: true,

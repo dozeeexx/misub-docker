@@ -3,6 +3,8 @@
  * @author MiSub Team
  */
 
+import { DEFAULT_SUBCONVERTER_BACKEND } from './subconverter-backends.js';
+
 export const DEFAULT_SETTINGS = {
     FileName: 'MiSub',
     mytoken: 'auto',
@@ -86,7 +88,7 @@ prependGroupName: false
     // 订阅转换设置
     subconverter: {
         engineMode: 'builtin',
-        defaultBackend: "https://subapi.cmliussss.net/sub?",
+        defaultBackend: DEFAULT_SUBCONVERTER_BACKEND,
         defaultOptions: {
             udp: true,
             emoji: true,

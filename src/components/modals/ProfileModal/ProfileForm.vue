@@ -234,9 +234,12 @@ watch(
             <input
               type="text"
               v-model="localProfile.subconverter.backend"
-              placeholder="留空则使用全局默认后端"
+              placeholder="留空跟随全局；可填 api.v1.mk"
               class="block w-full px-3 py-2 bg-orange-50/20 dark:bg-orange-900/10 border border-orange-200/50 dark:border-orange-500/20 misub-radius-md sm:text-sm dark:text-white focus:ring-orange-500"
             />
+            <p class="mt-1.5 text-[10px] leading-relaxed text-gray-400">
+              只需填写域名，运行时会自动补全 https:// 和 /sub。
+            </p>
             <div v-if="!localProfile.subconverter.backend" class="flex items-center gap-1.5 mt-1.5">
                <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
                <span class="text-[10px] text-orange-600 dark:text-orange-400 font-bold uppercase tracking-tight">
