@@ -39,6 +39,7 @@ import {
 import { handleGithubReleaseRequest } from './handlers/github-proxy-handler.js'; // [NEW] Import handler
 import { handleParseSubscription } from './parse-subscription-handler.js';
 import { safeFetchPublicUrl, validatePublicFetchUrl, redactUrl } from './security-utils.js';
+import { normalizeSubconverterBackend } from './subscription/main-handler.js';
 
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
@@ -385,6 +386,9 @@ export async function handleApiRequest(request, env) {
         case '/parse_subscription':
             return await handleParseSubscription(request, env);
 
+        case '/subconverter/test':
+            return await handleSubconverterTestRequest(request, env);
+
         case '/logs':
             if (request.method === 'GET') {
                 const { LogService } = await import('../services/log-service.js');
@@ -441,6 +445,94 @@ export async function handleApiRequest(request, env) {
 
         default:
             return createErrorResponse('API route not found', 404);
+    }
+}
+
+export async function handleSubconverterTestRequest(request, env) {
+    if (request.method !== 'POST') {
+        return createErrorResponse('Method Not Allowed', 405);
+    }
+
+    let requestData;
+    try {
+        requestData = await request.json();
+    } catch (e) {
+        return createErrorResponse('Invalid JSON format', 400);
+    }
+
+    const { backend, target = 'clash', timeout = 15000 } = requestData || {};
+    let endpoint;
+    try {
+        endpoint = normalizeSubconverterBackend(backend);
+    } catch (error) {
+        return createJsonResponse({
+            success: false,
+            error: '转换后端地址无效，请填写域名或 http(s) URL。',
+            details: error.message
+        }, 400);
+    }
+
+    const safeTarget = /^[a-z0-9_-]{2,32}$/i.test(String(target || '')) ? String(target).toLowerCase() : 'clash';
+    const controller = new AbortController();
+    const normalizedTimeout = Math.min(Math.max(Number(timeout) || 15000, 3000), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), normalizedTimeout);
+
+    try {
+        // 使用公开测试节点内容直接传给后端，避免探测时依赖用户订阅链接或 MiSub 回调 URL。
+        endpoint.searchParams.set('target', safeTarget);
+        endpoint.searchParams.set('url', 'trojan://password@example.com:443?allowInsecure=1&sni=example.com#MiSub-Test-Node');
+        endpoint.searchParams.set('insert', 'false');
+        endpoint.searchParams.set('emoji', 'false');
+        endpoint.searchParams.set('list', 'false');
+        endpoint.searchParams.set('udp', 'true');
+        endpoint.searchParams.set('tfo', 'false');
+        endpoint.searchParams.set('scv', 'true');
+        endpoint.searchParams.set('sort', 'false');
+
+        const startedAt = Date.now();
+        const response = await fetch(new Request(endpoint.toString(), {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'MiSub/Backend-Test',
+                'Accept': '*/*',
+                'Cache-Control': 'no-cache'
+            },
+            signal: controller.signal
+        }));
+        const elapsedMs = Date.now() - startedAt;
+        clearTimeout(timeoutId);
+
+        const text = await response.text();
+        const sample = text.slice(0, 200);
+        const hasUsableOutput = response.ok && /MiSub-Test-Node|proxies:|proxy-groups:|trojan/i.test(text);
+
+        return createJsonResponse({
+            success: hasUsableOutput,
+            available: hasUsableOutput,
+            status: response.status,
+            statusText: response.statusText,
+            endpoint: `${endpoint.origin}${endpoint.pathname}`,
+            elapsedMs,
+            sample,
+            message: hasUsableOutput
+                ? `第三方转换后端可用，响应 ${response.status}，耗时 ${elapsedMs}ms。`
+                : `后端已响应但未返回有效转换结果（HTTP ${response.status}）。`
+        }, response.ok ? 200 : 502);
+    } catch (error) {
+        clearTimeout(timeoutId);
+        const isTimeout = error.name === 'AbortError';
+        console.error('[Subconverter Test] Error:', {
+            backend: endpoint ? `${endpoint.origin}${endpoint.pathname}` : '[invalid]',
+            error: error.message,
+            type: isTimeout ? 'timeout' : 'network'
+        });
+        return createJsonResponse({
+            success: false,
+            available: false,
+            endpoint: endpoint ? `${endpoint.origin}${endpoint.pathname}` : null,
+            error: isTimeout ? `测试超时（${normalizedTimeout}ms）` : `无法连接转换后端：${error.message}`,
+            errorType: isTimeout ? 'timeout' : 'network'
+        }, 502);
     }
 }
 

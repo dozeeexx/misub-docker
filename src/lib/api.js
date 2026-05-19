@@ -272,6 +272,18 @@ export async function fetchGithubLatestRelease(repo) {
     }
 }
 
+export async function testSubconverterBackend(backend, target = 'clash') {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const data = await api.post('/api/subconverter/test', { backend, target }, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        return data;
+    } catch (error) {
+        return handleApiError(error, 'testSubconverterBackend');
+    }
+}
+
 /**
  * 测试订阅链接内容
  * @param {string} url - 订阅URL

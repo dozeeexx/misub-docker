@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { handleApiRequest, handleExternalFetchRequest } from '../../functions/modules/api-router.js';
+import { handleApiRequest, handleExternalFetchRequest, handleSubconverterTestRequest } from '../../functions/modules/api-router.js';
 import {
   handleDebugSubscriptionRequest,
   handleExportDataRequest,
@@ -139,6 +139,43 @@ describe('security hardening', () => {
 
     expect(queryResponse.status).toBe(401);
     expect(bearerResponse.status).not.toBe(401);
+  });
+
+  it('tests subconverter backends with a synthetic node without exposing user subscriptions', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('proxies:\n  - name: MiSub-Test-Node\n', { status: 200 }));
+
+    const response = await handleSubconverterTestRequest(new Request('https://example.com/api/subconverter/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ backend: 'api.v1.mk' })
+    }), {});
+    const body = await response.json();
+    const requestArg = fetchSpy.mock.calls[0][0];
+    const testUrl = new URL(requestArg.url);
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.endpoint).toBe('https://api.v1.mk/sub');
+    expect(testUrl.origin + testUrl.pathname).toBe('https://api.v1.mk/sub');
+    expect(testUrl.searchParams.get('target')).toBe('clash');
+    expect(testUrl.searchParams.get('url')).toContain('MiSub-Test-Node');
+    expect(testUrl.searchParams.get('url')).not.toContain('airport.example');
+  });
+
+  it('reports backend test failure when converter output is not usable', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('No nodes were found!', { status: 200 }));
+
+    const response = await handleSubconverterTestRequest(new Request('https://example.com/api/subconverter/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ backend: 'subapi.cmliussss.net' })
+    }), {});
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(false);
+    expect(body.available).toBe(false);
+    expect(body.message).toContain('未返回有效转换结果');
   });
 
   it('does not pass insecureSkipVerify when previewing external content', async () => {

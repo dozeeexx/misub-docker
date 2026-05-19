@@ -5,6 +5,7 @@ import Switch from '@/components/ui/Switch.vue';
 import SectionHeader from '../../SectionHeader.vue';
 import RuleTemplateManager from './RuleTemplateManager.vue';
 import { DEFAULT_SUBCONVERTER_BACKEND, SUBCONVERTER_BACKENDS } from '@/constants/subconverter-backends.js';
+import { testSubconverterBackend } from '@/lib/api.js';
 
 const props = defineProps({
   settings: {
@@ -71,6 +72,32 @@ const modeHint = computed(() => {
 
 const isBuiltinEngine = computed(() => props.settings.subconverter.engineMode === 'builtin' || props.settings.subconverter.engineMode === '');
 const isExternalEngine = computed(() => props.settings.subconverter.engineMode === 'external');
+const backendTestStatus = ref(null);
+const isTestingBackend = ref(false);
+const backendTestToneClass = computed(() => {
+  if (!backendTestStatus.value) return 'border-gray-100 bg-gray-50 text-gray-500 dark:border-white/5 dark:bg-white/5 dark:text-gray-400';
+  return backendTestStatus.value.success
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-900/20 dark:text-emerald-300'
+    : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-900/20 dark:text-rose-300';
+});
+
+async function handleTestBackend() {
+  if (isTestingBackend.value) return;
+  isTestingBackend.value = true;
+  backendTestStatus.value = null;
+  const result = await testSubconverterBackend(props.settings.subconverter.defaultBackend, 'clash');
+  backendTestStatus.value = {
+    success: Boolean(result?.success || result?.available),
+    message: result?.message || result?.error || '测试失败，请检查后端地址或稍后重试。',
+    endpoint: result?.endpoint || '',
+    elapsedMs: result?.elapsedMs
+  };
+  isTestingBackend.value = false;
+}
+
+watch(() => props.settings.subconverter.defaultBackend, () => {
+  backendTestStatus.value = null;
+});
 
 watch(isExternalEngine, (enabled) => {
   if (!enabled) return;
@@ -253,6 +280,31 @@ watch(isExternalEngine, (enabled) => {
           <p class="mt-1.5 text-[10px] leading-relaxed text-gray-400">
             只需填写域名，例如 subapi.cmliussss.net 或 api.v1.mk；MiSub 会自动补全为 https://域名/sub。
           </p>
+          <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              data-testid="test-subconverter-backend"
+              @click="handleTestBackend"
+              :disabled="!isExternalEngine || isTestingBackend"
+              class="inline-flex items-center justify-center rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-700 transition-colors hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-orange-500/30 dark:bg-orange-900/20 dark:text-orange-200 dark:hover:bg-orange-900/30"
+            >
+              {{ isTestingBackend ? '测试中...' : '测试后端可用性' }}
+            </button>
+            <p class="text-[10px] leading-relaxed text-gray-400">
+              使用内置示例节点向后端发起 Clash 转换测试，不会发送你的真实订阅链接。
+            </p>
+          </div>
+          <div
+            v-if="backendTestStatus"
+            data-testid="subconverter-backend-test-result"
+            :class="backendTestToneClass"
+            class="mt-3 rounded-lg border px-3 py-2 text-[10px] leading-relaxed"
+          >
+            <div class="font-semibold">{{ backendTestStatus.message }}</div>
+            <div v-if="backendTestStatus.endpoint" class="mt-1 opacity-80">
+              探测端点：{{ backendTestStatus.endpoint }}<span v-if="backendTestStatus.elapsedMs"> · {{ backendTestStatus.elapsedMs }}ms</span>
+            </div>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
