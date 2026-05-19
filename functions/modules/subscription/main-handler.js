@@ -214,8 +214,9 @@ export function buildExternalSubconverterUrl({
     const normalizedNodeList = String(nodeList || '').trim();
     if (normalizedNodeList) {
         // 关键：第三方转换模式应接收 MiSub 已完成预处理后的节点列表。
-        // 直接把节点列表传给 converter，避免远端 converter 因回调 URL 抓取策略/SSRF 限制而 400。
-        externalUrl.searchParams.set('url', normalizedNodeList);
+        // subconverter 对多个内联节点更稳定的分隔符是 `|`；保留换行会让部分后端只解析首行或直接报 No nodes were found。
+        const inlineNodeList = normalizedNodeList.split(/\r?\n+/).map(line => line.trim()).filter(Boolean).join('|');
+        externalUrl.searchParams.set('url', inlineNodeList);
     } else if (requestUrl) {
         // 兜底保留旧回调 URL 逻辑，避免异常空列表场景构造无效 converter 请求。
         const dataSourceUrl = new URL(requestUrl);

@@ -115,6 +115,7 @@ describe('handleMisubRequest regression coverage', () => {
         expect(inlineNodeList).toContain('trojan://pass@example.com:443#');
         expect(inlineNodeList).not.toContain('misub.example');
         expect(inlineNodeList).not.toContain('target=nodes');
+        expect(inlineNodeList).not.toContain('\n');
     });
 
     it.each([
@@ -157,6 +158,7 @@ describe('handleMisubRequest regression coverage', () => {
         expect(redirectUrl.searchParams.get('target')).toBe('clash');
         expect(inlineNodeList).toContain('trojan://pass@example.com:443#');
         expect(inlineNodeList).not.toContain('target=nodes');
+        expect(inlineNodeList).not.toContain('\n');
     });
 
     it('returns current fetch traffic header on the first builtin response', async () => {
