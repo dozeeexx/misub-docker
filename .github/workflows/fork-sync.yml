@@ -1,4 +1,4 @@
-name: Fork Sync (Safe Merge Version)
+name: Fork Sync
 
 on:
   schedule:
