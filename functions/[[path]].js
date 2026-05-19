@@ -190,7 +190,10 @@ export async function onRequest(context) {
                 }
 
                 const cronAuthHeader = request.headers.get('Authorization');
-                const isAuthorized = cronAuthHeader === `Bearer ${expectedSecret}`;
+                const cronSecretParam = url.searchParams.get('secret');
+                const isAuthorized =
+                    cronAuthHeader === `Bearer ${expectedSecret}` ||
+                    cronSecretParam === expectedSecret;
 
                 if (!isAuthorized) {
                     return createJsonResponse({ error: 'Unauthorized' }, 401);

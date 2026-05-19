@@ -117,7 +117,7 @@ describe('security hardening', () => {
     expect(body.success).toBe(true);
   });
 
-  it('rejects cron secret in query string and accepts Authorization bearer only', async () => {
+  it('supports cron query secret compatibility and Authorization bearer', async () => {
     const env = {
       ASSETS: createAssets(),
       MISUB_DB: createD1({ cronSecret: 'cron-secret' })
@@ -136,9 +136,15 @@ describe('security hardening', () => {
       env,
       next
     });
+    const wrongQueryResponse = await onRequest({
+      request: new Request('https://example.com/cron?secret=wrong-secret'),
+      env,
+      next
+    });
 
-    expect(queryResponse.status).toBe(401);
+    expect(queryResponse.status).not.toBe(401);
     expect(bearerResponse.status).not.toBe(401);
+    expect(wrongQueryResponse.status).toBe(401);
   });
 
   it('tests subconverter backends with a synthetic node without exposing user subscriptions', async () => {
