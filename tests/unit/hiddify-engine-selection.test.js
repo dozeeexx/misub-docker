@@ -45,6 +45,13 @@ describe('Hiddify subscription compatibility', () => {
         })).toBe('external');
 
         expect(resolveEffectiveEngine({
+            searchParams: new URLSearchParams('?target=clash&builtin=1'),
+            userAgent: 'ClashMeta',
+            profileEngineMode: '',
+            globalEngineMode: 'external'
+        })).toBe('builtin');
+
+        expect(resolveEffectiveEngine({
             searchParams: new URLSearchParams('?target=singbox'),
             userAgent: hiddifyUa,
             profileEngineMode: '',
