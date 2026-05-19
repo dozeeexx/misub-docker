@@ -79,7 +79,7 @@ describe('handleMisubRequest regression coverage', () => {
         );
     });
 
-    it('normalizes external converter hosts and keeps data-source requests in nodes format', async () => {
+    it('normalizes external converter hosts and sends preprocessed nodes inline', async () => {
         const subscriptions = [{
             id: 'sub-a',
             name: '鏈哄満A',
@@ -107,23 +107,14 @@ describe('handleMisubRequest regression coverage', () => {
             waitUntil: vi.fn()
         });
         const redirectUrl = new URL(initialResponse.headers.get('Location'));
-        const dataSourceUrl = redirectUrl.searchParams.get('url');
+        const inlineNodeList = redirectUrl.searchParams.get('url');
 
         expect(initialResponse.status).toBe(302);
         expect(redirectUrl.origin + redirectUrl.pathname).toBe('https://sub.example/sub');
-        expect(dataSourceUrl).toContain('target=nodes');
-
-        const dataSourceResponse = await handleMisubRequest({
-            request: new Request(dataSourceUrl, { headers: { 'User-Agent': 'subconverter/v0.9' } }),
-            env: {},
-            waitUntil: vi.fn()
-        });
-        const dataSourceText = await dataSourceResponse.text();
-
-        expect(dataSourceResponse.status).toBe(200);
-        expect(dataSourceResponse.headers.get('X-MiSub-Mode')).toBe('node-export-plain');
-        expect(dataSourceText).toContain('trojan://pass@example.com:443#');
-        expect(dataSourceText).not.toMatch(/^[A-Za-z0-9+/=]+$/);
+        expect(redirectUrl.searchParams.get('target')).toBe('clash');
+        expect(inlineNodeList).toContain('trojan://pass@example.com:443#');
+        expect(inlineNodeList).not.toContain('misub.example');
+        expect(inlineNodeList).not.toContain('target=nodes');
     });
 
     it.each([
@@ -159,13 +150,13 @@ describe('handleMisubRequest regression coverage', () => {
             waitUntil: vi.fn()
         });
         const redirectUrl = new URL(response.headers.get('Location'));
-        const dataSourceUrl = new URL(redirectUrl.searchParams.get('url'));
+        const inlineNodeList = redirectUrl.searchParams.get('url');
 
         expect(response.status).toBe(302);
         expect(redirectUrl.origin + redirectUrl.pathname).toBe(expectedEndpoint);
         expect(redirectUrl.searchParams.get('target')).toBe('clash');
-        expect(dataSourceUrl.searchParams.get('target')).toBe('nodes');
-        expect(dataSourceUrl.searchParams.get('builtin')).toBe('true');
+        expect(inlineNodeList).toContain('trojan://pass@example.com:443#');
+        expect(inlineNodeList).not.toContain('target=nodes');
     });
 
     it('returns current fetch traffic header on the first builtin response', async () => {
