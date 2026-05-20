@@ -98,7 +98,7 @@ const renderedHtml = computed(() => {
   // 1. 文本占位符替换
   const nodeCount = props.profiles.reduce((sum, p) => sum + (p.subscriptionCount || 0) + (p.manualNodeCount || 0), 0);
   const textVars = {
-    version: '2.6.4',
+    version: '2.7.0',
     title: props.config?.hero?.title1 || '',
     description: props.config?.hero?.description || '',
     profile_count: props.profiles.length,
