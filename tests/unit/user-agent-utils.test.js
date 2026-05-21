@@ -66,11 +66,18 @@ describe('User-Agent Utils', () => {
             const params = new URLSearchParams('');
             expect(determineTargetFormat('Clash.Meta/1.0', params)).toBe('clash');
             expect(determineTargetFormat('ClashVerge/1.0', params)).toBe('clash');
-            expect(determineTargetFormat('Shadowrocket/2.0', params)).toBe('clash');
+            expect(determineTargetFormat('Shadowrocket/2.0', params)).toBe('base64');
             expect(determineTargetFormat('sing-box/1.0', params)).toBe('singbox');
             expect(determineTargetFormat('Egern/1.0.73 (iPhone; iOS 17.0)', params)).toBe('egern');
             expect(determineTargetFormat('Quantumult X', params)).toBe('quanx');
             expect(determineTargetFormat('Loon/2.1', params)).toBe('loon');
+        });
+
+        it('should default Shadowrocket adaptive subscription links to base64 unless explicitly overridden', () => {
+            expect(determineTargetFormat('Shadowrocket/2.2.60 CFNetwork/1496.0.7 Darwin/23.5.0', new URLSearchParams(''))).toBe('base64');
+            expect(determineTargetFormat('shadowrocket', new URLSearchParams(''))).toBe('base64');
+            expect(determineTargetFormat('Shadowrocket/2.2.60', new URLSearchParams('?clash=1'))).toBe('clash');
+            expect(determineTargetFormat('Shadowrocket/2.2.60', new URLSearchParams('?target=surge&ver=4'))).toBe('surge&ver=4');
         });
 
         it('should treat Yuetu Android clients as Clash-compatible', () => {

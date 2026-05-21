@@ -284,6 +284,25 @@ custom_proxy_group=TestGroup`, {
         expect(quanxRendered).toContain('anytls=156.239.232.67:443, password=9d6c62f6-e38d-4146-ab3e-d40568555f89, sni=xkhkfree.99887766.best, alpn=h2,h3, tls-verification=false, tag=🌍 AnyTLS-QX');
     });
 
+    it('should render QuanX VLESS TLS, REALITY and XTLS Vision syntax from templates', () => {
+        const quanxRendered = renderQuanxFromIniTemplate(`
+[Proxy]
+custom_proxy_group=TestGroup`, {
+            nodeList: [
+                'vless://11111111-1111-4111-8111-111111111111@tls.example.com:443?security=tls&sni=tls.example.com&type=tcp#VLESS-TLS',
+                'vless://22222222-2222-4222-8222-222222222222@reality.example.com:443?security=reality&sni=addons.mozilla.org&pbk=testpublickey&sid=abcdef&type=tcp#VLESS-Reality',
+                'vless://33333333-3333-4333-8333-333333333333@vision.example.com:443?security=tls&sni=vision.example.com&flow=xtls-rprx-vision&type=tcp#VLESS-Vision'
+            ].join('\n'),
+            targetFormat: 'quanx'
+        });
+
+        expect(quanxRendered).toContain('vless=tls.example.com:443, password=11111111-1111-4111-8111-111111111111, method=none, obfs=over-tls, obfs-host=tls.example.com, tag=🌍 VLESS-TLS');
+        expect(quanxRendered).toContain('vless=reality.example.com:443, password=22222222-2222-4222-8222-222222222222, method=none, obfs=over-tls, obfs-host=addons.mozilla.org, reality-base64-pubkey=testpublickey, reality-hex-shortid=abcdef, tag=🌍 VLESS-Reality');
+        expect(quanxRendered).toContain('vless=vision.example.com:443, password=33333333-3333-4333-8333-333333333333, method=none, obfs=over-tls, obfs-host=vision.example.com, flow=xtls-rprx-vision, tag=🌍 VLESS-Vision');
+        expect(quanxRendered).not.toContain('over-tls=true');
+        expect(quanxRendered).not.toContain('tls-host=vision.example.com');
+    });
+
     it('should render QuanX vmess ws tls tag at the end in template output', () => {
         const vmessConfig = Buffer.from(JSON.stringify({
             v: '2', ps: 'VMESS 节点', add: 'ip.sb', port: '443',

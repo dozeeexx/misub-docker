@@ -56,17 +56,40 @@ function buildProxyLine(proxy) {
         return `vmess=${server}:${port}, method=${normalizeQxVmessMethod(proxy.cipher)}, password=${proxy.uuid || ''}${extras.length ? `, ${extras.join(', ')}` : ''}, tag=${name}`;
     }
     if (type === 'vless') {
-        const extras = [];
-        if (proxy.network === 'ws') {
-            extras.push('obfs=ws');
+        const extras = ['method=none'];
+        const transport = proxy.network || 'tcp';
+        const isReality = proxy.security === 'reality' || !!proxy['reality-opts'];
+        const hasTlsLayer = proxy.tls || isReality;
+        const hostValue = proxy.sni ?? proxy.servername;
+
+        if (transport === 'ws' || proxy['ws-opts']) {
+            extras.push(hasTlsLayer ? 'obfs=wss' : 'obfs=ws');
             const wsOpts = proxy['ws-opts'] || proxy.wsOpts;
-            if (wsOpts?.path) extras.push(`obfs-uri=${wsOpts.path}`);
             if (wsOpts?.headers?.Host) extras.push(`obfs-host=${wsOpts.headers.Host}`);
-        } else {
-            extras.push('over-tls=true');
+            else if (hostValue !== undefined) extras.push(`obfs-host=${hostValue}`);
+            if (wsOpts?.path) extras.push(`obfs-uri=${wsOpts.path}`);
+        } else if (transport === 'grpc' || proxy['grpc-opts']) {
+            extras.push(hasTlsLayer ? 'obfs=over-tls' : 'obfs=grpc');
+            if (hostValue !== undefined) extras.push(`obfs-host=${hostValue}`);
+            const grpcOpts = proxy['grpc-opts'] || proxy.grpcOpts;
+            if (!hasTlsLayer && grpcOpts?.['grpc-service-name']) extras.push(`obfs-uri=${grpcOpts['grpc-service-name']}`);
+        } else if (transport === 'xhttp' || proxy['xhttp-opts']) {
+            extras.push(hasTlsLayer ? 'obfs=over-tls' : 'obfs=http');
+            const xhttpOpts = proxy['xhttp-opts'] || proxy.xhttpOpts;
+            if (xhttpOpts?.host) extras.push(`obfs-host=${xhttpOpts.host}`);
+            else if (hostValue !== undefined) extras.push(`obfs-host=${hostValue}`);
+            if (!hasTlsLayer && xhttpOpts?.path) extras.push(`obfs-uri=${xhttpOpts.path}`);
+        } else if (hasTlsLayer) {
+            extras.push('obfs=over-tls');
+            if (hostValue !== undefined) extras.push(`obfs-host=${hostValue}`);
         }
-        const sni = proxy.servername ?? proxy.sni;
-        if (sni !== undefined) extras.push(`tls-host=${sni}`);
+
+        if (isReality) {
+            const realityOpts = proxy['reality-opts'] || {};
+            if (realityOpts['public-key']) extras.push(`reality-base64-pubkey=${realityOpts['public-key']}`);
+            if (realityOpts['short-id']) extras.push(`reality-hex-shortid=${realityOpts['short-id']}`);
+        }
+        if (proxy.flow) extras.push(`flow=${proxy.flow}`);
         if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) extras.push('tls-verification=false');
         return `vless=${server}:${port}, password=${proxy.uuid || ''}${extras.length ? `, ${extras.join(', ')}` : ''}, tag=${name}`;
     }
