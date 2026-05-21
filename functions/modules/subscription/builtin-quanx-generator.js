@@ -204,13 +204,27 @@ function buildQxLine(proxy) {
 
     if (type === 'anytls') {
         const extraParts = [`password=${proxy.password || ''}`];
-        if (proxy.sni || proxy.servername) extraParts.push(`sni=${proxy.sni || proxy.servername}`);
+        extraParts.push('over-tls=true');
+        
+        if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) {
+            extraParts.push('tls-verification=false');
+        } else {
+            extraParts.push('tls-verification=true');
+        }
+
+        if (proxy.sni || proxy.servername) {
+            extraParts.push(`tls-host=${proxy.sni || proxy.servername}`);
+        }
+
         if (proxy.alpn) {
             const alpn = Array.isArray(proxy.alpn) ? proxy.alpn.join(',') : proxy.alpn;
             extraParts.push(`alpn=${alpn}`);
         }
-        appendQxTlsParams(extraParts, proxy);
-        return `anytls=${server}:${port}, ${extraParts.join(', ')}${proxy.tfo ? ', fast-open=true' : ''}, tag=${name}`;
+
+        extraParts.push(`fast-open=${proxy.tfo ? 'true' : 'false'}`);
+        extraParts.push(`udp-relay=${proxy.udp ? 'true' : 'false'}`);
+
+        return `anytls=${server}:${port}, ${extraParts.join(', ')}, tag=${name}`;
     }
 
     return null;

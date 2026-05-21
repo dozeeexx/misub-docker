@@ -123,13 +123,27 @@ function buildProxyLine(proxy) {
     }
     if (type === 'anytls') {
         const extras = [`password=${proxy.password || ''}`];
+        extras.push('over-tls=true');
+        
+        if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) {
+            extras.push('tls-verification=false');
+        } else {
+            extras.push('tls-verification=true');
+        }
+
         const sni = proxy.servername ?? proxy.sni;
-        if (sni !== undefined) extras.push(`sni=${sni}`);
+        if (sni !== undefined) {
+            extras.push(`tls-host=${sni}`);
+        }
+
         if (proxy.alpn) {
             const alpn = Array.isArray(proxy.alpn) ? proxy.alpn.join(',') : proxy.alpn;
             extras.push(`alpn=${alpn}`);
         }
-        if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) extras.push('tls-verification=false');
+
+        extras.push(`fast-open=${proxy.tfo ? 'true' : 'false'}`);
+        extras.push(`udp-relay=${proxy.udp ? 'true' : 'false'}`);
+
         return `anytls=${server}:${port}, ${extras.join(', ')}, tag=${name}`;
     }
     return null;

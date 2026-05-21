@@ -475,7 +475,7 @@ function parseQuantumultXAnyTLS(line) {
         const rawParams = config.split(',').map(p => p.trim());
         const params = [];
         for (const param of rawParams) {
-            if (/^[A-Za-z][A-Za-z0-9_-]*=/.test(param) || param.includes(':') || params.length < 1) {
+            if (/^[A-Za-z][A-Za-z0-9_-]*=/.test(param) || param.includes(':') || params.length < 1 || (params.length < 3 && !/^[A-Za-z][A-Za-z0-9_-]*=/.test(param))) {
                 params.push(param);
             } else if (params.length > 0) {
                 params[params.length - 1] = `${params[params.length - 1]},${param}`;
@@ -515,6 +515,7 @@ function parseQuantumultXAnyTLS(line) {
                     break;
                 case 'sni':
                 case 'peer':
+                case 'tls-host':
                     urlParams.push(`sni=${encodeURIComponent(value)}`);
                     break;
                 case 'alpn':
