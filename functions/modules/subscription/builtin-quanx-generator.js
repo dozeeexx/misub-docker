@@ -165,6 +165,7 @@ function buildQxLine(proxy) {
             if (realityOpts['short-id']) extraParts.push(`reality-hex-shortid=${realityOpts['short-id']}`);
         }
 
+        if (proxy.flow) extraParts.push(`flow=${proxy.flow}`);
         appendQxTlsParams(extraParts, proxy);
         return `vless=${server}:${port}, password=${uuid}${extraParts.length > 0 ? `, ${extraParts.join(', ')}` : ''}, tag=${name}`;
     }

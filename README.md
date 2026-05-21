@@ -144,13 +144,13 @@
 
 - Shadowsocks (SS/SS2022)
 - VMess
-- VLESS
+- VLESS（Quantumult X v1.5.5+ 支持 TLS / REALITY / XTLS Vision 输出）
 - Trojan
 - Hysteria2 / HY2
 - TUIC
 - Snell
 - WireGuard
-- AnyTLS
+- AnyTLS（Quantumult X v1.6.0+ 支持）
 - HTTPS
 - SOCKS5 / SOCKS5-TLS
 
@@ -404,7 +404,7 @@ MiSub 提供 `/cron` 接口用于外部定时服务触发订阅刷新，适合 C
 - **自定义规则模板体验** - 新增自定义规则模板能力，优化模板变量帮助文本与折叠交互，减少配置误用。
 - **节点刷新与缓存保护** - 订阅保存、手动刷新与外部抓取失败场景下更稳健地保留可用缓存，并在 UI/API 中呈现更明确的失败信息。
 - **服务集成 Cron 兼容恢复** - 后端同时支持 `/cron?secret=[REDACTED]` 兼容链接与 Bearer Token Header 推荐方式，修复服务集成页面复制链接后返回 `Unauthorized` 的问题。
-- **安全与协议细节** - 加固安全边界，移除直接 `eval` fallback，并补强 Hysteria2 realm、Egern emoji、QuanX SS websocket TLS 等协议输出细节。
+- **安全与协议细节** - 加固安全边界，移除直接 `eval` fallback，并补强 Hysteria2 realm、Egern emoji、Quantumult X v1.6.0 AnyTLS、v1.5.5 VLESS TLS / REALITY / XTLS Vision 等协议输出细节。
 
 ### v2.5.0 (2026-04-10)
 

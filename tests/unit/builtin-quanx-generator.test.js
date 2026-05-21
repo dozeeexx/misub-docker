@@ -184,4 +184,33 @@ describe('Quantumult X 内置生成器', () => {
         expect(line).not.toContain('over-tls=true');
     });
 
+    it('should document Quantumult X 1.6.0 AnyTLS support in builtin output and parser round-trip', () => {
+        const generated = generateBuiltinQuanxConfig('anytls://pass-anytls@anytls.example.com:443/?sni=anytls.example.com&alpn=h2,h3&allowInsecure=1#AnyTLS-v1.6.0');
+        const line = generated.split('\n').find(item => item.startsWith('anytls='));
+
+        expect(line).toBe('anytls=anytls.example.com:443, password=pass-anytls, sni=anytls.example.com, alpn=h2,h3, tls-verification=false, tag=🌍 AnyTLS-v1.6.0');
+
+        const parsed = parseQuantumultXConfig(generated);
+        const anytls = parsed.find(node => node.protocol === 'anytls');
+        expect(anytls?.url).toBe('anytls://pass-anytls@anytls.example.com:443?sni=anytls.example.com&alpn=h2%2Ch3&allowInsecure=1#%F0%9F%8C%8D%20AnyTLS-v1.6.0');
+    });
+
+    it('should document Quantumult X 1.5.5 VLESS TLS, REALITY and XTLS Vision support in builtin output', () => {
+        const generated = generateBuiltinQuanxConfig([
+            'vless://11111111-1111-4111-8111-111111111111@tls.example.com:443?security=tls&sni=tls.example.com&type=tcp#VLESS-TLS',
+            'vless://22222222-2222-4222-8222-222222222222@reality.example.com:443?security=reality&sni=addons.mozilla.org&pbk=testpublickey&sid=abcdef&type=tcp#VLESS-Reality',
+            'vless://33333333-3333-4333-8333-333333333333@vision.example.com:443?security=tls&sni=vision.example.com&flow=xtls-rprx-vision&type=tcp#VLESS-Vision'
+        ].join('\n'));
+
+        expect(generated).toContain('vless=tls.example.com:443, password=11111111-1111-4111-8111-111111111111, method=none, obfs=over-tls, obfs-host=tls.example.com, tag=🌍 VLESS-TLS');
+        expect(generated).toContain('vless=reality.example.com:443, password=22222222-2222-4222-8222-222222222222, method=none, obfs=over-tls, obfs-host=addons.mozilla.org, reality-base64-pubkey=testpublickey, reality-hex-shortid=abcdef, tag=🌍 VLESS-Reality');
+        expect(generated).toContain('vless=vision.example.com:443, password=33333333-3333-4333-8333-333333333333, method=none, obfs=over-tls, obfs-host=vision.example.com, flow=xtls-rprx-vision, tag=🌍 VLESS-Vision');
+        expect(generated).not.toContain('over-tls=true');
+        expect(generated).not.toContain('tls-host=vision.example.com');
+
+        const parsed = parseQuantumultXConfig(generated);
+        expect(parsed.filter(node => node.protocol === 'vless')).toHaveLength(3);
+        expect(parsed.some(node => node.url.includes('flow=xtls-rprx-vision'))).toBe(true);
+    });
+
 });
