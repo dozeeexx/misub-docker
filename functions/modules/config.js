@@ -11,7 +11,7 @@ export const KV_KEY_SETTINGS = 'worker_settings_v1';
 
 // Auth
 export const COOKIE_NAME = 'auth_session';
-export const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours
+export const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const DEFAULT_SUBCONVERTER_BACKEND = 'subapi.cmliussss.net';
 
 // Default settings
