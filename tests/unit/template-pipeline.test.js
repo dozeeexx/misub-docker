@@ -297,7 +297,7 @@ custom_proxy_group=TestGroup`, {
 
         expect(quanxRendered).not.toContain('hysteria2=');
         expect(quanxRendered).toContain('tuic=5.45.102.158:39689, a276f4e4-08b4-4a03-bfe8-f36ef17ad133, a276f4e4-08b4-4a03-bfe8-f36ef17ad133, sni=www.bing.com, congestion-controller=bbr, udp-relay=native, alpn=h3, tls-verification=false, tag=🌍 TUIC-QX');
-        expect(quanxRendered).toContain('anytls=156.239.232.67:443, password=9d6c62f6-e38d-4146-ab3e-d40568555f89, over-tls=true, tls-verification=false, tls-host=xkhkfree.99887766.best, alpn=h2,h3, fast-open=false, udp-relay=true, tag=🌍 AnyTLS-QX');
+        expect(quanxRendered).toContain('anytls=156.239.232.67:443, password=9d6c62f6-e38d-4146-ab3e-d40568555f89, over-tls=true, tls-verification=false, tls-host=xkhkfree.99887766.best, fast-open=false, udp-relay=true, tag=🌍 AnyTLS-QX');
     });
 
     it('should render QuanX VLESS TLS, REALITY and XTLS Vision syntax from templates', () => {

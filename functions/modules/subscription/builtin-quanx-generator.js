@@ -216,11 +216,6 @@ function buildQxLine(proxy) {
             extraParts.push(`tls-host=${proxy.sni || proxy.servername}`);
         }
 
-        if (proxy.alpn) {
-            const alpn = Array.isArray(proxy.alpn) ? proxy.alpn.join(',') : proxy.alpn;
-            extraParts.push(`alpn=${alpn}`);
-        }
-
         extraParts.push(`fast-open=${proxy.tfo ? 'true' : 'false'}`);
         extraParts.push(`udp-relay=${proxy.udp ? 'true' : 'false'}`);
 

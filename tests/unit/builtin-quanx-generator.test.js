@@ -113,7 +113,7 @@ describe('Quantumult X 内置生成器', () => {
 
         expect(generated).not.toContain('hysteria2=');
         expect(generated).toContain('tuic=tuic.example.com:443, uuid-tuic, pass-tuic, sni=tuic.example.com, congestion-controller=bbr, udp-relay=native, alpn=h3, tls-verification=false, tag=🌍 TUICNode');
-        expect(generated).toContain('anytls=anytls.example.com:443, password=pass-anytls, over-tls=true, tls-verification=false, tls-host=anytls.example.com, alpn=h2,h3, fast-open=false, udp-relay=true, tag=🌍 AnyTLSNode');
+        expect(generated).toContain('anytls=anytls.example.com:443, password=pass-anytls, over-tls=true, tls-verification=false, tls-host=anytls.example.com, fast-open=false, udp-relay=true, tag=🌍 AnyTLSNode');
 
         const parsed = parseQuantumultXConfig(generated);
         expect(parsed.some(node => node.protocol === 'hysteria2')).toBe(false);
@@ -188,11 +188,11 @@ describe('Quantumult X 内置生成器', () => {
         const generated = generateBuiltinQuanxConfig('anytls://pass-anytls@anytls.example.com:443/?sni=anytls.example.com&alpn=h2,h3&allowInsecure=1#AnyTLS-v1.6.0');
         const line = generated.split('\n').find(item => item.startsWith('anytls='));
 
-        expect(line).toBe('anytls=anytls.example.com:443, password=pass-anytls, over-tls=true, tls-verification=false, tls-host=anytls.example.com, alpn=h2,h3, fast-open=false, udp-relay=true, tag=🌍 AnyTLS-v1.6.0');
+        expect(line).toBe('anytls=anytls.example.com:443, password=pass-anytls, over-tls=true, tls-verification=false, tls-host=anytls.example.com, fast-open=false, udp-relay=true, tag=🌍 AnyTLS-v1.6.0');
 
         const parsed = parseQuantumultXConfig(generated);
         const anytls = parsed.find(node => node.protocol === 'anytls');
-        expect(anytls?.url).toBe('anytls://pass-anytls@anytls.example.com:443?allowInsecure=1&sni=anytls.example.com&alpn=h2%2Ch3#%F0%9F%8C%8D%20AnyTLS-v1.6.0');
+        expect(anytls?.url).toBe('anytls://pass-anytls@anytls.example.com:443?allowInsecure=1&sni=anytls.example.com#%F0%9F%8C%8D%20AnyTLS-v1.6.0');
     });
 
     it('should document Quantumult X 1.5.5 VLESS TLS, REALITY and XTLS Vision support in builtin output', () => {

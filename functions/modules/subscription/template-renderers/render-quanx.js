@@ -136,11 +136,6 @@ function buildProxyLine(proxy) {
             extras.push(`tls-host=${sni}`);
         }
 
-        if (proxy.alpn) {
-            const alpn = Array.isArray(proxy.alpn) ? proxy.alpn.join(',') : proxy.alpn;
-            extras.push(`alpn=${alpn}`);
-        }
-
         extras.push(`fast-open=${proxy.tfo ? 'true' : 'false'}`);
         extras.push(`udp-relay=${proxy.udp ? 'true' : 'false'}`);
 
