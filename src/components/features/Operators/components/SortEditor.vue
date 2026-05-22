@@ -56,7 +56,7 @@ const updateKeyField = (index, field, value) => {
       if (value === 'region') {
         next.customOrder = ['香港', '台湾', '日本', '新加坡', '美国', '韩国', '英国', '德国', '法国', '加拿大'];
       } else if (value === 'protocol') {
-        next.customOrder = ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'];
+        next.customOrder = ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr', 'anytls'];
       } else {
         next.customOrder = [];
       }
@@ -100,7 +100,7 @@ const resetToDefaultOrder = (idx, keyType) => {
     if (!current) return keys;
     const defaults = keyType === 'region' 
       ? ['香港', '台湾', '日本', '新加坡', '美国', '韩国', '英国', '德国', '法国', '加拿大']
-      : ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'];
+      : ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr', 'anytls'];
     keys[idx] = { ...current, customOrder: defaults };
     return keys;
   });
