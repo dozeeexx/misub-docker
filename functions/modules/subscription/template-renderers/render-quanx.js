@@ -136,6 +136,12 @@ function buildProxyLine(proxy) {
             extras.push(`tls-host=${sni}`);
         }
 
+        if (proxy.security === 'reality' || proxy['reality-opts']) {
+            const realityOpts = proxy['reality-opts'] || {};
+            if (realityOpts['public-key']) extras.push(`reality-base64-pubkey=${realityOpts['public-key']}`);
+            if (realityOpts['short-id']) extras.push(`reality-hex-shortid=${realityOpts['short-id']}`);
+        }
+
         extras.push(`fast-open=${proxy.tfo ? 'true' : 'false'}`);
         extras.push(`udp-relay=${proxy.udp ? 'true' : 'false'}`);
 

@@ -216,6 +216,12 @@ function buildQxLine(proxy) {
             extraParts.push(`tls-host=${proxy.sni || proxy.servername}`);
         }
 
+        if (proxy.security === 'reality' || proxy['reality-opts']) {
+            const realityOpts = proxy['reality-opts'] || {};
+            if (realityOpts['public-key']) extraParts.push(`reality-base64-pubkey=${realityOpts['public-key']}`);
+            if (realityOpts['short-id']) extraParts.push(`reality-hex-shortid=${realityOpts['short-id']}`);
+        }
+
         extraParts.push(`fast-open=${proxy.tfo ? 'true' : 'false'}`);
         extraParts.push(`udp-relay=${proxy.udp ? 'true' : 'false'}`);
 
