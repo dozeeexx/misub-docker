@@ -267,6 +267,22 @@ custom_proxy_group=TestGroup`, {
         expect(surgeRendered).not.toContain('reality=true');
     });
 
+    it('should render QuanX DNS using syntax accepted by Quantumult X', () => {
+        const quanxRendered = renderQuanxFromIniTemplate(`
+[Proxy]
+custom_proxy_group=TestGroup`, {
+            nodeList: 'trojan://password@1.2.3.4:443#HK-01',
+            targetFormat: 'quanx'
+        });
+
+        expect(quanxRendered).toContain('[dns]');
+        expect(quanxRendered).toContain('no-ipv6');
+        expect(quanxRendered).toContain('server = 223.5.5.5');
+        expect(quanxRendered).toContain('server = 114.114.114.114');
+        expect(quanxRendered).not.toContain('prefer-ipv4=true');
+        expect(quanxRendered).not.toContain('server=223.5.5.5');
+    });
+
     it('should render QuanX tuic and anytls syntax while skipping unsupported hysteria2', () => {
         const quanxRendered = renderQuanxFromIniTemplate(`
 [Proxy]
