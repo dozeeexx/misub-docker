@@ -49,4 +49,37 @@ describe('node-utils', () => {
         expect(proxies[0].type).toBe('ssr');
         expect(proxies[0].name).toContain('台湾 1');
     });
+
+    it('TUIC 节点密码包含 URL 保留字符时应保持可回环解析', () => {
+        const proxy = {
+            name: 'TUIC Special',
+            type: 'tuic',
+            server: 'tuic.example.com',
+            port: 443,
+            uuid: '11111111-1111-1111-1111-111111111111',
+            password: 'p@ss:word%23?x',
+            sni: 'tuic.example.com',
+            alpn: ['h3'],
+            'skip-cert-verify': true,
+            'congestion-controller': 'bbr',
+            'udp-relay-mode': 'native'
+        };
+
+        const url = convertClashProxyToUrl(proxy);
+        const proxies = urlsToClashProxies([url]);
+
+        expect(url).toContain('p%40ss%3Aword%2523%3Fx');
+        expect(proxies).toHaveLength(1);
+        expect(proxies[0]).toMatchObject({
+            type: 'tuic',
+            server: proxy.server,
+            port: proxy.port,
+            uuid: proxy.uuid,
+            password: proxy.password,
+            sni: proxy.sni,
+            'congestion-controller': 'bbr',
+            'udp-relay-mode': 'native'
+        });
+        expect(proxies[0].alpn).toEqual(['h3']);
+    });
 });

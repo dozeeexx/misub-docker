@@ -59,4 +59,17 @@ describe('Clash 内置生成器', () => {
             expect(parsed.proxies[0]['udp-relay-mode']).toBe('native');
         }
     });
+
+    it('应保留 TUIC URL 中包含特殊字符的密码且不污染 server', () => {
+        const node = 'tuic://11111111-1111-1111-1111-111111111111:p%40ss%3Aword@tuic.example.com:443?sni=tuic.example.com&alpn=h3#TUICNode';
+
+        const fullConfig = yaml.load(generateBuiltinClashConfig(node));
+        const proxy = fullConfig.proxies[0];
+
+        expect(proxy.type).toBe('tuic');
+        expect(proxy.server).toBe('tuic.example.com');
+        expect(proxy.uuid).toBe('11111111-1111-1111-1111-111111111111');
+        expect(proxy.password).toBe('p@ss:word');
+        expect(proxy.alpn).toEqual(['h3']);
+    });
 });

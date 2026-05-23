@@ -222,8 +222,10 @@ export function convertClashProxyToUrl(proxy) {
 
         if (type === 'tuic') {
             const uuid = proxy.uuid || '';
-            const password = proxy.password || '';
-            const auth = password ? `${uuid}:${password}` : uuid;
+            const password = proxy.password || proxy.token || '';
+            const auth = password
+                ? `${encodeURIComponent(uuid)}:${encodeURIComponent(password)}`
+                : encodeURIComponent(uuid);
             const params = [];
             if (proxy.sni !== undefined) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
             if (proxy.alpn) {
