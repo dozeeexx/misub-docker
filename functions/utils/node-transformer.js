@@ -12,7 +12,7 @@ import { evaluateDslExpression, renderDslTemplate } from './expression-dsl.js';
 
 const DEFAULT_SORT_KEYS = [
     { key: 'region', order: 'asc', customOrder: ['香港', '台湾', '日本', '新加坡', '美国', '韩国', '英国', '德国', '法国', '加拿大'] },
-    { key: 'protocol', order: 'asc', customOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] },
+    { key: 'protocol', order: 'asc', customOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr', 'anytls'] },
     { key: 'name', order: 'asc' }
 ];
 
@@ -591,9 +591,17 @@ export function makeComparator(sortCfg) {
 
     // 预先构建 customOrder 索引 Map，将 O(n) 查找优化为 O(1)
     const customOrderMaps = keys.map(k => {
-        if (!Array.isArray(k?.customOrder)) return null;
+        let orderList = k?.customOrder;
+        if (!Array.isArray(orderList) || orderList.length === 0) {
+            if (k?.key === 'region') {
+                orderList = ['香港', '台湾', '日本', '新加坡', '美国', '韩国', '英国', '德国', '法国', '加拿大'];
+            } else if (k?.key === 'protocol') {
+                orderList = ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr', 'anytls'];
+            }
+        }
+        if (!Array.isArray(orderList)) return null;
         const map = new Map();
-        k.customOrder.forEach((v, i) => map.set(String(v), i));
+        orderList.forEach((v, i) => map.set(String(v), i));
         return map;
     });
 
