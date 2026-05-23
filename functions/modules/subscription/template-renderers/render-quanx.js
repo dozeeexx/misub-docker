@@ -123,13 +123,28 @@ function buildProxyLine(proxy) {
     }
     if (type === 'anytls') {
         const extras = [`password=${proxy.password || ''}`];
-        const sni = proxy.servername ?? proxy.sni;
-        if (sni !== undefined) extras.push(`sni=${sni}`);
-        if (proxy.alpn) {
-            const alpn = Array.isArray(proxy.alpn) ? proxy.alpn.join(',') : proxy.alpn;
-            extras.push(`alpn=${alpn}`);
+        extras.push('over-tls=true');
+        
+        if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) {
+            extras.push('tls-verification=false');
+        } else {
+            extras.push('tls-verification=true');
         }
-        if (proxy['skip-cert-verify'] === true || proxy.skipCertVerify === true) extras.push('tls-verification=false');
+
+        const sni = proxy.servername ?? proxy.sni;
+        if (sni !== undefined) {
+            extras.push(`tls-host=${sni}`);
+        }
+
+        if (proxy.security === 'reality' || proxy['reality-opts']) {
+            const realityOpts = proxy['reality-opts'] || {};
+            if (realityOpts['public-key']) extras.push(`reality-base64-pubkey=${realityOpts['public-key']}`);
+            if (realityOpts['short-id']) extras.push(`reality-hex-shortid=${realityOpts['short-id']}`);
+        }
+
+        extras.push(`fast-open=${proxy.tfo ? 'true' : 'false'}`);
+        extras.push(`udp-relay=${proxy.udp ? 'true' : 'false'}`);
+
         return `anytls=${server}:${port}, ${extras.join(', ')}, tag=${name}`;
     }
     return null;
