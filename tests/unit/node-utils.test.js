@@ -82,4 +82,42 @@ describe('node-utils', () => {
         });
         expect(proxies[0].alpn).toEqual(['h3']);
     });
+
+    it('SS Clash YAML 节点的 obfs plugin-opts 应在 URL 转换中保留并可回环解析', () => {
+        const proxy = {
+            name: 'HK-1',
+            type: 'ss',
+            server: 'example.com',
+            port: 2400,
+            udp: true,
+            'udp-over-tcp': true,
+            cipher: 'chacha20-ietf-poly1305',
+            password: 'EG1dv6Hw9PCHv40QThZjFZmkHThfsUk9',
+            plugin: 'obfs',
+            'plugin-opts': {
+                mode: 'tls',
+                host: 'abcd.apple.com:215275'
+            }
+        };
+
+        const url = convertClashProxyToUrl(proxy);
+        const proxies = urlsToClashProxies([url]);
+
+        expect(url).toContain('plugin=obfs');
+        expect(url).toContain('obfs=tls');
+        expect(url).toContain('obfs-host=abcd.apple.com%3A215275');
+        expect(proxies).toHaveLength(1);
+        expect(proxies[0]).toMatchObject({
+            type: 'ss',
+            server: 'example.com',
+            port: 2400,
+            cipher: 'chacha20-ietf-poly1305',
+            password: 'EG1dv6Hw9PCHv40QThZjFZmkHThfsUk9',
+            plugin: 'obfs',
+            'plugin-opts': {
+                mode: 'tls',
+                host: 'abcd.apple.com:215275'
+            }
+        });
+    });
 });

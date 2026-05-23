@@ -562,6 +562,11 @@ function parseSsUrl(url) {
             if (pluginDetails) {
                 proxy.plugin = pluginDetails.name;
                 proxy['plugin-opts'] = pluginDetails.opts;
+
+                const obfsMode = params.get('obfs');
+                const obfsHost = params.get('obfs-host');
+                if (obfsMode) proxy['plugin-opts'].mode = obfsMode;
+                if (obfsHost) proxy['plugin-opts'].host = obfsHost;
                 
                 // 协议兼容性映射 (TLS / Host)
                 if (pluginDetails.opts.tls || pluginDetails.opts.mode?.includes('tls') || pluginDetails.opts.security === 'tls') {
