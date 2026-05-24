@@ -28,14 +28,14 @@ export function convertClashProxyToUrl(proxy) {
         if (type === 'ss' || type === 'shadowsocks') {
             const userInfo = base64Encode(`${proxy.cipher}:${proxy.password}`);
             let url = `ss://${userInfo}@${server}:${port}`;
-            if (proxy.plugin === 'anytls' || proxy.plugin === 'obfs-local') {
+            if (proxy.plugin) {
                 const params = [];
-                if (proxy.plugin) params.push(`plugin=${proxy.plugin}`);
+                params.push(`plugin=${encodeURIComponent(proxy.plugin)}`);
                 const pluginOpts = proxy['plugin-opts'];
                 if (pluginOpts) {
                     if (pluginOpts.enabled !== undefined) params.push(`enabled=${pluginOpts.enabled}`);
                     if (pluginOpts.padding !== undefined) params.push(`padding=${pluginOpts.padding}`);
-                    if (pluginOpts.mode) params.push(`obfs=${pluginOpts.mode}`);
+                    if (pluginOpts.mode) params.push(`obfs=${encodeURIComponent(pluginOpts.mode)}`);
                     if (pluginOpts.host) params.push(`obfs-host=${encodeURIComponent(pluginOpts.host)}`);
                 }
                 if (params.length > 0) url += `?${params.join('&')}`;
