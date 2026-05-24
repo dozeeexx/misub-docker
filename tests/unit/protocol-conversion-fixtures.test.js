@@ -18,6 +18,20 @@ const expectRoundTrip = (proxy, expected) => {
     expect(stripGeneratedFields(batched)).toMatchObject(expected);
 };
 
+const expectParseOnly = (url, expected) => {
+    const parsed = urlToClashProxy(url);
+    expect(parsed).toMatchObject(expected);
+
+    const [batched] = urlsToClashProxies([url], { addFlagEmoji: false });
+    expect(stripGeneratedFields(batched)).toMatchObject(expected);
+};
+
+const base64UrlSafeEncode = (value) => Buffer.from(value, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+
 describe('protocol conversion fixtures', () => {
     it('preserves common proxy fields across Clash proxy -> URL -> Clash proxy round trips', () => {
         const fixtures = [
@@ -368,6 +382,142 @@ describe('protocol conversion fixtures', () => {
 
         for (const fixture of fixtures) {
             expectRoundTrip(fixture.proxy, fixture.expected);
+        }
+    });
+
+    it('preserves parse-only protocol contracts for supported import schemes', () => {
+        const ssdUrl = `ssd://${base64UrlSafeEncode(JSON.stringify({
+            encryption: 'aes-256-gcm',
+            password: 'shared-pass',
+            servers: [
+                {
+                    server: 'ssd.example.com',
+                    port: 8443,
+                    remarks: 'Fixture SSD',
+                    plugin: 'obfs-local',
+                    plugin_options: 'cdn.example.com'
+                }
+            ]
+        }))}`;
+
+        const fixtures = [
+            {
+                url: ssdUrl,
+                expected: {
+                    name: 'Fixture SSD',
+                    type: 'ss',
+                    server: 'ssd.example.com',
+                    port: 8443,
+                    cipher: 'aes-256-gcm',
+                    password: 'shared-pass',
+                    plugin: 'obfs-local',
+                    'plugin-opts': {
+                        host: 'cdn.example.com'
+                    }
+                }
+            },
+            {
+                url: 'https://user:p%40ss%3Aword@https.example.com:443?sni=https-sni.example.com&allowInsecure=1#Fixture%20HTTPS',
+                expected: {
+                    name: 'Fixture HTTPS',
+                    type: 'https',
+                    server: 'https.example.com',
+                    port: 443,
+                    username: 'user',
+                    password: 'p@ss:word',
+                    servername: 'https-sni.example.com',
+                    sni: 'https-sni.example.com',
+                    'skip-cert-verify': true,
+                    udp: false
+                }
+            },
+            {
+                url: 'socks5://user:p%40ss%3Aword@socks-tls.example.com:1081?tls=1&sni=socks-sni.example.com&allowInsecure=1#Fixture%20SOCKS5%20TLS',
+                expected: {
+                    name: 'Fixture SOCKS5 TLS',
+                    type: 'socks5-tls',
+                    server: 'socks-tls.example.com',
+                    port: 1081,
+                    username: 'user',
+                    password: 'p@ss:word',
+                    udp: false,
+                    servername: 'socks-sni.example.com',
+                    sni: 'socks-sni.example.com',
+                    'skip-cert-verify': true
+                }
+            }
+        ];
+
+        for (const fixture of fixtures) {
+            expectParseOnly(fixture.url, fixture.expected);
+        }
+    });
+
+    it('documents one-way exports whose emitted schemes are not parsed back yet', () => {
+        const fixtures = [
+            {
+                proxy: {
+                    name: 'Fixture Hysteria Legacy',
+                    type: 'hysteria',
+                    server: 'hy.example.com',
+                    port: 8443,
+                    password: 'hy-pass',
+                    protocol: 'udp',
+                    sni: 'hy-sni.example.com',
+                    'skip-cert-verify': true,
+                    up: 100,
+                    down: 200
+                },
+                urlPattern: /^hysteria:\/\/hy-pass@hy\.example\.com:8443\?/,
+                requiredParts: [
+                    'protocol=udp',
+                    'sni=hy-sni.example.com',
+                    'insecure=1',
+                    'up=100',
+                    'down=200',
+                    '#Fixture%20Hysteria%20Legacy'
+                ]
+            },
+            {
+                proxy: {
+                    name: 'Fixture HTTP Export',
+                    type: 'http',
+                    server: 'http.example.com',
+                    port: 8080,
+                    username: 'user',
+                    password: 'p@ss:word'
+                },
+                urlPattern: /^http:\/\/user:p%40ss%3Aword@http\.example\.com:8080#Fixture%20HTTP%20Export$/,
+                requiredParts: []
+            },
+            {
+                proxy: {
+                    name: 'Fixture Naive Export',
+                    type: 'naive',
+                    server: 'naive.example.com',
+                    port: 443,
+                    username: 'user',
+                    password: 'p@ss:word',
+                    padding: true,
+                    'extra-headers': 'Host: naive-front.example.com'
+                },
+                urlPattern: /^naive\+https:\/\/user:p%40ss%3Aword@naive\.example\.com:443\?/,
+                requiredParts: [
+                    'padding=true',
+                    'extra-headers=Host%3A%20naive-front.example.com',
+                    '#Fixture%20Naive%20Export'
+                ]
+            }
+        ];
+
+        for (const fixture of fixtures) {
+            const url = convertClashProxyToUrl(fixture.proxy);
+            expect(url).toMatch(fixture.urlPattern);
+            for (const part of fixture.requiredParts) {
+                expect(url).toContain(part);
+            }
+            expect(urlToClashProxy(url)).toBeNull();
+            expect(urlsToClashProxies([url])).toEqual([]);
         }
     });
 });
