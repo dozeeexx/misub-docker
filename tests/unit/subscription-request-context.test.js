@@ -42,4 +42,16 @@ describe('subscription request context routing', () => {
       profileIdentifier: 'stable-token'
     });
   });
+
+  it('does not allow arbitrary path segments before the profile token', () => {
+    expect(resolveRequestContext(new URL('https://example.com/random/profiles/group-a'), config, [])).toEqual({
+      token: 'random',
+      profileIdentifier: 'profiles'
+    });
+
+    expect(resolveRequestContext(new URL('https://example.com/safdsfdsfsm/profiles/55dafd9a-f2ec-4c74-adf5-b9c72f0311de'), config, [])).toEqual({
+      token: 'safdsfdsfsm',
+      profileIdentifier: 'profiles'
+    });
+  });
 });

@@ -21,10 +21,17 @@ export function resolveRequestContext(url, config, allProfiles) {
     const pathSegments = url.pathname.split('/').filter(Boolean);
 
     if (pathSegments.length >= 3) {
-        // 3+ 段：/sub/{token}/{profileId}
-        // 第一段为路由前缀 'sub'，跳过
-        token = pathSegments[1];
-        profileIdentifier = pathSegments[2];
+        if (pathSegments[0] === 'sub') {
+            // 3+ 段：/sub/{token}/{profileId}
+            // 第一段为路由前缀 'sub'，跳过
+            token = pathSegments[1];
+            profileIdentifier = pathSegments[2];
+        } else {
+            // 任意三段路径不能隐式跳过首段；否则 /anything/{profileToken}/{profileId}
+            // 会绕过规范路径校验并泄露公开订阅组。
+            token = pathSegments[0];
+            profileIdentifier = pathSegments[1];
+        }
     } else if (pathSegments.length === 2) {
         const [firstSeg, secondSeg] = pathSegments;
 
