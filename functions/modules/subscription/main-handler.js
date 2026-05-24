@@ -19,6 +19,7 @@ import { groupNodeLinesByProtocol } from './protocol-groups.js';
 import { shouldApplyExternalTemplateForTarget } from './template-compatibility.js';
 import { renderClashFromIniTemplate, renderLoonFromIniTemplate, renderQuanxFromIniTemplate, renderSingboxFromIniTemplate, renderSurgeFromIniTemplate } from './template-pipeline.js';
 import { getBuiltinTemplate } from './builtin-template-registry.js';
+import { assertPublicNetworkUrl } from '../security-utils.js';
 
 function maskSensitiveLogValue(value) {
     const text = String(value ?? '');
@@ -175,7 +176,7 @@ export function normalizeSubconverterBackend(input, fallback = DEFAULT_SUBCONVER
         backend = `https://${backend}`;
     }
 
-    const externalUrl = new URL(backend);
+    const externalUrl = assertPublicNetworkUrl(backend);
     if (externalUrl.pathname === '/' || !externalUrl.pathname) {
         externalUrl.pathname = '/sub';
     }

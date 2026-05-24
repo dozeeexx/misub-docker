@@ -10,6 +10,7 @@ import { buildFetchProxyUrl } from '../utils/fetch-proxy-utils.js';
 import { prependNodeName, addFlagEmoji, removeFlagEmoji, fixNodeUrlEncoding, sanitizeNodeForYaml } from '../utils/node-utils.js';
 import { runOperatorChain } from '../utils/operator-runner.js';
 import { createTimeoutFetch } from '../modules/utils.js';
+import { assertPublicNetworkUrl } from '../modules/security-utils.js';
 
 /**
  * 订阅获取配置常量
@@ -433,10 +434,12 @@ const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
             const requestHeaders = { 'User-Agent': processedUserAgent };
 
             // [Fetch Proxy] 获取单点订阅专属拉取代理前缀
+            assertPublicNetworkUrl(sub.url);
             let requestUrl = sub.url;
             if (sub.fetchProxy && typeof sub.fetchProxy === 'string' && sub.fetchProxy.trim()) {
                 requestUrl = buildFetchProxyUrl(sub.fetchProxy, sub.url, processedUserAgent);
             }
+            requestUrl = assertPublicNetworkUrl(requestUrl).toString();
 
             const response = await fetchWithRetry(requestUrl, {
                 headers: requestHeaders,

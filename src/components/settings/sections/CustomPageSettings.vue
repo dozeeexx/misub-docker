@@ -103,14 +103,11 @@ const applyTemplate = (tpl) => {
     props.settings.customPage.type = 'html';
     props.settings.customPage.content = parsed.html;
     props.settings.customPage.css = parsed.css;
-    
-    // 自动开启权限
-    if (parsed.extractedStyles || parsed.stylesheets.length > 0) {
-      props.settings.customPage.allowExternalStylesheets = true;
-    }
-    if (parsed.strippedScripts || parsed.scripts.length > 0) {
-      props.settings.customPage.allowScripts = true;
-    }
+
+    // 自定义公开页 HTML 会经过安全清洗。兼容旧配置字段，但不再自动开启
+    // 外链样式或脚本能力，避免设置页展示与运行时安全策略不一致。
+    props.settings.customPage.allowExternalStylesheets = false;
+    props.settings.customPage.allowScripts = false;
   }
 };
 
@@ -176,20 +173,20 @@ const normalizeFullPageSource = () => {
             <Switch v-model="props.settings.customPage.hideFooter" />
           </div>
 
-          <div class="flex items-center justify-between p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 misub-radius-lg">
+          <div class="flex items-center justify-between p-4 bg-blue-50/70 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 misub-radius-lg">
             <div class="flex-1 mr-4">
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">允许外链样式表</p>
-              <p class="text-xs text-gray-500 mt-0.5">允许加载样式表 Link 标签。</p>
+              <p class="text-sm font-medium text-blue-900 dark:text-blue-200">外链样式表已安全禁用</p>
+              <p class="text-xs text-blue-700/80 dark:text-blue-300/80 mt-0.5">为避免公开页发起非预期请求，HTML 中的 Link 样式表会被清理；请把样式放入下方自定义 CSS。</p>
             </div>
-            <Switch v-model="props.settings.customPage.allowExternalStylesheets" />
+            <span class="px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium">固定禁用</span>
           </div>
 
-          <div class="flex items-center justify-between p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 misub-radius-lg">
+          <div class="flex items-center justify-between p-4 bg-blue-50/70 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 misub-radius-lg">
             <div class="flex-1 mr-4">
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">允许脚本执行</p>
-              <p class="text-xs text-gray-500 mt-0.5">高风险功能，允许执行内联和外链脚本。</p>
+              <p class="text-sm font-medium text-blue-900 dark:text-blue-200">脚本执行已安全禁用</p>
+              <p class="text-xs text-blue-700/80 dark:text-blue-300/80 mt-0.5">自定义 HTML 会经过清洗，内联和外链脚本不会在主页面执行；需要完整第三方页面能力时请使用受限 iframe 方案。</p>
             </div>
-            <Switch v-model="props.settings.customPage.allowScripts" />
+            <span class="px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium">固定禁用</span>
           </div>
         </div>
 
@@ -216,7 +213,7 @@ const normalizeFullPageSource = () => {
         <div class="bg-primary-50/50 dark:bg-primary-900/5 p-4 rounded-2xl border border-primary-100/50 dark:border-primary-800/30">
           <h3 class="text-sm font-bold text-primary-900 dark:text-primary-400 mb-3 flex items-center gap-2"><span class="text-lg">✨</span> 快速应用模板</h3>
           <div class="flex flex-wrap gap-3">
-            <button v-for="tpl in templates" :key="tpl.name" @click="applyTemplate(tpl)" class="px-4 py-2 bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-800 rounded-xl text-sm font-medium text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all active:scale-95 shadow-sm">{{ tpl.name }}</button>
+            <button v-for="tpl in templates" :key="tpl.name" data-testid="custom-page-template" @click="applyTemplate(tpl)" class="px-4 py-2 bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-800 rounded-xl text-sm font-medium text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all active:scale-95 shadow-sm">{{ tpl.name }}</button>
           </div>
         </div>
 
@@ -241,7 +238,7 @@ const normalizeFullPageSource = () => {
                 <li><strong>{&#123;description&#125;}</strong>: 系统设置的描述。</li>
               </ul>
             </div>
-            <p class="mt-2 opacity-80">当前仅支持 `HTML / CSS` 模式，占位符匹配不区分大小写。</p>
+            <p class="mt-2 opacity-80">当前仅支持 `HTML / CSS` 模式，占位符匹配不区分大小写；脚本和外链样式会被安全清理。</p>
           </div>
         </div>
       </div>

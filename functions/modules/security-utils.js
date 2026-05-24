@@ -124,6 +124,46 @@ export async function safeFetchPublicUrl(inputUrl, init = {}, options = {}) {
     throw error;
 }
 
+export function validatePublicNetworkUrl(value) {
+    let url;
+    try {
+        url = new URL(String(value || '').trim());
+    } catch (_) {
+        return { ok: false, error: 'Invalid or missing URL parameter. Must be a valid HTTP/HTTPS URL.' };
+    }
+
+    if (!ALLOWED_FETCH_PROTOCOLS.has(url.protocol)) {
+        return { ok: false, error: 'Only HTTP/HTTPS URLs are allowed.' };
+    }
+    if (!url.hostname) {
+        return { ok: false, error: 'URL host is required.' };
+    }
+    if (isBlockedHostname(url.hostname)) {
+        return { ok: false, error: 'URL host is not allowed.' };
+    }
+    return { ok: true, url };
+}
+
+export function assertPublicFetchUrl(inputUrl) {
+    const validation = validatePublicFetchUrl(inputUrl);
+    if (!validation.ok) {
+        const error = new Error(validation.error);
+        error.status = 400;
+        throw error;
+    }
+    return validation.url;
+}
+
+export function assertPublicNetworkUrl(inputUrl) {
+    const validation = validatePublicNetworkUrl(inputUrl);
+    if (!validation.ok) {
+        const error = new Error(validation.error);
+        error.status = 400;
+        throw error;
+    }
+    return validation.url;
+}
+
 function isRedirectStatus(status) {
     return [301, 302, 303, 307, 308].includes(status);
 }

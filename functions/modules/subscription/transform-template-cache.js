@@ -1,4 +1,5 @@
 import { getCache } from '../../services/node-cache-service.js';
+import { assertPublicNetworkUrl } from '../security-utils.js';
 
 const TEMPLATE_CACHE_PREFIX = 'transform_template_';
 const DEFAULT_REVALIDATE_INTERVAL_SECONDS = 5 * 60;
@@ -89,7 +90,8 @@ function createCacheEntry(templateUrl, nodes, response, previousEntry = null) {
 export async function fetchTransformTemplate(storageAdapter, templateUrl, forceRefresh = false) {
     if (!templateUrl) return null;
 
-    const cacheKey = makeTemplateCacheKey(templateUrl);
+    const safeTemplateUrl = assertPublicNetworkUrl(templateUrl).toString();
+    const cacheKey = makeTemplateCacheKey(safeTemplateUrl);
     const cacheConfig = getTemplateCacheConfig(storageAdapter);
     const { data: cachedTemplate } = await getCache(storageAdapter, cacheKey);
 
@@ -99,7 +101,7 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
 
     let response;
     try {
-        response = await fetch(templateUrl, {
+        response = await fetch(safeTemplateUrl, {
             headers: forceRefresh ? { 'User-Agent': 'MiSub-Template-Fetch/1.0' } : buildFetchHeaders(cachedTemplate)
         });
     } catch (error) {
@@ -111,7 +113,7 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
     }
 
     if (response.status === 304 && cachedTemplate?.nodes) {
-        const refreshedCacheEntry = createCacheEntry(templateUrl, cachedTemplate.nodes, response, cachedTemplate);
+        const refreshedCacheEntry = createCacheEntry(safeTemplateUrl, cachedTemplate.nodes, response, cachedTemplate);
         await putTemplateCache(storageAdapter, cacheKey, refreshedCacheEntry, cacheConfig.maxAgeSeconds);
         return cachedTemplate.nodes;
     }
@@ -125,7 +127,7 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
     }
 
     const text = await response.text();
-    const cacheEntry = createCacheEntry(templateUrl, text, response, cachedTemplate);
+    const cacheEntry = createCacheEntry(safeTemplateUrl, text, response, cachedTemplate);
     await putTemplateCache(storageAdapter, cacheKey, cacheEntry, cacheConfig.maxAgeSeconds);
 
     return text;
