@@ -32,9 +32,9 @@ export function resolveRequestContext(url, config, allProfiles) {
             // /{token}/{profileId} — 订阅组访问
             token = firstSeg;
             profileIdentifier = secondSeg;
-        } else if (firstSeg === 'sub' || firstSeg === 's') {
+        } else if (firstSeg === 'sub' || firstSeg === 's' || firstSeg === 'sam') {
             // 第一段为常见订阅路由前缀，第二段为实际 token
-            // 例如：/sub/{mytoken}
+            // 例如：/sub/{mytoken}、/s/{mytoken}、/sam/{mytoken}
             token = secondSeg;
         } else {
             // 兜底：假设为 /{token}/{profileId} 格式，由后续逻辑校验 token 合法性
