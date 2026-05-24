@@ -253,6 +253,116 @@ describe('protocol conversion fixtures', () => {
                     'reduce-rtt': true,
                     heartbeat: '10s'
                 }
+            },
+            {
+                proxy: {
+                    name: 'Fixture SOCKS5',
+                    type: 'socks5',
+                    server: 'socks.example.com',
+                    port: 1080,
+                    username: 'user',
+                    password: 'p@ss:word'
+                },
+                expected: {
+                    name: 'Fixture SOCKS5',
+                    type: 'socks5',
+                    server: 'socks.example.com',
+                    port: 1080,
+                    username: 'user',
+                    password: 'p@ss:word',
+                    udp: false
+                }
+            },
+            {
+                proxy: {
+                    name: 'Fixture Snell',
+                    type: 'snell',
+                    server: 'snell.example.com',
+                    port: 440,
+                    psk: 'snell-pass',
+                    version: 3,
+                    reuse: true,
+                    tfo: true,
+                    'obfs-opts': {
+                        mode: 'tls',
+                        host: 'snell-front.example.com'
+                    },
+                    ecn: true
+                },
+                expected: {
+                    name: 'Fixture Snell',
+                    type: 'snell',
+                    server: 'snell.example.com',
+                    port: 440,
+                    psk: 'snell-pass',
+                    version: 3,
+                    reuse: true,
+                    tfo: true,
+                    'obfs-opts': {
+                        mode: 'tls',
+                        host: 'snell-front.example.com'
+                    },
+                    ecn: true
+                }
+            },
+            {
+                proxy: {
+                    name: 'Fixture AnyTLS',
+                    type: 'anytls',
+                    server: 'anytls.example.com',
+                    port: 443,
+                    password: 'anytls-pass',
+                    sni: 'anytls-sni.example.com',
+                    alpn: ['h2', 'http/1.1'],
+                    'skip-cert-verify': true,
+                    padding: true
+                },
+                expected: {
+                    name: 'Fixture AnyTLS',
+                    type: 'anytls',
+                    server: 'anytls.example.com',
+                    port: 443,
+                    password: 'anytls-pass',
+                    servername: 'anytls-sni.example.com',
+                    sni: 'anytls-sni.example.com',
+                    alpn: ['h2', 'http/1.1'],
+                    'skip-cert-verify': true,
+                    udp: true
+                }
+            },
+            {
+                proxy: {
+                    name: 'Fixture WireGuard',
+                    type: 'wireguard',
+                    server: 'wg.example.com',
+                    port: 51820,
+                    'private-key': 'private-key-value',
+                    'public-key': 'public-key-value',
+                    ip: ['172.16.0.2/32', '2606:4700:110:abcd::2/128'],
+                    'allowed-ips': ['0.0.0.0/0', '::/0'],
+                    reserved: [1, 2, 3],
+                    mtu: 1280,
+                    dns: ['1.1.1.1', '2606:4700:4700::1111'],
+                    'persistent-keepalive': 25,
+                    'preshared-key': 'psk-value'
+                },
+                expected: {
+                    name: 'Fixture WireGuard',
+                    type: 'wireguard',
+                    server: 'wg.example.com',
+                    port: 51820,
+                    'private-key': 'private-key-value',
+                    'remote-dns-resolve': true,
+                    udp: true,
+                    'public-key': 'public-key-value',
+                    ip: ['172.16.0.2/32', '2606:4700:110:abcd::2/128'],
+                    'allowed-ips': ['0.0.0.0/0', '::/0'],
+                    reserved: [1, 2, 3],
+                    mtu: 1280,
+                    dns: ['1.1.1.1', '2606:4700:4700::1111'],
+                    'persistent-keepalive': 25,
+                    'preshared-key': 'psk-value'
+                }
             }
         ];
 
