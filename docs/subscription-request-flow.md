@@ -18,7 +18,7 @@
 
 订阅请求会被转交给 `handleMisubRequest(context)`，条件包括：
 
-- 路径显式以 `/sub/`、`/s/`、`/sam/` 开头。
+- 路径显式以 `/sub/` 开头。
 - 路径第一段等于配置中的 `mytoken` 或 `profileToken`。
 - 非 API、非 SPA、非静态资源路径的兜底订阅短链。
 
@@ -65,7 +65,6 @@ API 路径 `/api/*` 总是优先进入 `handleApiRequest(request, env)`，不会
 - `/{profileToken}/{profileId}`：订阅组访问。
 - `/sub/{token}`：带路由前缀的管理员全量订阅。
 - `/sub/{profileToken}/{profileId}`：带路由前缀的订阅组访问。
-- `/s/{token}`、`/sam/{token}` 等显式订阅路由由入口先分发到订阅处理器；实际 token/profile 仍按路径段解析。
 - 空路径可从 `?token=` 读取 token。
 
 当前实现的路径段规则：
@@ -73,7 +72,7 @@ API 路径 `/api/*` 总是优先进入 `handleApiRequest(request, env)`，不会
 - 3 段及以上：跳过第一段，将第二段视为 token，第三段视为 profile 标识。
 - 2 段：
   - 第一段等于 `profileToken` 或 `mytoken` 时，按 `/{token}/{profileId}` 处理。
-  - 第一段为 `sub` 或 `s` 时，按 `/sub/{token}` 或 `/s/{token}` 处理。
+  - 第一段为 `sub` 时，按 `/sub/{token}` 处理。
   - 其他情况兜底按 `/{token}/{profileId}` 处理，后续再校验 token。
 - 1 段：该段就是 token。
 

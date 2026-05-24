@@ -161,11 +161,8 @@ export async function onRequest(context) {
                 return applyNoStoreToHtmlResponse(await fetchStaticAsset(request, env, next));
             }
 
-            // [新增] 动态识别订阅路由
-            // 只要路径以 /sub/, /s/, /sam/ 开头，或者是用户自定义的 mytoken/profileToken，就转交给 handleMisubRequest
-            const isExplicitSubRoute = url.pathname.startsWith('/sub/') || 
-                                     url.pathname.startsWith('/s/') || 
-                                     url.pathname.startsWith('/sam/');
+            // 动态识别订阅路由：仅保留 /sub/ 显式前缀，以及用户自定义 mytoken/profileToken 短链
+            const isExplicitSubRoute = url.pathname.startsWith('/sub/');
             
             const firstSeg = url.pathname.split('/').filter(Boolean)[0];
             const isCustomTokenRoute = firstSeg && (firstSeg === config.mytoken || firstSeg === config.profileToken);

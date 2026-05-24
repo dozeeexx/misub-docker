@@ -20,7 +20,7 @@
   - 认证：公开；受 disguise 设置影响。受保护 SPA 路由在非 localhost 下会先校验登录状态，未登录时返回伪装页。
   - 写入：无。
 
-- `GET /sub/*`、`GET /s/*`、`GET /sam/*`、`GET /{mytoken}`、`GET /{profileToken}`、其它疑似订阅短链路径
+- `GET /sub/*`、`GET /{mytoken}`、`GET /{profileToken}`、其它疑似订阅短链路径
   - Handler：`handleMisubRequest()`，实现位于 `functions/modules/subscription/main-handler.js`，由 `functions/modules/subscription-handler.js` re-export。
   - 认证：公开短链/token 模式；具体访问控制由 token、profile、settings、浏览器伪装和订阅配置决定。
   - 读取：settings、subscriptions、profiles、rule templates、node cache。

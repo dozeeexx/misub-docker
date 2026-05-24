@@ -62,7 +62,7 @@ functions/[[path]].js
 HTTP Request
 └── functions/[[path]].js:onRequest(context)
     ├── /api/*                         → functions/modules/api-router.js
-    ├── /sub/*, /s/*, /sam/*           → functions/modules/subscription-handler.js
+    ├── /sub/*                         → functions/modules/subscription-handler.js
     ├── /<mytoken>/*, /<profileToken>/* → functions/modules/subscription-handler.js
     ├── /cron                          → functions/modules/notifications.js
     └── 其他路径                        → SPA 静态资源、公开页或伪装页

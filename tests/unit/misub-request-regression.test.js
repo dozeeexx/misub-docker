@@ -278,40 +278,6 @@ describe('handleMisubRequest regression coverage', () => {
         }
     });
 
-    it('treats /sam/{token} as a token subscription route', async () => {
-        const subscriptions = [{
-            id: 'sub-a',
-            name: 'Airport A',
-            url: 'https://airport.example/sub',
-            enabled: true
-        }];
-        const adapter = createStorageAdapter({
-            settings: { mytoken: 'stable-token', enableFlagEmoji: false, enableTrafficNode: false },
-            subscriptions
-        });
-        createAdapter.mockReturnValue(adapter);
-        vi.stubGlobal('fetch', vi.fn(async () => new Response('trojan://pass@example.com:443#HK', { status: 200 })));
-
-        const logSpy = silenceExpectedRequestLogs();
-        try {
-            const { handleMisubRequest } = await import('../../functions/modules/subscription/main-handler.js');
-            const response = await handleMisubRequest({
-                request: new Request('https://misub.example/sam/stable-token?target=nodes&refresh=1', {
-                    headers: { 'User-Agent': 'ClashMeta' }
-                }),
-                env: {},
-                waitUntil: vi.fn()
-            });
-            const text = await response.text();
-
-            expect(response.status).toBe(200);
-            expect(text).toContain('trojan://pass@example.com:443#');
-            expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-            expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('[MiSub Request]'));
-        } finally {
-            logSpy.mockRestore();
-        }
-    });
 
     it('serves disguise content before token validation for unauthenticated browser subscription visits', async () => {
         const adapter = createStorageAdapter({
