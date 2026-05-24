@@ -48,6 +48,7 @@ describe('useSubscriptions manual node refresh failures', () => {
   });
 
   it('clears stale node count and traffic when protective node cache is disabled', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mocks.subscriptionsRef.value = [{
       id: 'sub-1',
       name: 'Airport',
@@ -68,16 +69,22 @@ describe('useSubscriptions manual node refresh failures', () => {
     const markDirty = vi.fn();
     const { handleUpdateNodeCount } = useSubscriptions(markDirty);
 
-    await handleUpdateNodeCount('sub-1');
+    try {
+      await handleUpdateNodeCount('sub-1');
 
-    expect(mocks.subscriptionsRef.value[0].nodeCount).toBe(0);
-    expect(mocks.subscriptionsRef.value[0].userInfo).toBeNull();
-    expect(mocks.subscriptionsRef.value[0].lastError).toBe('HTTP 403: Forbidden');
-    expect(markDirty).toHaveBeenCalledTimes(1);
-    expect(mocks.saveData).toHaveBeenCalledTimes(1);
+      expect(mocks.subscriptionsRef.value[0].nodeCount).toBe(0);
+      expect(mocks.subscriptionsRef.value[0].userInfo).toBeNull();
+      expect(mocks.subscriptionsRef.value[0].lastError).toBe('HTTP 403: Forbidden');
+      expect(errorSpy).toHaveBeenCalledWith('[handleUpdateNodeCount] Failed for Airport:', 'HTTP 403: Forbidden');
+      expect(markDirty).toHaveBeenCalledTimes(1);
+      expect(mocks.saveData).toHaveBeenCalledTimes(1);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it('keeps stale node count and traffic when protective node cache is enabled', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const oldUserInfo = { upload: 1, download: 2, total: 100, expire: 999 };
     mocks.subscriptionsRef.value = [{
       id: 'sub-1',
@@ -99,12 +106,17 @@ describe('useSubscriptions manual node refresh failures', () => {
     const markDirty = vi.fn();
     const { handleUpdateNodeCount } = useSubscriptions(markDirty);
 
-    await handleUpdateNodeCount('sub-1');
+    try {
+      await handleUpdateNodeCount('sub-1');
 
-    expect(mocks.subscriptionsRef.value[0].nodeCount).toBe(86);
-    expect(mocks.subscriptionsRef.value[0].userInfo).toBe(oldUserInfo);
-    expect(mocks.subscriptionsRef.value[0].lastError).toBe('HTTP 403: Forbidden');
-    expect(markDirty).not.toHaveBeenCalled();
-    expect(mocks.saveData).not.toHaveBeenCalled();
+      expect(mocks.subscriptionsRef.value[0].nodeCount).toBe(86);
+      expect(mocks.subscriptionsRef.value[0].userInfo).toBe(oldUserInfo);
+      expect(mocks.subscriptionsRef.value[0].lastError).toBe('HTTP 403: Forbidden');
+      expect(errorSpy).toHaveBeenCalledWith('[handleUpdateNodeCount] Failed for Airport:', 'HTTP 403: Forbidden');
+      expect(markDirty).not.toHaveBeenCalled();
+      expect(mocks.saveData).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });

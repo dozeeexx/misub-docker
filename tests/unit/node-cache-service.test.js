@@ -69,6 +69,7 @@ describe('node-cache-service', () => {
     });
 
     it('refuses to overwrite an existing non-empty cache with an empty node list', async () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const storage = createStorage({
             cache: {
                 nodes: 'trojan://password@1.2.3.4:443#HK-01\n',
@@ -78,12 +79,17 @@ describe('node-cache-service', () => {
             }
         });
 
-        const updated = await setCache(storage, 'cache', '', ['机场']);
-        const cached = await getCache(storage, 'cache');
+        try {
+            const updated = await setCache(storage, 'cache', '', ['机场']);
+            const cached = await getCache(storage, 'cache');
 
-        expect(updated).toBe(false);
-        expect(cached.data.nodes).toBe('trojan://password@1.2.3.4:443#HK-01\n');
-        expect(cached.data.nodeCount).toBe(1);
+            expect(updated).toBe(false);
+            expect(cached.data.nodes).toBe('trojan://password@1.2.3.4:443#HK-01\n');
+            expect(cached.data.nodeCount).toBe(1);
+            expect(warnSpy).toHaveBeenCalledWith('[Cache] Refusing to overwrite non-empty cache cache with empty node list');
+        } finally {
+            warnSpy.mockRestore();
+        }
     });
 
     it('preserves only requested subscription protective caches when clearing node caches', async () => {

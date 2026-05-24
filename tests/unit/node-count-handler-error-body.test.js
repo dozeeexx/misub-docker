@@ -32,6 +32,8 @@ describe('handleNodeCountRequest error body handling', () => {
     });
 
     it('treats HTTP 200 upstream error text as a failed manual node update', async () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         const errorText = 'failed to fetch remote profile with status 400 Bad Request';
         const adapter = createAdapter({
             settings: { builtinSkipCertVerify: false },
@@ -48,14 +50,22 @@ describe('handleNodeCountRequest error body handling', () => {
             body: JSON.stringify({ url: 'https://airport.example/sub' })
         });
 
-        const response = await handleNodeCountRequest(request, {});
-        const data = await response.json();
+        try {
+            const response = await handleNodeCountRequest(request, {});
+            const data = await response.json();
 
-        expect(data.success).toBe(false);
-        expect(data.errorType).toBe('server');
-        expect(data.error).toContain('HTTP 400');
-        expect(data.count).toBe(0);
-        expect(adapter.updateSubscriptionById).not.toHaveBeenCalled();
+            expect(data.success).toBe(false);
+            expect(data.errorType).toBe('server');
+            expect(data.error).toContain('HTTP 400');
+            expect(data.count).toBe(0);
+            expect(warnSpy).toHaveBeenCalledWith('[NodeHandler] Node count response contains upstream error: HTTP 400: failed to fetch remote profile with status 400 Bad Request');
+            expect(warnSpy).toHaveBeenCalledWith('[NodeHandler] Skipping node count fallback because upstream returned an error body: HTTP 400: failed to fetch remote profile with status 400 Bad Request');
+            expect(errorSpy).toHaveBeenCalledWith('[Node Count] Node count update failed for https://airport.example/sub: HTTP 400: failed to fetch remote profile with status 400 Bad Request');
+            expect(adapter.updateSubscriptionById).not.toHaveBeenCalled();
+        } finally {
+            warnSpy.mockRestore();
+            errorSpy.mockRestore();
+        }
     });
 
     it('does not skip certificate verification for node count by default', async () => {

@@ -212,13 +212,19 @@ expect(result).toContain('sid=abc123')
             })
 
             it('不支持的类型应返回null', () => {
-                const proxy = {
-                    name: 'Unknown',
-                    type: 'unknown-protocol',
-                    server: '1.2.3.4',
-                    port: 443
+                const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+                try {
+                    const proxy = {
+                        name: 'Unknown',
+                        type: 'unknown-protocol',
+                        server: '1.2.3.4',
+                        port: 443
+                    }
+                    expect(convertClashProxyToUrl(proxy)).toBeNull()
+                    expect(warnSpy).toHaveBeenCalledWith('不支持的代理类型: unknown-protocol')
+                } finally {
+                    warnSpy.mockRestore()
                 }
-                expect(convertClashProxyToUrl(proxy)).toBeNull()
             })
         })
     })

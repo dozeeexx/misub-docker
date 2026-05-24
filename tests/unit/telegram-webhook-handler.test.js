@@ -87,6 +87,7 @@ describe('handleTelegramWebhook', () => {
   });
 
   it('rejects webhook requests when secret is missing', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { state, adapter } = createState({
       settings: {
         telegram_push_config: {
@@ -100,18 +101,23 @@ describe('handleTelegramWebhook', () => {
     createAdapter.mockReturnValue(adapter);
 
     const { handleTelegramWebhook } = await import('../../functions/modules/handlers/telegram-webhook-handler.js');
-    const response = await handleTelegramWebhook(createRequest({
-      message: {
-        text: '/start',
-        chat: { id: 1001 },
-        from: { id: 1 }
-      }
-    }, ''), { MISUB_KV: null });
+    try {
+      const response = await handleTelegramWebhook(createRequest({
+        message: {
+          text: '/start',
+          chat: { id: 1001 },
+          from: { id: 1 }
+        }
+      }, ''), { MISUB_KV: null });
 
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: 'Webhook secret required' });
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(state.settings.telegram_push_config.webhook_secret).toBe('');
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'Webhook secret required' });
+      expect(errorSpy).toHaveBeenCalledWith('[Telegram Push] Missing webhook secret');
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(state.settings.telegram_push_config.webhook_secret).toBe('');
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it('denies access by default when whitelist is empty', async () => {
@@ -145,44 +151,51 @@ describe('handleTelegramWebhook', () => {
   });
 
   it('stores bindings per telegram user and auto-binds imports to the correct profile', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const { state, adapter } = createState();
     createAdapter.mockReturnValue(adapter);
 
     const { handleTelegramWebhook } = await import('../../functions/modules/handlers/telegram-webhook-handler.js');
 
-    await handleTelegramWebhook(createRequest({
-      message: {
-        text: '/bind 1',
-        chat: { id: 2001 },
-        from: { id: 1 }
-      }
-    }), { MISUB_KV: null });
+    try {
+      await handleTelegramWebhook(createRequest({
+        message: {
+          text: '/bind 1',
+          chat: { id: 2001 },
+          from: { id: 1 }
+        }
+      }), { MISUB_KV: null });
 
-    await handleTelegramWebhook(createRequest({
-      message: {
-        text: '/bind 2',
-        chat: { id: 2002 },
-        from: { id: 2 }
-      }
-    }), { MISUB_KV: null });
+      await handleTelegramWebhook(createRequest({
+        message: {
+          text: '/bind 2',
+          chat: { id: 2002 },
+          from: { id: 2 }
+        }
+      }), { MISUB_KV: null });
 
-    await handleTelegramWebhook(createRequest({
-      message: {
-        text: 'ss://YWVzLTI1Ni1nY206cGFzc0BleGFtcGxlLmNvbTo0NDM=#Node-A',
-        chat: { id: 2001 },
-        from: { id: 1 }
-      }
-    }), { MISUB_KV: null });
+      await handleTelegramWebhook(createRequest({
+        message: {
+          text: 'ss://YWVzLTI1Ni1nY206cGFzc0BleGFtcGxlLmNvbTo0NDM=#Node-A',
+          chat: { id: 2001 },
+          from: { id: 1 }
+        }
+      }), { MISUB_KV: null });
 
-    expect(state.settings.telegram_push_config.user_bindings).toEqual({
-      '1': 'profile-1',
-      '2': 'profile-2'
-    });
-    expect(state.subscriptions).toHaveLength(1);
-    expect(state.profiles[0].manualNodes).toEqual([state.subscriptions[0].id]);
-    expect(state.profiles[1].manualNodes).toEqual([]);
-    expect(clearAllNodeCaches).toHaveBeenCalledTimes(1);
-    expect(clearAllNodeCaches).toHaveBeenCalledWith(adapter);
+      expect(state.settings.telegram_push_config.user_bindings).toEqual({
+        '1': 'profile-1',
+        '2': 'profile-2'
+      });
+      expect(state.subscriptions).toHaveLength(1);
+      expect(state.profiles[0].manualNodes).toEqual([state.subscriptions[0].id]);
+      expect(state.profiles[1].manualNodes).toEqual([]);
+      expect(clearAllNodeCaches).toHaveBeenCalledTimes(1);
+      expect(clearAllNodeCaches).toHaveBeenCalledWith(adapter);
+      expect(infoSpy).toHaveBeenCalledWith('[Telegram Push] Cleared 1 node caches after node import');
+      expect(infoSpy).toHaveBeenCalledWith('[Telegram Push] User 1 added 1 items (Ignored 0)');
+    } finally {
+      infoSpy.mockRestore();
+    }
   });
 
   it('keeps the original command surface in help output', async () => {

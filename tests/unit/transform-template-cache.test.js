@@ -151,6 +151,7 @@ describe('Transform template cache', () => {
     });
 
     it('falls back to cached template when revalidation fails before max age', async () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         vi.stubGlobal('fetch', vi.fn(async () => new Response('server error', { status: 503 })));
         const storage = createStorage({
             nodes: 'cached template',
@@ -159,9 +160,14 @@ describe('Transform template cache', () => {
             lastModified: 'Wed, 13 May 2026 00:00:00 GMT'
         });
 
-        const result = await fetchTransformTemplate(storage, 'https://example.com/template.yaml');
+        try {
+            const result = await fetchTransformTemplate(storage, 'https://example.com/template.yaml');
 
-        expect(result).toBe('cached template');
+            expect(result).toBe('cached template');
+            expect(warnSpy).toHaveBeenCalledWith('[TemplateCache] Template fetch failed with HTTP 503, falling back to cached template');
+        } finally {
+            warnSpy.mockRestore();
+        }
     });
 
     it('throws when remote fetch fails and no cached template is available', async () => {

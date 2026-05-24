@@ -42,7 +42,8 @@ describe('PublicProfilesView hero loading state', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await vi.dynamicImportSettled();
     wrapper?.unmount();
     vi.clearAllMocks();
   });
@@ -90,6 +91,7 @@ describe('PublicProfilesView hero loading state', () => {
     });
 
     await flushPromises();
+    await vi.dynamicImportSettled();
 
     expect(wrapper.text()).toContain('自定义发现');
     expect(wrapper.text()).toContain('自定义订阅');
@@ -144,6 +146,7 @@ describe('PublicProfilesView hero loading state', () => {
     });
 
     await flushPromises();
+    await vi.dynamicImportSettled();
 
     expect(wrapper.text()).toContain('自定义公开页');
     expect(wrapper.text()).not.toContain('Cosmic Selection');

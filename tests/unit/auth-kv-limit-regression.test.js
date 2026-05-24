@@ -19,16 +19,23 @@ function createLimitExceededKv() {
 
 describe('auth gracefully handles exhausted KV write quota', () => {
   it('uses COOKIE_SECRET without failing when KV cannot persist it', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const env = {
       MISUB_KV: createLimitExceededKv(),
       COOKIE_SECRET: 'stable-cookie-secret',
       ADMIN_PASSWORD: 'secret-password'
     };
 
-    await expect(getCookieSecret(env)).resolves.toBe('stable-cookie-secret');
+    try {
+      await expect(getCookieSecret(env)).resolves.toBe('stable-cookie-secret');
+      expect(warnSpy).toHaveBeenCalledWith('[Auth Storage] KV put skipped for SYSTEM_COOKIE_SECRET: KV put() limit exceeded for the day.');
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('still logs in when KV put quota is exceeded but COOKIE_SECRET is configured', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const env = {
       MISUB_KV: createLimitExceededKv(),
       COOKIE_SECRET: 'stable-cookie-secret',
@@ -40,11 +47,16 @@ describe('auth gracefully handles exhausted KV write quota', () => {
       body: JSON.stringify({ password: 'secret-password' })
     });
 
-    const response = await handleLogin(request, env);
-    const body = await response.json();
+    try {
+      const response = await handleLogin(request, env);
+      const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(body).toEqual({ success: true });
+      expect(response.status).toBe(200);
+      expect(body).toEqual({ success: true });
+      expect(warnSpy).toHaveBeenCalledWith('[Auth Storage] KV put skipped for SYSTEM_COOKIE_SECRET: KV put() limit exceeded for the day.');
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('auth_debug reports env COOKIE_SECRET without failing when KV put quota is exceeded', async () => {

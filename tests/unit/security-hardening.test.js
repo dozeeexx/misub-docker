@@ -144,33 +144,42 @@ describe('security hardening', () => {
   });
 
   it('supports cron query secret compatibility and Authorization bearer', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const env = {
       ASSETS: createAssets(),
       MISUB_DB: createD1({ cronSecret: 'cron-secret' })
     };
     const next = vi.fn(async () => new Response('next'));
 
-    const queryResponse = await onRequest({
-      request: new Request('https://example.com/cron?secret=cron-secret'),
-      env,
-      next
-    });
-    const bearerResponse = await onRequest({
-      request: new Request('https://example.com/cron', {
-        headers: { Authorization: 'Bearer cron-secret' }
-      }),
-      env,
-      next
-    });
-    const wrongQueryResponse = await onRequest({
-      request: new Request('https://example.com/cron?secret=wrong-secret'),
-      env,
-      next
-    });
+    try {
+      const queryResponse = await onRequest({
+        request: new Request('https://example.com/cron?secret=cron-secret'),
+        env,
+        next
+      });
+      const bearerResponse = await onRequest({
+        request: new Request('https://example.com/cron', {
+          headers: { Authorization: 'Bearer cron-secret' }
+        }),
+        env,
+        next
+      });
+      const wrongQueryResponse = await onRequest({
+        request: new Request('https://example.com/cron?secret=wrong'),
+        env,
+        next
+      });
 
-    expect(queryResponse.status).not.toBe(401);
-    expect(bearerResponse.status).not.toBe(401);
-    expect(wrongQueryResponse.status).toBe(401);
+      expect(queryResponse.status).not.toBe(401);
+      expect(bearerResponse.status).not.toBe(401);
+      expect(wrongQueryResponse.status).toBe(401);
+      expect(warnSpy).toHaveBeenCalledWith('[Storage] No KV binding found, using noop adapter');
+      expect(infoSpy).toHaveBeenCalledWith('[Cron] Starting parallel update for 0 subscriptions');
+    } finally {
+      warnSpy.mockRestore();
+      infoSpy.mockRestore();
+    }
   });
 
   it('tests subconverter backends with a synthetic node without exposing user subscriptions', async () => {
