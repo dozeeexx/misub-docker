@@ -9,6 +9,7 @@ import { authMiddleware, handleLogin, handleLogout, createUnauthorizedResponse }
 import { sendTgNotification, checkAndNotify } from './notifications.js';
 import { clearAllNodeCaches } from '../services/node-cache-service.js';
 import { buildSubscriptionNodeCacheKey } from '../services/subscription-service.js';
+import { maybeRunScheduledTasks } from './scheduled-task-runner.js';
 
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings } from './config.js';
 import { listRuleTemplates } from './rule-template-handler.js';
@@ -131,7 +132,7 @@ async function syncCollectionRowLevel(storageAdapter, type, finalItems) {
  * @param {Object} env - Cloudflare环境对象
  * @returns {Promise<Response>} HTTP响应
  */
-export async function handleDataRequest(env) {
+export async function handleDataRequest(env, context = null) {
     let storageType = 'unknown';
     try {
         storageType = await StorageFactory.getStorageType(env);
@@ -169,6 +170,15 @@ export async function handleDataRequest(env) {
             ...settings,
             isDefaultPassword: await isUsingDefaultPassword(env)
         };
+        try {
+            const taskContext = context || { env };
+            const runPromise = maybeRunScheduledTasks(taskContext, { source: 'admin-api' });
+            if (typeof taskContext.waitUntil !== 'function') {
+                runPromise.catch(error => console.warn('[ScheduledTasks] lazy check failed:', error?.message || error));
+            }
+        } catch (taskError) {
+            console.warn('[ScheduledTasks] lazy check init failed:', taskError?.message || taskError);
+        }
         return createJsonResponse({ misubs, profiles, ruleTemplates, config });
     } catch (e) {
         console.error('[API Error /data] Failed to read from storage', {
@@ -393,10 +403,19 @@ export async function handleMisubsSave(request, env) {
  * @param {Object} env - Cloudflare环境对象
  * @returns {Promise<Response>} HTTP响应
  */
+function redactSettingsForResponse(settings = {}) {
+    return {
+        ...settings,
+        webdavBackup: settings.webdavBackup
+            ? { ...settings.webdavBackup, password: '' }
+            : settings.webdavBackup
+    };
+}
+
 export async function handleSettingsGet(env) {
     try {
         const settings = await SettingsCache.get(env) || {};
-        return createJsonResponse({ ...defaultSettings, ...settings });
+        return createJsonResponse(redactSettingsForResponse({ ...defaultSettings, ...settings }));
     } catch (e) {
         if (isStorageUnavailableError(e)) {
             return createJsonResponse({
@@ -462,6 +481,15 @@ export async function handleSettingsSave(request, env) {
 
         const storageAdapter = await getStorageAdapter(env);
         const oldSettings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
+        if (newSettings.webdavBackup && oldSettings.webdavBackup) {
+            const incomingPassword = newSettings.webdavBackup.password;
+            if (incomingPassword === '' || incomingPassword == null) {
+                newSettings.webdavBackup = {
+                    ...newSettings.webdavBackup,
+                    password: oldSettings.webdavBackup.password
+                };
+            }
+        }
         const finalSettings = { ...oldSettings, ...newSettings };
 
         // 使用存储适配器保存设置
@@ -502,7 +530,7 @@ export async function handleSettingsSave(request, env) {
         const message = `⚙️ *MiSub 设置更新* ⚙️\n\n您的 MiSub 应用设置已成功更新。`;
         await sendTgNotification(finalSettings, message);
 
-        return createJsonResponse({ success: true, message: '设置已保存', data: finalSettings });
+        return createJsonResponse({ success: true, message: '设置已保存', data: redactSettingsForResponse(finalSettings) });
     } catch (e) {
         return createErrorResponse('保存设置失败', 500);
     }

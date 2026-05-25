@@ -355,7 +355,9 @@ textarea {
 }
 
 .mobile-nav-glass {
-  @apply fixed left-0 right-0 z-50;
+  @apply left-0 right-0;
+  position: fixed;
+  z-index: 60;
   bottom: 0;
   min-height: calc(4rem + max(env(safe-area-inset-bottom, 0px), 12px));
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
@@ -365,8 +367,6 @@ textarea {
   border-top: 1px solid var(--border-subtle-light);
   box-shadow: 0 -8px 24px rgba(17, 24, 39, 0.06);
   box-sizing: border-box;
-  contain: layout paint;
-  transform: translateZ(0);
   overflow: visible;
 }
 

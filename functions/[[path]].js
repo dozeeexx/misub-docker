@@ -170,7 +170,7 @@ export async function onRequest(context) {
             // 路由分发
             if (url.pathname.startsWith('/api/')) {
                 // API 路由
-                return await handleApiRequest(request, env);
+                return await handleApiRequest(request, env, context);
             } else if (isExplicitSubRoute || isCustomTokenRoute) {
                 // MiSub 订阅路由
                 return await handleMisubRequest(context);

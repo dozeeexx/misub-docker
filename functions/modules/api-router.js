@@ -15,6 +15,15 @@ import {
     handlePublicPreviewRequest
 } from './subscription-handler.js';
 import {
+    handleWebdavBackupStatus,
+    handleWebdavBackupTest,
+    handleManualWebdavBackup,
+    handleWebdavBackupList,
+    handleWebdavRestore,
+    handleBackupExport,
+    handleBackupRestore
+} from './webdav-backup-handler.js';
+import {
     handleDebugSubscriptionRequest,
     handleSystemInfoRequest,
     handleStorageTestRequest,
@@ -40,6 +49,7 @@ import { handleGithubReleaseRequest } from './handlers/github-proxy-handler.js';
 import { handleParseSubscription } from './parse-subscription-handler.js';
 import { safeFetchPublicUrl, validatePublicFetchUrl, redactUrl } from './security-utils.js';
 import { normalizeSubconverterBackend } from './subscription/main-handler.js';
+import { maybeRunScheduledTasks } from './scheduled-task-runner.js';
 
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
@@ -54,7 +64,7 @@ function isAuthDiagnosticsEnabled(env) {
  * @param {Object} env - Cloudflare环境对象
  * @returns {Promise<Response>} HTTP响应
  */
-export async function handleApiRequest(request, env) {
+export async function handleApiRequest(request, env, context = null) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
 
@@ -215,7 +225,7 @@ export async function handleApiRequest(request, env) {
         }
 
 
-        return await handleDataRequest(env);
+        return await handleDataRequest(env, context || { env });
     }
 
     // [New] GitHub Proxy Route (Public)
@@ -349,6 +359,27 @@ export async function handleApiRequest(request, env) {
 
         case '/rule_templates':
             return await handleRuleTemplatesRequest(request, env);
+
+        case '/backup/export':
+            return await handleBackupExport(request, env);
+
+        case '/backup/restore':
+            return await handleBackupRestore(request, env);
+
+        case '/backup/webdav/status':
+            return await handleWebdavBackupStatus(env);
+
+        case '/backup/webdav/test':
+            return await handleWebdavBackupTest(request, env);
+
+        case '/backup/webdav/run':
+            return await handleManualWebdavBackup(request, env);
+
+        case '/backup/webdav/list':
+            return await handleWebdavBackupList(request, env);
+
+        case '/backup/webdav/restore':
+            return await handleWebdavRestore(request, env);
 
         case '/node_count':
             return await handleLegacyNodeCountRequest(request, env);
@@ -782,10 +813,17 @@ async function handleCronTriggerRequest(env) {
             console.warn('[Cron Trigger] Failed to save execution status:', error);
         }
 
+        const scheduledTasks = await maybeRunScheduledTasks({ env }, {
+            source: 'external-cron',
+            forceCheck: true,
+            awaitRun: true
+        }).catch(error => ({ success: false, error: error?.message || String(error) }));
+
         return createJsonResponse({
             success: true,
             message: 'Cron triggered successfully',
             result,
+            scheduledTasks,
             timestamp: new Date().toISOString()
         });
 

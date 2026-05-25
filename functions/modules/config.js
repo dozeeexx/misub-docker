@@ -116,6 +116,23 @@ export const DEFAULT_SETTINGS = {
         hideHeader: false,       // 自定义公开页是否隐藏全局页头
         hideFooter: false        // 自定义公开页是否隐藏全局页脚
     },
+    webdavBackup: {
+        enabled: false,
+        endpoint: '',
+        username: '',
+        password: '',
+        remotePath: '/MiSub',
+        filenameTemplate: 'misub-backup-{datetime}.json',
+        backupScope: 'dataOnly',
+        autoBackup: false,
+        interval: 'daily',
+        retentionCount: 7,
+        lastCheckedAt: null,
+        lastBackupAt: null,
+        lastBackupStatus: null,
+        lastBackupMessage: '',
+        lastBackupFile: ''
+    },
     // 订阅转换设置
     subconverter: {
         engineMode: "builtin",

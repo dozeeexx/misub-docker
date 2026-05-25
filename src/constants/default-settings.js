@@ -85,6 +85,23 @@ prependGroupName: false
         enabled: false,
         allowAnonymous: true
     },
+    webdavBackup: {
+        enabled: false,
+        endpoint: '',
+        username: '',
+        password: '',
+        remotePath: '/MiSub',
+        filenameTemplate: 'misub-backup-{datetime}.json',
+        backupScope: 'dataOnly',
+        autoBackup: false,
+        interval: 'daily',
+        retentionCount: 7,
+        lastCheckedAt: null,
+        lastBackupAt: null,
+        lastBackupStatus: null,
+        lastBackupMessage: '',
+        lastBackupFile: ''
+    },
     // 订阅转换设置
     subconverter: {
         engineMode: 'builtin',
