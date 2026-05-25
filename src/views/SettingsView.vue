@@ -12,6 +12,7 @@ import ServiceSettings from '../components/settings/sections/ServiceSettings.vue
 import GlobalSettings from '../components/settings/sections/GlobalSettings.vue';
 
 import SystemSettings from '../components/settings/sections/SystemSettings.vue';
+import WebdavBackupSettings from '../components/settings/sections/WebdavBackupSettings.vue';
 import ClientSettings from '../components/settings/sections/ClientSettings.vue';
 import CustomPageSettings from '../components/settings/sections/CustomPageSettings.vue';
 
@@ -111,8 +112,11 @@ watch(() => route.path, (path) => {
         <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
         <ClientSettings v-show="activeTab === 'client'" />
         <CustomPageSettings v-show="activeTab === 'custom-page'" :settings="settings" />
-        <SystemSettings v-show="activeTab === 'system'" :settings="settings" :exportBackup="exportBackup"
-          :importBackup="importBackup" :handleReset="handleReset" @migrate="handleOpenMigrationModal" />
+        <div v-show="activeTab === 'system'" class="space-y-6">
+          <WebdavBackupSettings :settings="settings" />
+          <SystemSettings :settings="settings" :exportBackup="exportBackup"
+            :importBackup="importBackup" :handleReset="handleReset" @migrate="handleOpenMigrationModal" />
+        </div>
       </div>
 
       <template #footer>
