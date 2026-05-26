@@ -43,7 +43,7 @@ MiSub/
 ```bash
 npm run dev          # 启动 Vite 前端开发服务
 npm run dev:server   # 启动 Wrangler Pages Functions 本地服务
-npm run dev:all      # 同时启动前后端开发服务
+# 如需同时启动，分别在两个终端运行以上两个命令
 npm run build        # 构建前端
 npm run test:run     # 运行测试
 ```
