@@ -219,7 +219,19 @@ export function validateProfile(profile) {
                 if (!value) return null;
                 
                 // 允许 builtin: 和 custom: 前缀（内置/自定义模板）
-                if (value.startsWith('builtin:') || value.startsWith('custom:')) {
+                if (value.startsWith('builtin:')) {
+                    const templateName = value.slice(8).trim();
+                    if (!templateName) {
+                        return 'builtin: 模板名称不能为空';
+                    }
+                    return null;
+                }
+                
+                if (value.startsWith('custom:')) {
+                    const templateName = value.slice(7).trim();
+                    if (!templateName) {
+                        return 'custom: 模板名称不能为空';
+                    }
                     return null;
                 }
                 

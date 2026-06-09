@@ -58,4 +58,49 @@ describe('Issue #380: SubConverter 配置文件自定义无法使用', () => {
     expect(result.isValid).toBe(true);
     expect(result.errors.transformConfig).toBeUndefined();
   });
+
+  it('应该拒绝 custom: 后面为空的模板名称', () => {
+    const profile = {
+      name: 'Test Profile',
+      customId: 'test',
+      transformConfigMode: 'custom_template',
+      transformConfig: 'custom:'
+    };
+
+    const result = validateProfile(profile);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.transformConfig).toBeDefined();
+    expect(result.errors.transformConfig[0]).toContain('模板名称不能为空');
+  });
+
+  it('应该拒绝 custom: 后面只有空格的模板名称', () => {
+    const profile = {
+      name: 'Test Profile',
+      customId: 'test',
+      transformConfigMode: 'custom_template',
+      transformConfig: 'custom:   '
+    };
+
+    const result = validateProfile(profile);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.transformConfig).toBeDefined();
+    expect(result.errors.transformConfig[0]).toContain('模板名称不能为空');
+  });
+
+  it('应该拒绝 builtin: 后面为空的模板名称', () => {
+    const profile = {
+      name: 'Test Profile',
+      customId: 'test',
+      transformConfigMode: 'preset',
+      transformConfig: 'builtin:'
+    };
+
+    const result = validateProfile(profile);
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.transformConfig).toBeDefined();
+    expect(result.errors.transformConfig[0]).toContain('模板名称不能为空');
+  });
 });

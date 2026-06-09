@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { useToastStore } from '../stores/toast.js';
+import { useDataStore } from '../stores/useDataStore.js';
 import { extractNodeName } from '../lib/utils.js';
 import { generateNodeId, generateSubscriptionId } from '../utils/id.js';
 import { COMMON_NODE_PROTOCOLS, createProtocolRegex } from '@/constants/nodeProtocols.js';
@@ -11,12 +12,18 @@ const BULK_IMPORT_NODE_REGEX = createProtocolRegex(BULK_IMPORT_NODE_PROTOCOLS, f
 
 export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk }) {
     const { showToast } = useToastStore();
+    const dataStore = useDataStore();
     const showModal = ref(false);
 
     const handleBulkImport = (importText, group) => {
         if (!importText) return;
 
         const normalizedGroup = normalizeManualNodeGroupName(group);
+        
+        // 获取已存在的所有 URL，用于去重
+        const existingUrls = new Set(
+            (dataStore.subscriptions || []).map(s => s.url).filter(Boolean)
+        );
         
         // 先尝试解析 Surge 格式（name = protocol, server, port, ...）
         const surgeNodes = parseSurgeConfig(importText);
@@ -28,18 +35,21 @@ export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk 
         // 如果成功解析出 Surge 节点，使用解析结果
         if (surgeNodes && surgeNodes.length > 0) {
             surgeNodes.forEach(node => {
-                validNodes.push({
-                    id: generateNodeId(),
-                    name: node.name || '未命名',
-                    url: node.url,
-                    enabled: true,
-                    status: 'unchecked',
-                    group: normalizedGroup || null,
-                    colorTag: null,
-                    exclude: '',
-                    customUserAgent: '',
-                    notes: ''
-                });
+                // 去重检查：跳过已存在的 URL
+                if (!existingUrls.has(node.url)) {
+                    validNodes.push({
+                        id: generateNodeId(),
+                        name: node.name || '未命名',
+                        url: node.url,
+                        enabled: true,
+                        status: 'unchecked',
+                        group: normalizedGroup || null,
+                        colorTag: null,
+                        exclude: '',
+                        customUserAgent: '',
+                        notes: ''
+                    });
+                }
             });
         }
 
@@ -59,11 +69,15 @@ export function useBulkImportLogic({ addSubscriptionsFromBulk, addNodesFromBulk 
             };
 
             if (/^https?:\/\//.test(line)) {
-                validSubs.push({ ...baseItem, id: generateSubscriptionId() });
+                // 去重检查：订阅 URL
+                if (!existingUrls.has(line)) {
+                    validSubs.push({ ...baseItem, id: generateSubscriptionId() });
+                }
             } else if (BULK_IMPORT_NODE_REGEX.test(line)) {
                 // 避免重复添加已从 Surge 格式解析的节点
                 const alreadyParsed = validNodes.some(n => n.url === line);
-                if (!alreadyParsed) {
+                // 去重检查：节点 URL
+                if (!alreadyParsed && !existingUrls.has(line)) {
                     validNodes.push({ ...baseItem, id: generateNodeId() });
                 }
             }

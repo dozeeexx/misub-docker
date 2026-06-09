@@ -71,4 +71,44 @@ describe('手动节点分组管理', () => {
     const groups = manualNodes.manualNodeGroups.value;
     expect(groups).toEqual(['HK', 'America', 'Japan']);
   });
+
+  it('重命名不存在的分组应不产生影响', () => {
+    manualNodes.reorderGroups(['HK', 'USA', 'Japan']);
+    const beforeGroups = [...manualNodes.manualNodeGroups.value];
+    
+    manualNodes.renameGroup('NonExistent', 'NewName');
+
+    const afterGroups = manualNodes.manualNodeGroups.value;
+    expect(afterGroups).toEqual(beforeGroups);
+  });
+
+  it('删除不存在的分组应不产生影响', () => {
+    manualNodes.reorderGroups(['HK', 'USA', 'Japan']);
+    const beforeGroups = [...manualNodes.manualNodeGroups.value];
+    
+    manualNodes.deleteGroup('NonExistent');
+
+    const afterGroups = manualNodes.manualNodeGroups.value;
+    expect(afterGroups).toEqual(beforeGroups);
+  });
+
+  it('重命名为空字符串应被忽略', () => {
+    manualNodes.reorderGroups(['HK', 'USA', 'Japan']);
+    const beforeGroups = [...manualNodes.manualNodeGroups.value];
+    
+    manualNodes.renameGroup('USA', '');
+
+    const afterGroups = manualNodes.manualNodeGroups.value;
+    expect(afterGroups).toEqual(beforeGroups);
+  });
+
+  it('重命名为相同名称应被忽略', () => {
+    manualNodes.reorderGroups(['HK', 'USA', 'Japan']);
+    const beforeGroups = [...manualNodes.manualNodeGroups.value];
+    
+    manualNodes.renameGroup('USA', 'USA');
+
+    const afterGroups = manualNodes.manualNodeGroups.value;
+    expect(afterGroups).toEqual(beforeGroups);
+  });
 });
