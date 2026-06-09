@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import Modal from '../forms/Modal.vue';
 import draggable from 'vuedraggable';
 
@@ -11,7 +11,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'rename', 'delete', 'reorder']);
+const emit = defineEmits(['close', 'rename', 'delete', 'reorder', 'update:show']);
 
 // 本地可编辑的分组列表
 const localGroups = ref([]);
@@ -23,14 +23,17 @@ const syncGroups = () => {
   localGroups.value = props.groups.map(g => ({ name: g, editing: false }));
 };
 
-// 当模态框打开时同步
-const handleOpen = () => {
-  syncGroups();
-};
+// 监听 show 变化，模态框打开时同步分组
+watch(() => props.show, (newVal) => {
+  if (newVal) {
+    syncGroups();
+  }
+});
 
 const handleClose = () => {
   editingGroupIndex.value = null;
   editingGroupName.value = '';
+  emit('update:show', false);
   emit('close');
 };
 
@@ -76,7 +79,7 @@ const isDraggable = computed(() => localGroups.value.length > 1);
 </script>
 
 <template>
-  <Modal :show="show" @close="handleClose" @open="handleOpen" max-width="max-w-2xl">
+  <Modal :show="show" @close="handleClose" max-width="max-w-2xl">
     <template #title>
       <div class="flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 20 20" fill="currentColor">

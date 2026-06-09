@@ -12,6 +12,8 @@ import ManualNodeDedupModal from '../components/modals/ManualNodeDedupModal.vue'
 import SubscriptionImportModal from '../components/modals/SubscriptionImportModal.vue';
 import BatchGroupModal from '../components/modals/BatchGroupModal.vue'; // Added
 
+const GroupManagementModal = defineAsyncComponent(() => import('../components/modals/GroupManagementModal.vue'));
+
 const dataStore = useDataStore();
 const { showToast } = useToastStore();
 const { markDirty } = dataStore;
@@ -27,13 +29,14 @@ const showDedupModal = ref(false);
 const dedupPlan = ref(null);
 const showBatchGroupModal = ref(false); // Added
 const batchGroupIds = ref([]); // Added
+const showGroupManagementModal = ref(false); // 分组管理模态框
 
 const {
   manualNodes, manualNodesCurrentPage, manualNodesTotalPages, paginatedManualNodes, searchTerm,
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes, deduplicateNodes, buildDedupPlan, applyDedupPlan,
   reorderManualNodes,
-  manualNodeGroups, renameGroup, deleteGroup,
+  manualNodeGroups, renameGroup, deleteGroup, reorderGroups,
   activeGroupFilter, setGroupFilter, batchUpdateGroup, batchDeleteNodes,
   manualNodesPerPage,
   pingResults, pingingNodes, pingNodeId, pingAllNodes
@@ -118,6 +121,26 @@ const confirmBatchDelete = () => {
   showBatchDeleteModal.value = false;
 };
 
+// 分组管理处理函数
+const handleOpenGroupManagement = () => {
+  showGroupManagementModal.value = true;
+};
+
+const handleGroupRename = (oldName, newName) => {
+  renameGroup(oldName, newName);
+  showToast(`分组 "${oldName}" 已重命名为 "${newName}"`, 'success');
+};
+
+const handleGroupDelete = (groupName) => {
+  deleteGroup(groupName);
+  showToast(`已删除分组 "${groupName}"`, 'success');
+};
+
+const handleGroupReorder = (newOrder) => {
+  reorderGroups(newOrder);
+  showToast('分组顺序已更新', 'success');
+};
+
 </script>
 
 <template>
@@ -139,6 +162,7 @@ const confirmBatchDelete = () => {
       @batch-update-group="(ids, group) => batchUpdateGroup(ids, group)"
       @batch-delete-nodes="handleBatchDeleteRequest"
       @open-batch-group-modal="handleOpenBatchGroupModal"
+      @manage-groups="handleOpenGroupManagement"
       :ping-results="pingResults"
       :pinging-nodes="pingingNodes"
       @ping="pingNodeId"
@@ -151,6 +175,14 @@ const confirmBatchDelete = () => {
       @confirm="applyDedupPlan(dedupPlan); showDedupModal = false; dedupPlan = null" />
     
     <BatchGroupModal v-model:show="showBatchGroupModal" :groups="manualNodeGroups" @confirm="handleBatchGroupConfirm" />
+
+    <GroupManagementModal 
+      v-model:show="showGroupManagementModal" 
+      :groups="manualNodeGroups" 
+      @rename="handleGroupRename"
+      @delete="handleGroupDelete"
+      @reorder="handleGroupReorder"
+    />
 
     <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodesWithCleanup">
       <template #title>
