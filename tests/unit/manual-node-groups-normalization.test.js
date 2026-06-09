@@ -8,7 +8,7 @@ describe('manual node group normalization', () => {
     expect(normalizeManualNodeGroupName(null)).toBe('');
   });
 
-  it('收集手动节点分组时按 trim 后的名称去重，避免肉眼同名分组', () => {
+  it('收集手动节点分组时按 trim 后的名称去重，并保留现有节点中的首次出现顺序', () => {
     const groups = collectManualNodeGroups([
       { id: 'n1', group: 'S5' },
       { id: 'n2', group: ' S5 ' },
@@ -16,6 +16,6 @@ describe('manual node group normalization', () => {
       { id: 'n4', group: '' }
     ]);
 
-    expect(groups).toEqual(['FreezeHost', 'S5']);
+    expect(groups).toEqual(['S5', 'FreezeHost']);
   });
 });

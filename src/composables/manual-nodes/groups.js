@@ -10,7 +10,8 @@ export function collectManualNodeGroups(nodes) {
       groups.add(group);
     }
   });
-  return Array.from(groups).sort();
+  // 保留首次出现顺序，不再强制字典排序
+  return Array.from(groups);
 }
 
 export function buildGroupedManualNodes(nodesToDisplay, manualNodeGroups) {
