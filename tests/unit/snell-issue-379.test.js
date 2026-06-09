@@ -19,4 +19,19 @@ describe('Issue #379: snell 节点添加无效', () => {
     expect(nodes[0].url).toContain('reuse=true');
     expect(nodes[0].url).toContain('tfo=true');
   });
+
+  it('批量导入应支持 Surge 格式的 snell 节点', () => {
+    // 模拟 useBulkImportLogic 的解析流程
+    const importText = '🇺🇸 USA Racknerd = snell, 192.xx.xx.212, 12345, psk = 9GBbVNzAuxqijVahyOra, version = 5, reuse = true, tfo = true';
+    
+    const surgeNodes = parseSurgeConfig(importText);
+    
+    // 应该成功解析出节点
+    expect(surgeNodes).toHaveLength(1);
+    expect(surgeNodes[0].url).toMatch(/^snell:\/\//);
+    
+    // 解析后的 URL 应该能被 isManualNodeEntry 识别
+    const url = surgeNodes[0].url;
+    expect(url).toMatch(/^snell:\/\//i);
+  });
 });
