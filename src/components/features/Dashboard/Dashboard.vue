@@ -34,6 +34,7 @@ const LogModal = defineAsyncComponent(() => import('../../modals/LogModal.vue'))
 const NodePreviewModal = defineAsyncComponent(() => import('../../modals/NodePreview/NodePreviewModal.vue'));
 
 const BatchGroupModal = defineAsyncComponent(() => import('../../modals/BatchGroupModal.vue'));
+const GroupManagementModal = defineAsyncComponent(() => import('../../modals/GroupManagementModal.vue'));
 const QRCodeModal = defineAsyncComponent(() => import('../../modals/QRCodeModal.vue'));
 const CopyLinkModal = defineAsyncComponent(() => import('../../modals/CopyLinkModal.vue'));
 
@@ -115,7 +116,7 @@ const {
   changeManualNodesPage, addNode, updateNode, deleteNode, deleteAllNodes,
   addNodesFromBulk, autoSortNodes, deduplicateNodes,
   reorderManualNodes, activeGroupFilter, setGroupFilter, batchUpdateGroup, batchDeleteNodes, buildDedupPlan, applyDedupPlan,
-  manualNodeGroups, renameGroup, deleteGroup // Added group helpers
+  manualNodeGroups, renameGroup, deleteGroup, reorderGroups // Added group helpers
 } = useManualNodes(markDirty);
 
 const handleSearchTermUpdate = (val) => {
@@ -171,6 +172,7 @@ const showDedupModal = ref(false);
 const dedupPlan = ref(null);
 const showBatchGroupModal = ref(false); // Added
 const batchGroupIds = ref([]); // Added
+const showGroupManagementModal = ref(false); // 分组管理模态框
 
 // 节点预览相关状态
 const showNodePreviewModal = ref(false);
@@ -322,6 +324,26 @@ const handleBatchGroupConfirm = (groupName) => {
   batchGroupIds.value = [];
 };
 
+// 分组管理处理函数
+const handleOpenGroupManagement = () => {
+  showGroupManagementModal.value = true;
+};
+
+const handleGroupRename = (oldName, newName) => {
+  renameGroup(oldName, newName);
+  showToast(`分组 "${oldName}" 已重命名为 "${newName}"`, 'success');
+};
+
+const handleGroupDelete = (groupName) => {
+  deleteGroup(groupName);
+  showToast(`已删除分组 "${groupName}"`, 'success');
+};
+
+const handleGroupReorder = (newOrder) => {
+  reorderGroups(newOrder);
+  showToast('分组顺序已更新', 'success');
+};
+
 // 节点预览处理函数
 const handlePreviewSubscription = (subscriptionId) => {
   const subscription = subscriptions.value.find(s => s.id === subscriptionId);
@@ -423,7 +445,8 @@ import SavePrompt from '../../ui/SavePrompt.vue';
           @batch-update-group="(ids, group) => batchUpdateGroup(ids, group)" 
           @batch-delete-nodes="handleBatchDeleteRequest" 
           @rename-group="renameGroup" @delete-group="deleteGroup"
-          @open-batch-group-modal="handleOpenBatchGroupModal" />
+          @open-batch-group-modal="handleOpenBatchGroupModal"
+          @manage-groups="handleOpenGroupManagement" />
       </div>
 
       <!-- Right Column -->
@@ -473,6 +496,14 @@ import SavePrompt from '../../ui/SavePrompt.vue';
     @confirm="applyDedupPlan(dedupPlan); showDedupModal = false; dedupPlan = null" />
   
   <BatchGroupModal v-model:show="showBatchGroupModal" :groups="manualNodeGroups" @confirm="handleBatchGroupConfirm" />
+
+  <GroupManagementModal 
+    v-model:show="showGroupManagementModal" 
+    :groups="manualNodeGroups" 
+    @rename="handleGroupRename"
+    @delete="handleGroupDelete"
+    @reorder="handleGroupReorder"
+  />
 
   <SubscriptionEditModal v-model:show="showSubModal" :is-new="isNewSubscription"
     :editing-subscription="editingSubscription" @confirm="handleSaveSubscription" />

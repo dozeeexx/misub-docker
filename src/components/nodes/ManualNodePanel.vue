@@ -28,7 +28,8 @@ const emit = defineEmits([
   'update:itemsPerPage', // Added
   'open-batch-group-modal', // Added
   'ping',
-  'ping-all'
+  'ping-all',
+  'manage-groups'
 ]);
 
 const isSelectionMode = ref(false);
@@ -164,6 +165,7 @@ const handleDeleteAll = () => {
       @delete-all="handleDeleteAll"
       @toggle-selection-mode="toggleSelectionMode"
       @ping-all="emit('ping-all')"
+      @manage-groups="emit('manage-groups')"
     />
 
     <BulkOperations
