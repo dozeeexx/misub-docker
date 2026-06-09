@@ -216,7 +216,15 @@ export function validateProfile(profile) {
         },
         transformConfig: {
             validator: (value) => {
-                if (value && !isValidUrl(value)) {
+                if (!value) return null;
+                
+                // 允许 builtin: 和 custom: 前缀（内置/自定义模板）
+                if (value.startsWith('builtin:') || value.startsWith('custom:')) {
+                    return null;
+                }
+                
+                // 其他情况必须是有效的 URL
+                if (!isValidUrl(value)) {
                     return '请输入有效的外部规则模板URL，或留空使用内置模板';
                 }
                 return null;
