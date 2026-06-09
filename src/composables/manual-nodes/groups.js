@@ -2,7 +2,7 @@ export function normalizeManualNodeGroupName(groupName) {
   return typeof groupName === 'string' ? groupName.trim() : '';
 }
 
-export function collectManualNodeGroups(nodes) {
+export function collectManualNodeGroups(nodes, customOrder = []) {
   const groups = new Set();
   nodes.forEach(node => {
     const group = normalizeManualNodeGroupName(node.group);
@@ -10,8 +10,34 @@ export function collectManualNodeGroups(nodes) {
       groups.add(group);
     }
   });
-  // 保留首次出现顺序，不再强制字典排序
-  return Array.from(groups);
+  
+  const allGroups = Array.from(groups);
+  
+  // 如果有自定义顺序，按自定义顺序排列，然后追加新出现的分组
+  if (customOrder && customOrder.length > 0) {
+    const orderedGroups = [];
+    const remaining = new Set(allGroups);
+    
+    // 先按自定义顺序添加
+    customOrder.forEach(group => {
+      if (remaining.has(group)) {
+        orderedGroups.push(group);
+        remaining.delete(group);
+      }
+    });
+    
+    // 追加新分组（保持首次出现顺序）
+    allGroups.forEach(group => {
+      if (remaining.has(group)) {
+        orderedGroups.push(group);
+      }
+    });
+    
+    return orderedGroups;
+  }
+  
+  // 默认保留首次出现顺序
+  return allGroups;
 }
 
 export function buildGroupedManualNodes(nodesToDisplay, manualNodeGroups) {

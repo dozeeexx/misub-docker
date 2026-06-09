@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useDataStore } from '../stores/useDataStore.js';
+import { useSettingsStore } from '../stores/settings.js';
 import { useToastStore } from '../stores/toast.js'; // Restored
 import { extractNodeName, extractHostAndPort } from '../lib/utils.js';
 import { pingNode } from '../utils/ping.js';
@@ -13,6 +14,7 @@ import { collectManualNodeGroups, buildGroupedManualNodes, normalizeManualNodeGr
 export function useManualNodes(markDirty) {
   const { showToast } = useToastStore();
   const dataStore = useDataStore();
+  const settingsStore = useSettingsStore();
   const { subscriptions: allSubscriptions } = storeToRefs(dataStore);
 
   // Manual Nodes are items in subscriptions that are NOT http/https
@@ -229,7 +231,10 @@ export function useManualNodes(markDirty) {
     markDirty();
   }
 
-  const manualNodeGroups = computed(() => collectManualNodeGroups(manualNodes.value));
+  const manualNodeGroups = computed(() => {
+    const customOrder = settingsStore.config.manualNodeGroupOrder || [];
+    return collectManualNodeGroups(manualNodes.value, customOrder);
+  });
 
   const groupedManualNodes = computed(() => {
     return buildGroupedManualNodes(filteredManualNodes.value, manualNodeGroups.value);
@@ -244,6 +249,16 @@ export function useManualNodes(markDirty) {
     nodesInGroup.forEach(node => {
       dataStore.updateSubscription(node.id, { ...node, group: normalizedNewName });
     });
+    
+    // 同步更新自定义分组顺序
+    const customOrder = settingsStore.config.manualNodeGroupOrder || [];
+    const index = customOrder.indexOf(normalizedOldName);
+    if (index !== -1) {
+      const newOrder = [...customOrder];
+      newOrder[index] = normalizedNewName;
+      settingsStore.updateConfig({ manualNodeGroupOrder: newOrder });
+    }
+    
     markDirty();
   }
 
@@ -257,6 +272,20 @@ export function useManualNodes(markDirty) {
       const { group, ...rest } = node;
       dataStore.updateSubscription(node.id, { ...rest, group: '' }); // Set to empty string or remove property
     });
+    
+    // 从自定义分组顺序中移除
+    const customOrder = settingsStore.config.manualNodeGroupOrder || [];
+    const newOrder = customOrder.filter(g => g !== normalizedGroupName);
+    if (newOrder.length !== customOrder.length) {
+      settingsStore.updateConfig({ manualNodeGroupOrder: newOrder });
+    }
+    
+    markDirty();
+  }
+
+  function reorderGroups(newOrder) {
+    // 保存用户自定义的分组顺序
+    settingsStore.updateConfig({ manualNodeGroupOrder: newOrder });
     markDirty();
   }
 
@@ -335,6 +364,7 @@ export function useManualNodes(markDirty) {
     reorderManualNodes, // Added
     renameGroup,
     deleteGroup,
+    reorderGroups, // New: 调整分组顺序
     setGroupFilter, // New
     batchUpdateGroup, // New
     batchDeleteNodes, // New
