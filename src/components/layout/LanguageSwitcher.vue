@@ -14,7 +14,6 @@ function handleChange(event) {
 <template>
   <label class="inline-flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-300" :title="selectLabel">
     <span class="sr-only">{{ selectLabel }}</span>
-    <span aria-hidden="true" class="text-sm">🌐</span>
     <select
       class="h-9 rounded-full border border-gray-200/80 bg-white/80 px-2.5 text-xs font-medium text-gray-700 shadow-sm outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 dark:border-white/10 dark:bg-white/[0.04] dark:text-gray-200"
       :aria-label="selectLabel"
