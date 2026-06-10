@@ -46,14 +46,17 @@ export const messages = {
       moveDown: '下移',
       previewNodes: '预览节点',
       showQrCode: '显示二维码',
-      viewLogs: '查看日志'
+      viewLogs: '查看日志',
+      refreshAll: '全部刷新'
     },
     notices: {
       defaultPasswordWarning: '安全警告：检测到您正在使用默认密码 "admin"。为了您的系统安全，请立即前往设置修改密码。',
       discardedChanges: '已放弃所有未保存的更改',
       updateAvailable: '检测到上游新版本 {version}',
       currentVersion: '当前版本为 {version}。建议在确认变更内容后安排升级。',
-      noToken: '未配置订阅组 Token，无法生成链接'
+      noToken: '未配置订阅组 Token，无法生成链接',
+      linkInvalid: '链接无效，请先完成配置',
+      copied: '已复制到剪贴板'
     },
     profiles: {
       title: '我的订阅组',
@@ -73,6 +76,28 @@ export const messages = {
       publicSwitch: '公开',
       downloadCount: '被订阅 {count} 次',
       copySubscription: '复制订阅'
+    },
+    subscriptions: {
+      title: '机场订阅',
+      subtitle: '维护机场订阅源，添加/导入后可在卡片中查看节点、流量与到期信息。',
+      unnamed: '未命名订阅',
+      qrCodeTitle: '订阅二维码',
+      deleteAllConfirmTitle: '确认清空订阅',
+      deleteAllConfirmBody: '您确定要删除所有**订阅**吗？',
+      empty: '没有机场订阅',
+      emptyDesc: '从单个机场订阅开始；如果手上有多条链接，也可以一次性批量导入。',
+      addEmpty: '添加机场订阅',
+      expired: '已过期',
+      expiresToday: '今天到期',
+      expiresInDays: '{count} 天后',
+      usedTraffic: '已用',
+      noTrafficData: '暂无流量数据',
+      nodeCountLabel: '节点数量',
+      updating: '更新中...',
+      nodeCount: '{count} 个节点',
+      updateNodeInfo: '更新节点信息',
+      visitWebsite: '访问官网',
+      website: '官网'
     },
     dashboard: {
       title: '仪表盘',
@@ -188,14 +213,17 @@ export const messages = {
       moveDown: 'Move Down',
       previewNodes: 'Preview Nodes',
       showQrCode: 'Show QR Code',
-      viewLogs: 'View Logs'
+      viewLogs: 'View Logs',
+      refreshAll: 'Refresh All'
     },
     notices: {
       defaultPasswordWarning: 'Security warning: you are using the default password "admin". For your system safety, change it in Settings immediately.',
       discardedChanges: 'Discarded all unsaved changes',
       updateAvailable: 'New upstream version detected: {version}',
       currentVersion: 'Current version: {version}. Review the changelog before upgrading.',
-      noToken: 'Profile token not configured, cannot generate link'
+      noToken: 'Profile token not configured, cannot generate link',
+      linkInvalid: 'Invalid link, finish configuration first',
+      copied: 'Copied to clipboard'
     },
     profiles: {
       title: 'My Subscriptions',
@@ -215,6 +243,28 @@ export const messages = {
       publicSwitch: 'Public',
       downloadCount: 'Subscribed {count} times',
       copySubscription: 'Copy Subscription'
+    },
+    subscriptions: {
+      title: 'Sources',
+      subtitle: 'Manage subscription sources. After adding or importing, view nodes, traffic and expiry on each card.',
+      unnamed: 'Unnamed Subscription',
+      qrCodeTitle: 'Subscription QR Code',
+      deleteAllConfirmTitle: 'Confirm Clear Subscriptions',
+      deleteAllConfirmBody: 'Are you sure you want to delete all **subscriptions**?',
+      empty: 'No subscription sources',
+      emptyDesc: 'Start with one subscription source; if you have multiple links, bulk import them at once.',
+      addEmpty: 'Add Subscription Source',
+      expired: 'Expired',
+      expiresToday: 'Expires today',
+      expiresInDays: 'In {count} days',
+      usedTraffic: 'Used',
+      noTrafficData: 'No traffic data',
+      nodeCountLabel: 'Node Count',
+      updating: 'Updating...',
+      nodeCount: '{count} nodes',
+      updateNodeInfo: 'Update node info',
+      visitWebsite: 'Visit website',
+      website: 'Website'
     },
     dashboard: {
       title: 'Dashboard',
