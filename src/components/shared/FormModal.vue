@@ -5,6 +5,7 @@
 
 <script setup>
 import { ref, watch, nextTick, computed } from 'vue';
+import { t } from '../../i18n/index.js';
 
 const props = defineProps({
   show: {
@@ -42,11 +43,11 @@ const props = defineProps({
   },
   confirmText: {
     type: String,
-    default: '确认'
+    default: ''
   },
   cancelText: {
     type: String,
-    default: '取消'
+    default: ''
   },
   confirmDisabled: {
     type: Boolean,
@@ -101,6 +102,9 @@ const contentStyle = computed(() => {
   }
   return styles;
 });
+
+const resolvedConfirmText = computed(() => props.confirmText || t('actions.confirm'));
+const resolvedCancelText = computed(() => props.cancelText || t('actions.cancel'));
 
 // 监听显示状态变化
 watch(() => props.show, async (newVal) => {
@@ -251,7 +255,7 @@ defineExpose({
                   class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-white/10 text-sm font-medium rounded-[var(--misub-radius-md)] text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.04] hover:bg-gray-50 dark:hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                   @click="handleCancel"
                 >
-                  {{ cancelText }}
+                  {{ resolvedCancelText }}
                 </button>
 
                 <button
@@ -272,7 +276,7 @@ defineExpose({
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
 
-                  {{ confirmText }}
+                  {{ resolvedConfirmText }}
                 </button>
               </div>
             </slot>

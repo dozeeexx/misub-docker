@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { describe, expect, it } from 'vitest';
 import SubscriptionPanel from '../../src/components/subscriptions/SubscriptionPanel.vue';
+import { createI18n } from '../../src/i18n/index.js';
 
 const baseProps = {
   currentPage: 1,
@@ -18,7 +19,7 @@ function mountPanel(props = {}) {
       ...props
     },
     global: {
-      plugins: [createPinia()],
+      plugins: [createPinia(), createI18n({ initialLocale: 'zh-CN' })],
       stubs: {
         Card: { props: ['misub'], template: '<article class="card-stub">{{ misub.name }}</article>' },
         PanelPagination: true,

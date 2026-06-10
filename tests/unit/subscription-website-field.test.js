@@ -3,6 +3,14 @@ import { mount } from '@vue/test-utils';
 import { useSubscriptionForms } from '../../src/composables/useSubscriptionForms.js';
 import AdvancedOptions from '../../src/components/modals/SubscriptionEditModal/AdvancedOptions.vue';
 import Card from '../../src/components/ui/Card.vue';
+import { createI18n } from '../../src/i18n/index.js';
+
+function withZhI18n(stubs = {}) {
+  return {
+    plugins: [createI18n({ initialLocale: 'zh-CN' })],
+    stubs
+  };
+}
 
 vi.mock('../../src/stores/toast.js', () => ({
   useToastStore: () => ({
@@ -32,7 +40,8 @@ describe('subscription official website field', () => {
           enableNodeCache: false,
           plusAsSpace: false
         }
-      }
+      },
+      global: withZhI18n()
     });
 
     const websiteInput = wrapper.get('#sub-edit-website');
@@ -56,11 +65,9 @@ describe('subscription official website field', () => {
           nodeCount: 0
         }
       },
-      global: {
-        stubs: {
-          Switch: { template: '<button class="switch-stub"></button>' }
-        }
-      }
+      global: withZhI18n({
+        Switch: { template: '<button class="switch-stub"></button>' }
+      })
     });
 
     const link = wrapper.get('[data-testid="subscription-website-link"]');
@@ -81,11 +88,9 @@ describe('subscription official website field', () => {
           nodeCount: 0
         }
       },
-      global: {
-        stubs: {
-          Switch: { template: '<button class="switch-stub"></button>' }
-        }
-      }
+      global: withZhI18n({
+        Switch: { template: '<button class="switch-stub"></button>' }
+      })
     });
 
     const meta = wrapper.get('[data-testid="subscription-footer-meta"]');
