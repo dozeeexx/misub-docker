@@ -11,6 +11,7 @@ import { useVersionStore } from './stores/version';
 import { storeToRefs } from 'pinia';
 import NavBar from './components/layout/NavBar.vue';
 import { detectLegacyD1 } from './lib/api.js';
+import { useI18n } from './i18n/index.js';
 
 // Lazy components
 const Login = defineAsyncComponent(() => import('./components/modals/Login.vue'));
@@ -25,6 +26,7 @@ const LegacyD1MigrationModal = defineAsyncComponent(() => import('./components/m
 const VersionChangelogModal = defineAsyncComponent(() => import('./components/modals/VersionChangelogModal.vue'));
 
 const route = useRoute();
+const { t } = useI18n();
 const themeStore = useThemeStore();
 const { theme } = storeToRefs(themeStore);
 const { initTheme } = themeStore;
@@ -107,7 +109,7 @@ const isDefaultPassword = computed(() => {
 });
 const defaultPasswordWarningMessage = computed(() => (
   sessionStore.securityWarning?.message
-  || '安全警告：检测到您正在使用默认密码 "admin"。为了您的系统安全，请立即前往设置修改密码。'
+  || t('notices.defaultPasswordWarning')
 ));
 
 onMounted(async () => {
@@ -177,7 +179,7 @@ const handleSave = async () => {
 };
 const handleDiscard = async () => {
   await dataStore.fetchData(true);
-  toastStore.showToast('已放弃所有未保存的更改');
+  toastStore.showToast(t('notices.discardedChanges'));
 };
 
 const isCustomPageFullWidth = computed(() => {
@@ -237,13 +239,13 @@ aria-live="polite"
 <div v-if="showUpdateNotice && versionReleaseInfo" class="mb-4 rounded-lg border border-amber-200/70 bg-amber-50/90 px-4 py-3 text-amber-800 shadow-sm dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
 <div class="flex items-start justify-between gap-4">
 <div class="space-y-1">
-<p class="text-sm font-semibold">检测到上游新版本 {{ versionReleaseInfo.tag_name }}</p>
-<p class="text-sm opacity-90">当前版本为 {{ currentVersion }}。建议在确认变更内容后安排升级。</p>
+<p class="text-sm font-semibold">{{ t('notices.updateAvailable', { version: versionReleaseInfo.tag_name }) }}</p>
+<p class="text-sm opacity-90">{{ t('notices.currentVersion', { version: currentVersion }) }}</p>
 <a v-if="versionReleaseInfo.html_url" :href="versionReleaseInfo.html_url" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-sm font-medium underline underline-offset-2">
-查看发布说明
+{{ t('actions.viewReleaseNotes') }}
 </a>
 </div>
-<button @click="showUpdateNotice = false" class="rounded-md px-2 py-1 text-sm hover:bg-amber-100/80 dark:hover:bg-white/10">知道了</button>
+<button @click="showUpdateNotice = false" class="rounded-md px-2 py-1 text-sm hover:bg-amber-100/80 dark:hover:bg-white/10">{{ t('actions.gotIt') }}</button>
 </div>
 </div>
 
