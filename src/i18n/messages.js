@@ -184,6 +184,26 @@ export const messages = {
         trafficUsage: '流量使用'
       }
     },
+    publicProfiles: {
+      heroTitle1: '发现',
+      heroTitle2: '优质订阅',
+      heroDescription: '浏览并获取由管理员分享的精选订阅组合，一键导入到您的客户端。',
+      badge: '精选订阅',
+      guestbook: '留言板',
+      guestbookDisabled: '留言板功能已关闭',
+      fetchFailed: '获取数据失败',
+      linkCopied: '订阅链接已复制',
+      copyFailedManual: '复制失败，请手动复制',
+      appStoreVersion: 'App Store 版',
+      stableVersion: '稳定版',
+      qrDownloaded: '二维码已下载',
+      loadFailed: '加载失败',
+      retry: '重试',
+      clientsEyebrow: '必备工具',
+      clientsTitle: '必备客户端',
+      clientsDescription: '为了获得最佳体验，请下载我们推荐的客户端软件。覆盖全平台，简单易用。',
+      download: '获取下载'
+    },
     settings: {
       title: '设置',
       loading: '正在加载设置...',
@@ -199,23 +219,6 @@ export const messages = {
         service: '服务集成',
         client: '客户端管理',
         system: '系统设置'
-      }
-    },
-    settings: {
-      title: 'Settings',
-      loading: 'Loading settings...',
-      currentModule: 'Current module',
-      saveHint: 'Remember to click Save at the bottom-right after changes',
-      saving: 'Saving...',
-      saveChanges: 'Save Changes',
-      tabs: {
-        basic: 'Basic Settings',
-        home: 'Home Settings',
-        customPage: 'Custom Public Page',
-        global: 'Global Settings',
-        service: 'Service Integrations',
-        client: 'Client Management',
-        system: 'System Settings'
       }
     },
     notFound: {
@@ -424,6 +427,43 @@ export const messages = {
         nodes: 'Total Nodes',
         profiles: 'Profiles',
         trafficUsage: 'Traffic Usage'
+      }
+    },
+    publicProfiles: {
+      heroTitle1: 'Discover',
+      heroTitle2: 'Quality Subscriptions',
+      heroDescription: 'Browse curated subscription profiles shared by the admin and import them into your client with one click.',
+      badge: 'Featured',
+      guestbook: 'Guestbook',
+      guestbookDisabled: 'Guestbook is disabled',
+      fetchFailed: 'Failed to load data',
+      linkCopied: 'Subscription link copied',
+      copyFailedManual: 'Copy failed, please copy manually',
+      appStoreVersion: 'App Store',
+      stableVersion: 'Stable',
+      qrDownloaded: 'QR code downloaded',
+      loadFailed: 'Load failed',
+      retry: 'Retry',
+      clientsEyebrow: 'Essential Tools',
+      clientsTitle: 'Essential Clients',
+      clientsDescription: 'For the best experience, download our recommended client apps. Cross-platform, simple, and easy to use.',
+      download: 'Download'
+    },
+    settings: {
+      title: 'Settings',
+      loading: 'Loading settings...',
+      currentModule: 'Current module',
+      saveHint: 'Remember to click Save at the bottom-right after changes',
+      saving: 'Saving...',
+      saveChanges: 'Save Changes',
+      tabs: {
+        basic: 'Basic Settings',
+        home: 'Home Settings',
+        customPage: 'Custom Public Page',
+        global: 'Global Settings',
+        service: 'Service Integrations',
+        client: 'Client Management',
+        system: 'System Settings'
       }
     },
     notFound: {
