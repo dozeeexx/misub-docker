@@ -37,7 +37,8 @@ export const messages = {
       import: '导入',
       export: '导出',
       bulkImport: '批量导入',
-      viewLog: '订阅日志'
+      viewLog: '订阅日志',
+      backToHome: '返回首页'
     },
     notices: {
       defaultPasswordWarning: '安全警告：检测到您正在使用默认密码 "admin"。为了您的系统安全，请立即前往设置修改密码。',
@@ -88,6 +89,11 @@ export const messages = {
         profiles: '组合订阅',
         trafficUsage: '流量使用'
       }
+    },
+    notFound: {
+      title: '页面迷失在星际中',
+      description: '抱歉，您访问的页面似乎已漂流至已知宇宙之外。',
+      loginHint: '如需登录，请访问已配置的自定义登录路径。'
     },
     common: {
       loading: '加载中...',
@@ -145,7 +151,8 @@ export const messages = {
       import: 'Import',
       export: 'Export',
       bulkImport: 'Bulk Import',
-      viewLog: 'Subscription Log'
+      viewLog: 'Subscription Log',
+      backToHome: 'Back to Home'
     },
     notices: {
       defaultPasswordWarning: 'Security warning: you are using the default password "admin". For your system safety, change it in Settings immediately.',
@@ -196,6 +203,11 @@ export const messages = {
         profiles: 'Profiles',
         trafficUsage: 'Traffic Usage'
       }
+    },
+    notFound: {
+      title: 'Page Lost in Space',
+      description: 'Sorry, the page you are looking for has drifted beyond the known universe.',
+      loginHint: 'To log in, please visit your configured custom login path.'
     },
     common: {
       loading: 'Loading...',
