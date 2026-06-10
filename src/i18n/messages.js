@@ -38,13 +38,41 @@ export const messages = {
       export: '导出',
       bulkImport: '批量导入',
       viewLog: '订阅日志',
-      backToHome: '返回首页'
+      backToHome: '返回首页',
+      clearAll: '清空',
+      manualSort: '手动排序',
+      finishSort: '完成排序',
+      moveUp: '上移',
+      moveDown: '下移',
+      previewNodes: '预览节点',
+      showQrCode: '显示二维码',
+      viewLogs: '查看日志'
     },
     notices: {
       defaultPasswordWarning: '安全警告：检测到您正在使用默认密码 "admin"。为了您的系统安全，请立即前往设置修改密码。',
       discardedChanges: '已放弃所有未保存的更改',
       updateAvailable: '检测到上游新版本 {version}',
-      currentVersion: '当前版本为 {version}。建议在确认变更内容后安排升级。'
+      currentVersion: '当前版本为 {version}。建议在确认变更内容后安排升级。',
+      noToken: '未配置订阅组 Token，无法生成链接'
+    },
+    profiles: {
+      title: '我的订阅组',
+      empty: '没有订阅组',
+      emptyDesc: '创建一个订阅组来组合你的节点吧！',
+      sortingHint: '当前为排序模式，已显示全部订阅组。使用卡片右下角的上下箭头调整顺序，完成后点击"完成排序"。',
+      deleteAllConfirmTitle: '确认清空订阅组',
+      deleteAllConfirmBody: '您确定要删除所有**订阅组**吗？此操作不可逆。',
+      qrCodeTitle: '订阅组二维码',
+      badge: '订阅组',
+      disabled: '已停用',
+      public: '已公开',
+      counts: '{subscriptions} 个订阅，{nodes} 个节点',
+      enabledStatus: '启用状态',
+      enable: '启用',
+      publicAccess: '公开访问',
+      publicSwitch: '公开',
+      downloadCount: '被订阅 {count} 次',
+      copySubscription: '复制订阅'
     },
     dashboard: {
       title: '仪表盘',
@@ -152,13 +180,41 @@ export const messages = {
       export: 'Export',
       bulkImport: 'Bulk Import',
       viewLog: 'Subscription Log',
-      backToHome: 'Back to Home'
+      backToHome: 'Back to Home',
+      clearAll: 'Clear All',
+      manualSort: 'Manual Sort',
+      finishSort: 'Finish Sort',
+      moveUp: 'Move Up',
+      moveDown: 'Move Down',
+      previewNodes: 'Preview Nodes',
+      showQrCode: 'Show QR Code',
+      viewLogs: 'View Logs'
     },
     notices: {
       defaultPasswordWarning: 'Security warning: you are using the default password "admin". For your system safety, change it in Settings immediately.',
       discardedChanges: 'Discarded all unsaved changes',
       updateAvailable: 'New upstream version detected: {version}',
-      currentVersion: 'Current version: {version}. Review the changelog before upgrading.'
+      currentVersion: 'Current version: {version}. Review the changelog before upgrading.',
+      noToken: 'Profile token not configured, cannot generate link'
+    },
+    profiles: {
+      title: 'My Subscriptions',
+      empty: 'No subscriptions',
+      emptyDesc: 'Create a subscription profile to combine your nodes!',
+      sortingHint: 'Sorting mode active. All profiles shown. Use arrow buttons at bottom-right of cards to reorder, then click "Finish Sort".',
+      deleteAllConfirmTitle: 'Confirm Clear All',
+      deleteAllConfirmBody: 'Are you sure you want to delete all **subscription profiles**? This action cannot be undone.',
+      qrCodeTitle: 'Subscription QR Code',
+      badge: 'Profile',
+      disabled: 'Disabled',
+      public: 'Public',
+      counts: '{subscriptions} subscriptions, {nodes} nodes',
+      enabledStatus: 'Enabled Status',
+      enable: 'Enable',
+      publicAccess: 'Public Access',
+      publicSwitch: 'Public',
+      downloadCount: 'Subscribed {count} times',
+      copySubscription: 'Copy Subscription'
     },
     dashboard: {
       title: 'Dashboard',
