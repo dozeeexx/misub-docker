@@ -11,12 +11,14 @@ import ManualNodeEditModal from '../components/modals/ManualNodeEditModal.vue';
 import ManualNodeDedupModal from '../components/modals/ManualNodeDedupModal.vue';
 import SubscriptionImportModal from '../components/modals/SubscriptionImportModal.vue';
 import BatchGroupModal from '../components/modals/BatchGroupModal.vue'; // Added
+import { useI18n } from '../i18n/index.js';
 
 const GroupManagementModal = defineAsyncComponent(() => import('../components/modals/GroupManagementModal.vue'));
 
 const dataStore = useDataStore();
 const { showToast } = useToastStore();
 const { markDirty } = dataStore;
+const { t } = useI18n();
 
 // Component Logic Reuse
 const isSortingNodes = ref(false);
@@ -75,13 +77,13 @@ const handleDeleteAllNodesWithCleanup = () => {
 
 const handleAutoSortNodes = () => {
   autoSortNodes();
-  showToast('已按地区排序，请手动保存', 'success');
+  showToast(t('manualNodes.sortedByRegion'), 'success');
 };
 
 const handleDeduplicateNodes = () => {
   const plan = buildDedupPlan();
   if (!plan || plan.removeCount === 0) {
-    showToast('没有发现重复的节点。', 'info');
+    showToast(t('manualNodes.noDuplicates'), 'info');
     return;
   }
   dedupPlan.value = plan;
@@ -128,17 +130,17 @@ const handleOpenGroupManagement = () => {
 
 const handleGroupRename = (oldName, newName) => {
   renameGroup(oldName, newName);
-  showToast(`分组 "${oldName}" 已重命名为 "${newName}"`, 'success');
+  showToast(t('manualNodes.groupRenamed', { oldName, newName }), 'success');
 };
 
 const handleGroupDelete = (groupName) => {
   deleteGroup(groupName);
-  showToast(`已删除分组 "${groupName}"`, 'success');
+  showToast(t('manualNodes.groupDeleted', { groupName }), 'success');
 };
 
 const handleGroupReorder = (newOrder) => {
   reorderGroups(newOrder);
-  showToast('分组顺序已更新', 'success');
+  showToast(t('manualNodes.groupOrderUpdated'), 'success');
 };
 
 </script>
@@ -186,20 +188,21 @@ const handleGroupReorder = (newOrder) => {
 
     <Modal v-model:show="showDeleteNodesModal" @confirm="handleDeleteAllNodesWithCleanup">
       <template #title>
-        <h3 class="text-lg font-bold text-red-500">确认清空节点</h3>
+        <h3 class="text-lg font-bold text-red-500">{{ t('manualNodes.deleteAllConfirmTitle') }}</h3>
       </template>
       <template #body>
-        <p class="text-sm text-gray-400">您确定要删除所有**手动节点**吗？</p>
+        <p class="text-sm text-gray-400">{{ t('manualNodes.deleteAllConfirmBody') }}</p>
       </template>
     </Modal>
 
     <Modal v-model:show="showBatchDeleteModal" @confirm="confirmBatchDelete">
       <template #title>
-        <h3 class="text-lg font-bold text-red-500">确认批量删除</h3>
+        <h3 class="text-lg font-bold text-red-500">{{ t('manualNodes.batchDeleteConfirmTitle') }}</h3>
       </template>
       <template #body>
-        <p class="text-sm text-gray-600 dark:text-gray-300">您确定要删除选中的 <span class="font-bold border-b border-red-500">{{
-          batchDeleteIds.length }}</span> 个节点吗？此操作不可恢复。</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+          {{ t('manualNodes.batchDeleteConfirmBody', { count: batchDeleteIds.length }) }}
+        </p>
       </template>
     </Modal>
 

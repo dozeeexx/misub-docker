@@ -47,7 +47,19 @@ export const messages = {
       previewNodes: '预览节点',
       showQrCode: '显示二维码',
       viewLogs: '查看日志',
-      refreshAll: '全部刷新'
+      refreshAll: '全部刷新',
+      ping: '测速',
+      pingAll: '全部测速',
+      copyLink: '复制链接',
+      bulkActions: '批量操作',
+      exitBatch: '退出批量',
+      importSubscription: '导入订阅',
+      manageGroups: '分组管理',
+      autoSort: '一键排序',
+      deduplicate: '一键去重',
+      selectAllPage: '全选本页',
+      deselectAll: '取消全选',
+      exit: '退出'
     },
     notices: {
       defaultPasswordWarning: '安全警告：检测到您正在使用默认密码 "admin"。为了您的系统安全，请立即前往设置修改密码。',
@@ -56,7 +68,8 @@ export const messages = {
       currentVersion: '当前版本为 {version}。建议在确认变更内容后安排升级。',
       noToken: '未配置订阅组 Token，无法生成链接',
       linkInvalid: '链接无效，请先完成配置',
-      copied: '已复制到剪贴板'
+      copied: '已复制到剪贴板',
+      copyFailed: '复制失败'
     },
     profiles: {
       title: '我的订阅组',
@@ -76,6 +89,34 @@ export const messages = {
       publicSwitch: '公开',
       downloadCount: '被订阅 {count} 次',
       copySubscription: '复制订阅'
+    },
+    manualNodes: {
+      title: '手动节点',
+      unnamed: '未命名节点',
+      ungrouped: '未分组',
+      allGroups: '全部',
+      searchLabel: '搜索',
+      searchPlaceholder: '搜索节点...',
+      searchResult: '搜索: "{keyword}" ({filtered}/{total})',
+      noSearchResult: '没有找到包含 “{keyword}” 的节点',
+      empty: '没有手动节点',
+      emptyDesc: '添加分享链接或单个节点。',
+      selectedCount: '已选 {count}',
+      bulkActionsLabel: '批量操作:',
+      moveToGroup: '移动所属分组...',
+      connectivityOk: '连通正常',
+      connectivityFailed: '连通失败',
+      pinging: '测速中',
+      unreachable: '不通',
+      sortedByRegion: '已按地区排序，请手动保存',
+      noDuplicates: '没有发现重复的节点。',
+      groupRenamed: '分组 "{oldName}" 已重命名为 "{newName}"',
+      groupDeleted: '已删除分组 "{groupName}"',
+      groupOrderUpdated: '分组顺序已更新',
+      deleteAllConfirmTitle: '确认清空节点',
+      deleteAllConfirmBody: '您确定要删除所有**手动节点**吗？',
+      batchDeleteConfirmTitle: '确认批量删除',
+      batchDeleteConfirmBody: '您确定要删除选中的 {count} 个节点吗？此操作不可恢复。'
     },
     subscriptions: {
       title: '机场订阅',
@@ -214,7 +255,19 @@ export const messages = {
       previewNodes: 'Preview Nodes',
       showQrCode: 'Show QR Code',
       viewLogs: 'View Logs',
-      refreshAll: 'Refresh All'
+      refreshAll: 'Refresh All',
+      ping: 'Test',
+      pingAll: 'Test All',
+      copyLink: 'Copy Link',
+      bulkActions: 'Bulk Actions',
+      exitBatch: 'Exit Bulk',
+      importSubscription: 'Import Subscription',
+      manageGroups: 'Group Management',
+      autoSort: 'Auto Sort',
+      deduplicate: 'Deduplicate',
+      selectAllPage: 'Select Page',
+      deselectAll: 'Deselect All',
+      exit: 'Exit'
     },
     notices: {
       defaultPasswordWarning: 'Security warning: you are using the default password "admin". For your system safety, change it in Settings immediately.',
@@ -223,7 +276,8 @@ export const messages = {
       currentVersion: 'Current version: {version}. Review the changelog before upgrading.',
       noToken: 'Profile token not configured, cannot generate link',
       linkInvalid: 'Invalid link, finish configuration first',
-      copied: 'Copied to clipboard'
+      copied: 'Copied to clipboard',
+      copyFailed: 'Copy failed'
     },
     profiles: {
       title: 'My Subscriptions',
@@ -243,6 +297,34 @@ export const messages = {
       publicSwitch: 'Public',
       downloadCount: 'Subscribed {count} times',
       copySubscription: 'Copy Subscription'
+    },
+    manualNodes: {
+      title: 'Manual Nodes',
+      unnamed: 'Unnamed Node',
+      ungrouped: 'Ungrouped',
+      allGroups: 'All',
+      searchLabel: 'Search',
+      searchPlaceholder: 'Search nodes...',
+      searchResult: 'Search: "{keyword}" ({filtered}/{total})',
+      noSearchResult: 'No nodes found containing “{keyword}”',
+      empty: 'No manual nodes',
+      emptyDesc: 'Add share links or individual nodes.',
+      selectedCount: '{count} selected',
+      bulkActionsLabel: 'Bulk actions:',
+      moveToGroup: 'Move to group...',
+      connectivityOk: 'Connection OK',
+      connectivityFailed: 'Connection failed',
+      pinging: 'Testing',
+      unreachable: 'Unreachable',
+      sortedByRegion: 'Sorted by region. Save manually to apply.',
+      noDuplicates: 'No duplicate nodes found.',
+      groupRenamed: 'Group "{oldName}" renamed to "{newName}"',
+      groupDeleted: 'Deleted group "{groupName}"',
+      groupOrderUpdated: 'Group order updated',
+      deleteAllConfirmTitle: 'Confirm Clear Nodes',
+      deleteAllConfirmBody: 'Are you sure you want to delete all **manual nodes**?',
+      batchDeleteConfirmTitle: 'Confirm Bulk Delete',
+      batchDeleteConfirmBody: 'Are you sure you want to delete the selected {count} nodes? This action cannot be undone.'
     },
     subscriptions: {
       title: 'Sources',
