@@ -1,5 +1,8 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
+import { useI18n } from '@/i18n/index.js';
+
+const { t } = useI18n();
 
 const props = defineProps({
   formattedTotalRemainingTraffic: {
@@ -72,7 +75,7 @@ const navigate = (path, query = {}) => {
       @click="navigate('/dashboard/subscriptions', hasTrafficWarning ? { status: 'low-traffic' } : {})"
     >
       <div class="flex items-center justify-between mb-2">
-        <h3 class="text-xs font-medium text-gray-500 uppercase">剩余流量</h3>
+        <h3 class="text-xs font-medium text-gray-500 uppercase">{{ t('dashboard.remainingTraffic') }}</h3>
         <span class="p-1.5 misub-radius-md" :class="hasTrafficWarning ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
         </span>
@@ -89,7 +92,7 @@ const navigate = (path, query = {}) => {
         ></div>
       </div>
       <p class="text-xs mt-1" :class="hasTrafficWarning ? 'text-amber-700 dark:text-amber-300' : 'text-gray-400'">
-        {{ hasTrafficWarning ? '流量偏低' : `已用 ${trafficStats.used} / ${trafficStats.total}` }}
+        {{ hasTrafficWarning ? t('dashboard.trafficLow') : t('dashboard.trafficUsed', { used: trafficStats.used, total: trafficStats.total }) }}
       </p>
     </button>
 
@@ -101,7 +104,7 @@ const navigate = (path, query = {}) => {
       @click="navigate('/dashboard/subscriptions', hasSubscriptionWarning ? { status: subscriptionsCount === 0 ? 'missing' : 'disabled' } : {})"
     >
       <div class="flex items-center justify-between mb-2">
-        <h3 class="text-xs font-medium text-gray-500 uppercase">活跃订阅</h3>
+        <h3 class="text-xs font-medium text-gray-500 uppercase">{{ t('dashboard.activeSubscriptions') }}</h3>
         <span class="p-1.5 misub-radius-md" :class="hasSubscriptionWarning ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
         </span>
@@ -112,7 +115,7 @@ const navigate = (path, query = {}) => {
       </p>
       <p class="text-xs mt-2 flex items-center gap-1" :class="hasSubscriptionWarning ? 'text-amber-700 dark:text-amber-300' : 'text-green-600 dark:text-green-400'">
         <span class="inline-block w-2 h-2 rounded-full" :class="hasSubscriptionWarning ? 'bg-amber-500' : 'bg-green-500 animate-ping-slow'"></span>
-        <span>{{ hasSubscriptionWarning ? '需要启用订阅' : '正常运行' }}</span>
+        <span>{{ hasSubscriptionWarning ? t('dashboard.needsEnableSubscriptions') : t('dashboard.normalRunning') }}</span>
       </p>
     </button>
 
@@ -124,14 +127,14 @@ const navigate = (path, query = {}) => {
       @click="navigate('/dashboard/subscriptions', hasNodeWarning ? { status: 'zero-nodes' } : {})"
     >
       <div class="flex items-center justify-between mb-2">
-        <h3 class="text-xs font-medium text-gray-500 uppercase">节点总数</h3>
+        <h3 class="text-xs font-medium text-gray-500 uppercase">{{ t('dashboard.totalNodes') }}</h3>
         <span class="p-1.5 misub-radius-md" :class="hasNodeWarning ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </span>
       </div>
       <p class="text-2xl font-semibold text-gray-900 dark:text-white tracking-tight leading-none">{{ totalNodesCount }}</p>
       <p class="text-xs mt-2" :class="hasNodeWarning ? 'text-amber-700 dark:text-amber-300' : 'text-gray-400'">
-        {{ hasNodeWarning ? '需要刷新节点' : `来自 ${subscriptionsCount} 个订阅源` }}
+        {{ hasNodeWarning ? t('dashboard.needsRefreshNodes') : t('dashboard.fromSources', { count: subscriptionsCount }) }}
       </p>
     </button>
 
@@ -143,14 +146,14 @@ const navigate = (path, query = {}) => {
       @click="navigate('/dashboard/subscriptions', hasProfileWarning ? { focus: 'profiles' } : {})"
     >
       <div class="flex items-center justify-between mb-2">
-        <h3 class="text-xs font-medium text-gray-500 uppercase">组合订阅</h3>
+        <h3 class="text-xs font-medium text-gray-500 uppercase">{{ t('dashboard.combinedSubscriptions') }}</h3>
         <span class="p-1.5 misub-radius-md" :class="hasProfileWarning ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
         </span>
       </div>
       <p class="text-2xl font-semibold text-gray-900 dark:text-white tracking-tight leading-none">{{ activeProfilesCount }}</p>
       <p class="text-xs mt-2" :class="hasProfileWarning ? 'text-amber-700 dark:text-amber-300' : 'text-gray-400'">
-        {{ hasProfileWarning ? '需要创建组合' : `已发布 ${activeProfilesCount} 个组合` }}
+        {{ hasProfileWarning ? t('dashboard.needsCreateProfile') : t('dashboard.publishedProfiles', { count: activeProfilesCount }) }}
       </p>
     </button>
   </div>
