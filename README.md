@@ -497,7 +497,7 @@ MiSub 提供 `/cron` 接口用于外部定时服务触发订阅刷新，适合 C
 
 ## 🙏 致谢
 
-感谢赞助商 [双鸭山](https://sponsorship.forztn.com/github/imzyb/MiSub) 对项目服务器的支持，感谢。
+感谢赞助商 [ForZTN](https://sponsorship.forztn.com/github/imzyb/MiSub) 对项目服务器的支持，感谢。
 
 本项目基于 [CF-Workers-SUB](https://github.com/cmliu/CF-Workers-SUB) 项目发展而来,感谢 CM 大佬的开源贡献。
 
