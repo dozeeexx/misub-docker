@@ -15,8 +15,10 @@ import Input from '../../ui/Input.vue';
 import Switch from '../../ui/Switch.vue';
 import { watch, computed } from 'vue';
 import { useToastStore } from '../../../stores/toast';
+import { useI18n } from '../../../i18n/index.js';
 
 const { showToast } = useToastStore();
+const { t } = useI18n();
 
 // 系统保留路径列表，这些路径会与前端路由或后端 API 冲突
 const RESERVED_PATHS = [
@@ -35,12 +37,12 @@ const customLoginPathError = computed(() => {
   if (!value) return '';
 
   if (/[^a-zA-Z0-9-_\/]/.test(value)) {
-    return '路径仅允许字母、数字、下划线、中划线和斜杠';
+    return t('settings.reservedPathChars');
   }
 
   const pathSegment = getPathSegment(value);
   if (RESERVED_PATHS.includes(pathSegment)) {
-    return `"/${pathSegment}" 是系统保留路径，不可用作自定义管理后台路径`;
+    return t('settings.reservedPathCustomLogin', { path: pathSegment });
   }
 
   return '';
@@ -51,7 +53,7 @@ const myTokenError = computed(() => {
   if (!value) return '';
 
   const pathSegment = getPathSegment(value);
-  return RESERVED_PATHS.includes(pathSegment) ? '系统保留路径不可用作自定义订阅 Token' : '';
+  return RESERVED_PATHS.includes(pathSegment) ? t('settings.reservedPathSubscriptionToken') : '';
 });
 
 const profileTokenError = computed(() => {
@@ -59,7 +61,7 @@ const profileTokenError = computed(() => {
   if (!value) return '';
 
   const pathSegment = getPathSegment(value);
-  return RESERVED_PATHS.includes(pathSegment) ? '系统保留路径不可用作订阅组分享 Token' : '';
+  return RESERVED_PATHS.includes(pathSegment) ? t('settings.reservedPathProfileToken') : '';
 });
 
 // 监听自定义登录路径，保留输入并通过提示引导修正
@@ -71,7 +73,7 @@ watch(() => props.settings.customLoginPath, (val) => {
   
   if (sanitized !== val) {
     props.settings.customLoginPath = sanitized;
-    showToast('路径仅允许字母、数字、下划线、中划线', 'warning');
+    showToast(t('settings.reservedPathCharsToast'), 'warning');
     return;
   }
 });
@@ -80,7 +82,7 @@ watch(() => props.settings.mytoken, (val) => {
   if (!val) return;
   const pathSegment = getPathSegment(val);
   if (RESERVED_PATHS.includes(pathSegment)) {
-    showToast('系统保留路径不可用作自定义订阅Token', 'error');
+    showToast(t('settings.reservedPathSubscriptionToken'), 'error');
   }
 });
 
@@ -88,7 +90,7 @@ watch(() => props.settings.profileToken, (val) => {
   if (!val) return;
   const pathSegment = getPathSegment(val);
   if (RESERVED_PATHS.includes(pathSegment)) {
-    showToast('系统保留路径不可用作订阅组分享Token', 'error');
+    showToast(t('settings.reservedPathProfileToken'), 'error');
   }
 });
 
@@ -99,7 +101,7 @@ watch(() => props.settings.profileToken, (val) => {
   <div class="space-y-8">
     <!-- 订阅基本信息配置 -->
     <div class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
-      <SectionHeader title="订阅配置" description="统一管理订阅文件名、订阅 Token 和订阅组分享链接规则。" tone="indigo">
+      <SectionHeader :title="t('settings.subscriptionConfigTitle')" :description="t('settings.subscriptionConfigDesc')" tone="indigo">
         <template #icon>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -109,14 +111,14 @@ watch(() => props.settings.profileToken, (val) => {
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div>
           <Input 
-            label="自定义订阅文件名"
+            :label="t('settings.customFileName')"
             v-model="settings.FileName"
             class="misub-radius-lg"
           />
         </div>
         <div>
           <Input 
-            label="自定义订阅Token"
+            :label="t('settings.customToken')"
             v-model="settings.mytoken"
             :error="myTokenError"
             class="misub-radius-lg"
@@ -124,9 +126,9 @@ watch(() => props.settings.profileToken, (val) => {
         </div>
         <div>
           <Input 
-            label="订阅组分享Token"
+            :label="t('settings.profileToken')"
             v-model="settings.profileToken"
-            placeholder="用于生成订阅组链接专用Token"
+            :placeholder="t('settings.profileTokenPlaceholder')"
             :error="profileTokenError"
             class="misub-radius-lg"
           />
@@ -136,7 +138,7 @@ watch(() => props.settings.profileToken, (val) => {
 
     <!-- 功能开关区域 -->
     <div class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
-      <SectionHeader title="功能控制" description="统一管理自动更新、访问日志、流量节点和访问控制开关。" tone="green">
+      <SectionHeader :title="t('settings.featureControlTitle')" :description="t('settings.featureControlDesc')" tone="green">
         <template #icon>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -149,8 +151,8 @@ watch(() => props.settings.profileToken, (val) => {
           class="p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 misub-radius-lg">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">订阅自动更新间隔</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">页面打开时自动刷新订阅节点数和流量</p>
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ t('settings.autoUpdateInterval') }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ t('settings.autoUpdateDesc') }}</p>
             </div>
           </div>
           <div class="mt-3 flex flex-wrap gap-3">
@@ -159,18 +161,18 @@ watch(() => props.settings.profileToken, (val) => {
                 type="number"
                 :value="![0, 30, 60, 120].includes(settings.autoUpdateInterval) ? settings.autoUpdateInterval : ''"
                 @input="e => { const v = parseInt(e.target.value); if (v >= 5) settings.autoUpdateInterval = v; }"
-                placeholder="自定义"
+                :placeholder="t('settings.customInterval')"
                 min="5"
                 class="w-24 px-2.5 py-2 text-sm bg-white/70 dark:bg-black/20 border border-gray-200/80 dark:border-white/10 misub-radius-md text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 outline-none transition-all"
               >
-              <span class="text-xs text-gray-500 dark:text-gray-400">分钟</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('settings.minutes') }}</span>
             </div>
-            <span class="text-xs text-gray-400 dark:text-gray-500 self-center">快捷选择</span>
+            <span class="text-xs text-gray-400 dark:text-gray-500 self-center">{{ t('settings.quickSelect') }}</span>
             <button
               v-for="option in [
-                { value: 0, label: '禁用' },
-                { value: 30, label: '30分钟' },
-                { value: 60, label: '1小时' }
+                { value: 0, label: t('settings.disabledOption') },
+                { value: 30, label: t('settings.option30Minutes') },
+                { value: 60, label: t('settings.option1Hour') }
               ]"
               :key="option.value"
               @click="settings.autoUpdateInterval = option.value"
@@ -186,7 +188,7 @@ watch(() => props.settings.profileToken, (val) => {
             </button>
           </div>
           <p v-if="settings.autoUpdateInterval === 0" class="text-xs text-amber-600 dark:text-amber-400 mt-2">
-            ⚠️ 自动更新已禁用，订阅信息需手动刷新
+            {{ t('settings.autoUpdateDisabledHint') }}
           </p>
         </div>
 
@@ -194,10 +196,10 @@ watch(() => props.settings.profileToken, (val) => {
         <div
           class="flex items-center justify-between p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 misub-radius-lg">
           <div>
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-200">开启访问日志 & 计数</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">记录订阅访问并统计流量与IP</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ t('settings.accessLogTitle') }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ t('settings.accessLogDesc') }}</p>
             <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
-              ⚠️ 默认使用轻量持久化模式以节省 Cloudflare 免费版 KV 配额，日志会自动去重并限流，频繁刷新不会完整落库。
+              {{ t('settings.accessLogQuotaHint') }}
             </p>
           </div>
           <Switch 
@@ -209,15 +211,15 @@ watch(() => props.settings.profileToken, (val) => {
           v-if="settings.enableAccessLog"
           class="p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 misub-radius-lg space-y-2">
           <div>
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-200">访问日志持久化模式</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">免费版建议保持轻量模式，仅在需要完整审计时再切到完整模式。</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ t('settings.accessLogMode') }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ t('settings.accessLogModeDesc') }}</p>
           </div>
           <select
             v-model="settings.accessLogPersistenceMode"
             class="block w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
           >
-            <option value="light">轻量持久化（推荐）</option>
-            <option value="full">完整持久化</option>
+            <option value="light">{{ t('settings.accessLogLight') }}</option>
+            <option value="full">{{ t('settings.accessLogFull') }}</option>
           </select>
         </div>
 
@@ -225,8 +227,8 @@ watch(() => props.settings.profileToken, (val) => {
         <div
           class="flex items-center justify-between p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 misub-radius-lg">
           <div>
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-200">显示流量统计节点</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">在订阅中生成虚拟节点显示剩余流量</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ t('settings.trafficNodeTitle') }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ t('settings.trafficNodeDesc') }}</p>
           </div>
           <Switch 
             v-model="settings.enableTrafficNode"
