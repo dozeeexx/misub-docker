@@ -184,6 +184,40 @@ export const messages = {
         trafficUsage: '流量使用'
       }
     },
+    settings: {
+      title: '设置',
+      loading: '正在加载设置...',
+      currentModule: '当前模块',
+      saveHint: '修改后记得点击右下角保存',
+      saving: '保存中...',
+      saveChanges: '保存修改',
+      tabs: {
+        basic: '基础设置',
+        home: '首页设置',
+        customPage: '自定义公开页',
+        global: '全局设置',
+        service: '服务集成',
+        client: '客户端管理',
+        system: '系统设置'
+      }
+    },
+    settings: {
+      title: 'Settings',
+      loading: 'Loading settings...',
+      currentModule: 'Current module',
+      saveHint: 'Remember to click Save at the bottom-right after changes',
+      saving: 'Saving...',
+      saveChanges: 'Save Changes',
+      tabs: {
+        basic: 'Basic Settings',
+        home: 'Home Settings',
+        customPage: 'Custom Public Page',
+        global: 'Global Settings',
+        service: 'Service Integrations',
+        client: 'Client Management',
+        system: 'System Settings'
+      }
+    },
     notFound: {
       title: '页面迷失在星际中',
       description: '抱歉，您访问的页面似乎已漂流至已知宇宙之外。',
