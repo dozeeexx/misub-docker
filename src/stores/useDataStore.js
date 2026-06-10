@@ -7,6 +7,7 @@ import { createStorageCache } from '../utils/cache-helper.js';
 import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
 import { TIMING } from '../constants/timing.js';
 import { api } from '../lib/http.js';
+import { t } from '../i18n/index.js';
 
 const isDev = import.meta.env.DEV;
 
@@ -95,7 +96,7 @@ export const useDataStore = defineStore('data', () => {
 
         } catch (error) {
             console.error('Failed to fetch data:', error);
-            showToast('获取数据失败: ' + error.message, 'error');
+            showToast(t('store.fetchDataFailed', { message: error.message }), 'error');
             throw error;
         } finally {
             isLoading.value = false;
@@ -104,7 +105,7 @@ export const useDataStore = defineStore('data', () => {
 
     async function saveData() {
         if (isLoading.value) {
-            showToast('操作过于频繁，请稍候...', 'warning');
+            showToast(t('store.tooFrequent'), 'warning');
             return;
         }
 
@@ -133,7 +134,7 @@ export const useDataStore = defineStore('data', () => {
             const result = await api.post('/api/misubs', payload);
 
             if (!result.success) {
-                throw new Error(result.message || '保存失败');
+                throw new Error(result.message || t('store.saveFailed'));
             }
 
             // Update local state with backend response (Source of Truth)
@@ -144,7 +145,7 @@ export const useDataStore = defineStore('data', () => {
 
             updateSnapshot();
 
-            showToast('数据已保存', 'success');
+            showToast(t('store.dataSaved'), 'success');
             lastUpdated.value = new Date();
             clearDirty();
             saveState.value = 'success';
@@ -169,7 +170,7 @@ export const useDataStore = defineStore('data', () => {
 
         } catch (error) {
             console.error('[Store] Failed to save data:', error);
-            showToast('保存数据失败: ' + error.message, 'error');
+            showToast(t('store.saveDataFailed', { message: error.message }), 'error');
             saveState.value = 'idle';
             throw error;
         } finally {
@@ -183,15 +184,15 @@ export const useDataStore = defineStore('data', () => {
             const result = await api.post('/api/settings', newSettings);
 
             if (!result.success) {
-                throw new Error(result.message || '保存设置失败');
+                throw new Error(result.message || t('store.saveSettingsFailed'));
             }
 
             settingsStore.updateConfig(newSettings);
-            showToast('设置已更新', 'success');
+            showToast(t('store.settingsUpdated'), 'success');
 
         } catch (error) {
             console.error('Failed to save settings:', error);
-            showToast('保存设置失败: ' + error.message, 'error');
+            showToast(t('store.saveSettingsFailedWithMessage', { message: error.message }), 'error');
             throw error;
         } finally {
             editorStore.setLoading(false);
@@ -210,15 +211,15 @@ export const useDataStore = defineStore('data', () => {
         try {
             const result = await api.post('/api/rule_templates', { templates: items });
             if (!result.success) {
-                throw new Error(result.message || '保存自定义规则模板失败');
+                throw new Error(result.message || t('store.saveRuleTemplatesFailed'));
             }
             ruleTemplates.value = Array.isArray(result.data) ? result.data : [];
             lastSavedData.ruleTemplates = JSON.parse(JSON.stringify(ruleTemplates.value));
-            showToast('自定义规则模板已保存', 'success');
+            showToast(t('store.ruleTemplatesSaved'), 'success');
             return ruleTemplates.value;
         } catch (error) {
             console.error('Failed to save rule templates:', error);
-            showToast('保存自定义规则模板失败: ' + error.message, 'error');
+            showToast(t('store.saveRuleTemplatesFailedWithMessage', { message: error.message }), 'error');
             throw error;
         } finally {
             editorStore.setLoading(false);

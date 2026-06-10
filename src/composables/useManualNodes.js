@@ -10,6 +10,7 @@ import { filterManualNodes, isManualNodeEntry } from './manual-nodes/filters.js'
 import { buildDedupPlan as buildDedupPlanCore } from './manual-nodes/dedup.js';
 import { buildAutoSortedSubscriptions } from './manual-nodes/sorting.js';
 import { collectManualNodeGroups, buildGroupedManualNodes, normalizeManualNodeGroupName } from './manual-nodes/groups.js';
+import { t } from '../i18n/index.js';
 
 export function useManualNodes(markDirty) {
   const { showToast } = useToastStore();
@@ -84,7 +85,7 @@ export function useManualNodes(markDirty) {
         dataStore.updateSubscription(id, updates);
       });
       markDirty();
-      showToast(`已将 ${updates.length} 个节点移动到分组 ${normalizedGroupName || '默认'}`, 'success');
+      showToast(t('manualNodes.movedToGroup', { count: updates.length, group: normalizedGroupName || t('manualNodes.defaultGroup') }), 'success');
     }
   }
 
@@ -104,7 +105,7 @@ export function useManualNodes(markDirty) {
     }
 
     markDirty();
-    showToast(`已删除 ${nodeIds.length} 个节点`, 'success');
+    showToast(t('manualNodes.deletedCount', { count: nodeIds.length }), 'success');
   }
 
   function addNode(node) {
@@ -147,7 +148,7 @@ export function useManualNodes(markDirty) {
 
     // 如果没有节点，提示并返回
     if (idsToRemove.length === 0) {
-      showToast('没有可删除的节点', 'info');
+      showToast(t('manualNodes.noNodesToDelete'), 'info');
       return;
     }
 
@@ -157,7 +158,7 @@ export function useManualNodes(markDirty) {
 
     manualNodesCurrentPage.value = 1;
     markDirty();
-    showToast(`已清空 ${idsToRemove.length} 个节点`, 'success');
+    showToast(t('manualNodes.clearedCount', { count: idsToRemove.length }), 'success');
   }
 
   function addNodesFromBulk(nodes, groupName = '') {
@@ -175,12 +176,12 @@ export function useManualNodes(markDirty) {
 
   function applyDedupPlan(plan) {
     if (!plan || !plan.removeNodes || plan.removeNodes.length === 0) {
-      showToast('没有发现重复的节点。', 'info');
+      showToast(t('manualNodes.noDuplicates'), 'info');
       return;
     }
 
     plan.removeNodes.forEach(node => dataStore.removeSubscription(node.id));
-    showToast(`成功移除 ${plan.removeNodes.length} 个重复节点，请记得保存。`, 'success');
+    showToast(t('manualNodes.removedDuplicates', { count: plan.removeNodes.length }), 'success');
     markDirty();
     manualNodesCurrentPage.value = 1;
   }
@@ -300,7 +301,7 @@ export function useManualNodes(markDirty) {
   
       const { host, port } = extractHostAndPort(node.url);
       if (!host || !port) {
-          pingResults.value[nodeId] = { status: 'error', latency: -1, message: '解析地址失败' };
+          pingResults.value[nodeId] = { status: 'error', latency: -1, message: t('manualNodes.parseAddressFailed') };
           return;
       }
   
@@ -323,7 +324,7 @@ export function useManualNodes(markDirty) {
       const nodesToTest = enabledManualNodes.value.map(n => n.id);
       if (nodesToTest.length === 0) return;
       
-      showToast(`开始测速 ${nodesToTest.length} 个节点...`, 'info');
+      showToast(t('manualNodes.pingStarted', { count: nodesToTest.length }), 'info');
       
       // 控制并发数 (比如最大 10 并发)
       const CONCURRENCY = 10;
@@ -338,7 +339,7 @@ export function useManualNodes(markDirty) {
       });
       
       await Promise.allSettled(workers);
-      showToast(`已完成 ${nodesToTest.length} 个节点的连通性测试`, 'success');
+      showToast(t('manualNodes.pingCompleted', { count: nodesToTest.length }), 'success');
   }
 
   return {

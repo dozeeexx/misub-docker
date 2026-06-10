@@ -6,6 +6,7 @@ import { fetchInitialData, login as apiLogin, fetchPublicConfig } from '../lib/a
 import { api } from '../lib/http.js';
 import { handleError } from '../utils/errorHandler.js';
 import { useDataStore } from './useDataStore';
+import { t } from '../i18n/index.js';
 
 export const useSessionStore = defineStore('session', () => {
   const sessionState = ref('loading'); // loading, loggedIn, loggedOut
@@ -66,7 +67,7 @@ export const useSessionStore = defineStore('session', () => {
       } else {
         // Network or other error, still show logged out
         console.error("Session check failed:", dataResult.error);
-        handleError(new Error(dataResult.error || '会话检查失败'), '会话检查', {
+        handleError(new Error(dataResult.error || t('settings.sessionCheckFailed')), t('settings.sessionCheckContext'), {
           errorType: dataResult.errorType
         });
         sessionState.value = 'loggedOut';
@@ -82,7 +83,7 @@ export const useSessionStore = defineStore('session', () => {
       // 登录成功后跳转到仪表盘
       router.push({ path: '/dashboard' });
     } else {
-      throw new Error(result.error || '登录失败');
+      throw new Error(result.error || t('settings.loginFailed'));
     }
   }
 

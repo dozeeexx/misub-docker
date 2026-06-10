@@ -1,4 +1,5 @@
 import { NODE_PROTOCOL_PREFIXES } from '@/constants/nodeProtocols.js';
+import { t } from '@/i18n/index.js';
 
 /**
  * 验证工具函数
@@ -52,7 +53,7 @@ export function isValidEmail(email) {
  */
 export function validatePasswordStrength(password) {
     if (!password) {
-        return { score: 0, message: '密码不能为空', suggestions: ['请输入密码'] };
+        return { score: 0, message: t('validation.passwordRequired'), suggestions: [t('validation.enterPassword')] };
     }
 
     let score = 0;
@@ -62,44 +63,44 @@ export function validatePasswordStrength(password) {
     if (password.length >= 8) {
         score += 1;
     } else {
-        suggestions.push('密码长度至少8位');
+        suggestions.push(t('validation.passwordMinLength'));
     }
 
     // 包含小写字母
     if (/[a-z]/.test(password)) {
         score += 1;
     } else {
-        suggestions.push('包含小写字母');
+        suggestions.push(t('validation.includeLowercase'));
     }
 
     // 包含大写字母
     if (/[A-Z]/.test(password)) {
         score += 1;
     } else {
-        suggestions.push('包含大写字母');
+        suggestions.push(t('validation.includeUppercase'));
     }
 
     // 包含数字
     if (/\d/.test(password)) {
         score += 1;
     } else {
-        suggestions.push('包含数字');
+        suggestions.push(t('validation.includeNumber'));
     }
 
     // 包含特殊字符
     if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
         score += 1;
     } else {
-        suggestions.push('包含特殊字符');
+        suggestions.push(t('validation.includeSpecial'));
     }
 
     let message = '';
     if (score <= 2) {
-        message = '密码强度弱';
+        message = t('validation.passwordWeak');
     } else if (score <= 4) {
-        message = '密码强度中等';
+        message = t('validation.passwordMedium');
     } else {
-        message = '密码强度强';
+        message = t('validation.passwordStrong');
     }
 
     return { score, message, suggestions };

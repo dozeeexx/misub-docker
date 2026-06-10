@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { t } from '@/i18n/index.js';
 
 const props = defineProps({
   modelValue: {
@@ -12,7 +13,7 @@ const props = defineProps({
   },
   placeholder: {
     type: String,
-    default: '选择或输入分组...'
+    default: () => t('common.groupPlaceholder')
   }
 });
 
@@ -171,7 +172,7 @@ onUnmounted(() => {
             class="w-full text-left pl-10 pr-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 block transition-colors"
             @click="selectGroup(modelValue)"
           >
-            创建新分组 "{{ modelValue }}"
+            {{ t('common.createGroup', { name: modelValue }) }}
           </button>
           <button
             v-for="group in filteredGroups"

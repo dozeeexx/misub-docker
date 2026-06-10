@@ -1,5 +1,6 @@
 import { useToastStore } from '../stores/toast.js';
 import { api } from '../lib/http.js';
+import { t } from '../i18n/index.js';
 
 /**
  * 备份和恢复逻辑 composable
@@ -32,14 +33,14 @@ export function useBackupLogic() {
         try {
             const result = await api.post('/api/backup/export', { scope });
             if (!result?.success || !result.exportData) {
-                throw new Error(result?.message || '导出失败');
+                throw new Error(result?.message || t('backup.exportFailed'));
             }
             const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
             downloadJson(result.exportData, `misub-backup-${result.exportData.scope || scope}-${timestamp}.json`);
-            showToast('备份已成功导出', 'success');
+            showToast(t('backup.exportSuccess'), 'success');
         } catch (error) {
             console.error('Backup export failed:', error);
-            showToast('备份导出失败: ' + error.message, 'error');
+            showToast(t('backup.exportFailedWithMessage', { message: error.message }), 'error');
         }
     };
 
@@ -60,18 +61,18 @@ export function useBackupLogic() {
                 try {
                     const data = JSON.parse(e.target.result);
                     const scope = data?.scope || 'dataOnly';
-                    const scopeLabel = scope === 'dataAndSettings' ? '数据 + 设置' : '仅数据';
-                    const message = `确定要从备份中恢复吗？\n\n备份范围：${scopeLabel}\n恢复会覆盖 MiSub 对应的数据集合，但不会清空整个 KV/D1。`;
+                    const scopeLabel = scope === 'dataAndSettings' ? t('backup.scopeDataAndSettings') : t('backup.scopeDataOnly');
+                    const message = t('backup.restoreConfirm', { scope: scopeLabel });
                     if (!confirm(message)) return;
 
                     const result = await api.post('/api/backup/restore', { payload: data, scope });
                     if (!result?.success) {
-                        throw new Error(result?.message || '恢复失败');
+                        throw new Error(result?.message || t('backup.restoreFailed'));
                     }
-                    showToast('备份已恢复，请刷新页面查看最新数据', 'success');
+                    showToast(t('backup.restoreSuccess'), 'success');
                     setTimeout(() => window.location.reload(), 800);
                 } catch (err) {
-                    showToast('导入失败: ' + err.message, 'error');
+                    showToast(t('backup.importFailedWithMessage', { message: err.message }), 'error');
                 }
             };
             reader.readAsText(file);
