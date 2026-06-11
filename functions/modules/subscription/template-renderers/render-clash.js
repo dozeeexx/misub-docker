@@ -67,6 +67,10 @@ function toClashRuleProviderUrl(sourceUrl) {
     try {
         const url = new URL(sourceUrl);
         if (!/raw\.githubusercontent\.com$/i.test(url.hostname)) return sourceUrl;
+        const pathParts = url.pathname.split('/').filter(Boolean);
+        const owner = pathParts[0] || '';
+        const repo = pathParts[1] || '';
+        if (owner.toLowerCase() !== 'acl4ssr' || repo.toLowerCase() !== 'acl4ssr') return sourceUrl;
         if (!/\/Clash\/.*\.(list|txt)$/i.test(url.pathname)) return sourceUrl;
 
         const fileName = url.pathname.split('/').pop()?.replace(/\.(list|txt)$/i, '') || '';

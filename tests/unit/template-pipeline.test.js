@@ -488,6 +488,31 @@ custom_proxy_group=📥 下载服务\`select\`[]🚀 节点选择\`[]DIRECT
         expect(parsed.rules).toContain('RULE-SET,download_0,📥 下载服务');
     });
 
+    it('keeps non-ACL4SSR raw GitHub rule URLs unchanged', () => {
+        const rendered = renderClashFromIniTemplate(`
+[custom]
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Apple.list
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Microsoft.list
+ruleset=🐟 漏网之鱼,[]FINAL
+custom_proxy_group=🚀 节点选择\`select\`[]DIRECT\`.*
+`, {
+            nodeList: 'trojan://password@1.2.3.4:443#HK-01',
+            targetFormat: 'clash'
+        });
+
+        const parsed = yaml.load(rendered);
+        const providerUrls = Object.values(parsed['rule-providers'] || {}).map(provider => provider.url);
+
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Apple.list');
+        expect(providerUrls).toContain('https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Microsoft.list');
+        expect(providerUrls).not.toContain('https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Providers/Apple.yaml');
+        expect(providerUrls).not.toContain('https://raw.githubusercontent.com/szkane/ClashRuleSet/main/Clash/Providers/Ruleset/Microsoft.yaml');
+        expect(Object.values(parsed['rule-providers'] || {})).toEqual(expect.arrayContaining([
+            expect.objectContaining({ format: 'text', path: './ruleset/apple_0.list' }),
+            expect.objectContaining({ format: 'text', path: './ruleset/microsoft_1.list' })
+        ]));
+    });
+
     it('uses short ACL4SSR file names as rule-provider name hints instead of rs fallback names', () => {
         const rendered = renderClashFromIniTemplate(`
 [custom]
