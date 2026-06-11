@@ -198,7 +198,7 @@ const isCustomPageFullWidth = computed(() => {
     <Header v-else-if="showLegacyHeader" :is-logged-in="isLoggedIn" :hide-branding="shouldHidePublicBranding" @logout="logout" />
 
     <main :class="[
-      isCustomPageFullWidth ? 'grow w-full' : 'grow w-full py-6 pb-24 md:pb-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8',
+      isCustomPageFullWidth ? 'grow w-full min-h-[100dvh]' : 'grow w-full py-6 pb-24 md:pb-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8',
       {
         'flex items-center justify-center': shouldCenterMain,
         'ios-header-padding': showLegacyHeader

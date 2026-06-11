@@ -77,6 +77,25 @@ describe('CustomPublicRenderer iframe mode', () => {
     expect(iframe.attributes('allowfullscreen')).toBeUndefined();
   });
 
+  it('uses dynamic viewport height by default for immersive iframe pages', () => {
+    const wrapper = mountRenderer({
+      props: {
+        content: '',
+        css: '',
+        config: {
+          customPage: {
+            type: 'iframe-srcdoc'
+          }
+        }
+      }
+    });
+
+    const iframe = wrapper.find('iframe');
+    expect(iframe.exists()).toBe(true);
+    expect(iframe.classes()).toContain('iframe-immersive-default');
+    expect(iframe.attributes('style')).toContain('width: 100%');
+  });
+
   it('blocks non-http iframe urls', () => {
     const wrapper = mountRenderer({
       props: {

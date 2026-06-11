@@ -79,9 +79,10 @@ const iframeHostStyle = computed(() => ({
 }));
 const iframeStyle = computed(() => ({
   width: '100%',
-  height: customPageConfig.value.iframeHeight || '100vh',
+  height: customPageConfig.value.iframeHeight || undefined,
   borderRadius: customPageConfig.value.iframeRadius || undefined
 }));
+const iframeUsesDefaultViewportHeight = computed(() => !customPageConfig.value.iframeHeight);
 
 const parsedSource = computed(() => parseCustomPageSource(props.content, props.css));
 const escapeHtml = (value) => {
@@ -184,7 +185,10 @@ watch(() => route.path, (newPath, oldPath) => {
       <iframe
         v-if="customPageType === 'iframe-srcdoc'"
         class="custom-page-iframe"
-        :class="{ 'iframe-shadow': customPageConfig.iframeShadow === true }"
+        :class="{
+          'iframe-shadow': customPageConfig.iframeShadow === true,
+          'iframe-immersive-default': iframeUsesDefaultViewportHeight
+        }"
         :srcdoc="iframeSrcdoc"
         :style="iframeStyle"
         :sandbox="iframeSandbox"
@@ -193,7 +197,10 @@ watch(() => route.path, (newPath, oldPath) => {
       <iframe
         v-else
         class="custom-page-iframe"
-        :class="{ 'iframe-shadow': customPageConfig.iframeShadow === true }"
+        :class="{
+          'iframe-shadow': customPageConfig.iframeShadow === true,
+          'iframe-immersive-default': iframeUsesDefaultViewportHeight
+        }"
         :src="iframeSrc"
         :style="iframeStyle"
         :sandbox="iframeSandbox"
@@ -245,7 +252,11 @@ watch(() => route.path, (newPath, oldPath) => {
 /* 允许用户的 HTML 撑开容器 */
 .custom-public-renderer {
   width: 100%;
-  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.custom-html-container {
+  min-height: inherit;
 }
 
 .custom-html-container,
@@ -256,6 +267,10 @@ watch(() => route.path, (newPath, oldPath) => {
 .custom-page-iframe {
   display: block;
   border: 0;
+}
+
+.custom-page-iframe.iframe-immersive-default {
+  height: 100dvh;
 }
 
 .iframe-shadow {
