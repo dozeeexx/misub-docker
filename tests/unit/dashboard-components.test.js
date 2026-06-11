@@ -69,6 +69,19 @@ describe('dashboard UI components', () => {
     expect(wrapper.find('input').element.value).toContain('/stable-token');
   });
 
+  it('does not generate copyable subscription links for invalid token characters', () => {
+    const wrapper = mountRightPanel({
+      config: { mytoken: ':', profileToken: 'share-token' },
+      profiles: [{ id: 'p1', customId: 'daily', name: '日常使用' }]
+    });
+
+    const input = wrapper.find('input');
+    expect(wrapper.text()).toContain('固定主 Token');
+    expect(input.attributes('disabled')).toBeDefined();
+    expect(input.element.value).toBe('请先在“设置”中配置固定的 主 Token');
+    expect(input.element.value).not.toContain('https://sub.dmorz.com/:');
+  });
+
   it('renders stat cards and generated-link panel in English without leaking i18n keys', () => {
     const statCards = mount(StatCards, {
       props: {

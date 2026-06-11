@@ -584,6 +584,7 @@ export const messages = {
       reservedPathCustomLogin: '"/{path}" 是系统保留路径，不可用作自定义管理后台路径',
       reservedPathSubscriptionToken: '系统保留路径不可用作自定义订阅 Token',
       reservedPathProfileToken: '系统保留路径不可用作订阅组分享 Token',
+      reservedTokenChars: 'Token 仅允许字母、数字、下划线和中划线',
       reservedPathCharsToast: '路径仅允许字母、数字、下划线、中划线',
       tabs: {
         basic: '基础设置',
@@ -1294,6 +1295,7 @@ export const messages = {
       reservedPathCustomLogin: '"/{path}" is reserved and cannot be used as admin path',
       reservedPathSubscriptionToken: 'Reserved paths cannot be used as subscription token',
       reservedPathProfileToken: 'Reserved paths cannot be used as profile share token',
+      reservedTokenChars: 'Tokens can only contain letters, numbers, underscores and hyphens',
       reservedPathCharsToast: 'Only letters, numbers, underscores and hyphens are allowed',
       tabs: {
         basic: 'Basic',

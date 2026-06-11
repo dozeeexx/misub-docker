@@ -31,6 +31,7 @@ const RESERVED_PATHS = [
 ];
 
 const getPathSegment = (value) => value.replace(/^\/+/, '').split('/')[0].toLowerCase();
+const hasInvalidTokenChars = (value) => /[^a-zA-Z0-9-_]/.test(value);
 
 const customLoginPathError = computed(() => {
   const value = props.settings.customLoginPath;
@@ -52,6 +53,10 @@ const myTokenError = computed(() => {
   const value = props.settings.mytoken;
   if (!value) return '';
 
+  if (hasInvalidTokenChars(value)) {
+    return t('settings.reservedTokenChars');
+  }
+
   const pathSegment = getPathSegment(value);
   return RESERVED_PATHS.includes(pathSegment) ? t('settings.reservedPathSubscriptionToken') : '';
 });
@@ -59,6 +64,10 @@ const myTokenError = computed(() => {
 const profileTokenError = computed(() => {
   const value = props.settings.profileToken;
   if (!value) return '';
+
+  if (hasInvalidTokenChars(value)) {
+    return t('settings.reservedTokenChars');
+  }
 
   const pathSegment = getPathSegment(value);
   return RESERVED_PATHS.includes(pathSegment) ? t('settings.reservedPathProfileToken') : '';
@@ -80,6 +89,10 @@ watch(() => props.settings.customLoginPath, (val) => {
 
 watch(() => props.settings.mytoken, (val) => {
   if (!val) return;
+  if (hasInvalidTokenChars(val)) {
+    showToast(t('settings.reservedTokenChars'), 'error');
+    return;
+  }
   const pathSegment = getPathSegment(val);
   if (RESERVED_PATHS.includes(pathSegment)) {
     showToast(t('settings.reservedPathSubscriptionToken'), 'error');
@@ -88,6 +101,10 @@ watch(() => props.settings.mytoken, (val) => {
 
 watch(() => props.settings.profileToken, (val) => {
   if (!val) return;
+  if (hasInvalidTokenChars(val)) {
+    showToast(t('settings.reservedTokenChars'), 'error');
+    return;
+  }
   const pathSegment = getPathSegment(val);
   if (RESERVED_PATHS.includes(pathSegment)) {
     showToast(t('settings.reservedPathProfileToken'), 'error');

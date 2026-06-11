@@ -27,10 +27,11 @@ const selectedFormat = ref('universal');
 const selectedId = ref('default');
 
 const formatLabel = (format) => format === 'universal' ? t('dashboard.linkCard.universalFormat') : format;
+const isStableToken = (value) => typeof value === 'string' && value.trim() === value && value !== 'auto' && /^[a-zA-Z0-9-_]+$/.test(value);
 
 const hasProfiles = computed(() => (props.profiles || []).length > 0);
-const mainTokenReady = computed(() => Boolean(props.config?.mytoken && props.config.mytoken !== 'auto'));
-const profileTokenReady = computed(() => Boolean(props.config?.profileToken && props.config.profileToken !== 'auto'));
+const mainTokenReady = computed(() => isStableToken(props.config?.mytoken));
+const profileTokenReady = computed(() => isStableToken(props.config?.profileToken));
 
 const setupTasks = computed(() => {
   const tasks = [];
@@ -69,9 +70,7 @@ const requiredToken = computed(() => {
     : { type: 'profileToken', value: props.config?.profileToken, name: t('dashboard.linkCard.tokenNameShare') };
 });
 
-const isLinkValid = computed(() => {
-  return requiredToken.value.value && requiredToken.value.value !== 'auto';
-});
+const isLinkValid = computed(() => isStableToken(requiredToken.value.value));
 
 const subLink = computed(() => {
   if (!isLinkValid.value) {
