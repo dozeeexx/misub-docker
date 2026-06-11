@@ -258,7 +258,7 @@ watch(() => props.settings.profileToken, (val) => {
 
     <!-- Web 访问控制 -->
     <div class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70">
-      <SectionHeader title="Web 访问控制" description="统一管理公开页访问、伪装页面和后台登录路径等访问行为。" tone="blue">
+      <SectionHeader :title="t('settings.webAccessTitle')" :description="t('settings.webAccessDesc')" tone="blue">
         <template #icon>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -272,8 +272,8 @@ watch(() => props.settings.profileToken, (val) => {
         <div
           class="p-4 flex items-center justify-between hover:bg-gray-50/80 dark:hover:bg-white/5 transition-colors">
           <div>
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-200">允许未登录访问公开页</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">关闭后未登录访问首页将显示不可访问页面</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ t('settings.publicPageAccessTitle') }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ t('settings.publicPageAccessDesc') }}</p>
           </div>
           <Switch 
             v-model="settings.enablePublicPage"
@@ -284,8 +284,8 @@ watch(() => props.settings.profileToken, (val) => {
         <div class="p-4 space-y-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">启用伪装页面</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">浏览器访问订阅链接时显示伪装内容，防止被探测</p>
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-200">{{ t('settings.disguisePageTitle') }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ t('settings.disguisePageDesc') }}</p>
             </div>
             <Switch 
               v-model="disguiseConfig.enabled"
@@ -299,10 +299,10 @@ watch(() => props.settings.profileToken, (val) => {
                 <input type="text" name="fake_user_for_autofill" autocomplete="username" style="display:none" tabindex="-1" aria-hidden="true" />
                 <input type="password" name="fake_pass_for_autofill" autocomplete="current-password" style="display:none" tabindex="-1" aria-hidden="true" />
                  <Input 
-                   label="自定义管理后台路径"
+                   :label="t('settings.customAdminPath')"
                    v-model="settings.customLoginPath"
                    :error="customLoginPathError"
-                   placeholder="默认: login"
+                   :placeholder="t('settings.customAdminPathPlaceholder')"
                    prefix="/"
                   autocomplete="off"
                   name="custom_admin_path_setting_no_autofill"
@@ -310,26 +310,25 @@ watch(() => props.settings.profileToken, (val) => {
                 />
              </div>
              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-               设置后，只有访问此路径才能进入登录页面。默认路径 <code>/login</code> 将失效（除非未设置）。
+               {{ t('settings.customAdminPathHint') }}
              </p>
               <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                ⚠️ 不可使用系统保留路径：/settings, /login, /groups, /nodes, /subscriptions, /dashboard, /logout, /auth_debug, /auth_check
+                {{ t('settings.reservedPathListHint') }}
               </p>
            </div>
 
             <div v-show="disguiseConfig.enabled"
             class="bg-white/80 dark:bg-gray-900/60 misub-radius-lg p-4 space-y-4 border border-gray-200/70 dark:border-white/10 transition-all duration-300">
             <div>
-              <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">伪装策略</label>
+              <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">{{ t('settings.disguiseStrategy') }}</label>
               <div class="flex flex-col sm:flex-row gap-4">
                 <label class="flex items-center cursor-pointer group">
                   <input type="radio" value="default" v-model="disguiseConfig.pageType"
                     class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800">
                   <div class="ml-3">
                     <span
-                      class="block text-sm font-medium text-gray-900 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">默认
-                      404</span>
-                    <span class="block text-xs text-gray-500">显示标准的 404 Not Found 页面</span>
+                      class="block text-sm font-medium text-gray-900 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{{ t('settings.disguiseDefault404') }}</span>
+                    <span class="block text-xs text-gray-500">{{ t('settings.disguiseDefault404Desc') }}</span>
                   </div>
                 </label>
                 <label class="flex items-center cursor-pointer group">
@@ -337,9 +336,8 @@ watch(() => props.settings.profileToken, (val) => {
                     class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800">
                   <div class="ml-3">
                     <span
-                      class="block text-sm font-medium text-gray-900 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">URL
-                      跳转</span>
-                    <span class="block text-xs text-gray-500">自动重定向到指定的网页地址</span>
+                      class="block text-sm font-medium text-gray-900 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{{ t('settings.disguiseRedirect') }}</span>
+                    <span class="block text-xs text-gray-500">{{ t('settings.disguiseRedirectDesc') }}</span>
                   </div>
                 </label>
               </div>
@@ -348,7 +346,7 @@ watch(() => props.settings.profileToken, (val) => {
             <div v-if="disguiseConfig.pageType === 'redirect'" class="animate-fade-in-down">
               <div>
                 <Input 
-                  label="目标网址"
+                  :label="t('settings.disguiseTargetUrl')"
                   v-model="disguiseConfig.redirectUrl"
                   placeholder="www.example.com"
                   type="url"
@@ -364,7 +362,7 @@ watch(() => props.settings.profileToken, (val) => {
                   d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                   clip-rule="evenodd" />
               </svg>
-              <span>伪装仅对浏览器 (User-Agent) 访问生效，不会影响 Clash、V2Ray 等代理客户端的正常订阅更新。</span>
+              <span>{{ t('settings.disguiseBrowserOnlyHint') }}</span>
             </div>
       </div>
       </div>
