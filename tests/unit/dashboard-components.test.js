@@ -3,17 +3,18 @@ import { createPinia } from 'pinia';
 import { describe, expect, it } from 'vitest';
 import StatCards from '../../src/components/features/Dashboard/StatCards.vue';
 import RightPanel from '../../src/components/profiles/RightPanel.vue';
+import { createI18n } from '../../src/i18n/index.js';
 
 const routerLinkStub = {
   props: ['to'],
   template: '<a :href="typeof to === \'string\' ? to : to?.path"><slot /></a>'
 };
 
-function mountRightPanel(props) {
+function mountRightPanel(props, locale = 'zh-CN') {
   return mount(RightPanel, {
     props,
     global: {
-      plugins: [createPinia()],
+      plugins: [createPinia(), createI18n({ initialLocale: locale })],
       stubs: {
         RouterLink: routerLinkStub
       }
@@ -31,6 +32,9 @@ describe('dashboard UI components', () => {
         subscriptionsCount: 2,
         totalNodesCount: 0,
         activeProfilesCount: 0
+      },
+      global: {
+        plugins: [createI18n({ initialLocale: 'zh-CN' })]
       }
     });
 
@@ -63,5 +67,41 @@ describe('dashboard UI components', () => {
     expect(wrapper.text()).not.toContain('链接生成前还差几步');
     expect(wrapper.find('input').attributes('disabled')).toBeUndefined();
     expect(wrapper.find('input').element.value).toContain('/stable-token');
+  });
+
+  it('renders stat cards and generated-link panel in English without leaking i18n keys', () => {
+    const statCards = mount(StatCards, {
+      props: {
+        formattedTotalRemainingTraffic: '155.89 TB',
+        trafficStats: { used: '1 TB', total: '2 TB', percentage: 50 },
+        activeSubscriptionsCount: 1,
+        subscriptionsCount: 1,
+        totalNodesCount: 12,
+        activeProfilesCount: 1
+      },
+      global: {
+        plugins: [createI18n({ initialLocale: 'en-US' })]
+      }
+    });
+
+    expect(statCards.text()).toContain('Remaining traffic');
+    expect(statCards.text()).toContain('Active sources');
+    expect(statCards.text()).toContain('Total nodes');
+    expect(statCards.text()).toContain('Profiles');
+    expect(statCards.text()).not.toContain('dashboard.');
+    expect(statCards.text()).not.toContain('DASHBOARD.');
+
+    const rightPanel = mountRightPanel({
+      config: { mytoken: 'auto', profileToken: '' },
+      profiles: []
+    }, 'en-US');
+
+    expect(rightPanel.text()).toContain('Generate subscription links');
+    expect(rightPanel.text()).toContain('A few steps remain before links are ready');
+    expect(rightPanel.text()).toContain('Set fixed main token');
+    expect(rightPanel.text()).toContain('Create a profile');
+    expect(rightPanel.text()).toContain('Universal');
+    expect(rightPanel.text()).not.toContain('生成订阅链接');
+    expect(rightPanel.text()).not.toContain('dashboard.');
   });
 });

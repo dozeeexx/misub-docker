@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import BasicSettings from '../../src/components/settings/sections/BasicSettings.vue';
+import { createI18n } from '../../src/i18n/index.js';
 
 const showToast = vi.fn();
 
@@ -30,6 +31,7 @@ describe('BasicSettings validation feedback', () => {
         }
       },
       global: {
+        plugins: [createI18n({ initialLocale: 'zh-CN' })],
         stubs: {
           Switch: {
             template: '<div />'
