@@ -57,8 +57,8 @@ describe('TransformCard third-party backend test button', () => {
       }
     });
 
-    expect(wrapper.text()).toContain('测试后端可用性');
-    expect(wrapper.text()).toContain('不会发送你的真实订阅链接');
+    expect(wrapper.text()).toContain('Test backend availability');
+    expect(wrapper.text()).toContain('Your real subscription links are not sent');
 
     await wrapper.get('[data-testid="test-subconverter-backend"]').trigger('click');
     await nextTick();

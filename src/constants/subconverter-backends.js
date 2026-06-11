@@ -1,12 +1,12 @@
 export const SUBCONVERTER_BACKENDS = [
     {
         value: 'subapi.cmliussss.net',
-        label: 'CMliussss 默认后端',
+        labelKey: 'settings.subconverterBackendCmliussss',
         description: 'subapi.cmliussss.net'
     },
     {
         value: 'api.v1.mk',
-        label: '肥羊后端',
+        labelKey: 'settings.subconverterBackendFeiyang',
         description: 'api.v1.mk'
     }
 ];

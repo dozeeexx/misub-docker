@@ -143,7 +143,7 @@ describe('Custom rule template UX regressions', () => {
       ruleTemplates: []
     });
 
-    await wrapper.findAll('button').find(button => button.text() === '新建模板').trigger('click');
+    await wrapper.findAll('button').find(button => ['New template', '新建模板'].includes(button.text())).trigger('click');
     const textareaValue = wrapper.find('textarea').element.value;
 
     expect(textareaValue).toContain('[custom]');

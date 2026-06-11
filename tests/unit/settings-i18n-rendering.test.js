@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import BasicSettings from '../../src/components/settings/sections/BasicSettings.vue';
 import ClientSettings from '../../src/components/settings/sections/ClientSettings.vue';
+import TransformCard from '../../src/components/settings/sections/ServiceSettings/TransformCard.vue';
+import RuleTemplateManager from '../../src/components/settings/sections/ServiceSettings/RuleTemplateManager.vue';
+import TelegramCard from '../../src/components/settings/sections/ServiceSettings/TelegramCard.vue';
 import { createI18n } from '../../src/i18n/index.js';
 
 vi.mock('../../src/lib/http.js', () => ({
@@ -103,5 +107,72 @@ describe('settings page English translations', () => {
     expect(wrapper.text()).toContain('Down');
     expect(wrapper.text()).toContain('Edit');
     expectNoChineseOrKeys(wrapper.text());
+  });
+
+  it('renders service cards in English without leaking keys', async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const transform = mount(TransformCard, {
+      props: {
+        settings: {
+          transformConfigMode: 'preset',
+          transformConfig: '',
+          builtinSkipCertVerify: false,
+          builtinEnableUdp: false,
+          ruleLevel: 'std',
+          subconverter: {
+            engineMode: 'external',
+            defaultBackend: 'api.v1.mk',
+            defaultOptions: { udp: true, emoji: true, scv: true, tfo: false, sort: false, list: false }
+          }
+        }
+      },
+      global: {
+        plugins: [createI18n({ initialLocale: 'en-US' }), pinia],
+        stubs: {
+          TransformSelector: true,
+          RuleTemplateManager: true
+        }
+      }
+    });
+
+    expect(transform.text()).toContain('Default conversion engine');
+    expect(transform.text()).toContain('External backend parameters');
+    expect(transform.text()).toContain('Test backend availability');
+    expectNoChineseOrKeys(transform.text());
+
+    const telegram = mount(TelegramCard, {
+      props: {
+        settings: {
+          BotToken: '',
+          ChatID: '',
+          telegram_push_config: {
+            enabled: true,
+            bot_token: '',
+            webhook_secret: '',
+            allowed_user_ids: [],
+            allow_all_users: false
+          }
+        }
+      },
+      ...englishMountOptions()
+    });
+
+    expect(telegram.text()).toContain('Telegram notification bot');
+    expect(telegram.text()).toContain('Webhook Secret (required)');
+    expect(telegram.text()).toContain('setWebhook link');
+    expectNoChineseOrKeys(telegram.text());
+
+    const rules = mount(RuleTemplateManager, {
+      global: {
+        plugins: [createI18n({ initialLocale: 'en-US' }), pinia]
+      }
+    });
+    await flushPromises();
+
+    expect(rules.text()).toContain('Custom rule templates');
+    expect(rules.text()).toContain('No custom rule templates yet');
+    expectNoChineseOrKeys(rules.text());
   });
 });

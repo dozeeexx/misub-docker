@@ -38,9 +38,9 @@ describe('CustomPageSettings safety messaging', () => {
     const wrapper = mountSettings();
     const text = wrapper.text();
 
-    expect(text).toContain('外链样式表已安全禁用');
-    expect(text).toContain('脚本执行已安全禁用');
-    expect(text).toContain('固定禁用');
+    expect(text).toContain('External stylesheets are safely disabled');
+    expect(text).toContain('Script execution is safely disabled');
+    expect(text).toContain('Always disabled');
     expect(text).not.toContain('允许外链样式表');
     expect(text).not.toContain('允许脚本执行');
   });
