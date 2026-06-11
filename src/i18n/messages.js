@@ -228,7 +228,15 @@ export const messages = {
       moreNodes: '还有 {count} 个节点...',
       batchMoveGroupTitle: '批量移动分组',
       batchMoveGroupDesc: '请输入要移动到的分组名称。留空将移动到"未分组"。',
-      groupName: '分组名称'
+      groupName: '分组名称',
+      dedupConfirmTitle: '确认去重',
+      dedupWillRemovePrefix: '将移除',
+      dedupWillRemoveMiddle: '个重复节点，',
+      dedupWillRemoveSuffix: '保留',
+      dedupKeptSuffix: '个节点。',
+      dedupPreviewTitle: '预览将被移除的节点（最多显示 20 条）',
+      unnamedNode: '未命名节点',
+      noDuplicatesFound: '没有检测到重复节点。'
     },
     nodePreview: {
       profileTitle: '订阅组节点预览 - {name}',
@@ -953,7 +961,9 @@ export const messages = {
       updated: '更新时间',
       firstPage: '第一页',
       prevPage: '上一页',
+      previousPage: '上一页',
       nextPage: '下一页',
+      clear: '清空',
       lastPage: '最后一页',
       perPage: '每页:',
       totalProfiles: '共 {count} 个订阅组',
@@ -961,6 +971,7 @@ export const messages = {
       itemRange: '显示第 {start} 至 {end} 项，共 {total} 项',
       filters: '过滤器',
       reset: '重置',
+      refresh: '刷新',
       apply: '应用',
       expandFilters: '展开或收起过滤器',
       choose: '请选择...',
@@ -997,6 +1008,35 @@ export const messages = {
       unsavedLeaveConfirm: '您有未保存的更改，确定要离开吗？',
       confirmAction: '确认操作',
       confirmContinue: '你确定要继续吗？'
+    },
+    logs: {
+      title: '订阅访问日志',
+      fetchFailed: '获取日志失败',
+      clearConfirm: '确定要清空所有日志吗？',
+      clearSuccess: '日志已清空',
+      clearFailed: '清空日志失败',
+      empty: '暂无日志记录',
+      emptyForProfile: '该订阅暂无日志记录',
+      time: '时间',
+      location: '位置',
+      duration: '耗时',
+      nodes: '节点数',
+      nodeSummary: '总计 {total} (源: {sources}, 成功: {success})',
+      pageSummary: '第 {current} 页 / 共 {total} 页 ({count} 条)'
+    },
+    quickImport: {
+      title: '选择客户端导入',
+      subtitle: '点击客户端图标自动打开应用并导入订阅',
+      detectedPrefix: '检测到您的设备为 ',
+      detectedSuffix: '，已为您优先推荐适配客户端',
+      empty: '暂无支持一键导入的客户端',
+      recommended: '推荐',
+      tipsTitle: '使用提示：',
+      tipInstalled: '请确保您已安装对应的客户端应用',
+      tipOpenApp: '点击后将自动打开客户端并添加订阅',
+      tipBrowserConfirm: '部分浏览器可能需要您手动确认打开应用',
+      tipDefaultApp: '若安装了多个同类软件，系统将调用默认关联的程序打开',
+      defaultName: '订阅'
     }
   },
   'en-US': {
@@ -1274,7 +1314,15 @@ export const messages = {
       parseAddressFailed: 'Failed to parse address',
       pingStarted: 'Testing {count} nodes...',
       pingCompleted: 'Tested {count} nodes',
-      urlRequired: 'Node URL required'
+      urlRequired: 'Node URL required',
+      dedupConfirmTitle: 'Confirm deduplication',
+      dedupWillRemovePrefix: 'Remove',
+      dedupWillRemoveMiddle: 'duplicate nodes,',
+      dedupWillRemoveSuffix: 'keep',
+      dedupKeptSuffix: 'nodes.',
+      dedupPreviewTitle: 'Preview nodes to remove (up to 20)',
+      unnamedNode: 'Unnamed node',
+      noDuplicatesFound: 'No duplicate nodes detected.'
     },
     nodePreview: {
       profileTitle: 'Profile node preview - {name}',
@@ -1998,7 +2046,9 @@ export const messages = {
       updated: 'Updated',
       firstPage: 'First',
       prevPage: 'Prev',
+      previousPage: 'Previous',
       nextPage: 'Next',
+      clear: 'Clear',
       lastPage: 'Last',
       perPage: 'Per:',
       totalProfiles: '{count} profiles',
@@ -2006,6 +2056,7 @@ export const messages = {
       itemRange: '{start}-{end} / {total}',
       filters: 'Filters',
       reset: 'Reset',
+      refresh: 'Refresh',
       apply: 'Apply',
       expandFilters: 'Toggle filters',
       choose: 'Choose...',
@@ -2042,6 +2093,35 @@ export const messages = {
       unsavedLeaveConfirm: 'You have unsaved changes. Leave?',
       confirmAction: 'Confirm action',
       confirmContinue: 'Continue?'
+    },
+    logs: {
+      title: 'Subscription access logs',
+      fetchFailed: 'Failed to load logs',
+      clearConfirm: 'Clear all logs?',
+      clearSuccess: 'Logs cleared',
+      clearFailed: 'Failed to clear logs',
+      empty: 'No log records yet',
+      emptyForProfile: 'No log records for this profile yet',
+      time: 'Time',
+      location: 'Location',
+      duration: 'Duration',
+      nodes: 'Nodes',
+      nodeSummary: 'Total {total} (sources: {sources}, success: {success})',
+      pageSummary: 'Page {current} / {total} ({count} records)'
+    },
+    quickImport: {
+      title: 'Choose client import',
+      subtitle: 'Click a client icon to open the app and import the subscription',
+      detectedPrefix: 'Detected your device as ',
+      detectedSuffix: '; matching clients are prioritized',
+      empty: 'No clients support one-click import yet',
+      recommended: 'Recommended',
+      tipsTitle: 'Tips:',
+      tipInstalled: 'Make sure the matching client app is installed',
+      tipOpenApp: 'Clicking opens the client and adds the subscription automatically',
+      tipBrowserConfirm: 'Some browsers may ask you to confirm opening the app',
+      tipDefaultApp: 'If multiple similar apps are installed, the system opens the default associated app',
+      defaultName: 'Subscription'
     }
   }
 };

@@ -1,6 +1,14 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import QuickImportModal from '../../src/components/modals/QuickImportModal.vue';
+import { createI18n } from '../../src/i18n/index.js';
+
+const globalOptions = () => ({
+  plugins: [createI18n({ initialLocale: 'en-US' })],
+  stubs: {
+    Teleport: true
+  }
+});
 
 describe('QuickImportModal', () => {
   beforeEach(() => {
@@ -15,14 +23,10 @@ describe('QuickImportModal', () => {
         clients: [],
         profileToken: 'profiles'
       },
-      global: {
-        stubs: {
-          Teleport: true
-        }
-      }
+      global: globalOptions()
     });
 
-    expect(wrapper.text()).toContain('选择客户端导入');
+    expect(wrapper.text()).toContain('Choose client import');
     await wrapper.findComponent({ name: 'Modal' }).vm.$emit('update:show', false);
 
     expect(wrapper.emitted('close')).toBeTruthy();
@@ -39,11 +43,7 @@ describe('QuickImportModal', () => {
         clients: [{ id: 'clash-party', name: 'Clash Party', platforms: ['windows'] }],
         profileToken: ''
       },
-      global: {
-        stubs: {
-          Teleport: true
-        }
-      }
+      global: globalOptions()
     });
 
     await wrapper.find('button.group').trigger('click');
