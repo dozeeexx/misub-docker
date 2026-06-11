@@ -190,6 +190,12 @@ Current version: `v2.7.0`
 
 For detailed historical changes, see [README-zh.md](README-zh.md) and the repository commit history.
 
+## Acknowledgements
+
+Thanks to sponsor [ForZTN](https://sponsorship.forztn.com/github/imzyb/MiSub) for supporting the project server.
+
+MiSub is developed from [CF-Workers-SUB](https://github.com/cmliu/CF-Workers-SUB). Thanks to CM for the open-source contribution.
+
 ## License
 
 MIT License. See [LICENSE](LICENSE).
