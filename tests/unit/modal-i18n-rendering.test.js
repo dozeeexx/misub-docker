@@ -3,7 +3,9 @@ import { mount, flushPromises } from '@vue/test-utils';
 import LogModal from '../../src/components/modals/LogModal.vue';
 import QuickImportModal from '../../src/components/modals/QuickImportModal.vue';
 import ManualNodeDedupModal from '../../src/components/modals/ManualNodeDedupModal.vue';
+import ManualNodeEditModal from '../../src/components/modals/ManualNodeEditModal.vue';
 import { createI18n } from '../../src/i18n/index.js';
+import { createPinia, setActivePinia } from 'pinia';
 
 vi.mock('../../src/lib/http.js', () => ({
   api: {
@@ -77,6 +79,32 @@ describe('modal English translations', () => {
     expect(wrapper.text()).toContain('Confirm deduplication');
     expect(wrapper.text()).toContain('Preview nodes to remove');
     expect(wrapper.text()).toContain('Unnamed node');
+    expectEnglishOnly(wrapper.text());
+  });
+
+  it('renders manual node edit modal in English', () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const wrapper = mount(ManualNodeEditModal, {
+      props: {
+        show: true,
+        isNew: true,
+        editingNode: { name: '', group: '', url: '' },
+        groups: []
+      },
+      global: {
+        plugins: [createI18n({ initialLocale: 'en-US' }), pinia],
+        stubs: {
+          Teleport: true
+        }
+      }
+    });
+
+    expect(wrapper.text()).toContain('Add manual node');
+    expect(wrapper.text()).toContain('Edit a single node');
+    expect(wrapper.text()).toContain('Node name (optional)');
+    expect(wrapper.text()).toContain('Group (optional)');
+    expect(wrapper.find('textarea').attributes('placeholder')).toContain('Enter one link');
     expectEnglishOnly(wrapper.text());
   });
 });

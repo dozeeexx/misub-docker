@@ -6,6 +6,7 @@ import ClientSettings from '../../src/components/settings/sections/ClientSetting
 import TransformCard from '../../src/components/settings/sections/ServiceSettings/TransformCard.vue';
 import RuleTemplateManager from '../../src/components/settings/sections/ServiceSettings/RuleTemplateManager.vue';
 import TelegramCard from '../../src/components/settings/sections/ServiceSettings/TelegramCard.vue';
+import SystemSettings from '../../src/components/settings/sections/SystemSettings.vue';
 import { createI18n } from '../../src/i18n/index.js';
 
 vi.mock('../../src/lib/http.js', () => ({
@@ -174,5 +175,25 @@ describe('settings page English translations', () => {
     expect(rules.text()).toContain('Custom rule templates');
     expect(rules.text()).toContain('No custom rule templates yet');
     expectNoChineseOrKeys(rules.text());
+  });
+
+  it('renders SystemSettings storage backup and admin security copy in English', () => {
+    const wrapper = mount(SystemSettings, {
+      props: {
+        settings: { storageType: 'd1' },
+        exportBackup: vi.fn(),
+        importBackup: vi.fn(),
+        handleReset: vi.fn()
+      },
+      ...englishMountOptions()
+    });
+
+    expect(wrapper.text()).toContain('Data storage type');
+    expect(wrapper.text()).toContain('D1 database (recommended)');
+    expect(wrapper.text()).toContain('Backup and restore');
+    expect(wrapper.text()).toContain('Export backup');
+    expect(wrapper.text()).toContain('Administrator security settings');
+    expect(wrapper.text()).toContain('Change admin password');
+    expectNoChineseOrKeys(wrapper.text());
   });
 });
