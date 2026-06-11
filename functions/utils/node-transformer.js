@@ -668,6 +668,11 @@ export function makeComparator(sortCfg) {
                 if (r !== 0) return r * order;
                 continue;
             }
+            if (key === 'group') {
+                const r = cmpStr(ra.group || '', rb.group || '');
+                if (r !== 0) return r * order;
+                continue;
+            }
             if (key === 'port') {
                 const r = cmpNum(ra.port, rb.port);
                 if (r !== 0) return r * order;

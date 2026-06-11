@@ -110,6 +110,7 @@ const resetToDefaultOrder = (idx, keyType) => {
 
 const availableKeys = [
   { value: 'name', labelKey: 'operators.sortKeyName' },
+  { value: 'group', labelKey: 'operators.sortKeyGroup' },
   { value: 'region', labelKey: 'operators.sortKeyRegion' },
   { value: 'protocol', labelKey: 'operators.sortKeyProtocol' },
   { value: 'server', labelKey: 'operators.sortKeyServer' },

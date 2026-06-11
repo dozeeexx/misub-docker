@@ -144,12 +144,14 @@ export async function handleProfileMode(request, env, profileId, userAgent, appl
         const nodeInfo = parseNodeInfo(effectiveUrl);
         return {
             subscriptionName: node.name || '手工节点',
+            group: node.group || '',
             url: effectiveUrl,
             success: true,
             nodes: [{
                 ...nodeInfo,
                 url: effectiveUrl,
-                subscriptionName: node.name || '手工节点'
+                subscriptionName: node.name || '手工节点',
+                group: node.group || ''
             }],
             error: null,
             isManualNode: true
@@ -181,6 +183,7 @@ export async function handleProfileMode(request, env, profileId, userAgent, appl
 
     if (applyTransform) {
         const nodeUrls = allNodes.map(node => node.url);
+        const nodeMetadataByUrl = new Map(allNodes.map(node => [node.url, { group: node.group || '' }]));
 
         let activeOperators = ensureArray(profile?.operators);
         if (!activeOperators.length && profile?.nodeTransform?.enabled && profile.nodeTransform?.operators) {
@@ -201,7 +204,8 @@ export async function handleProfileMode(request, env, profileId, userAgent, appl
             transformedUrls = await runOperatorChain(nodeUrls, activeOperators, {
                 subName: profile?.name,
                 userAgent,
-                config: settings
+                config: settings,
+                nodeMetadataByUrl
             });
         } else if (effectiveNodeTransform?.enabled) {
             const defaultTemplate = '{emoji}{region}-{protocol}-{index}';

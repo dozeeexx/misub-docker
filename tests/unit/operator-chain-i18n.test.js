@@ -43,7 +43,7 @@ const operatorList = [
     id: 'sort-1',
     type: 'sort',
     enabled: true,
-    params: { keys: [] }
+    params: { keys: [{ key: 'group', order: 'asc', customOrder: [] }] }
   },
   {
     id: 'dedup-1',
@@ -104,7 +104,7 @@ describe('operator chain English translations', () => {
     await headers[2].trigger('click');
     expect(wrapper.text()).toContain('Sort weights');
     expect(wrapper.text()).toContain('Add condition');
-    expect(wrapper.text()).toContain('No sort conditions yet');
+    expect(wrapper.text()).toContain('Custom group');
     expectNoChineseOrKeys(wrapper.text());
 
     await headers[4].trigger('click');

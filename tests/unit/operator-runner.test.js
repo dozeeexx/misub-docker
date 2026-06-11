@@ -57,4 +57,33 @@ describe('operator runner', () => {
     }
   });
 
+  it('sorts nodes by custom group metadata', async () => {
+    const urls = [
+      'ss://YWVzLTEyOC1nY206cGFzcw@us.example.com:8388#USNode',
+      'ss://YWVzLTEyOC1nY206cGFzcw@hk.example.com:8388#HKNode',
+      'ss://YWVzLTEyOC1nY206cGFzcw@jp.example.com:8388#JPNode'
+    ];
+
+    const result = await runOperatorChain(urls, [
+      {
+        type: 'sort',
+        params: {
+          keys: [{ key: 'group', order: 'asc' }]
+        }
+      }
+    ], {
+      nodeMetadataByUrl: new Map([
+        [urls[0], { group: 'B-US' }],
+        [urls[1], { group: 'A-HK' }],
+        [urls[2], { group: 'C-JP' }]
+      ])
+    });
+
+    expect(result.map(url => decodeURIComponent(url))).toEqual([
+      expect.stringContaining('#HKNode'),
+      expect.stringContaining('#USNode'),
+      expect.stringContaining('#JPNode')
+    ]);
+  });
+
 });

@@ -223,6 +223,15 @@ export async function runOperatorChain(nodeUrls, operators, context = {}) {
         needServerPort: true, 
         ensureRegion: false 
     });
+    const metadataByUrl = context.nodeMetadataByUrl instanceof Map
+        ? context.nodeMetadataByUrl
+        : new Map(Object.entries(context.nodeMetadataByUrl || {}));
+    if (metadataByUrl.size > 0) {
+        records = records.map(record => ({
+            ...record,
+            ...(metadataByUrl.get(record.url) || {})
+        }));
+    }
 
     const ua = (context.userAgent || '').toLowerCase();
     const platform = {
