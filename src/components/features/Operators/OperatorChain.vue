@@ -5,6 +5,7 @@ import FilterEditor from './components/FilterEditor.vue';
 import RenameEditor from './components/RenameEditor.vue';
 import SortEditor from './components/SortEditor.vue';
 import DedupEditor from './components/DedupEditor.vue';
+import Input from '../../ui/Input.vue';
 
 const props = defineProps({
   modelValue: {
@@ -257,6 +258,7 @@ const updateOperatorParams = (index, params) => {
                 <Input 
                   :modelValue="op.params.url"
                   @update:modelValue="(val) => updateOperatorParams(index, { ...op.params, url: val })"
+                  :label="t('operators.scriptUrlLabel')"
                   :placeholder="t('operators.scriptUrlPlaceholder')"
                 />
                 <textarea

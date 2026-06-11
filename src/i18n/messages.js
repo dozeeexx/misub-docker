@@ -57,6 +57,7 @@ export const messages = {
       manageGroups: '分组管理',
       autoSort: '一键排序',
       deduplicate: '一键去重',
+      selectAll: '全选',
       selectAllPage: '全选本页',
       deselectAll: '取消全选',
       exit: '退出'
@@ -247,7 +248,20 @@ export const messages = {
       authAbnormal: '认证异常，请刷新页面后重试',
       authFailed: '认证失败，请重新登录后再试',
       networkFailed: '网络连接失败，请检查网络连接',
-      loadFailed: '加载节点失败'
+      loadFailed: '加载节点失败',
+      profileSubtitle: '订阅组节点概览',
+      subscriptionSubtitle: '订阅节点预览结果',
+      pickNodes: '挑选节点',
+      exitPicking: '退出挑选',
+      loadingNodes: '正在加载节点信息...',
+      noMatchingNodes: '未找到符合条件的节点',
+      nodesTotal: '总节点数',
+      protocolTypes: '协议类型',
+      pickingMode: '挑选模式',
+      selectedNodesPrefix: '已选择',
+      selectedNodesSuffix: '个节点',
+      saveSelection: '保存选择',
+      selectAtLeastOne: '请先选择至少一个节点'
     },
     subscriptions: {
       title: '机场订阅',
@@ -1000,7 +1014,8 @@ export const messages = {
       includeProtocolDedupHint: '开启后，不同协议但同主机端口的节点不会互相去重。',
       preferredProtocols: '优先保留协议',
       preferredProtocolsHint: '当检测到重复节点时，优先保留这里勾选的协议。未设置时按默认规则处理。',
-      scriptUrlPlaceholder: '远程脚本 URL (GitGist/Raw 链接)',
+      scriptUrlLabel: '远程脚本 URL',
+      scriptUrlPlaceholder: 'GitGist/Raw 链接',
       regionLabel: '{region}'
     },
     systemSettings: {
@@ -1198,6 +1213,7 @@ export const messages = {
       manageGroups: 'Groups',
       autoSort: 'Auto sort',
       deduplicate: 'Dedup',
+      selectAll: 'Select all',
       selectAllPage: 'Select page',
       deselectAll: 'Deselect',
       exit: 'Exit'
@@ -1448,7 +1464,20 @@ export const messages = {
       authAbnormal: 'Auth issue. Refresh and retry.',
       authFailed: 'Auth failed. Log in again.',
       networkFailed: 'Network failed. Check connection.',
-      loadFailed: 'Failed to load nodes'
+      loadFailed: 'Failed to load nodes',
+      profileSubtitle: 'Profile node overview',
+      subscriptionSubtitle: 'Source node preview result',
+      pickNodes: 'Pick nodes',
+      exitPicking: 'Exit picking',
+      loadingNodes: 'Loading node information...',
+      noMatchingNodes: 'No matching nodes found',
+      nodesTotal: 'Nodes total',
+      protocolTypes: 'Protocol types',
+      pickingMode: 'Picking mode',
+      selectedNodesPrefix: 'Selected',
+      selectedNodesSuffix: 'nodes',
+      saveSelection: 'Save selection',
+      selectAtLeastOne: 'Select at least one node first'
     },
     subscriptions: {
       title: 'Sources',
@@ -2200,7 +2229,8 @@ export const messages = {
       includeProtocolDedupHint: 'When enabled, nodes with different protocols but the same host and port are not deduplicated together.',
       preferredProtocols: 'Preferred protocols to keep',
       preferredProtocolsHint: 'When duplicate nodes are found, selected protocols are kept first. Default rules apply when none are selected.',
-      scriptUrlPlaceholder: 'Remote script URL (GitGist/raw link)',
+      scriptUrlLabel: 'Remote script URL',
+      scriptUrlPlaceholder: 'GitGist/raw link',
       regionLabel: '{region}'
     },
     systemSettings: {

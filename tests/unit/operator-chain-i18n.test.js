@@ -6,10 +6,6 @@ import { createI18n } from '../../src/i18n/index.js';
 const englishGlobal = () => ({
   plugins: [createI18n({ initialLocale: 'en-US' })],
   stubs: {
-    Input: {
-      props: ['modelValue', 'placeholder'],
-      template: '<input :value="modelValue" :placeholder="placeholder" />'
-    },
     draggable: {
       props: ['modelValue'],
       template: '<div><div v-for="element in modelValue" :key="element.id"><slot name="item" :element="element" /></div></div>'
@@ -112,7 +108,8 @@ describe('operator chain English translations', () => {
     expectNoChineseOrKeys(wrapper.text());
 
     await headers[4].trigger('click');
-    expect(wrapper.find('input[placeholder="Remote script URL (GitGist/raw link)"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Remote script URL');
+    expect(wrapper.find('input[placeholder="GitGist/raw link"]').exists()).toBe(true);
     expectNoChineseOrKeys(wrapper.text());
   });
 });
