@@ -257,7 +257,7 @@ const updateOperatorParams = (index, params) => {
                 <Input 
                   :modelValue="op.params.url"
                   @update:modelValue="(val) => updateOperatorParams(index, { ...op.params, url: val })"
-                  placeholder="远程脚本 URL (GitGist/Raw 链接)" 
+                  :placeholder="t('operators.scriptUrlPlaceholder')"
                 />
                 <textarea
                   :value="op.params.code"

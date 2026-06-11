@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from '../../../../i18n/index.js';
 import draggable from 'vuedraggable';
 
 const props = defineProps({
@@ -10,6 +11,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+const { t } = useI18n();
 
 const params = computed({
   get: () => ({
@@ -107,20 +109,34 @@ const resetToDefaultOrder = (idx, keyType) => {
 };
 
 const availableKeys = [
-  { value: 'name', label: '节点名称' },
-  { value: 'region', label: '地区' },
-  { value: 'protocol', label: '协议' },
-  { value: 'server', label: '服务器' },
-  { value: 'port', label: '端口' }
+  { value: 'name', labelKey: 'operators.sortKeyName' },
+  { value: 'region', labelKey: 'operators.sortKeyRegion' },
+  { value: 'protocol', labelKey: 'operators.sortKeyProtocol' },
+  { value: 'server', labelKey: 'operators.sortKeyServer' },
+  { value: 'port', labelKey: 'operators.sortKeyPort' }
 ];
+
+const regionLabels = {
+  '香港': 'Hong Kong',
+  '台湾': 'Taiwan',
+  '日本': 'Japan',
+  '新加坡': 'Singapore',
+  '美国': 'United States',
+  '韩国': 'South Korea',
+  '英国': 'United Kingdom',
+  '德国': 'Germany',
+  '法国': 'France',
+  '加拿大': 'Canada'
+};
+const displayTagName = (item, name) => item.key === 'region' ? `${getRegionEmoji(name)} ${t('operators.regionLabel', { region: regionLabels[name] || name })}` : name;
 
 </script>
 
 <template>
   <div class="space-y-3">
     <div class="flex items-center justify-between">
-      <label class="text-[11px] font-bold text-gray-400 uppercase tracking-tight">排序权重 (Weights)</label>
-      <button @click="addKey" class="text-[10px] text-indigo-600 font-bold">+ 添加条件</button>
+      <label class="text-[11px] font-bold text-gray-400 uppercase tracking-tight">{{ t('operators.sortWeights') }}</label>
+      <button @click="addKey" class="text-[10px] text-indigo-600 font-bold">+ {{ t('operators.addCondition') }}</button>
     </div>
 
     <div class="space-y-1.5">
@@ -138,12 +154,12 @@ const availableKeys = [
           </div>
 
           <select :value="item.key" @change="updateKeyField(idx, 'key', $event.target.value)" class="flex-1 bg-transparent border-none p-0 text-[11px] font-medium text-gray-900 dark:text-gray-100 focus:ring-0 outline-none">
-            <option v-for="k in availableKeys" :key="k.value" :value="k.value" class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">{{ k.label }}</option>
+            <option v-for="k in availableKeys" :key="k.value" :value="k.value" class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">{{ t(k.labelKey) }}</option>
           </select>
 
           <select :value="item.order" @change="updateKeyField(idx, 'order', $event.target.value)" class="w-14 bg-transparent border-none p-0 text-[11px] text-gray-600 dark:text-gray-300 focus:ring-0 outline-none">
-            <option value="asc" class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">升序</option>
-            <option value="desc" class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">降序</option>
+            <option value="asc" class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">{{ t('operators.ascending') }}</option>
+            <option value="desc" class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">{{ t('operators.descending') }}</option>
           </select>
 
           <button @click="removeKey(idx)" class="p-1 text-gray-300 hover:text-rose-500">
@@ -157,10 +173,10 @@ const availableKeys = [
             
             <div class="flex items-center justify-between text-[10px]">
                 <span class="font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight flex items-center gap-1">
-                  自定义{{ item.key === 'region' ? '地区' : '协议' }}优先级顺序 (可拖拽排序)
+                  {{ t('operators.customPriorityOrder', { type: t(item.key === 'region' ? 'operators.sortKeyRegion' : 'operators.sortKeyProtocol') }) }}
                 </span>
                 <button @click="resetToDefaultOrder(idx, item.key)" class="text-indigo-500 hover:text-indigo-600 font-bold">
-                  重置默认
+                  {{ t('operators.resetDefault') }}
                 </button>
             </div>
 
@@ -174,21 +190,21 @@ const availableKeys = [
             >
                 <template #item="{ element }">
                     <div class="cursor-grab active:cursor-grabbing inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50/60 dark:bg-indigo-500/10 border border-indigo-100/50 dark:border-indigo-500/20 text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:bg-indigo-100/80 dark:hover:bg-indigo-500/20 transition-colors select-none">
-                        <span>{{ item.key === 'region' ? getRegionEmoji(element.name) + ' ' + element.name : element.name }}</span>
+                        <span>{{ displayTagName(item, element.name) }}</span>
                     </div>
                 </template>
             </draggable>
             
             <div v-if="!(item.customOrder || []).length" class="text-[9px] text-gray-400 italic">
-              暂无排序优先项，节点将随机退化为纯文本对比
+              {{ t('operators.emptyPriorityItems') }}
             </div>
         </div>
       </div>
 
       <div v-if="params.keys.length === 0" class="text-center py-2 text-[10px] text-gray-400 italic">
-        暂未添加排序条件，点击上方“+ 添加条件”开始配置
+        {{ t('operators.emptySortConditions') }}
       </div>
     </div>
-    <p class="text-[10px] text-gray-400">排序会按条件从上到下依次生效，排在前面的条件优先级更高。</p>
+    <p class="text-[10px] text-gray-400">{{ t('operators.sortHint') }}</p>
   </div>
 </template>
