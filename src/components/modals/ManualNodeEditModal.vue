@@ -8,6 +8,7 @@ import { useSubscriptions } from '../../composables/useSubscriptions.js';
 import { useBulkImportLogic } from '../../composables/useBulkImportLogic.js';
 import { useManualNodes } from '../../composables/useManualNodes.js';
 import { useI18n } from '../../i18n/index.js';
+import { parseSurgeConfig } from '../../utils/protocolConverter.js';
 
 const props = defineProps({
   show: Boolean,
@@ -121,6 +122,18 @@ const handleConfirm = () => {
     emit('update:show', false);
     return;
   }
+
+  // 单行模式下检测 Surge 配置格式并自动转换
+  if (props.isNew && !isMultiLine.value && props.editingNode?.url) {
+    const surgeNodes = parseSurgeConfig(props.editingNode.url);
+    if (surgeNodes && surgeNodes.length === 1) {
+      props.editingNode.url = surgeNodes[0].url;
+      if (!props.editingNode.name && surgeNodes[0].name) {
+        props.editingNode.name = surgeNodes[0].name;
+      }
+    }
+  }
+
   emit('confirm');
 };
 
