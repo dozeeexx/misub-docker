@@ -10,6 +10,8 @@ import { getBuiltinTemplate } from '../modules/subscription/builtin-template-reg
 import { fetchTransformTemplate } from '../modules/subscription/transform-template-cache.js';
 import { resolveRuleTemplateSource } from '../modules/rule-template-handler.js';
 import { base64EncodeUtf8 } from '../modules/utils.js';
+import yaml from 'js-yaml';
+import { urlsToClashProxies } from '../utils/url-to-clash.js';
 
 function getTemplateExtension(templateUrl) {
     const raw = typeof templateUrl === 'string' ? templateUrl.trim() : '';
@@ -28,6 +30,67 @@ export function isIniTemplateSource(templateSource, builtinTemplateEntry = null)
     if (builtinTemplateEntry?.format === 'ini') return true;
     if (templateSource?.kind === 'custom') return true;
     return getTemplateExtension(templateSource?.value) === 'ini';
+}
+
+function stripInternalProxyFields(proxy) {
+    if (!proxy || typeof proxy !== 'object') return proxy;
+    const { metadata, ...publicProxy } = proxy;
+    return publicProxy;
+}
+
+function deduplicateProxyNames(proxies) {
+    const seen = new Map();
+    proxies.forEach(proxy => {
+        if (!proxy?.name) return;
+        const originalName = proxy.name;
+        const count = seen.get(originalName) || 0;
+        seen.set(originalName, count + 1);
+        if (count > 0) {
+            proxy.name = `${originalName} ${count + 1}`;
+        }
+    });
+}
+
+export function isClashYamlProfileTemplate(templateText) {
+    if (typeof templateText !== 'string' || templateText.trim() === '') return false;
+
+    try {
+        const parsed = yaml.load(templateText);
+        return Boolean(
+            parsed &&
+            typeof parsed === 'object' &&
+            !Array.isArray(parsed) &&
+            Array.isArray(parsed['proxy-groups']) &&
+            Array.isArray(parsed.rules)
+        );
+    } catch {
+        return false;
+    }
+}
+
+export function renderClashYamlProfileTemplate(templateText, nodeList, options = {}) {
+    const config = yaml.load(templateText);
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+        return '';
+    }
+
+    const nodeUrls = String(nodeList || '')
+        .split(/\r?\n+/)
+        .map(line => line.trim())
+        .filter(line => line && !line.startsWith('#'));
+    const proxies = urlsToClashProxies(nodeUrls, options).map(stripInternalProxyFields);
+    deduplicateProxyNames(proxies);
+
+    return yaml.dump({
+        ...config,
+        proxies
+    }, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        quotingType: '"',
+        forceQuotes: false
+    });
 }
 
 export class ProcessorService {
@@ -154,6 +217,10 @@ export class ProcessorService {
                         contentType = 'application/x-yaml; charset=utf-8';
                         break;
                 }
+            } else if (templateText && targetFormat === 'clash' && isClashYamlProfileTemplate(templateText)) {
+                finalContent = renderClashYamlProfileTemplate(templateText, combinedNodeList, builtinOptions);
+                contentType = 'application/x-yaml; charset=utf-8';
+                headers['X-MiSub-Template-Mode'] = 'clash-yaml-profile';
             }
         }
 

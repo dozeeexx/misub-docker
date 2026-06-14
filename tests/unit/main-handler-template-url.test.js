@@ -5,7 +5,8 @@ import {
     extractProxySectionFromBuiltin,
     resolveExternalTemplateConfigUrl,
     resolveTemplateSource,
-    resolveTemplateUrl
+    resolveTemplateUrl,
+    shouldRenderClashYamlProfileTemplateLocally
 } from '../../functions/modules/subscription/main-handler.js';
 import {
     TEMPLATE_COMPATIBILITY,
@@ -83,6 +84,24 @@ describe('Main handler template url', () => {
         });
 
         expect(externalUrl.searchParams.get('config')).toBe('https://raw.githubusercontent.com/Luckylos/shellcrashyaml/main/subconverter-shellcrash-needs.yaml');
+    });
+
+    it('should render remote Clash YAML profile templates locally in external mode', () => {
+        expect(shouldRenderClashYamlProfileTemplateLocally({
+            isExternalMode: true,
+            targetFormat: 'clash',
+            templateSource: resolveTemplateSource('https://raw.githubusercontent.com/Luckylos/shellcrashyaml/refs/heads/main/subconverter-shellcrash-needs.yaml')
+        })).toBe(true);
+        expect(shouldRenderClashYamlProfileTemplateLocally({
+            isExternalMode: true,
+            targetFormat: 'surge',
+            templateSource: resolveTemplateSource('https://raw.githubusercontent.com/Luckylos/shellcrashyaml/refs/heads/main/subconverter-shellcrash-needs.yaml')
+        })).toBe(false);
+        expect(shouldRenderClashYamlProfileTemplateLocally({
+            isExternalMode: true,
+            targetFormat: 'clash',
+            templateSource: resolveTemplateSource('https://example.com/subconverter.ini')
+        })).toBe(false);
     });
 
     it('should normalize template targets and expose compatibility table', () => {

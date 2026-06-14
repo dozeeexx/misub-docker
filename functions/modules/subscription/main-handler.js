@@ -337,6 +337,16 @@ export function resolveBuiltinRequestOptions({ searchParams, userAgent = '' } = 
     };
 }
 
+export function shouldRenderClashYamlProfileTemplateLocally({ isExternalMode = false, targetFormat = '', templateSource = {} } = {}) {
+    if (!isExternalMode || targetFormat !== 'clash' || templateSource?.kind !== 'remote') return false;
+    try {
+        const parsed = new URL(String(templateSource.value || '').trim());
+        return /\.ya?ml$/i.test(parsed.pathname);
+    } catch {
+        return /\.ya?ml(?:[?#].*)?$/i.test(String(templateSource.value || '').trim());
+    }
+}
+
 /**
  * 处理MiSub订阅请求
  * @param {Object} context - Cloudflare上下文
@@ -733,6 +743,50 @@ export async function handleMisubRequest(context) {
 
     // 2. If external mode active, build the redirect URL and return 302
     if (isExternalMode && targetFormat !== 'base64') {
+        if (shouldRenderClashYamlProfileTemplateLocally({ isExternalMode, targetFormat, templateSource })) {
+            try {
+                const userInfoHeader = buildUserInfoHeaderFromSubscriptions(context, targetMisubs);
+                const builtinOptions = {
+                    ...resolveBuiltinRequestOptions({ searchParams: url.searchParams, userAgent: userAgentHeader }),
+                    fileName: subName,
+                    managedConfigUrl: buildManagedConfigUrl(request.url),
+                    interval: config.UpdateInterval || 86400,
+                    skipCertVerify: shouldSkipCertificateVerify,
+                    enableUdp: shouldEnableUdp,
+                    enableTfo: urlTfo === 'true' || urlTfo === '1',
+                    ruleLevel,
+                    isMeta: isMetaCore(userAgentHeader, url.searchParams)
+                };
+                const rendered = await ProcessorService.renderOutput({
+                    targetFormat,
+                    combinedNodeList: isProfileExpired ? (DEFAULT_EXPIRED_NODE + '\n') : combinedNodeList,
+                    subName,
+                    config,
+                    builtinOptions,
+                    templateSource,
+                    managedConfigUrl: builtinOptions.managedConfigUrl,
+                    storageAdapter,
+                    userInfoHeader
+                });
+
+                if (rendered.headers?.['X-MiSub-Template-Mode'] === 'clash-yaml-profile') {
+                    const responseHeaders = new Headers({
+                        'Content-Type': rendered.contentType || 'application/x-yaml; charset=utf-8',
+                        'Cache-Control': 'no-store, no-cache',
+                        'X-MiSub-Mode': 'local-clash-yaml-profile-template'
+                    });
+                    if (userInfoHeader) {
+                        responseHeaders.set('Subscription-Userinfo', userInfoHeader);
+                        responseHeaders.set('Profile-Update-Interval', String(config.UpdateInterval || 24));
+                    }
+                    Object.entries(rendered.headers || {}).forEach(([key, value]) => responseHeaders.set(key, value));
+                    return new Response(rendered.content, { headers: responseHeaders });
+                }
+            } catch (err) {
+                console.warn('[ExternalTemplate] Local Clash YAML profile render failed, falling back to external redirect:', err?.message || err);
+            }
+        }
+
         const backend = url.searchParams.get('backend') || profileSub.backend || globalSub.defaultBackend;
         const externalUrl = buildExternalSubconverterUrl({
             backend,
