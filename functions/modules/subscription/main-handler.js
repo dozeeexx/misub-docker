@@ -158,7 +158,37 @@ export function resolveTemplateSource(value) {
 
 export function resolveExternalTemplateConfigUrl(templateSource) {
     if (!templateSource || typeof templateSource !== 'object') return '';
-    return templateSource.kind === 'remote' ? String(templateSource.value || '').trim() : '';
+    if (templateSource.kind !== 'remote') return '';
+    return normalizeExternalTemplateConfigUrl(String(templateSource.value || '').trim());
+}
+
+export function normalizeExternalTemplateConfigUrl(input) {
+    const raw = typeof input === 'string' ? input.trim() : '';
+    if (!raw) return '';
+
+    try {
+        const parsed = new URL(raw);
+        if (parsed.hostname.toLowerCase() !== 'github.com') {
+            return raw;
+        }
+
+        const parts = parsed.pathname.split('/').filter(Boolean);
+        const markerIndex = parts.findIndex(part => part === 'blob' || part === 'raw');
+        if (parts.length < 5 || markerIndex !== 2) {
+            return raw;
+        }
+
+        const [owner, repo, , branch, ...fileParts] = parts;
+        if (!owner || !repo || !branch || fileParts.length === 0) {
+            return raw;
+        }
+
+        const rawUrl = new URL(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${fileParts.join('/')}`);
+        rawUrl.search = parsed.search;
+        return rawUrl.toString();
+    } catch {
+        return raw;
+    }
 }
 
 export function normalizeSubconverterBackend(input, fallback = DEFAULT_SUBCONVERTER_BACKEND) {

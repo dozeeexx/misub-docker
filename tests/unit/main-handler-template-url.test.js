@@ -73,6 +73,18 @@ describe('Main handler template url', () => {
         expect(externalUrl.searchParams.get('config')).toBe('https://raw.githubusercontent.com/Luckylos/shellcrashyaml/main/subconverter-shellcrash-needs.yaml');
     });
 
+    it('should normalize GitHub blob config URLs before forwarding to external subconverter backends', () => {
+        const externalUrl = buildExternalSubconverterUrl({
+            backend: 'https://sub.example.com/sub',
+            targetFormat: 'clash',
+            nodeList: 'ss://node-a#A',
+            templateSource: resolveTemplateSource('https://github.com/Luckylos/shellcrashyaml/blob/main/subconverter-shellcrash-needs.yaml'),
+            subName: 'ShellCrash'
+        });
+
+        expect(externalUrl.searchParams.get('config')).toBe('https://raw.githubusercontent.com/Luckylos/shellcrashyaml/main/subconverter-shellcrash-needs.yaml');
+    });
+
     it('should normalize template targets and expose compatibility table', () => {
         expect(normalizeTemplateTarget('surge&ver=4')).toBe('surge');
         expect(normalizeTemplateTarget('sing-box')).toBe('singbox');
