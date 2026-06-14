@@ -137,6 +137,64 @@ describe('handleMisubRequest regression coverage', () => {
         }
     });
 
+    it('switches large external converter redirects to a temporary callback URL', async () => {
+        const subscriptions = [{
+            id: 'sub-a',
+            name: 'Airport A',
+            url: 'https://airport.example/sub',
+            enabled: true
+        }];
+        const adapter = createStorageAdapter({
+            settings: {
+                mytoken: 'stable-token',
+                enableFlagEmoji: false,
+                enableTrafficNode: false,
+                subconverter: { engineMode: 'external', defaultBackend: 'sub.example' }
+            },
+            subscriptions
+        });
+        const kvWrites = new Map();
+        const env = {
+            CALLBACK_TOKEN_SECRET: 'callback-secret',
+            MISUB_KV: {
+                get: vi.fn(async (key) => kvWrites.get(key) || null),
+                put: vi.fn(async (key, value) => {
+                    kvWrites.set(key, value);
+                })
+            }
+        };
+        createAdapter.mockReturnValue(adapter);
+        const bigNodeList = Array.from({ length: 90 }, (_, index) => `trojan://pass${index}@example.com:443#HK-${index}`).join('\n');
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(bigNodeList, { status: 200 })));
+
+        const logSpy = silenceExpectedRequestLogs();
+        try {
+            const { handleMisubRequest } = await import('../../functions/modules/subscription/main-handler.js');
+            const response = await handleMisubRequest({
+                request: new Request('https://misub.example/stable-token?target=clash&refresh=1', {
+                    headers: { 'User-Agent': 'ClashMeta' }
+                }),
+                env,
+                waitUntil: vi.fn()
+            });
+            const redirectUrl = new URL(response.headers.get('Location'));
+            const callbackUrl = new URL(redirectUrl.searchParams.get('url'));
+
+            expect(response.status).toBe(302);
+            expect(redirectUrl.origin + redirectUrl.pathname).toBe('https://sub.example/sub');
+            expect(redirectUrl.searchParams.get('target')).toBe('clash');
+            expect(callbackUrl.origin + callbackUrl.pathname).toBe('https://misub.example/api/external-nodes-callback');
+            expect(callbackUrl.searchParams.get('token')).toBeTruthy();
+            expect(redirectUrl.searchParams.get('url')).not.toContain('trojan://pass0@example.com');
+            const externalNodeCacheWrites = [...kvWrites.entries()].filter(([key]) => key.startsWith('tmp_external_nodes:'));
+            expect(externalNodeCacheWrites).toHaveLength(1);
+            expect(externalNodeCacheWrites[0][1]).toContain('trojan://pass0@example.com:443#');
+            expect(response.headers.get('X-MiSub-Mode')).toBe('external-redirect-callback');
+        } finally {
+            logSpy.mockRestore();
+        }
+    });
+
     it.each([
         ['bare default backend', 'subapi.cmliussss.net', 'https://subapi.cmliussss.net/sub'],
         ['legacy default backend URL', 'https://subapi.cmliussss.net/sub?', 'https://subapi.cmliussss.net/sub'],

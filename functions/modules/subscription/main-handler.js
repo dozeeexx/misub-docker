@@ -5,6 +5,7 @@ import { sendEnhancedTgNotification, tgEscape } from '../notifications.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS as defaultSettings, DEFAULT_SUBCONVERTER_BACKEND } from '../config.js';
 import { createDisguiseResponse } from '../disguise-page.js';
 import { generateCacheKey, setCache } from '../../services/node-cache-service.js';
+import { countNodeLines, prepareExternalNodesCallback, shouldUseExternalNodesCallback } from '../../services/external-nodes-callback-service.js';
 import { resolveRequestContext } from './request-context.js';
 import { resolveNodeListWithCache } from './cache-manager.js';
 import { ProcessorService } from '../../services/processor-service.js';
@@ -788,10 +789,11 @@ export async function handleMisubRequest(context) {
         }
 
         const backend = url.searchParams.get('backend') || profileSub.backend || globalSub.defaultBackend;
-        const externalUrl = buildExternalSubconverterUrl({
+        const externalNodeList = isProfileExpired ? (DEFAULT_EXPIRED_NODE + '\n') : combinedNodeList;
+        let externalUrl = buildExternalSubconverterUrl({
             backend,
             targetFormat,
-            nodeList: isProfileExpired ? (DEFAULT_EXPIRED_NODE + '\n') : combinedNodeList,
+            nodeList: externalNodeList,
             requestUrl: request.url,
             profileSub,
             globalSub,
@@ -800,6 +802,33 @@ export async function handleMisubRequest(context) {
             templateSource,
             subName
         });
+        let externalRedirectMode = 'external-redirect-v2';
+
+        if (shouldUseExternalNodesCallback({
+            inlineUrlLength: externalUrl.toString().length,
+            nodeCount: countNodeLines(externalNodeList)
+        })) {
+            const callbackProfileId = profileIdentifier || token || 'default';
+            const callback = await prepareExternalNodesCallback({
+                env,
+                requestUrl: request.url,
+                profileId: callbackProfileId,
+                nodesText: externalNodeList
+            });
+            externalUrl = buildExternalSubconverterUrl({
+                backend,
+                targetFormat,
+                nodeList: callback.callbackUrl,
+                requestUrl: request.url,
+                profileSub,
+                globalSub,
+                userAgent: userAgentHeader,
+                searchParams: url.searchParams,
+                templateSource,
+                subName
+            });
+            externalRedirectMode = 'external-redirect-callback';
+        }
 
         // [Access Log] Send notification for external redirection
         if (!url.searchParams.has('callback_token') && !shouldSkipLogging && config.enableAccessLog) {
@@ -823,7 +852,7 @@ export async function handleMisubRequest(context) {
             headers: {
                 'Location': externalUrl.toString(),
                 'Cache-Control': 'no-store, no-cache',
-                'X-MiSub-Mode': 'external-redirect-v2',
+                'X-MiSub-Mode': externalRedirectMode,
                 ...(templateSource.kind === 'builtin' ? { 'X-MiSub-Template-Warning': 'external-engine-ignores-builtin-template' } : {})
             }
         });

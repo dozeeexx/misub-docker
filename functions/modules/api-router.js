@@ -50,6 +50,7 @@ import { handleParseSubscription } from './parse-subscription-handler.js';
 import { safeFetchPublicUrl, validatePublicFetchUrl, redactUrl } from './security-utils.js';
 import { normalizeSubconverterBackend } from './subscription/main-handler.js';
 import { maybeRunScheduledTasks } from './scheduled-task-runner.js';
+import { handleExternalNodesCallbackRequest } from '../services/external-nodes-callback-service.js';
 
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
@@ -67,6 +68,10 @@ function isAuthDiagnosticsEnabled(env) {
 export async function handleApiRequest(request, env, context = null) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
+
+    if (path === '/external-nodes-callback') {
+        return handleExternalNodesCallbackRequest(request, env);
+    }
 
     // [新增] 数据存储迁移接口 (KV -> D1)
     if (path === '/migrate_to_d1') {
