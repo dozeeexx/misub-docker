@@ -188,6 +188,7 @@ export const useDataStore = defineStore('data', () => {
             }
 
             settingsStore.updateConfig(newSettings);
+            syncCachedConfig(settingsStore.config);
             showToast(t('store.settingsUpdated'), 'success');
 
         } catch (error) {
@@ -238,6 +239,19 @@ export const useDataStore = defineStore('data', () => {
 
     function clearCachedData() {
         dataCache.clear();
+    }
+
+    function syncCachedConfig(nextConfig) {
+        const cachedData = dataCache.get();
+        if (!cachedData) return;
+
+        dataCache.set({
+            ...cachedData,
+            config: {
+                ...(cachedData.config || {}),
+                ...(nextConfig || {})
+            }
+        });
     }
 
     // --- Proxy Actions (Mutators) ---

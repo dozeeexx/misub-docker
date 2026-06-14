@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { buildManagedConfigUrl, extractProxySectionFromBuiltin, resolveExternalTemplateConfigUrl, resolveTemplateSource, resolveTemplateUrl } from '../../functions/modules/subscription/main-handler.js';
+import {
+    buildExternalSubconverterUrl,
+    buildManagedConfigUrl,
+    extractProxySectionFromBuiltin,
+    resolveExternalTemplateConfigUrl,
+    resolveTemplateSource,
+    resolveTemplateUrl
+} from '../../functions/modules/subscription/main-handler.js';
 import {
     TEMPLATE_COMPATIBILITY,
     normalizeTemplateTarget,
@@ -8,9 +15,9 @@ import {
 
 describe('Main handler template url', () => {
     it('should preserve subscription url while removing cache flags', () => {
-        const url = buildManagedConfigUrl('https://example.com/sub?token=abc&refresh=1&nocache=1');
+        const url = buildManagedConfigUrl('https://example.com/sub?profile=demo&refresh=1&nocache=1');
 
-        expect(url).toBe('https://example.com/sub?token=abc');
+        expect(url).toBe('https://example.com/sub?profile=demo');
     });
 
     it('should extract QuanX nodes from server_local section for list mode', () => {
@@ -50,6 +57,20 @@ describe('Main handler template url', () => {
         expect(shouldApplyExternalTemplateForTarget('quanx', 'https://example.com/preset.ini')).toBe(true);
         expect(shouldApplyExternalTemplateForTarget('singbox', 'https://example.com/preset.ini')).toBe(true);
         expect(shouldApplyExternalTemplateForTarget('clash', 'https://example.com/preset.yaml')).toBe(false);
+    });
+
+    it('should forward remote YAML config URLs to external subconverter backends', () => {
+        const externalUrl = buildExternalSubconverterUrl({
+            backend: 'https://sub.example.com/sub',
+            targetFormat: 'clash',
+            nodeList: 'ss://node-a#A\nss://node-b#B',
+            templateSource: resolveTemplateSource('https://raw.githubusercontent.com/Luckylos/shellcrashyaml/main/subconverter-shellcrash-needs.yaml'),
+            subName: 'ShellCrash'
+        });
+
+        expect(externalUrl.searchParams.get('target')).toBe('clash');
+        expect(externalUrl.searchParams.get('url')).toBe('ss://node-a#A|ss://node-b#B');
+        expect(externalUrl.searchParams.get('config')).toBe('https://raw.githubusercontent.com/Luckylos/shellcrashyaml/main/subconverter-shellcrash-needs.yaml');
     });
 
     it('should normalize template targets and expose compatibility table', () => {

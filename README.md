@@ -117,11 +117,12 @@ If schema initialization fails in the CLI, run the latest `schema.sql` manually 
 
 ### Recommended environment variables
 
-- `PASSWORD`: admin login password.
+- `ADMIN_PASSWORD`: admin login password. If unset, the default password is `admin`.
 - `COOKIE_SECRET`: stable session signing secret.
 - `CORS_ORIGINS`: allowed browser origins for API requests.
 - `CRON_SECRET`: secret used by external cron triggers.
-- `BASE_URL`: public base URL used for generated links.
+- `MISUB_PUBLIC_URL`: public site URL used to generate subscription conversion callback URLs.
+- `MISUB_CALLBACK_URL`: callback base URL for subscription conversion. It takes precedence over `MISUB_PUBLIC_URL`.
 
 Never commit real tokens, cookies, UUID/private keys, webhook secrets, bot tokens, subscription URLs, or airport domains.
 
@@ -174,7 +175,7 @@ See [Operator Chain Guide](docs/OPERATOR_CHAIN_GUIDE.md) for details.
 - User-provided scripts are not executed in the main page context.
 - External resource loading and iframe URLs are restricted by renderer policy.
 - Subscription fetch and preview flows include SSRF-oriented safeguards.
-- Use strong secrets for `PASSWORD`, `COOKIE_SECRET`, and `CRON_SECRET`.
+- Use strong secrets for `ADMIN_PASSWORD`, `COOKIE_SECRET`, and `CRON_SECRET`.
 
 ## Documentation
 
