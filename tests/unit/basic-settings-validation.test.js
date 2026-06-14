@@ -50,19 +50,33 @@ describe('BasicSettings validation feedback', () => {
     expect(wrapper.text()).toContain('"/login" 是系统保留路径，不可用作自定义管理后台路径');
   });
 
-  it('shows inline error for token characters that cannot form safe paths', async () => {
+  it('allows URL path-safe symbol characters in subscription tokens for stronger secrets', async () => {
     const wrapper = mountBasicSettings({
       FileName: '',
-      mytoken: ':',
-      profileToken: 'profile:token',
+      mytoken: '!luckyss',
+      profileToken: 'profile:token!$&()*+,;=@',
       customLoginPath: 'login',
       enablePublicPage: true
     });
 
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.props().settings.mytoken).toBe(':');
-    expect(wrapper.props().settings.profileToken).toBe('profile:token');
-    expect(wrapper.text()).toContain('Token 仅允许字母、数字、下划线和中划线');
+    expect(wrapper.props().settings.mytoken).toBe('!luckyss');
+    expect(wrapper.props().settings.profileToken).toBe('profile:token!$&()*+,;=@');
+    expect(wrapper.text()).not.toContain('Token 仅允许');
+  });
+
+  it('still rejects token characters that break a single URL path segment', async () => {
+    const wrapper = mountBasicSettings({
+      FileName: '',
+      mytoken: 'bad/token',
+      profileToken: 'bad?token',
+      customLoginPath: 'login',
+      enablePublicPage: true
+    });
+
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain('Token 不能包含斜杠、问号、井号或空白字符');
   });
 });

@@ -31,7 +31,7 @@ const RESERVED_PATHS = [
 ];
 
 const getPathSegment = (value) => value.replace(/^\/+/, '').split('/')[0].toLowerCase();
-const hasInvalidTokenChars = (value) => /[^a-zA-Z0-9-_]/.test(value);
+const hasInvalidTokenChars = (value) => /[\s\/?#]/.test(value);
 
 const customLoginPathError = computed(() => {
   const value = props.settings.customLoginPath;
