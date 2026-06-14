@@ -107,6 +107,7 @@ function getCurrentRequestUserInfo(context, sub) {
 
 function buildUserInfoHeaderFromSubscriptions(context, subscriptions) {
     const totalUserInfo = subscriptions.reduce((acc, sub) => {
+        if (sub?.excludeTraffic) return acc;
         const userInfo = sub?.enabled ? getCurrentRequestUserInfo(context, sub) : null;
         if (!userInfo) return acc;
 
