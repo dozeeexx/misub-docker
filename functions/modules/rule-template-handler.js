@@ -1,5 +1,5 @@
 import { StorageFactory } from '../storage-adapter.js';
-import { createJsonResponse, createErrorResponse } from './utils.js';
+import { createJsonResponse, createErrorResponse, JSON_BODY_LIMITS, readJsonWithLimit } from './utils.js';
 
 export const KV_KEY_RULE_TEMPLATES = 'misub_rule_templates_v1';
 const MAX_TEMPLATE_COUNT = 50;
@@ -102,8 +102,11 @@ export async function handleRuleTemplatesRequest(request, env) {
         if (request.method === 'POST') {
             let body;
             try {
-                body = await request.json();
-            } catch {
+                body = await readJsonWithLimit(request, JSON_BODY_LIMITS.normal);
+            } catch (e) {
+                if (e?.status === 413) {
+                    return createJsonResponse({ success: false, message: e.message, error: e.message }, 413);
+                }
                 return createJsonResponse({ success: false, message: '请求数据格式错误' }, 400);
             }
 

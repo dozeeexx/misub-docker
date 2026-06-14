@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { api, APIError } from '../../../lib/http.js';
 import { useToastStore } from '../../../stores/toast.js';
 import { useDataStore } from '../../../stores/useDataStore.js';
+import { useManualNodes } from '../../../composables/useManualNodes.js';
 import { useI18n } from '../../../i18n/index.js';
 import Modal from '../../forms/Modal.vue';
 import NodeFilters from './components/NodeFilters.vue';
@@ -89,6 +90,7 @@ const clearSelection = () => {
 
 const { showToast } = useToastStore();
 const dataStore = useDataStore();
+const { addNodesFromBulk } = useManualNodes(dataStore.markDirty);
 
 const handleSaveSelection = async () => {
   if (selectedUrls.value.size === 0) {
@@ -112,20 +114,10 @@ const handleSaveSelection = async () => {
         };
     });
 
-    dataStore.addNodes(nodesToAdd);
+    addNodesFromBulk(nodesToAdd);
     
-    // If we are in profile mode, we might want to also add these new nodes to the profile
-    if (props.profileId) {
-        const profile = dataStore.profiles.find(p => p.id === props.profileId || p.customId === props.profileId);
-        if (profile) {
-            // Wait for nodes to be added to get their IDs (or we generate them)
-            // Since dataStore.addNodes generates IDs, we need to be careful.
-            // Simplified: showToast and guide user to save.
-            showToast(`已成功提取 ${urls.length} 个节点至手动列表，请手动在订阅组中勾选或保存。`, 'success');
-        }
-    } else {
-        showToast(`已成功提取 ${urls.length} 个节点至手动列表，请记得保存更改。`, 'success');
-    }
+    // Add nodes to the manual list. Profile association remains an explicit follow-up action.
+    showToast(`已成功提取 ${urls.length} 个节点至手动列表，请记得保存更改。`, 'success');
     
     pickingMode.value = false;
     selectedUrls.value.clear();

@@ -4,7 +4,7 @@
  */
 
 import { StorageFactory, SettingsCache, STORAGE_TYPES } from '../storage-adapter.js';
-import { getCookieSecret, getAdminPassword, setAdminPassword, isUsingDefaultPassword, createJsonResponse, createErrorResponse, migrateProfileIds } from './utils.js';
+import { getCookieSecret, getAdminPassword, setAdminPassword, isUsingDefaultPassword, createJsonResponse, createErrorResponse, migrateProfileIds, JSON_BODY_LIMITS, readJsonWithLimit } from './utils.js';
 import { authMiddleware, handleLogin, handleLogout, createUnauthorizedResponse } from './auth-middleware.js';
 import { sendTgNotification, checkAndNotify } from './notifications.js';
 import { clearAllNodeCaches } from '../services/node-cache-service.js';
@@ -212,13 +212,13 @@ export async function handleMisubsSave(request, env) {
         // 步骤1: 解析请求体
         let requestData;
         try {
-            requestData = await request.json();
+            requestData = await readJsonWithLimit(request, JSON_BODY_LIMITS.large);
         } catch (parseError) {
             console.error('[API Error /misubs] JSON解析失败:', parseError);
             return createJsonResponse({
                 success: false,
-                message: '请求数据格式错误，请检查数据格式'
-            }, 400);
+                message: parseError.status === 413 ? parseError.message : '请求数据格式错误，请检查数据格式'
+            }, parseError.status || 400);
         }
 
         const { misubs, profiles, diff } = requestData;
@@ -436,7 +436,7 @@ export async function handleSettingsGet(env) {
  */
 export async function handleSettingsSave(request, env) {
     try {
-        const newSettings = await request.json();
+        const newSettings = await readJsonWithLimit(request, JSON_BODY_LIMITS.large);
 
         const reservedPathRoots = new Set([
             'settings', 'login', 'groups', 'nodes', 'subscriptions', 'dashboard',
@@ -708,7 +708,7 @@ export async function handleUpdatePassword(request, env) {
     }
 
     try {
-        const { password } = await request.json();
+        const { password } = await readJsonWithLimit(request, JSON_BODY_LIMITS.auth);
 
         if (!password || typeof password !== 'string' || password.length < 6) {
             return createErrorResponse('密码必须至少6位字符', 400);

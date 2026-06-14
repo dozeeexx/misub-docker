@@ -5,7 +5,7 @@
 
 import { StorageFactory } from '../../storage-adapter.js';
 import { DEFAULT_SETTINGS, KV_KEY_SETTINGS } from '../config.js';
-import { createJsonResponse, createErrorResponse } from '../utils.js';
+import { createJsonResponse, createErrorResponse, JSON_BODY_LIMITS, readJsonWithLimit } from '../utils.js';
 import { parseNodeList } from '../utils/node-parser.js';
 import { getProcessedUserAgent } from '../../utils/format-utils.js';
 import { buildFetchProxyUrl } from '../../utils/fetch-proxy-utils.js';
@@ -69,7 +69,7 @@ export async function handleNodeCountRequest(request, env) {
     }
 
     try {
-        const { url: subUrl, fetchProxy, plusAsSpace, userAgent: customUserAgent } = await request.json();
+        const { url: subUrl, fetchProxy, plusAsSpace, userAgent: customUserAgent } = await readJsonWithLimit(request, JSON_BODY_LIMITS.normal);
         if (!subUrl || typeof subUrl !== 'string' || !/^https?:\/\//i.test(subUrl)) {
             return createErrorResponse('Invalid or missing url', 400);
         }
@@ -417,7 +417,7 @@ export async function handleBatchUpdateNodesRequest(request, env) {
     }
 
     try {
-        const requestData = await request.json();
+        const requestData = await readJsonWithLimit(request, JSON_BODY_LIMITS.normal);
         const { subscriptionIds, userAgent = 'MiSub-Batch-Update/1.0' } = requestData;
 
         // 验证必需参数
@@ -555,7 +555,7 @@ export async function handleCleanNodesRequest(request, env) {
     }
 
     try {
-        const requestData = await request.json();
+        const requestData = await readJsonWithLimit(request, JSON_BODY_LIMITS.normal);
         const { profileId } = requestData;
 
         const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
@@ -609,7 +609,7 @@ export async function handleHealthCheckRequest(request, env) {
     }
 
     try {
-        const requestData = await request.json();
+        const requestData = await readJsonWithLimit(request, JSON_BODY_LIMITS.normal);
         const { nodeUrls, timeout = 5000 } = requestData;
 
         if (!nodeUrls || !Array.isArray(nodeUrls) || nodeUrls.length === 0) {

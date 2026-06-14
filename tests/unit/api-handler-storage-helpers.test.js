@@ -36,7 +36,9 @@ vi.mock('../../functions/modules/utils.js', () => ({
   isUsingDefaultPassword: vi.fn().mockResolvedValue(false),
   createJsonResponse: (data, status = 200) => new Response(JSON.stringify(data), { status }),
   createErrorResponse: (data, status = 500) => new Response(JSON.stringify({ error: String(data) }), { status }),
-  migrateProfileIds: vi.fn().mockReturnValue(false)
+  migrateProfileIds: vi.fn().mockReturnValue(false),
+  JSON_BODY_LIMITS: { auth: 16 * 1024, small: 128 * 1024, normal: 1024 * 1024, large: 5 * 1024 * 1024 },
+  readJsonWithLimit: async request => request.json()
 }));
 
 vi.mock('../../functions/modules/auth-middleware.js', () => ({

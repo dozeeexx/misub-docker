@@ -612,6 +612,38 @@ export function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
+export const JSON_BODY_LIMITS = {
+    auth: 16 * 1024,
+    small: 128 * 1024,
+    normal: 1024 * 1024,
+    large: 5 * 1024 * 1024
+};
+
+export class RequestBodyTooLargeError extends Error {
+    constructor(limitBytes) {
+        super(`Request JSON body too large (max ${limitBytes} bytes)`);
+        this.name = 'RequestBodyTooLargeError';
+        this.status = 413;
+        this.code = 'REQUEST_BODY_TOO_LARGE';
+    }
+}
+
+export async function readJsonWithLimit(request, limitBytes = JSON_BODY_LIMITS.normal) {
+    const contentLength = request?.headers?.get?.('Content-Length') || request?.headers?.get?.('content-length');
+    if (contentLength) {
+        const declaredBytes = Number(contentLength);
+        if (Number.isFinite(declaredBytes) && declaredBytes > limitBytes) {
+            throw new RequestBodyTooLargeError(limitBytes);
+        }
+    }
+
+    const text = await request.text();
+    if (new TextEncoder().encode(text).length > limitBytes) {
+        throw new RequestBodyTooLargeError(limitBytes);
+    }
+    return text ? JSON.parse(text) : {};
+}
+
 /**
  * 创建标准错误响应
  * @param {Error|string} error - 错误对象或错误消息

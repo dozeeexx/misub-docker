@@ -4,7 +4,7 @@
  */
 
 import { COOKIE_NAME, SESSION_DURATION } from './config.js';
-import { getCookieSecret, getAdminPassword, getAuthDebugInfo } from './utils.js';
+import { getCookieSecret, getAdminPassword, getAuthDebugInfo, JSON_BODY_LIMITS, RequestBodyTooLargeError, readJsonWithLimit } from './utils.js';
 import { StorageFactory } from '../storage-adapter.js';
 
 function normalizeSecret(value) {
@@ -222,7 +222,7 @@ export async function getLoginPasswordDiagnostic(request, env) {
 
     let payload;
     try {
-        payload = await request.json();
+        payload = await readJsonWithLimit(request, JSON_BODY_LIMITS.auth);
     } catch (_) {
         result.reason = 'invalid_json';
         return result;
@@ -277,9 +277,15 @@ export async function handleLogin(request, env) {
     const logMeta = buildRequestMeta(request, env);
     let payload;
     try {
-        payload = await request.json();
+        payload = await readJsonWithLimit(request, JSON_BODY_LIMITS.auth);
     } catch (e) {
         console.error('[API Error /login] Request body parse failed', { ...logMeta, error: e?.message });
+        if (e instanceof RequestBodyTooLargeError) {
+            return new Response(JSON.stringify({ error: e.message }), {
+                status: e.status,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
         return new Response(JSON.stringify({ error: '请求体解析失败' }), { status: 400 });
     }
 

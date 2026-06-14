@@ -10,7 +10,7 @@
 import { StorageFactory, SettingsCache, STORAGE_TYPES } from '../storage-adapter.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS } from './config.js';
 import { KV_KEY_RULE_TEMPLATES, listRuleTemplates } from './rule-template-handler.js';
-import { createJsonResponse, createErrorResponse } from './utils.js';
+import { createJsonResponse, createErrorResponse, JSON_BODY_LIMITS, readJsonWithLimit } from './utils.js';
 
 export const BACKUP_TYPE = 'misub-backup';
 export const BACKUP_VERSION = 1;
@@ -375,47 +375,47 @@ export async function handleWebdavBackupTest(request, env) {
     try {
         const { storageAdapter } = await getStorage(env);
         const settings = await storageAdapter.get(KV_KEY_SETTINGS) || {};
-        const body = await request.json().catch(() => ({}));
+        const body = await readJsonWithLimit(request, JSON_BODY_LIMITS.large).catch(e => { if (e?.status === 413) throw e; return {}; });
         const config = { ...normalizeWebdavConfig(settings), ...(body?.webdavBackup || body || {}) };
         assertSafeWebdavConfig(config);
         await ensureRemoteDirectory(config);
         return createJsonResponse({ success: true, message: 'WebDAV 连接测试成功' });
     } catch (error) {
-        return createJsonResponse({ success: false, message: error.message || 'WebDAV 连接测试失败' }, 400);
+        return createJsonResponse({ success: false, message: error.message || 'WebDAV 连接测试失败' }, error.status || 400);
     }
 }
 
 export async function handleManualWebdavBackup(request, env) {
     if (request.method !== 'POST') return createErrorResponse('Method Not Allowed', 405);
     try {
-        const body = await request.json().catch(() => ({}));
+        const body = await readJsonWithLimit(request, JSON_BODY_LIMITS.large).catch(e => { if (e?.status === 413) throw e; return {}; });
         const result = await performWebdavBackup(env, { scope: body.scope, trigger: 'manual' });
         return createJsonResponse(result);
     } catch (error) {
-        return createJsonResponse({ success: false, message: error.message || '备份失败' }, 500);
+        return createJsonResponse({ success: false, message: error.message || '备份失败' }, error.status || 500);
     }
 }
 
 export async function handleBackupExport(request, env) {
     if (request.method !== 'POST') return createErrorResponse('Method Not Allowed', 405);
     try {
-        const body = await request.json().catch(() => ({}));
+        const body = await readJsonWithLimit(request, JSON_BODY_LIMITS.large).catch(e => { if (e?.status === 413) throw e; return {}; });
         const payload = await buildBackupPayload(env, { scope: body.scope, trigger: 'local-export' });
         return createJsonResponse({ success: true, exportData: payload });
     } catch (error) {
-        return createJsonResponse({ success: false, message: error.message || '导出失败' }, 500);
+        return createJsonResponse({ success: false, message: error.message || '导出失败' }, error.status || 500);
     }
 }
 
 export async function handleBackupRestore(request, env) {
     if (request.method !== 'POST') return createErrorResponse('Method Not Allowed', 405);
     try {
-        const body = await request.json();
+        const body = await readJsonWithLimit(request, JSON_BODY_LIMITS.large);
         const payload = body?.payload || body?.backup || body;
         const result = await restoreBackupPayload(env, payload, { scope: body?.scope });
         return createJsonResponse(result);
     } catch (error) {
-        return createJsonResponse({ success: false, message: error.message || '恢复失败' }, 400);
+        return createJsonResponse({ success: false, message: error.message || '恢复失败' }, error.status || 400);
     }
 }
 
@@ -467,11 +467,11 @@ export async function fetchWebdavBackupFile(env, filePath) {
 export async function handleWebdavRestore(request, env) {
     if (request.method !== 'POST') return createErrorResponse('Method Not Allowed', 405);
     try {
-        const body = await request.json();
+        const body = await readJsonWithLimit(request, JSON_BODY_LIMITS.large);
         const payload = body.payload || (body.file ? await fetchWebdavBackupFile(env, body.file) : null);
         const result = await restoreBackupPayload(env, payload, { scope: body.scope });
         return createJsonResponse(result);
     } catch (error) {
-        return createJsonResponse({ success: false, message: error.message || '恢复失败' }, 400);
+        return createJsonResponse({ success: false, message: error.message || '恢复失败' }, error.status || 400);
     }
 }

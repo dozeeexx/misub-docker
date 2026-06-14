@@ -4,7 +4,7 @@
  */
 
 import { StorageFactory } from '../../storage-adapter.js';
-import { createJsonResponse, createErrorResponse } from '../utils.js';
+import { createJsonResponse, createErrorResponse, JSON_BODY_LIMITS, readJsonWithLimit } from '../utils.js';
 import { handleSubscriptionNodesRequest } from '../subscription-handler.js';
 import { debugTgNotification } from '../../services/notification-service.js';
 import { parseNodeList, calculateProtocolStats, calculateRegionStats } from '../utils/node-parser.js';
@@ -22,7 +22,7 @@ export async function handleDebugSubscriptionRequest(request, env) {
     }
 
     try {
-        const requestData = await request.json();
+        const requestData = await readJsonWithLimit(request, JSON_BODY_LIMITS.normal);
         const {
             url: subscriptionUrl,
             subscriptionId,
@@ -254,7 +254,7 @@ export async function handleExportDataRequest(request, env) {
     }
 
     try {
-        const requestData = await request.json();
+        const requestData = await readJsonWithLimit(request, JSON_BODY_LIMITS.normal);
         const { includeSubscriptions = true, includeProfiles = true, includeSettings = false } = requestData;
 
         const storageAdapter = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
@@ -311,7 +311,7 @@ export async function handlePreviewContentRequest(request, env) {
     }
 
     try {
-        const requestData = await request.json();
+        const requestData = await readJsonWithLimit(request, JSON_BODY_LIMITS.normal);
         const { url, userAgent = 'MiSub-Preview/1.0', maxLength = 5000 } = requestData;
 
         if (!url) {
@@ -401,7 +401,7 @@ export async function handleTestNotificationRequest(request, env) {
     }
 
     try {
-        const { botToken, chatId } = await request.json();
+        const { botToken, chatId } = await readJsonWithLimit(request, JSON_BODY_LIMITS.small);
         const settings = { BotToken: botToken, ChatID: chatId };
 
         const result = await debugTgNotification(settings, '🔔 <b>通知测试</b> 🔔\n\n这是来自 MiSub 的测试消息，用于验证您的配置是否正确。');
@@ -413,6 +413,6 @@ export async function handleTestNotificationRequest(request, env) {
         }
 
     } catch (e) {
-        return createErrorResponse(e.message, 500);
+        return createErrorResponse(e.message, e.status || 500);
     }
 }

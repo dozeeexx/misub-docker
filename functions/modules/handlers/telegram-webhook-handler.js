@@ -24,7 +24,7 @@
 
 import { StorageFactory } from '../../storage-adapter.js';
 import { clearAllNodeCaches } from '../../services/node-cache-service.js';
-import { createJsonResponse, escapeHtml } from '../utils.js';
+import { createJsonResponse, escapeHtml, JSON_BODY_LIMITS, readJsonWithLimit } from '../utils.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS } from '../config.js';
 
 // ==================== 存储与配置 ====================
@@ -2698,7 +2698,7 @@ export async function handleTelegramWebhook(request, env) {
         }
 
         // 解析 Telegram Update
-        const update = await request.json();
+        const update = await readJsonWithLimit(request, JSON_BODY_LIMITS.small);
 
         // 处理 Callback Query（按钮回调）
         if (update.callback_query) {
@@ -2742,6 +2742,6 @@ export async function handleTelegramWebhook(request, env) {
 
     } catch (error) {
         console.error('[Telegram Push] Webhook handler error:', error);
-        return createJsonResponse({ error: 'Internal server error' }, 500);
+        return createJsonResponse({ error: error.status === 413 ? error.message : 'Internal server error' }, error.status || 500);
     }
 }

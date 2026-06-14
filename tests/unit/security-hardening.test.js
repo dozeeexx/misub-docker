@@ -8,6 +8,8 @@ import {
 import { handleLogin, createSignedToken, getAuthSessionDiagnostic } from '../../functions/modules/auth-middleware.js';
 import { SESSION_DURATION } from '../../functions/modules/config.js';
 import { handleMisubRequest } from '../../functions/modules/subscription/main-handler.js';
+import { logAccessSuccess } from '../../functions/modules/subscription/access-logger.js';
+import { LogService } from '../../functions/services/log-service.js';
 import { onRequest } from '../../functions/[[path]].js';
 
 function createKv(initial = {}) {
@@ -70,6 +72,36 @@ describe('security hardening', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('rejects oversized login JSON bodies before parsing', async () => {
+    const env = { MISUB_KV: createKv(), COOKIE_SECRET: 'stable-cookie-secret' };
+    const response = await handleLogin(new Request('https://example.com/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'admin', padding: 'x'.repeat(32 * 1024) })
+    }), env);
+    const body = await response.json();
+
+    expect(response.status).toBe(413);
+    expect(body.error).toMatch(/too large|过大/i);
+  });
+
+  it('rejects oversized public preview JSON bodies before outbound fetch', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('should-not-fetch'));
+    const response = await handlePreviewContentRequest(new Request('https://example.com/api/preview/content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: 'https://raw.githubusercontent.com/example/repo/main/sub.txt',
+        padding: 'x'.repeat(2 * 1024 * 1024)
+      })
+    }), {});
+    const body = await response.json();
+
+    expect(response.status).toBe(413);
+    expect(body.error).toMatch(/too large|过大/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('warns after logging in with the default admin password but still allows login', async () => {
@@ -257,6 +289,64 @@ describe('security hardening', () => {
     const logs = infoSpy.mock.calls.map(call => call.join(' ')).join('\n');
     expect(logs).not.toContain('super-secret-token');
     expect(logs).toMatch(/Token:/);
+  });
+
+  it('redacts access-log token and profile identifiers before payload storage and dedupe fingerprinting', async () => {
+    const rawProfileIdentifier = 'private-profile-slug-secret';
+    const addLogSpy = vi.spyOn(LogService, 'addLog').mockResolvedValue(null);
+
+    try {
+      logAccessSuccess({
+        context: {
+          generationStats: { totalNodes: 1, successCount: 1 },
+          accessLogPersistenceMode: 'light',
+          waitUntil(promise) { return promise; }
+        },
+        env: {},
+        request: new Request('https://example.com/profile-share-token/private-profile-slug-secret', {
+          headers: { 'User-Agent': 'ClashMeta', 'CF-Connecting-IP': '203.0.113.8' }
+        }),
+        userAgentHeader: 'ClashMeta',
+        targetFormat: 'clash',
+        token: 'profile-share-token',
+        profileIdentifier: rawProfileIdentifier,
+        subName: 'Private profile',
+        domain: 'example.com'
+      });
+
+      expect(addLogSpy).toHaveBeenCalledTimes(1);
+      const payload = addLogSpy.mock.calls[0][1];
+      const serialized = JSON.stringify(payload);
+      expect(serialized).not.toContain(rawProfileIdentifier);
+      expect(serialized).not.toContain('profile-share-token');
+      expect(payload.token).toMatch(/^profile:[a-f0-9]{12}$/);
+    } finally {
+      addLogSpy.mockRestore();
+    }
+  });
+
+  it('redacts raw log tokens before persistence so stored logs and fingerprints do not contain secrets', async () => {
+    const rawToken = 'access-log-token-secret';
+    const env = { MISUB_KV: createKv() };
+
+    await LogService.addLog(env, {
+      profileName: 'Main subscription',
+      clientIp: '203.0.113.8',
+      userAgent: 'ClashMeta',
+      status: 'success',
+      format: 'clash',
+      token: rawToken,
+      type: 'token',
+      domain: 'example.com',
+      persistenceMode: 'full',
+      details: { totalNodes: 1 },
+      summary: 'ok'
+    });
+
+    const logs = await LogService.getLogs(env);
+    const serialized = JSON.stringify(logs);
+    expect(serialized).not.toContain(rawToken);
+    expect(logs[0].token).toMatch(/^token:[a-f0-9]{12}$/);
   });
 
   it('blocks private and loopback addresses in external fetch and preview APIs', async () => {
