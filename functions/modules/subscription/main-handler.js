@@ -108,7 +108,6 @@ function getCurrentRequestUserInfo(context, sub) {
 function buildUserInfoHeaderFromSubscriptions(context, subscriptions) {
     const strategy = context?.config?.mergeExpireStrategy || 'max';
     const totalUserInfo = subscriptions.reduce((acc, sub) => {
-        if (sub?.excludeTraffic) return acc;
         const userInfo = sub?.enabled ? getCurrentRequestUserInfo(context, sub) : null;
         if (!userInfo) return acc;
 
@@ -121,6 +120,13 @@ function buildUserInfoHeaderFromSubscriptions(context, subscriptions) {
                     ? Math.min(acc.expire, userInfo.expire)
                     : Math.max(acc.expire, userInfo.expire);
             }
+        }
+
+        if (sub?.excludeTraffic) {
+            return {
+                ...acc,
+                expire: nextExpire
+            };
         }
 
         return {
