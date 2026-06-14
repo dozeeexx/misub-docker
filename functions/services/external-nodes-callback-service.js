@@ -1,3 +1,5 @@
+import { StorageFactory, STORAGE_TYPES } from '../storage-adapter.js';
+
 const DEFAULT_EXTERNAL_NODES_TTL_SECONDS = 120;
 const DEFAULT_MAX_INLINE_URL_LENGTH = 6000;
 const DEFAULT_MAX_INLINE_NODE_COUNT = 80;
@@ -82,6 +84,36 @@ function getMemoryCache() {
     return globalThis[MEMORY_CACHE_SYMBOL];
 }
 
+function resolveExternalNodesKv(env = {}) {
+    try {
+        return StorageFactory.resolveKV(env);
+    } catch {
+        return null;
+    }
+}
+
+function resolveExternalNodesD1Adapter(env = {}) {
+    if (!env?.MISUB_DB) return null;
+    try {
+        return StorageFactory.createAdapter(env, STORAGE_TYPES.D1);
+    } catch (error) {
+        console.warn('[ExternalNodesCallback] D1 storage unavailable:', error?.message || error);
+        return null;
+    }
+}
+
+function normalizeDurableStoredNodes(stored) {
+    if (stored === null || stored === undefined) return null;
+    if (typeof stored === 'string') return stored;
+    if (typeof stored === 'object') {
+        if (Number(stored.expiresAt || 0) && Number(stored.expiresAt) <= Date.now()) {
+            return null;
+        }
+        if (typeof stored.value === 'string') return stored.value;
+    }
+    return null;
+}
+
 function purgeExpiredMemoryEntries(now = Date.now()) {
     const cache = getMemoryCache();
     for (const [key, entry] of cache.entries()) {
@@ -121,7 +153,7 @@ export async function putExternalNodes({ env = {}, profileId = 'default', nodesT
     const normalizedNodes = String(nodesText || '');
     const nodeHash = await hashExternalNodes(normalizedNodes);
     const cacheKey = buildExternalNodesCacheKey(profileId, nodeHash);
-    const kv = env?.MISUB_KV;
+    const kv = resolveExternalNodesKv(env);
 
     if (kv?.get && kv?.put) {
         const existing = await kv.get(cacheKey);
@@ -130,6 +162,19 @@ export async function putExternalNodes({ env = {}, profileId = 'default', nodesT
         }
         await kv.put(cacheKey, normalizedNodes, { expirationTtl: ttlSeconds });
         return { cacheKey, nodeHash, reused: false, storage: 'kv' };
+    }
+
+    const d1Adapter = resolveExternalNodesD1Adapter(env);
+    if (d1Adapter?.get && d1Adapter?.put) {
+        const existing = normalizeDurableStoredNodes(await d1Adapter.get(cacheKey));
+        if (existing !== null && existing !== undefined) {
+            return { cacheKey, nodeHash, reused: true, storage: 'd1' };
+        }
+        await d1Adapter.put(cacheKey, {
+            value: normalizedNodes,
+            expiresAt: Date.now() + ttlSeconds * 1000
+        });
+        return { cacheKey, nodeHash, reused: false, storage: 'd1' };
     }
 
     purgeExpiredMemoryEntries();
@@ -147,9 +192,19 @@ export async function putExternalNodes({ env = {}, profileId = 'default', nodesT
 
 export async function getExternalNodes({ env = {}, profileId = 'default', nodeHash } = {}) {
     const cacheKey = buildExternalNodesCacheKey(profileId, nodeHash);
-    const kv = env?.MISUB_KV;
+    const kv = resolveExternalNodesKv(env);
     if (kv?.get) {
-        return await kv.get(cacheKey);
+        return normalizeDurableStoredNodes(await kv.get(cacheKey));
+    }
+
+    const d1Adapter = resolveExternalNodesD1Adapter(env);
+    if (d1Adapter?.get) {
+        const stored = await d1Adapter.get(cacheKey);
+        const nodes = normalizeDurableStoredNodes(stored);
+        if (nodes === null && stored && d1Adapter?.delete) {
+            await d1Adapter.delete(cacheKey).catch(() => undefined);
+        }
+        return nodes;
     }
 
     purgeExpiredMemoryEntries();

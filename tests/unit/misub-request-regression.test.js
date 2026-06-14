@@ -7,8 +7,9 @@ vi.mock('../../functions/storage-adapter.js', () => ({
     StorageFactory: {
         createAdapter: (...args) => createAdapter(...args),
         getStorageType: (...args) => getStorageType(...args),
-        resolveKV: () => null
-    }
+        resolveKV: (env) => env?.MISUB_KV || null
+    },
+    STORAGE_TYPES: { KV: 'kv', D1: 'd1' }
 }));
 
 function createStorageAdapter({ settings = {}, subscriptions = [], profiles = [] } = {}) {
@@ -160,6 +161,9 @@ describe('handleMisubRequest regression coverage', () => {
                 get: vi.fn(async (key) => kvWrites.get(key) || null),
                 put: vi.fn(async (key, value) => {
                     kvWrites.set(key, value);
+                }),
+                delete: vi.fn(async (key) => {
+                    kvWrites.delete(key);
                 })
             }
         };
