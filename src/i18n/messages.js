@@ -482,6 +482,8 @@ export const messages = {
       combinedSubscriptions: '组合订阅',
       needsCreateProfile: '需要创建组合',
       publishedProfiles: '已发布 {count} 个组合',
+      totalRemainingTraffic: '剩余总流量: {traffic}',
+      dashboardHint: '提示：常用操作在此，更多管理请前往对应模块。',
       linkCard: {
         title: '生成订阅链接',
         setupTitle: '链接生成前还差几步',
@@ -1704,6 +1706,8 @@ export const messages = {
       combinedSubscriptions: 'Profiles',
       needsCreateProfile: 'Create a profile',
       publishedProfiles: '{count} profiles published',
+      totalRemainingTraffic: 'Remaining traffic: {traffic}',
+      dashboardHint: 'Tip: common actions are here. Use modules for more.',
       linkCard: {
         title: 'Generate subscription links',
         setupTitle: 'A few steps remain before links are ready',
