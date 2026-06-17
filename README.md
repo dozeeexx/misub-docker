@@ -1,6 +1,8 @@
-# MiSub
+# MiSub Docker Self-Host Fork
 
 > 中文说明请见 [README-zh.md](README-zh.md)。
+>
+> This repository is a Docker self-hosting fork of the original [MiSub](https://github.com/imzyb/MiSub) project by [imzyb](https://github.com/imzyb). The upstream MiSub app remains the foundation; this fork adds a VPS-friendly Docker runtime, SQLite persistence, Caddy reverse-proxy templates, and update/backup helper commands.
 
 <div align="center">
 
@@ -21,7 +23,7 @@
 
 MiSub helps you manage upstream subscriptions and manual nodes, combine them into profiles, process nodes through a visual operator chain, and publish subscription links for common proxy clients.
 
-It is designed for personal and small-team usage: simple operations, clear client links, safe defaults, and flexible Cloudflare Pages deployment.
+It is designed for personal and small-team usage: simple operations, clear client links, safe defaults, flexible Cloudflare Pages deployment, and this fork's Docker/VPS self-hosting path.
 
 ## Screenshots
 
@@ -89,6 +91,31 @@ It is designed for personal and small-team usage: simple operations, clear clien
    - Build output directory: `dist`
 6. Deploy the project.
 7. Bind storage before production use.
+
+### Deploy with Docker on a VPS
+
+This fork can also run as a long-lived Docker Compose service backed by SQLite:
+
+1. Clone the repository and switch to `docker-selfhost`.
+2. Copy `.env.example` to `.env` and set strong `ADMIN_PASSWORD` and `COOKIE_SECRET` values.
+3. Keep `BIND_ADDRESS=127.0.0.1` when exposing the app through Caddy/Nginx HTTPS.
+4. Set your public URL only in local `.env`, for example `MISUB_PUBLIC_URL=https://your-domain.example`.
+5. Start the service:
+
+```bash
+docker compose up -d --build
+curl -fsS http://127.0.0.1:8787/_health
+```
+
+Common VPS operations:
+
+```bash
+npm run misub:status
+npm run misub:backup
+npm run misub:update
+```
+
+See [DOCKER.md](DOCKER.md) and [MAINTENANCE.md](MAINTENANCE.md) for the full Docker self-hosting workflow.
 
 ## Deployment
 
@@ -192,6 +219,8 @@ Current version: `v2.7.0`
 For detailed historical changes, see [README-zh.md](README-zh.md) and the repository commit history.
 
 ## Acknowledgements
+
+Original MiSub is created and maintained by [imzyb](https://github.com/imzyb) at [imzyb/MiSub](https://github.com/imzyb/MiSub). This Docker self-hosting fork keeps upstream MiSub's application code as the base and adds Docker Compose, SQLite runtime persistence, Caddy/VPS templates, and safe update/backup helpers.
 
 Thanks to sponsor [ForZTN](https://sponsorship.forztn.com/github/imzyb/MiSub) for supporting the project server.
 

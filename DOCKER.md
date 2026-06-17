@@ -76,7 +76,7 @@ If you track upstream MiSub updates, follow `MAINTENANCE.md`. MiSub Docker is a 
 Quick upstream sync command:
 
 ```bash
-npm run update:deploy -- --docker-build
+npm run misub:update
 ```
 
 ## Backup And Restore
@@ -123,6 +123,16 @@ your-domain.example {
 ```
 
 On a configured VPS, `npm run misub:vps -- caddy` prints a Caddy snippet using the local `.env` public URL.
+
+For a fresh redeploy from this public repository, the tracked Caddy file intentionally stays generic. Copy it to your Caddy config directory and replace only the local system copy's domain, or set `MISUB_PUBLIC_URL` / `MISUB_CALLBACK_URL` in `.env` and use the helper output:
+
+```bash
+npm --silent run misub:vps -- caddy | sudo tee /etc/caddy/conf.d/misub.caddy
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+Do not commit the real Caddy system file or `.env` back to Git.
 
 Example Nginx location:
 

@@ -1,4 +1,6 @@
-# MiSub
+# MiSub Docker 自托管分支
+
+> 本仓库是原项目 [imzyb/MiSub](https://github.com/imzyb/MiSub) 的 Docker 自托管改造分支。MiSub 应用本体仍以原作者 [imzyb](https://github.com/imzyb) 的上游项目为基础；本分支主要补充 VPS/Docker Compose 运行方式、SQLite 持久化、Caddy 反代模板，以及安全升级/备份辅助命令。
 
 <div align="center">
 
@@ -119,6 +121,14 @@
   - 适合频繁更新
   - 一键数据迁移
 
+### 🐳 Docker / VPS 自托管改造
+
+- **Docker Compose 运行**：支持在 VPS 上长期运行 MiSub 服务。
+- **SQLite 持久化**：Docker 模式下数据保存在 `./data/misub.db`，便于备份与迁移。
+- **本地端口私有化**：默认仅绑定 `127.0.0.1:8787`，推荐由 Caddy/Nginx 对外提供 HTTPS。
+- **Caddy 模板**：仓库内提供通用 `your-domain.example` 模板，真实域名只保留在 VPS 本地 `.env` 与 Caddy 配置中。
+- **维护命令**：提供 `npm run misub:status`、`npm run misub:backup`、`npm run misub:update` 等 VPS 辅助命令。
+
 ### 🔐 安全与定制
 
 - **密码保护**: 管理界面由自定义密码保护
@@ -183,6 +193,31 @@
    - **构建命令**: `npm run build`
    - **构建输出目录**: `dist`
 6. 点击 `保存并部署`
+
+### Docker VPS 部署
+
+如果要使用本分支的 Docker 自托管方式：
+
+1. 克隆仓库并切换到 `docker-selfhost` 分支。
+2. 复制 `.env.example` 为 `.env`，并设置强密码 `ADMIN_PASSWORD` 与稳定的 `COOKIE_SECRET`。
+3. 通过 Caddy/Nginx 对外提供 HTTPS 时，保持 `BIND_ADDRESS=127.0.0.1`。
+4. 真实域名只写入 VPS 本地 `.env`，例如 `MISUB_PUBLIC_URL=https://your-domain.example`。
+5. 启动服务：
+
+```bash
+docker compose up -d --build
+curl -fsS http://127.0.0.1:8787/_health
+```
+
+常用 VPS 维护命令：
+
+```bash
+npm run misub:status
+npm run misub:backup
+npm run misub:update
+```
+
+完整说明见 [DOCKER.md](DOCKER.md) 与 [MAINTENANCE.md](MAINTENANCE.md)。
 
 ---
 
@@ -496,6 +531,8 @@ MiSub 提供 `/cron` 接口用于外部定时服务触发订阅刷新，适合 C
 ---
 
 ## 🙏 致谢
+
+原始 MiSub 项目由 [imzyb](https://github.com/imzyb) 创建并维护，项目地址为 [imzyb/MiSub](https://github.com/imzyb/MiSub)。本 Docker 自托管分支以原项目为基础，主要增加 Docker Compose、SQLite 运行时持久化、Caddy/VPS 模板，以及安全升级与备份辅助命令。
 
 感谢赞助商 [ForZTN](https://sponsorship.forztn.com/github/imzyb/MiSub) 对项目服务器的支持，感谢。
 

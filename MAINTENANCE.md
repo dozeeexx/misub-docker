@@ -207,7 +207,7 @@ git merge --ff-only docker-selfhost-update/$(date +%F)
 On the production VPS, prefer the helper commands below. They intentionally unset shell `PORT` before running Docker Compose so unrelated VPS services cannot override the MiSub port.
 
 ```bash
-cd /opt/misub-docker
+cd /path/to/misub-docker
 npm run misub:status
 npm run misub:health
 npm run misub:logs -- -f
