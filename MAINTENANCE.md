@@ -217,6 +217,24 @@ npm run misub:update
 
 `npm run misub:backup` writes SQLite-consistent backups under `./data/backups` when possible. Keep `./data` out of Git and include it in VPS backups.
 
+### Repository template vs local VPS config
+
+The public repository should stay generic. Keep real deployment-only values only in local ignored files or system config:
+
+- Real domain: `.env` `MISUB_PUBLIC_URL` / `MISUB_CALLBACK_URL`, and `/etc/caddy/conf.d/*.caddy`.
+- Real secrets: `.env` `ADMIN_PASSWORD`, `COOKIE_SECRET`, Cron/WebDAV/Telegram secrets.
+- Real app data: `./data/misub.db` and `./data/backups/`.
+
+Tracked files should use placeholders such as `your-domain.example`. `npm run sync:verify` checks tracked files against the local `.env` public domain and fails if that real domain leaks back into Git-tracked files.
+
+### Admin UI settings persistence
+
+Settings changed in the web admin UI, including public-page access, disguise page options, custom management login path, tokens, subscriptions, profiles, and integration settings, are runtime data stored in SQLite under `./data/misub.db` in Docker mode. They are not stored in Git-tracked source files.
+
+Normal source upgrades and Docker rebuilds preserve these settings because `npm run misub:update` backs up `./data/misub.db` before merging upstream and Docker Compose mounts `./data:/data`. Avoid actions that replace or delete `./data`, restore an older database over the live database, or click the UI reset-settings action unless you intend to revert settings.
+
+When using a custom management login path, save the path somewhere private. The server rejects known reserved paths such as `/api`, `/login`, `/dashboard`, `/sub`, and `/assets`, but a typo or forgotten custom path can still lock you out until you inspect or edit the SQLite settings backup.
+
 ## Release Upgrade On A VPS
 
 For routine VPS upgrades:

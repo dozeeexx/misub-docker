@@ -67,4 +67,38 @@ describe('Docker SQLite runtime', () => {
 
     db.close();
   });
+
+  it('persists admin UI settings in SQLite data across database reopen', async () => {
+    const dbPath = tempDbPath();
+    const db = createSQLiteD1(dbPath);
+    const env = { MISUB_RUNTIME: 'docker', SQLITE_DB: db, MISUB_DB: db };
+    const storage = StorageFactory.createAdapter(env);
+    const savedSettings = {
+      storageType: 'sqlite',
+      enablePublicPage: false,
+      customLoginPath: 'private-admin',
+      disguise: {
+        enabled: true,
+        pageType: 'default',
+        redirectUrl: ''
+      }
+    };
+
+    await storage.put('worker_settings_v1', savedSettings);
+    db.close();
+    SettingsCache.clear();
+
+    const reopened = createSQLiteD1(dbPath);
+    const reopenedEnv = { MISUB_RUNTIME: 'docker', SQLITE_DB: reopened, MISUB_DB: reopened };
+    const row = await reopened.prepare('SELECT key, value FROM settings WHERE key = ?')
+      .bind('main')
+      .first();
+    const reloadedSettings = await StorageFactory.createAdapter(reopenedEnv).get('worker_settings_v1');
+
+    expect(row.key).toBe('main');
+    expect(JSON.parse(row.value)).toMatchObject(savedSettings);
+    expect(reloadedSettings).toMatchObject(savedSettings);
+
+    reopened.close();
+  });
 });

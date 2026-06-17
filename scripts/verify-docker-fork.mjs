@@ -58,6 +58,65 @@ function runGitDiffCheck() {
   }
 }
 
+function readLocalEnvValues() {
+  const envPath = rel('.env');
+  if (!fs.existsSync(envPath)) return {};
+  try {
+    const parsed = {};
+    for (const rawLine of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#') || !line.includes('=')) continue;
+      const index = line.indexOf('=');
+      const key = line.slice(0, index).trim();
+      let value = line.slice(index + 1).trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      parsed[key] = value;
+    }
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+function localPublicDomain() {
+  const env = readLocalEnvValues();
+  const rawUrl = env.MISUB_PUBLIC_URL || env.MISUB_CALLBACK_URL || '';
+  if (!rawUrl) return '';
+  try {
+    return new URL(rawUrl).host;
+  } catch {
+    return String(rawUrl).replace(/^https?:\/\//, '').split('/')[0];
+  }
+}
+
+function runPersonalDomainLeakCheck() {
+  if (!exists('.git')) return;
+  const deploymentDomain = localPublicDomain();
+  if (!deploymentDomain || deploymentDomain === 'your-domain.example') return;
+  const result = spawnSync('git', ['ls-files'], {
+    cwd: repoRoot,
+    encoding: 'utf8'
+  });
+  if (result.status !== 0) return;
+  const leakedFiles = [];
+  for (const file of result.stdout.split(/\r?\n/).filter(Boolean)) {
+    let content;
+    try {
+      content = fs.readFileSync(rel(file), 'utf8');
+    } catch {
+      continue;
+    }
+    if (content.includes(deploymentDomain)) {
+      leakedFiles.push(file);
+    }
+  }
+  if (leakedFiles.length > 0) {
+    errors.push(`Tracked files must not hard-code the local deployment domain; found in: ${leakedFiles.join(', ')}`);
+  }
+}
+
 [
   'server/index.js',
   'server/runtime-env.js',
@@ -161,9 +220,11 @@ requireIncludes('.gitattributes', '/scripts/misub-vps.mjs merge=keepDocker', 'VP
 requireIncludes('.gitattributes', '/deployment/caddy/** merge=keepDocker', 'Caddy deployment template merge protection');
 requireIncludes('.gitattributes', '/.gitattributes merge=keepDocker', 'self-protecting merge attributes');
 requireIncludes('scripts/misub-vps.mjs', 'delete env.PORT', 'VPS helper must ignore shell PORT');
+requireIncludes('scripts/misub-vps.mjs', 'loadLocalEnv', 'VPS helper reads local .env without committing it');
 requireIncludes('scripts/misub-vps.mjs', 'update:deploy', 'VPS helper update command');
 requireIncludes('scripts/misub-vps.mjs', 'data/backups', 'VPS helper backup target');
-requireIncludes('deployment/caddy/misub.caddy', 'mi.333023.xyz', 'MiSub public Caddy domain');
+requireIncludes('scripts/misub-vps.mjs', 'your-domain.example', 'generic Caddy domain fallback');
+requireIncludes('deployment/caddy/misub.caddy', 'your-domain.example', 'generic Caddy domain template');
 requireIncludes('deployment/caddy/misub.caddy', 'reverse_proxy 127.0.0.1:8787', 'Caddy proxy target');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'DOCKER_FORK_PATHS', 'snapshot migration file list');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'cloneWithRetries', 'snapshot migration clone flow');
@@ -180,6 +241,7 @@ requireIncludes('MAINTENANCE.md', 'unsafe for this Docker fork because it discar
 requireIncludes('.github/workflows/fork-sync.yml', "vars.ENABLE_UPSTREAM_MAIN_MIRROR == 'true'", 'fork mirror opt-in guard');
 requireIncludes('.github/workflows/fork-sync.yml', 'npm run sync:upstream', 'Docker sync warning');
 
+runPersonalDomainLeakCheck();
 runGitDiffCheck();
 
 if (warnings.length > 0) {

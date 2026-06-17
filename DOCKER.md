@@ -113,14 +113,16 @@ MiSub Docker honors:
 
 Set `MISUB_PUBLIC_URL=https://your-domain.example` in `.env` when callback or subscription links must always use the public domain.
 
-Example Caddy config is included at `deployment/caddy/misub.caddy`:
+A generic Caddy template is included at `deployment/caddy/misub.caddy`. Keep the real domain only in your VPS `.env` and `/etc/caddy/conf.d/*.caddy` so the public GitHub repository stays reusable:
 
 ```caddyfile
-mi.333023.xyz {
+your-domain.example {
     encode zstd gzip
     reverse_proxy 127.0.0.1:8787
 }
 ```
+
+On a configured VPS, `npm run misub:vps -- caddy` prints a Caddy snippet using the local `.env` public URL.
 
 Example Nginx location:
 

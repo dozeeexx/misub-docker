@@ -8,6 +8,32 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const command = process.argv[2] || 'help';
 const extraArgs = process.argv.slice(3);
 
+function parseDotEnv(content) {
+  const parsed = {};
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || !line.includes('=')) continue;
+    const index = line.indexOf('=');
+    const key = line.slice(0, index).trim();
+    let value = line.slice(index + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    parsed[key] = value;
+  }
+  return parsed;
+}
+
+function loadLocalEnv() {
+  const envPath = path.join(repoRoot, '.env');
+  if (!fs.existsSync(envPath)) return {};
+  try {
+    return parseDotEnv(fs.readFileSync(envPath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
 function composeEnv() {
   const env = { ...process.env };
   // Docker Compose gives shell variables precedence over .env. Hermes and some
@@ -73,8 +99,23 @@ Notes:
 }
 
 function healthUrl() {
-  const port = process.env.HOST_PORT || '8787';
+  const localEnv = loadLocalEnv();
+  const port = process.env.HOST_PORT || localEnv.HOST_PORT || '8787';
   return `http://127.0.0.1:${port}/_health`;
+}
+
+function caddyDomain() {
+  const localEnv = loadLocalEnv();
+  const rawUrl = process.env.MISUB_PUBLIC_URL
+    || process.env.MISUB_CALLBACK_URL
+    || localEnv.MISUB_PUBLIC_URL
+    || localEnv.MISUB_CALLBACK_URL
+    || 'https://your-domain.example';
+  try {
+    return new URL(rawUrl).host || 'your-domain.example';
+  } catch {
+    return String(rawUrl).replace(/^https?:\/\//, '').split('/')[0] || 'your-domain.example';
+  }
 }
 
 function status() {
@@ -163,7 +204,7 @@ switch (command) {
     dockerCompose(['config']);
     break;
   case 'caddy':
-    console.info(`mi.333023.xyz {\n    encode zstd gzip\n    reverse_proxy 127.0.0.1:8787\n}`);
+    console.info(`${caddyDomain()} {\n    encode zstd gzip\n    reverse_proxy 127.0.0.1:8787\n}`);
     break;
   default:
     console.error(`Unknown command: ${command}\n`);
