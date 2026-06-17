@@ -62,19 +62,17 @@ docker compose up -d --build
 For source deployments:
 
 ```bash
-git pull
-docker compose up -d --build
+npm run update:deploy
 ```
 
 The SQLite file in `./data` is not replaced by image upgrades.
 
-If you track upstream MiSub updates, follow `MAINTENANCE.md`. This Docker build is a maintained fork: upstream changes should be merged into the Docker branch, then verified with tests and `docker compose up -d --build`.
+If you track upstream MiSub updates, follow `MAINTENANCE.md`. This Docker build is a maintained fork: upstream changes should be merged into the Docker branch, then verified before Docker is restarted.
 
 Quick upstream sync command:
 
 ```bash
-npm run sync:upstream -- --docker-build
-docker compose up -d --build
+npm run update:deploy -- --docker-build
 ```
 
 ## Backup And Restore

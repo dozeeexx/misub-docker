@@ -31,4 +31,5 @@
 /scripts/migrate-snapshot-to-fork.mjs merge=keepDocker
 /scripts/setup-docker-fork-git.mjs merge=keepDocker
 /scripts/sync-upstream.mjs merge=keepDocker
+/scripts/update-selfhost.mjs merge=keepDocker
 /scripts/verify-docker-fork.mjs merge=keepDocker

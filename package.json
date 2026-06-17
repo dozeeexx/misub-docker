@@ -14,6 +14,8 @@
     "sync:upstream": "node scripts/sync-upstream.mjs",
     "sync:verify": "node scripts/verify-docker-fork.mjs",
     "sync:test": "npm run sync:verify && npm run build && npm test -- --run",
+    "update:selfhost": "node scripts/update-selfhost.mjs",
+    "update:deploy": "node scripts/update-selfhost.mjs --deploy",
     "test": "vitest --passWithNoTests",
     "test:run": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage --passWithNoTests"

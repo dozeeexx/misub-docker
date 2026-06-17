@@ -56,13 +56,33 @@ Keep Docker-specific files and changes on `docker-selfhost`.
 
 ## Fast Update Command
 
-For normal updates, run:
+For normal VPS updates, run one command:
 
 ```bash
-npm run sync:upstream
+npm run update:deploy
 ```
 
-The command will:
+This backs up `./data/misub.db` when it exists, fetches upstream MiSub, merges it into a temporary update branch, runs Docker fork verification, installs dependencies, builds, runs tests, fast-forwards `docker-selfhost`, and finally runs `docker compose up -d --build`.
+
+For source-only updates without restarting Docker:
+
+```bash
+npm run update:selfhost
+```
+
+For local testing when Docker is not available:
+
+```bash
+npm run update:selfhost -- --skip-docker
+```
+
+For a fast no-deploy check, useful on a development machine:
+
+```bash
+npm run update:selfhost -- --skip-tests --skip-docker
+```
+
+The one-click command wraps `sync:upstream`, which will:
 
 1. Ensure upstream Git config exists.
 2. Fetch `imzyb/MiSub`.
@@ -70,12 +90,13 @@ The command will:
 4. Merge upstream.
 5. Run Docker fork invariant checks.
 6. Run `npm ci`, `npm run build`, and `npm test -- --run`.
-7. Run `docker compose config` when Docker is available.
+7. Fast-forward the `docker-selfhost` branch when verification passes.
+8. Optionally deploy Docker Compose when `--deploy` is used.
 
 Use Docker image build verification when Docker is installed and running:
 
 ```bash
-npm run sync:upstream -- --docker-build
+npm run update:selfhost -- --docker-build
 ```
 
 If the merge has conflicts, resolve them and then run:
@@ -84,6 +105,8 @@ If the merge has conflicts, resolve them and then run:
 npm run sync:test
 git add <resolved files>
 git commit
+git switch docker-selfhost
+git merge --ff-only <update-branch>
 ```
 
 ## Upstream Upgrade Notes
@@ -117,6 +140,7 @@ These files are expected to be owned by the Docker fork:
 - `scripts/migrate-snapshot-to-fork.mjs`
 - `scripts/setup-docker-fork-git.mjs`
 - `scripts/sync-upstream.mjs`
+- `scripts/update-selfhost.mjs`
 - `scripts/verify-docker-fork.mjs`
 
 These upstream files contain Docker compatibility changes and are more likely to conflict during upstream updates:
@@ -133,7 +157,7 @@ These upstream files contain Docker compatibility changes and are more likely to
 
 ## Updating From Upstream
 
-The scripted flow above is preferred. The manual equivalent is:
+The one-click flow above is preferred. The manual equivalent is:
 
 ```bash
 git switch docker-selfhost
@@ -171,14 +195,19 @@ git merge --ff-only docker-selfhost-update/$(date +%F)
 
 ## Release Upgrade On A VPS
 
-Always back up before upgrading:
+For routine VPS upgrades:
+
+```bash
+npm run update:deploy -- --docker-build
+docker compose ps
+```
+
+`update:deploy` backs up `./data/misub.db` automatically before merging upstream. For an extra manual backup before high-risk upgrades:
 
 ```bash
 docker compose down
 cp ./data/misub.db ./data/misub.db.$(date +%F-%H%M%S).backup
-npm run sync:upstream -- --docker-build
-docker compose up -d --build
-docker compose ps
+docker compose up -d
 ```
 
 If the container fails after an upstream merge, restore the previous Git commit and database backup:

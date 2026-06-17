@@ -70,6 +70,7 @@ function runGitDiffCheck() {
   'DOCKER.md',
   'MAINTENANCE.md',
   '.github/workflows/fork-sync.yml',
+  'scripts/update-selfhost.mjs',
   'tests/unit/docker-sqlite-runtime.test.js'
 ].forEach(requireFile);
 
@@ -77,10 +78,13 @@ requireJson('package.json', pkg => {
   if (pkg.scripts?.['start:docker'] !== 'node server/index.js') {
     errors.push('package.json scripts.start:docker must be "node server/index.js".');
   }
-  for (const script of ['sync:setup', 'sync:migrate', 'sync:upstream', 'sync:verify', 'sync:test']) {
+  for (const script of ['sync:setup', 'sync:migrate', 'sync:upstream', 'sync:verify', 'sync:test', 'update:selfhost', 'update:deploy']) {
     if (!pkg.scripts?.[script]) {
       errors.push(`package.json must define scripts.${script}.`);
     }
+  }
+  if (!pkg.scripts?.['update:deploy']?.includes('--deploy')) {
+    errors.push('package.json scripts.update:deploy must pass --deploy.');
   }
   if (!pkg.dependencies?.['better-sqlite3']) {
     errors.push('package.json must depend on better-sqlite3.');
@@ -137,9 +141,15 @@ requireIncludes('src/composables/useSettingsLogic.js', "'sqlite'", 'frontend SQL
 requireIncludes('src/components/settings/sections/SystemSettings.vue', 'SQLite (Docker)', 'frontend SQLite option');
 
 requireIncludes('.gitattributes', 'merge=keepDocker', 'Docker fork merge driver attributes');
+requireIncludes('.gitattributes', '/scripts/update-selfhost.mjs merge=keepDocker', 'one-click update merge protection');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'DOCKER_FORK_PATHS', 'snapshot migration file list');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'cloneWithRetries', 'snapshot migration clone flow');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'sync:test', 'snapshot migration verification');
+requireIncludes('scripts/update-selfhost.mjs', 'backupDatabase', 'one-click database backup');
+requireIncludes('scripts/update-selfhost.mjs', 'sync:upstream', 'one-click upstream sync');
+requireIncludes('scripts/update-selfhost.mjs', '--ff-only', 'one-click fast-forward merge');
+requireIncludes('scripts/update-selfhost.mjs', '--deploy', 'one-click deploy option');
+requireIncludes('scripts/update-selfhost.mjs', '--skip-docker', 'one-click local dry-run option');
 requireIncludes('MAINTENANCE.md', 'Upstream Upgrade Notes', 'upstream upgrade guidance mapping');
 requireIncludes('MAINTENANCE.md', 'unsafe for this Docker fork because it discards the Docker runtime', 'reset warning');
 requireIncludes('.github/workflows/fork-sync.yml', "vars.ENABLE_UPSTREAM_MAIN_MIRROR == 'true'", 'fork mirror opt-in guard');
