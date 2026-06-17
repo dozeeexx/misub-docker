@@ -7,8 +7,19 @@
 // 存储类型常量
 export const STORAGE_TYPES = {
     KV: 'kv',
-    D1: 'd1'
+    D1: 'd1',
+    SQLITE: 'sqlite'
 };
+
+export function isDockerRuntime(env) {
+    return env?.MISUB_RUNTIME === 'docker'
+        || env?.STORAGE_TYPE === STORAGE_TYPES.SQLITE
+        || !!env?.SQLITE_DB;
+}
+
+function resolveD1(env) {
+    return env?.MISUB_DB || env?.SQLITE_DB || null;
+}
 
 // 数据键映射
 const DATA_KEYS = {
@@ -512,6 +523,13 @@ class D1StorageAdapter {
 /**
  * 无存储降级适配器（无可用持久化存储时，不读写持久数据）
  */
+class SQLiteStorageAdapter extends D1StorageAdapter {
+    constructor(sqliteDatabase) {
+        super(sqliteDatabase);
+        this.type = STORAGE_TYPES.SQLITE;
+    }
+}
+
 class NoopStorageAdapter {
     async get() { return null; }
     async put() { return true; }
@@ -574,12 +592,13 @@ export class SettingsCache {
 
         try {
             let settings = null;
-            if (env.MISUB_DB) {
+            const d1Db = resolveD1(env);
+            if (d1Db) {
                 try {
-                    const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
+                    const d1Adapter = new D1StorageAdapter(d1Db);
                     settings = await d1Adapter.get(DATA_KEYS.SETTINGS);
                 } catch (d1Error) {
-                    console.warn('[Storage Cache] Failed to read from D1:', d1Error.message);
+                    console.warn('[Storage Cache] Failed to read from D1/SQLite:', d1Error.message);
                 }
             }
 
@@ -631,10 +650,21 @@ export class StorageFactory {
      * @param {string} storageType - 存储类型 ('kv' | 'd1')
      * @returns {KVStorageAdapter|D1StorageAdapter}
      */
-    static createAdapter(env, storageType = STORAGE_TYPES.KV) {
-        switch (storageType) {
+    static createAdapter(env, storageType = null) {
+        const effectiveStorageType = storageType || (isDockerRuntime(env) ? STORAGE_TYPES.SQLITE : STORAGE_TYPES.KV);
+
+        switch (effectiveStorageType) {
+            case STORAGE_TYPES.SQLITE: {
+                const sqliteDb = env?.SQLITE_DB || env?.MISUB_DB;
+                if (!sqliteDb) {
+                    console.warn('[Storage] SQLite database not available, using noop adapter');
+                    return new NoopStorageAdapter();
+                }
+                return new SQLiteStorageAdapter(sqliteDb);
+            }
+
             case STORAGE_TYPES.D1:
-                if (!env.MISUB_DB) {
+                if (!resolveD1(env)) {
                     console.warn('[Storage] D1 database not available, falling back to KV');
                     const kvFallback = StorageFactory.resolveKV(env);
                     if (!kvFallback) {
@@ -643,7 +673,7 @@ export class StorageFactory {
                     }
                     return new KVStorageAdapter(kvFallback);
                 }
-                return new D1StorageAdapter(env.MISUB_DB);
+                return new D1StorageAdapter(resolveD1(env));
 
             case STORAGE_TYPES.KV:
             default: {
@@ -665,6 +695,9 @@ export class StorageFactory {
      */
     static async getStorageType(env) {
         try {
+            if (isDockerRuntime(env)) {
+                return STORAGE_TYPES.SQLITE;
+            }
             const settings = await SettingsCache.get(env);
             if (settings?.storageType) {
                 return settings.storageType;
@@ -680,6 +713,7 @@ export class StorageFactory {
      * 将 KV Settings 同步到 D1（当 D1 为空时）
      */
     static async ensureD1Settings(env) {
+        if (isDockerRuntime(env)) return false;
         if (!env?.MISUB_DB) return false;
         try {
             const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
@@ -707,6 +741,7 @@ export class StorageFactory {
      * @returns {boolean} 是否配置了双重存储
      */
     static hasDualStorage(env) {
+        if (isDockerRuntime(env)) return false;
         return !!(StorageFactory.resolveKV(env) && env.MISUB_DB);
     }
 }
@@ -722,6 +757,15 @@ export class DataMigrator {
      */
     static async migrateKVToD1(env) {
         try {
+            if (isDockerRuntime(env)) {
+                return {
+                    subscriptions: false,
+                    profiles: false,
+                    settings: false,
+                    notApplicable: true,
+                    errors: ['Docker SQLite runtime does not support Cloudflare KV to D1 online migration. Use backup export/import instead.']
+                };
+            }
             const kvNs = resolveKV(env);
             if (!kvNs) throw new Error('No KV binding found');
             const kvAdapter = new KVStorageAdapter(kvNs);
@@ -778,6 +822,14 @@ export class DataMigrator {
     }
 
     static async migrateLegacyD1MainRows(env) {
+        if (isDockerRuntime(env)) {
+            return {
+                subscriptions: 0,
+                profiles: 0,
+                notApplicable: true,
+                errors: ['Docker SQLite runtime does not need Cloudflare legacy D1 main-row migration.']
+            };
+        }
         if (!env?.MISUB_DB) throw new Error('D1 database not available');
 
         const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
@@ -821,6 +873,14 @@ export class DataMigrator {
     }
 
     static async detectLegacyD1MainRows(env) {
+        if (isDockerRuntime(env)) {
+            return {
+                hasLegacySubscriptions: false,
+                hasLegacyProfiles: false,
+                hasLegacyData: false,
+                notApplicable: true
+            };
+        }
         if (!env?.MISUB_DB) {
             return {
                 hasLegacySubscriptions: false,

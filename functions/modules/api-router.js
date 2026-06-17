@@ -55,6 +55,12 @@ import { handleExternalNodesCallbackRequest } from '../services/external-nodes-c
 // 常量定义
 const OLD_KV_KEY = 'misub_data_v1';
 const KV_KEY_PROFILES = 'misub_profiles_v1'; // Ensure this is defined if used
+function isDockerRuntime(env) {
+    return env?.MISUB_RUNTIME === 'docker'
+        || env?.STORAGE_TYPE === 'sqlite'
+        || !!env?.SQLITE_DB;
+}
+
 function isAuthDiagnosticsEnabled(env) {
     return String(env?.ENABLE_AUTH_DIAGNOSTICS || '').toLowerCase() === 'true';
 }
@@ -79,6 +85,13 @@ export async function handleApiRequest(request, env, context = null) {
             return createJsonResponse({ error: 'Unauthorized' }, 401);
         }
         try {
+            if (isDockerRuntime(env)) {
+                return createJsonResponse({
+                    success: false,
+                    notApplicable: true,
+                    message: 'Docker SQLite runtime does not use Cloudflare KV/D1 migration. Use backup export/import instead.'
+                }, 400);
+            }
             if (!env.MISUB_DB) {
                 return createJsonResponse({
                     success: false,
@@ -111,6 +124,17 @@ export async function handleApiRequest(request, env, context = null) {
             return createJsonResponse({ error: 'Unauthorized' }, 401);
         }
         try {
+            if (isDockerRuntime(env)) {
+                return createJsonResponse({
+                    success: true,
+                    data: {
+                        hasLegacySubscriptions: false,
+                        hasLegacyProfiles: false,
+                        hasLegacyData: false,
+                        notApplicable: true
+                    }
+                });
+            }
             const result = await DataMigrator.detectLegacyD1MainRows(env);
             return createJsonResponse({ success: true, data: result });
         } catch (error) {
@@ -124,6 +148,13 @@ export async function handleApiRequest(request, env, context = null) {
             return createJsonResponse({ error: 'Unauthorized' }, 401);
         }
         try {
+            if (isDockerRuntime(env)) {
+                return createJsonResponse({
+                    success: false,
+                    notApplicable: true,
+                    message: 'Docker SQLite runtime does not need legacy D1 main-row migration.'
+                }, 400);
+            }
             const migrationResult = await DataMigrator.migrateLegacyD1MainRows(env);
             if (migrationResult.errors.length > 0) {
                 return createJsonResponse({

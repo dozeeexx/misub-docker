@@ -1,3 +1,9 @@
+function isDockerRuntime(env) {
+    return env?.MISUB_RUNTIME === 'docker'
+        || env?.STORAGE_TYPE === 'sqlite'
+        || !!env?.SQLITE_DB;
+}
+
 /**
  * 工具函数模块
  * 包含各种通用的辅助函数
@@ -92,6 +98,36 @@ async function safeKvPut(kv, key, value) {
     }
 }
 
+function getDockerAuthDb(env) {
+    if (!isDockerRuntime(env)) return null;
+    return env?.SQLITE_DB || env?.MISUB_DB || null;
+}
+
+async function safeDbGet(db, key) {
+    if (!db) return null;
+    try {
+        const row = await db.prepare('SELECT value FROM settings WHERE key = ?').bind(key).first();
+        return row?.value ?? null;
+    } catch (error) {
+        console.warn(`[Auth Storage] SQLite get skipped for ${key}: ${error.message}`);
+        return null;
+    }
+}
+
+async function safeDbPut(db, key, value) {
+    if (!db) return false;
+    try {
+        await db.prepare(`
+            INSERT OR REPLACE INTO settings (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        `).bind(key, String(value)).run();
+        return true;
+    } catch (error) {
+        console.warn(`[Auth Storage] SQLite put skipped for ${key}: ${error.message}`);
+        return false;
+    }
+}
+
 /**
  * 条件性写入KV存储，只在数据真正变更时写入
  * @param {Object} env - Cloudflare环境对象
@@ -129,6 +165,18 @@ export async function conditionalKVPut(env, key, newData, oldData = null) {
  * @returns {Promise<string>} 密钥
  */
 export async function getCookieSecret(env) {
+    if (isDockerRuntime(env)) {
+        const db = getDockerAuthDb(env);
+        const runtimeCookieSecret = getRuntimeEnvValue(env, 'COOKIE_SECRET');
+        if (runtimeCookieSecret) {
+            await safeDbPut(db, 'SYSTEM_COOKIE_SECRET', runtimeCookieSecret);
+            return runtimeCookieSecret;
+        }
+        const dbSecret = await safeDbGet(db, 'SYSTEM_COOKIE_SECRET');
+        if (dbSecret) return dbSecret;
+        throw new Error('COOKIE_SECRET is required in Docker runtime');
+    }
+
     const kv = getKV(env);
     const runtimeCookieSecret = getRuntimeEnvValue(env, 'COOKIE_SECRET');
 
@@ -163,7 +211,16 @@ export async function getCookieSecret(env) {
 export async function getAdminPassword(env) {
     const runtimeAdminPassword = getRuntimeEnvValue(env, 'ADMIN_PASSWORD');
     if (runtimeAdminPassword) {
+        if (isDockerRuntime(env)) {
+            await safeDbPut(getDockerAuthDb(env), 'SYSTEM_ADMIN_PASSWORD', runtimeAdminPassword.trim());
+        }
         return runtimeAdminPassword.trim();
+    }
+
+    if (isDockerRuntime(env)) {
+        const dbPassword = await safeDbGet(getDockerAuthDb(env), 'SYSTEM_ADMIN_PASSWORD');
+        if (dbPassword) return String(dbPassword).trim();
+        throw new Error('ADMIN_PASSWORD is required for the first Docker startup');
     }
 
     const kv = getKV(env);
@@ -184,18 +241,28 @@ export async function getAuthDebugInfo(env) {
     const runtimeAdminPassword = getRuntimeEnvValue(env, 'ADMIN_PASSWORD');
     const runtimeCookieSecret = getRuntimeEnvValue(env, 'COOKIE_SECRET');
     const kv = getKV(env);
+    const dockerDb = getDockerAuthDb(env);
 
     let hasKvAdminPassword = false;
     let hasKvCookieSecret = false;
+    let hasDbAdminPassword = false;
+    let hasDbCookieSecret = false;
 
     if (kv) {
         hasKvAdminPassword = !!(await safeKvGet(kv, 'SYSTEM_ADMIN_PASSWORD'));
         hasKvCookieSecret = !!(await safeKvGet(kv, 'SYSTEM_COOKIE_SECRET'));
     }
 
+    if (dockerDb) {
+        hasDbAdminPassword = !!(await safeDbGet(dockerDb, 'SYSTEM_ADMIN_PASSWORD'));
+        hasDbCookieSecret = !!(await safeDbGet(dockerDb, 'SYSTEM_COOKIE_SECRET'));
+    }
+
     let adminPasswordSource = 'default';
     if (runtimeAdminPassword) {
         adminPasswordSource = 'env';
+    } else if (hasDbAdminPassword) {
+        adminPasswordSource = 'sqlite';
     } else if (hasKvAdminPassword) {
         adminPasswordSource = 'kv';
     }
@@ -203,6 +270,8 @@ export async function getAuthDebugInfo(env) {
     let cookieSecretSource = 'generated';
     if (runtimeCookieSecret) {
         cookieSecretSource = 'env';
+    } else if (hasDbCookieSecret) {
+        cookieSecretSource = 'sqlite';
     } else if (hasKvCookieSecret) {
         cookieSecretSource = 'kv';
     }
@@ -210,17 +279,20 @@ export async function getAuthDebugInfo(env) {
     return {
         hasKv: !!kv,
         hasD1: !!env?.MISUB_DB,
+        hasSQLite: !!dockerDb,
         adminPassword: {
             source: adminPasswordSource,
             hasRuntime: !!runtimeAdminPassword,
             hasKvValue: hasKvAdminPassword,
+            hasDbValue: hasDbAdminPassword,
             isDefaultFallback: adminPasswordSource === 'default'
         },
         cookieSecret: {
             source: cookieSecretSource,
             hasRuntime: !!runtimeCookieSecret,
             hasKvValue: hasKvCookieSecret,
-            mayRegenerateWithoutKv: !kv && !runtimeCookieSecret
+            hasDbValue: hasDbCookieSecret,
+            mayRegenerateWithoutKv: !kv && !runtimeCookieSecret && !dockerDb
         }
     };
 }
@@ -242,6 +314,12 @@ export async function isUsingDefaultPassword(env) {
  * @param {string} newPassword - 新密码
  */
 export async function setAdminPassword(env, newPassword) {
+    if (isDockerRuntime(env)) {
+        await safeDbPut(getDockerAuthDb(env), 'SYSTEM_ADMIN_PASSWORD', newPassword);
+        env.ADMIN_PASSWORD = newPassword;
+        return;
+    }
+
     const kv = getKV(env);
     if (!kv) {
         throw new Error('当前部署未绑定 KV，请在平台控制台通过环境变量 ADMIN_PASSWORD 修改密码');

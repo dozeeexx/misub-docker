@@ -22,7 +22,7 @@ export const DEFAULT_SETTINGS = {
     enableTrafficNode: false,
     enableFlagEmoji: true,
     enablePublicPage: true,
-    storageType: 'kv',
+    storageType: 'sqlite',
     autoUpdateInterval: 0, // 分钟，0表示禁用自动更新
 defaultPrefixSettings: {
 enableManualNodes: true,

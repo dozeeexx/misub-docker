@@ -8,11 +8,18 @@
     "dev:server": "npx wrangler pages dev public --port 8787",
     "build": "vite build",
     "preview": "vite preview",
+    "start:docker": "node server/index.js",
+    "sync:setup": "node scripts/setup-docker-fork-git.mjs",
+    "sync:migrate": "node scripts/migrate-snapshot-to-fork.mjs",
+    "sync:upstream": "node scripts/sync-upstream.mjs",
+    "sync:verify": "node scripts/verify-docker-fork.mjs",
+    "sync:test": "npm run sync:verify && npm run build && npm test -- --run",
     "test": "vitest --passWithNoTests",
     "test:run": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
+    "better-sqlite3": "^12.5.0",
     "dompurify": "^3.2.6",
     "js-yaml": "^4.1.0",
     "pinia": "^3.0.3",

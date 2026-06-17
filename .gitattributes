@@ -17,3 +17,18 @@
 *.gif binary
 *.ico binary
 *.svg binary
+
+# Docker self-hosting fork files. Run `npm run sync:setup` once so the
+# keepDocker merge driver is configured in local Git config.
+/server/** merge=keepDocker
+/Dockerfile merge=keepDocker
+/docker-compose.yml merge=keepDocker
+/.dockerignore merge=keepDocker
+/.env.example merge=keepDocker
+/DOCKER.md merge=keepDocker
+/MAINTENANCE.md merge=keepDocker
+/tests/unit/docker-sqlite-runtime.test.js merge=keepDocker
+/scripts/migrate-snapshot-to-fork.mjs merge=keepDocker
+/scripts/setup-docker-fork-git.mjs merge=keepDocker
+/scripts/sync-upstream.mjs merge=keepDocker
+/scripts/verify-docker-fork.mjs merge=keepDocker

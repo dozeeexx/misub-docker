@@ -121,6 +121,11 @@ const emit = defineEmits(['migrate']);
                         class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800">
                     <span class="ml-3 text-sm dark:text-gray-300">{{ t('systemSettings.d1DatabaseRecommended') }}</span>
                 </div>
+                <div class="flex items-center">
+                    <input type="radio" value="sqlite" v-model="settings.storageType"
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800">
+                    <span class="ml-3 text-sm dark:text-gray-300">SQLite (Docker)</span>
+                </div>
 
                 <!-- D1 Migration Section -->
                 <div v-if="settings.storageType === 'kv'"

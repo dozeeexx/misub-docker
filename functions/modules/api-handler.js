@@ -16,6 +16,12 @@ import { listRuleTemplates } from './rule-template-handler.js';
 
 const PROFILE_DOWNLOAD_COUNT_PREFIX = 'misub_profile_download_count_';
 
+function isDockerRuntime(env) {
+    return env?.MISUB_RUNTIME === 'docker'
+        || env?.STORAGE_TYPE === 'sqlite'
+        || !!env?.SQLITE_DB;
+}
+
 function normalizeProfile(profile = {}) {
     const normalized = { ...profile };
     normalized.subscriptions = Array.isArray(profile.subscriptions) ? profile.subscriptions : [];
@@ -168,6 +174,8 @@ export async function handleDataRequest(env, context = null) {
         const config = {
             ...defaultSettings,
             ...settings,
+            storageType,
+            runtime: isDockerRuntime(env) ? 'docker' : 'cloudflare',
             isDefaultPassword: await isUsingDefaultPassword(env)
         };
         try {
@@ -415,7 +423,12 @@ function redactSettingsForResponse(settings = {}) {
 export async function handleSettingsGet(env) {
     try {
         const settings = await SettingsCache.get(env) || {};
-        return createJsonResponse(redactSettingsForResponse({ ...defaultSettings, ...settings }));
+        return createJsonResponse(redactSettingsForResponse({
+            ...defaultSettings,
+            ...settings,
+            storageType: await StorageFactory.getStorageType(env),
+            runtime: isDockerRuntime(env) ? 'docker' : 'cloudflare'
+        }));
     } catch (e) {
         if (isStorageUnavailableError(e)) {
             return createJsonResponse({
@@ -491,6 +504,10 @@ export async function handleSettingsSave(request, env) {
             }
         }
         const finalSettings = { ...oldSettings, ...newSettings };
+        if (isDockerRuntime(env)) {
+            finalSettings.storageType = STORAGE_TYPES.SQLITE;
+            finalSettings.runtime = 'docker';
+        }
 
         // 使用存储适配器保存设置
         try {
@@ -506,17 +523,19 @@ export async function handleSettingsSave(request, env) {
         }
 
         // 双存储同步：尽量保持 KV / D1 一致
-        try {
-            const d1Adapter = StorageFactory.createAdapter(env, STORAGE_TYPES.D1);
-            await d1Adapter.put(KV_KEY_SETTINGS, finalSettings);
-        } catch (syncError) {
-            console.warn('[API] Failed to sync settings to D1:', syncError?.message || syncError);
-        }
-        try {
-            const kvAdapter = StorageFactory.createAdapter(env, STORAGE_TYPES.KV);
-            await kvAdapter.put(KV_KEY_SETTINGS, finalSettings);
-        } catch (syncError) {
-            console.warn('[API] Failed to sync settings to KV:', syncError?.message || syncError);
+        if (!isDockerRuntime(env)) {
+            try {
+                const d1Adapter = StorageFactory.createAdapter(env, STORAGE_TYPES.D1);
+                await d1Adapter.put(KV_KEY_SETTINGS, finalSettings);
+            } catch (syncError) {
+                console.warn('[API] Failed to sync settings to D1:', syncError?.message || syncError);
+            }
+            try {
+                const kvAdapter = StorageFactory.createAdapter(env, STORAGE_TYPES.KV);
+                await kvAdapter.put(KV_KEY_SETTINGS, finalSettings);
+            } catch (syncError) {
+                console.warn('[API] Failed to sync settings to KV:', syncError?.message || syncError);
+            }
         }
         SettingsCache.clear();
 
@@ -567,7 +586,11 @@ export async function handleSettingsReset(env) {
         return createJsonResponse({ 
             success: true, 
             message: '设置已恢复出厂状态',
-            data: defaultSettings 
+            data: {
+                ...defaultSettings,
+                storageType: isDockerRuntime(env) ? STORAGE_TYPES.SQLITE : defaultSettings.storageType,
+                runtime: isDockerRuntime(env) ? 'docker' : 'cloudflare'
+            }
         });
     } catch (e) {
         console.error('[API Error /settings/reset]', e);

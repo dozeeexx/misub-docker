@@ -38,7 +38,7 @@ export function useSettingsLogic() {
         return false;
     });
 
-    const isStorageTypeValid = computed(() => ['kv', 'd1'].includes(settings.value.storageType));
+    const isStorageTypeValid = computed(() => ['kv', 'd1', 'sqlite'].includes(settings.value.storageType));
 
     // ========== 核心函数 ==========
 
