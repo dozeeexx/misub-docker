@@ -124,7 +124,7 @@ watch(
     const rawTitle = route.meta?.title ? String(route.meta.title) : '';
     document.title = shouldHidePublicBranding.value
       ? (rawTitle || document.title || '')
-      : (rawTitle ? `${rawTitle} - MISUB` : 'MISUB');
+      : (rawTitle ? `${rawTitle} - MiSub Docker` : 'MiSub Docker');
   },
   { immediate: true }
 );

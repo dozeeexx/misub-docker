@@ -118,7 +118,25 @@ function copyIfExists(source, target) {
   return true;
 }
 
-function backupDatabase(skipBackup) {
+async function createConsistentSQLiteBackup(dbPath, targetPath) {
+  const { default: Database } = await import('better-sqlite3');
+  let db = null;
+  try {
+    db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    await db.backup(targetPath);
+  } finally {
+    db?.close();
+  }
+}
+
+function copyDatabaseFilesForFallback(dbPath, backupDir, stamp) {
+  const copiedMain = copyIfExists(dbPath, path.join(backupDir, `misub.db.${stamp}.backup`));
+  copyIfExists(`${dbPath}-wal`, path.join(backupDir, `misub.db-wal.${stamp}.backup`));
+  copyIfExists(`${dbPath}-shm`, path.join(backupDir, `misub.db-shm.${stamp}.backup`));
+  return copiedMain;
+}
+
+async function backupDatabase(skipBackup) {
   if (skipBackup) {
     console.info('Skipping database backup.');
     return;
@@ -133,11 +151,18 @@ function backupDatabase(skipBackup) {
 
   const backupDir = path.join(dataDir, 'backups');
   const stamp = branchTimestamp();
-  const copiedMain = copyIfExists(dbPath, path.join(backupDir, `misub.db.${stamp}.backup`));
-  copyIfExists(`${dbPath}-wal`, path.join(backupDir, `misub.db-wal.${stamp}.backup`));
-  copyIfExists(`${dbPath}-shm`, path.join(backupDir, `misub.db-shm.${stamp}.backup`));
+  fs.mkdirSync(backupDir, { recursive: true });
 
-  if (copiedMain) {
+  const backupPath = path.join(backupDir, `misub.db.${stamp}.backup`);
+  try {
+    await createConsistentSQLiteBackup(dbPath, backupPath);
+    console.info(`SQLite-consistent database backup written to ${backupPath}`);
+    return;
+  } catch (error) {
+    console.warn(`SQLite online backup failed, falling back to file copy: ${error?.message || error}`);
+  }
+
+  if (copyDatabaseFilesForFallback(dbPath, backupDir, stamp)) {
     console.info(`Database backup written to ${backupDir}`);
   }
 }
@@ -224,7 +249,7 @@ Usage:
 
 One-click update for the Docker self-hosting branch:
   1. Require a clean work tree
-  2. Back up ./data/misub.db when present
+  2. Create a SQLite-consistent backup of ./data/misub.db when present
   3. Merge upstream via sync:upstream
   4. Fast-forward the base branch
   5. Optionally rebuild/restart Docker Compose with --deploy
@@ -235,7 +260,7 @@ Options:
   --skip-tests                Skip npm build/test during sync
   --skip-install              Skip npm ci during sync
   --skip-docker               Skip docker compose config/build checks during sync
-  --skip-backup               Do not copy ./data/misub.db before updating
+  --skip-backup               Do not back up ./data/misub.db before updating
   --keep-update-branch        Keep the temporary update branch after merging
   --base-branch <branch>      Maintained branch. Default: ${DEFAULT_BASE_BRANCH}
   --remote <name>             Upstream remote. Default: ${DEFAULT_REMOTE}
@@ -258,7 +283,7 @@ if (isWorkTree !== 'true') {
 
 ensureBranch(options.baseBranch);
 ensureCleanWorkTree();
-backupDatabase(options.skipBackup);
+await backupDatabase(options.skipBackup);
 
 const currentBranch = capture('git', ['branch', '--show-current']) || 'HEAD';
 if (currentBranch !== options.baseBranch) {
@@ -279,7 +304,7 @@ if (isAncestor(upstreamRef, options.baseBranch)) {
     run(docker, ['compose', 'up', '-d', '--build']);
     run(docker, ['compose', 'ps']);
   }
-  console.info('\nSelf-hosted MiSub is already up to date.');
+  console.info('\nMiSub Docker is already up to date.');
   process.exit(0);
 }
 
@@ -324,5 +349,5 @@ if (options.deploy) {
   run(docker, ['compose', 'ps']);
 }
 
-console.info('\nSelf-hosted MiSub update complete.');
+console.info('\nMiSub Docker update complete.');
 console.info(`Current branch: ${options.baseBranch}`);

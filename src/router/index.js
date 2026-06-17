@@ -100,7 +100,7 @@ router.onError((error) => {
 router.beforeEach(async (to, from, next) => {
     // Update title
     if (typeof document !== 'undefined') {
-        document.title = to.meta.title ? `${to.meta.title} - MISUB` : 'MISUB';
+        document.title = to.meta.title ? `${to.meta.title} - MiSub Docker` : 'MiSub Docker';
     }
 
     // Simple auth check: check if the user is visiting a protected route

@@ -1,6 +1,6 @@
-# Maintaining The Docker Fork
+# Maintaining MiSub Docker
 
-This repository is a Docker self-hosting fork of upstream MiSub. Keep the Docker runtime changes isolated and rebase or merge upstream regularly.
+This repository is MiSub Docker, a Docker self-hosting fork of upstream MiSub. Keep the Docker runtime changes isolated and rebase or merge upstream regularly.
 
 ## Important: Start From Real Git History
 
@@ -62,7 +62,7 @@ For normal VPS updates, run one command:
 npm run update:deploy
 ```
 
-This backs up `./data/misub.db` when it exists, fetches upstream MiSub, merges it into a temporary update branch, runs Docker fork verification, installs dependencies, builds, runs tests, fast-forwards `docker-selfhost`, and finally runs `docker compose up -d --build`.
+This creates a SQLite-consistent backup of `./data/misub.db` when it exists, fetches upstream MiSub, merges it into a temporary update branch, runs Docker fork verification, installs dependencies, builds, runs tests, fast-forwards `docker-selfhost`, and finally runs `docker compose up -d --build`.
 
 For source-only updates without restarting Docker:
 
@@ -115,7 +115,7 @@ Upstream MiSub includes upgrade guidance such as `docs/UPGRADE_V2.5.md`. Keep re
 
 For this Docker fork, interpret the upstream guidance this way:
 
-- Data backup still applies. Use MiSub UI export/WebDAV backup, and also copy `./data/misub.db` before upgrading.
+- Data backup still applies. Use MiSub UI export/WebDAV backup; the one-click update script also creates a SQLite-consistent `./data/misub.db` backup before upgrading.
 - Git sync still applies, but use `npm run sync:upstream` instead of raw `git merge upstream/main`; the script preserves Docker runtime invariants and runs verification.
 - Config migrations still apply. For example, operator-chain migrations should still be completed in the UI when upstream asks for them.
 - Dependency/build notes still apply. The sync flow runs `npm ci`, `npm run build`, and tests so Vite/Tailwind/Node changes are caught early.
@@ -202,7 +202,7 @@ npm run update:deploy -- --docker-build
 docker compose ps
 ```
 
-`update:deploy` backs up `./data/misub.db` automatically before merging upstream. For an extra manual backup before high-risk upgrades:
+`update:deploy` backs up `./data/misub.db` automatically before merging upstream. For an extra manual cold backup before high-risk upgrades:
 
 ```bash
 docker compose down

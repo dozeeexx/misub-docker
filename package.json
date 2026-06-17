@@ -1,5 +1,5 @@
 {
-  "name": "misub",
+  "name": "misub-docker",
   "version": "2.7.0",
   "private": true,
   "type": "module",

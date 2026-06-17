@@ -1,7 +1,7 @@
 export const messages = {
   'zh-CN': {
     app: {
-      name: 'MiSub',
+      name: 'MiSub Docker',
       home: '首页',
       language: '语言'
     },
@@ -1166,7 +1166,7 @@ export const messages = {
   },
   'en-US': {
     app: {
-      name: 'MiSub',
+      name: 'MiSub Docker',
       home: 'Home',
       language: 'Language'
     },

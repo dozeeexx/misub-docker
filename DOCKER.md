@@ -1,6 +1,6 @@
-# MiSub Docker Compose Self-Hosting
+# MiSub Docker
 
-This build runs MiSub as a Docker-only self-hosted app. It does not require Cloudflare Pages, Workers, KV, D1, Wrangler, or scheduled triggers.
+MiSub Docker is the Docker-only self-hosted build of MiSub. It does not require Cloudflare Pages, Workers, KV, D1, Wrangler, or scheduled triggers.
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ This build runs MiSub as a Docker-only self-hosted app. It does not require Clou
 
    `ADMIN_PASSWORD=admin` is rejected in Docker runtime. `COOKIE_SECRET` must stay stable across restarts.
 
-3. Start MiSub:
+3. Start MiSub Docker:
 
    ```bash
    docker compose up -d --build
@@ -37,7 +37,7 @@ Docker Compose includes a healthcheck for `/_health`. Use `docker compose ps` to
 
 On first startup, set `ADMIN_PASSWORD`. The server writes it into SQLite.
 
-After you change the password in the UI, MiSub stores the new password in SQLite. You may remove `ADMIN_PASSWORD` from `.env` if you want the database value to be the login source. If `ADMIN_PASSWORD` remains set, it always takes priority over the SQLite value.
+After you change the password in the UI, MiSub Docker stores the new password in SQLite. You may remove `ADMIN_PASSWORD` from `.env` if you want the database value to be the login source. If `ADMIN_PASSWORD` remains set, it always takes priority over the SQLite value.
 
 `COOKIE_SECRET` is always required. Changing it logs out existing browser sessions.
 
@@ -51,7 +51,7 @@ CRON_INTERVAL_SECONDS=86400
 CRON_RUN_ON_START=false
 ```
 
-The scheduler runs the existing subscription update task and the WebDAV auto-backup due check. `/cron` is still available for external triggering if you configure a Cron Secret in MiSub settings.
+The scheduler runs the existing subscription update task and the WebDAV auto-backup due check. `/cron` is still available for external triggering if you configure a Cron Secret in settings.
 
 ## Upgrade
 
@@ -67,7 +67,7 @@ npm run update:deploy
 
 The SQLite file in `./data` is not replaced by image upgrades.
 
-If you track upstream MiSub updates, follow `MAINTENANCE.md`. This Docker build is a maintained fork: upstream changes should be merged into the Docker branch, then verified before Docker is restarted.
+If you track upstream MiSub updates, follow `MAINTENANCE.md`. MiSub Docker is a maintained fork: upstream changes should be merged into the Docker branch, then verified before Docker is restarted.
 
 Quick upstream sync command:
 
@@ -77,7 +77,9 @@ npm run update:deploy -- --docker-build
 
 ## Backup And Restore
 
-SQLite uses WAL mode for safer writes. The simplest backup path is to stop the container before copying the database:
+SQLite uses WAL mode for safer writes. `npm run update:selfhost` and `npm run update:deploy` create a SQLite-consistent backup under `./data/backups` before updating when `./data/misub.db` exists.
+
+The simplest manual backup path is to stop the container before copying the database:
 
 ```bash
 docker compose down
@@ -95,11 +97,11 @@ cp ./misub.db.backup ./data/misub.db
 docker compose up -d
 ```
 
-The existing MiSub export/import and WebDAV backup features are still available in the UI.
+The existing export/import and WebDAV backup features are still available in the UI.
 
 ## Reverse Proxy HTTPS
 
-MiSub honors:
+MiSub Docker honors:
 
 - `X-Forwarded-Proto`
 - `X-Forwarded-Host`

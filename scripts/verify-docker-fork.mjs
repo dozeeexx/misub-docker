@@ -75,6 +75,9 @@ function runGitDiffCheck() {
 ].forEach(requireFile);
 
 requireJson('package.json', pkg => {
+  if (pkg.name !== 'misub-docker') {
+    errors.push('package.json name must be "misub-docker".');
+  }
   if (pkg.scripts?.['start:docker'] !== 'node server/index.js') {
     errors.push('package.json scripts.start:docker must be "node server/index.js".');
   }
@@ -113,6 +116,12 @@ requireIncludes('server/scheduler.js', 'handleCronTrigger', 'cron trigger reuse'
 requireIncludes('server/scheduler.js', 'maybeRunScheduledTasks', 'scheduled task reuse');
 requireIncludes('server/scheduler.js', 'CRON_INTERVAL_SECONDS', 'configurable scheduler interval');
 
+requireIncludes('index.html', '<title>MiSub Docker</title>', 'MiSub Docker document title');
+requireIncludes('index.html', 'content="MiSub Docker"', 'MiSub Docker Open Graph title/site name');
+requireIncludes('src/i18n/messages.js', "name: 'MiSub Docker'", 'MiSub Docker app display name');
+requireIncludes('src/App.vue', 'MiSub Docker', 'MiSub Docker runtime title');
+requireIncludes('src/router/index.js', 'MiSub Docker', 'MiSub Docker route title');
+
 requireIncludes('functions/storage-adapter.js', "SQLITE: 'sqlite'", 'SQLite storage type');
 requireIncludes('functions/storage-adapter.js', 'isDockerRuntime', 'Docker runtime detection');
 requireIncludes('functions/storage-adapter.js', 'SQLiteStorageAdapter', 'SQLite adapter');
@@ -128,6 +137,7 @@ requireIncludes('Dockerfile', 'DATABASE_PATH=/data/misub.db', 'default SQLite pa
 requireIncludes('Dockerfile', 'CMD ["node", "server/index.js"]', 'direct Docker startup command');
 
 requireIncludes('docker-compose.yml', 'PORT: 8787', 'fixed container port');
+requireIncludes('docker-compose.yml', 'container_name: misub-docker', 'MiSub Docker container name');
 requireIncludes('docker-compose.yml', './data:/data', 'persistent data volume');
 requireIncludes('docker-compose.yml', '/_health', 'Compose healthcheck');
 requireIncludes('docker-compose.yml', 'stop_grace_period: 60s', 'graceful shutdown window');
@@ -146,6 +156,8 @@ requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'DOCKER_FORK_PATHS', 'sn
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'cloneWithRetries', 'snapshot migration clone flow');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'sync:test', 'snapshot migration verification');
 requireIncludes('scripts/update-selfhost.mjs', 'backupDatabase', 'one-click database backup');
+requireIncludes('scripts/update-selfhost.mjs', 'db.backup(targetPath)', 'SQLite-consistent update backup');
+requireIncludes('scripts/update-selfhost.mjs', 'copyDatabaseFilesForFallback', 'SQLite backup fallback copy');
 requireIncludes('scripts/update-selfhost.mjs', 'sync:upstream', 'one-click upstream sync');
 requireIncludes('scripts/update-selfhost.mjs', '--ff-only', 'one-click fast-forward merge');
 requireIncludes('scripts/update-selfhost.mjs', '--deploy', 'one-click deploy option');
