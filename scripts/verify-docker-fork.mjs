@@ -238,6 +238,10 @@ requireIncludes('scripts/update-selfhost.mjs', '--deploy', 'one-click deploy opt
 requireIncludes('scripts/update-selfhost.mjs', '--skip-docker', 'one-click local dry-run option');
 requireIncludes('MAINTENANCE.md', 'Upstream Upgrade Notes', 'upstream upgrade guidance mapping');
 requireIncludes('MAINTENANCE.md', 'unsafe for this Docker fork because it discards the Docker runtime', 'reset warning');
+requireIncludes('scripts/sync-upstream.mjs', "'merge', '--squash', '--no-commit'", 'sanitized upstream squash merge');
+requireIncludes('scripts/sync-upstream.mjs', 'leaked editor settings are not reintroduced', 'history leak prevention help text');
+requireIncludes('scripts/update-selfhost.mjs', 'sanitized squash commit', 'one-click update sanitization wording');
+
 requireIncludes('.github/workflows/fork-sync.yml', "vars.ENABLE_UPSTREAM_MAIN_MIRROR == 'true'", 'fork mirror opt-in guard');
 requireIncludes('.github/workflows/fork-sync.yml', 'npm run sync:upstream', 'Docker sync warning');
 

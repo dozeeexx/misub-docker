@@ -250,7 +250,7 @@ Usage:
 One-click update for the Docker self-hosting branch:
   1. Require a clean work tree
   2. Create a SQLite-consistent backup of ./data/misub.db when present
-  3. Merge upstream via sync:upstream
+  3. Apply upstream through sync:upstream as a sanitized squash commit
   4. Fast-forward the base branch
   5. Optionally rebuild/restart Docker Compose with --deploy
 

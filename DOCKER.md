@@ -71,7 +71,7 @@ The helper unsets shell `PORT` before invoking Docker Compose, which avoids acci
 
 The SQLite file in `./data` is not replaced by image upgrades.
 
-If you track upstream MiSub updates, follow `MAINTENANCE.md`. MiSub Docker is a maintained fork: upstream changes should be merged into the Docker branch, then verified before Docker is restarted.
+If you track upstream MiSub updates, follow `MAINTENANCE.md`. MiSub Docker is a maintained fork: upstream file changes should be applied as sanitized squash commits into the Docker branch, then verified before Docker is restarted.
 
 Quick upstream sync command:
 

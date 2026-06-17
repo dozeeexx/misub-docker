@@ -109,6 +109,9 @@ function printHelp() {
 Usage:
   npm run sync:upstream -- [options]
 
+This fork applies upstream changes with a sanitized squash merge so historical upstream
+commits that contained leaked editor settings are not reintroduced into the public fork.
+
 Options:
   --remote <name>              Upstream remote name. Default: upstream
   --upstream-url <url>         Upstream Git URL. Default: ${DEFAULT_UPSTREAM_URL}
@@ -173,18 +176,25 @@ console.info(`Update branch: ${updateBranch}\n`);
 
 run('git', ['switch', '-c', updateBranch]);
 
-const mergeResult = run('git', ['merge', '--no-ff', '--no-edit', `${options.remote}/${upstreamBranch}`], {
+const mergeResult = run('git', ['merge', '--squash', '--no-commit', `${options.remote}/${upstreamBranch}`], {
   allowFailure: true
 });
 
 if (mergeResult.status !== 0) {
-  console.error('\nUpstream merge stopped with conflicts.');
+  console.error('\nSanitized upstream squash merge stopped with conflicts.');
   console.error('Resolve conflicts, then run:');
   console.error('  npm run sync:test');
   console.error('  git add <resolved files>');
   console.error('  git commit');
   console.error(`Then merge ${updateBranch} back into ${currentBranch}.`);
   process.exit(mergeResult.status ?? 1);
+}
+
+const stagedStatus = capture('git', ['status', '--porcelain']);
+if (stagedStatus) {
+  run('git', ['commit', '-m', `Apply sanitized upstream ${options.remote}/${upstreamBranch}`]);
+} else {
+  console.info('No sanitized upstream changes were staged.');
 }
 
 if (options.install) {
