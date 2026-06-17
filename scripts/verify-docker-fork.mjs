@@ -69,6 +69,7 @@ function runGitDiffCheck() {
   '.env.example',
   'DOCKER.md',
   'MAINTENANCE.md',
+  '.github/workflows/fork-sync.yml',
   'tests/unit/docker-sqlite-runtime.test.js'
 ].forEach(requireFile);
 
@@ -139,6 +140,10 @@ requireIncludes('.gitattributes', 'merge=keepDocker', 'Docker fork merge driver 
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'DOCKER_FORK_PATHS', 'snapshot migration file list');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'cloneWithRetries', 'snapshot migration clone flow');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'sync:test', 'snapshot migration verification');
+requireIncludes('MAINTENANCE.md', 'Upstream Upgrade Notes', 'upstream upgrade guidance mapping');
+requireIncludes('MAINTENANCE.md', 'unsafe for this Docker fork because it discards the Docker runtime', 'reset warning');
+requireIncludes('.github/workflows/fork-sync.yml', "vars.ENABLE_UPSTREAM_MAIN_MIRROR == 'true'", 'fork mirror opt-in guard');
+requireIncludes('.github/workflows/fork-sync.yml', 'npm run sync:upstream', 'Docker sync warning');
 
 runGitDiffCheck();
 

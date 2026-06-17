@@ -13,7 +13,7 @@ jobs:
   sync_with_upstream:
     name: Sync with Upstream
     runs-on: ubuntu-latest
-    if: ${{ github.event.repository.fork }}
+    if: ${{ github.event.repository.fork && vars.ENABLE_UPSTREAM_MAIN_MIRROR == 'true' }}
 
     steps:
       - name: Checkout fork
@@ -73,6 +73,7 @@ jobs:
           fi
 
           echo "🚀 正在镜像上游 main，fork 本地 main 上的额外提交会被丢弃。"
+          echo "⚠️ Docker 自托管分支不要使用此 workflow 升级；请使用 npm run sync:upstream。"
           git reset --hard upstream/main
           git push --force-with-lease origin main
           echo "✅ Fork main 已镜像到上游 main。"

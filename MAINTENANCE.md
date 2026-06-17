@@ -86,6 +86,22 @@ git add <resolved files>
 git commit
 ```
 
+## Upstream Upgrade Notes
+
+Upstream MiSub includes upgrade guidance such as `docs/UPGRADE_V2.5.md`. Keep reading those notes before major updates because they describe product-level changes, deleted features, config migrations, and frontend dependency changes.
+
+For this Docker fork, interpret the upstream guidance this way:
+
+- Data backup still applies. Use MiSub UI export/WebDAV backup, and also copy `./data/misub.db` before upgrading.
+- Git sync still applies, but use `npm run sync:upstream` instead of raw `git merge upstream/main`; the script preserves Docker runtime invariants and runs verification.
+- Config migrations still apply. For example, operator-chain migrations should still be completed in the UI when upstream asks for them.
+- Dependency/build notes still apply. The sync flow runs `npm ci`, `npm run build`, and tests so Vite/Tailwind/Node changes are caught early.
+- Cloudflare Pages, Wrangler, KV, and D1 setup notes do not apply to Docker runtime. SQLite is the Docker storage source of truth.
+- `schema.sql` D1 console instructions usually translate to checking whether `server/sqlite-d1.js` still initializes equivalent SQLite tables. Update the SQLite compatibility layer if upstream adds required tables or columns.
+- Upstream advice to `git reset --hard upstream/main` is unsafe for this Docker fork because it discards the Docker runtime. Only use it on a clean upstream mirror branch, never on `docker-selfhost`.
+
+The upstream `.github/workflows/fork-sync.yml` mirrors a fork's `main` branch to upstream `main` with `git reset --hard`. In this Docker fork it is intentionally gated behind the repository variable `ENABLE_UPSTREAM_MAIN_MIRROR=true`. Leave it disabled for the Docker maintenance branch; upgrades should go through `sync:upstream`.
+
 ## Files That Belong To The Docker Fork
 
 These files are expected to be owned by the Docker fork:
