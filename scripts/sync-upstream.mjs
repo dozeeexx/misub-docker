@@ -37,12 +37,13 @@ function parseArgs(argv) {
 
 function run(command, args, { allowFailure = false, quiet = false } = {}) {
   if (!quiet) console.info(`> ${command} ${args.join(' ')}`);
-  const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
-  const result = spawnSync(command, args, {
+  const isWindowsScript = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+  const spawnCommand = isWindowsScript ? 'cmd.exe' : command;
+  const spawnArgs = isWindowsScript ? ['/d', '/s', '/c', command, ...args] : args;
+  const result = spawnSync(spawnCommand, spawnArgs, {
     cwd: process.cwd(),
     stdio: quiet ? 'pipe' : 'inherit',
-    encoding: 'utf8',
-    shell: useShell
+    encoding: 'utf8'
   });
 
   if (result.status !== 0 && !allowFailure) {
