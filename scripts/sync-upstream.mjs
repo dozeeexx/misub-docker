@@ -37,13 +37,21 @@ function parseArgs(argv) {
 
 function run(command, args, { allowFailure = false, quiet = false } = {}) {
   if (!quiet) console.info(`> ${command} ${args.join(' ')}`);
+  const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
     stdio: quiet ? 'pipe' : 'inherit',
-    encoding: 'utf8'
+    encoding: 'utf8',
+    shell: useShell
   });
 
   if (result.status !== 0 && !allowFailure) {
+    if (result.error) {
+      console.error(`${command} failed: ${result.error.message}`);
+    }
+    if (quiet && result.stderr) {
+      console.error(result.stderr.trim());
+    }
     process.exit(result.status ?? 1);
   }
 
@@ -85,6 +93,14 @@ function ensureRemote(remote, upstreamUrl) {
     console.warn(`Remote ${remote} points to ${currentUrl}`);
     console.warn(`Continuing without changing it. Expected default is ${upstreamUrl}`);
   }
+}
+
+function configureGitForDockerFork() {
+  run('git', ['config', 'merge.keepDocker.name', 'Keep Docker self-hosting fork files']);
+  run('git', ['config', 'merge.keepDocker.driver', 'true']);
+  run('git', ['config', 'rerere.enabled', 'true']);
+  run('git', ['config', 'rerere.autoupdate', 'true']);
+  run('git', ['config', 'pull.rebase', 'false']);
 }
 
 function printHelp() {
@@ -132,8 +148,8 @@ if (!options.allowDirty) {
   }
 }
 
-run(npmCommand(), ['run', 'sync:setup', '--', '--remote', options.remote, '--upstream-url', options.upstreamUrl]);
 ensureRemote(options.remote, options.upstreamUrl);
+configureGitForDockerFork();
 
 run('git', ['fetch', options.remote, '--prune']);
 
