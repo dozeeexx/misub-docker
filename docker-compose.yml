@@ -6,6 +6,7 @@ services:
     container_name: misub-docker
     restart: unless-stopped
     init: true
+    user: "${PUID:-1000}:${PGID:-1000}"
     stop_grace_period: 60s
     env_file:
       - .env

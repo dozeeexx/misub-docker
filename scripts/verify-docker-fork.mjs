@@ -198,6 +198,7 @@ requireIncludes('Dockerfile', 'DATABASE_PATH=/data/misub.db', 'default SQLite pa
 requireIncludes('Dockerfile', 'CMD ["node", "server/index.js"]', 'direct Docker startup command');
 
 requireIncludes('docker-compose.yml', 'PORT: 8787', 'fixed container port');
+requireIncludes('docker-compose.yml', 'user: "${PUID:-1000}:${PGID:-1000}"', 'non-root container user');
 requireIncludes('docker-compose.yml', '${BIND_ADDRESS:-127.0.0.1}:${HOST_PORT:-8787}:8787', 'localhost-first host port binding');
 requireIncludes('docker-compose.yml', 'container_name: misub-docker', 'MiSub Docker container name');
 requireIncludes('docker-compose.yml', './data:/data', 'persistent data volume');
@@ -206,6 +207,8 @@ requireIncludes('docker-compose.yml', 'stop_grace_period: 60s', 'graceful shutdo
 
 requireIncludes('.env.example', 'ADMIN_PASSWORD=', 'admin password template');
 requireIncludes('.env.example', 'COOKIE_SECRET=', 'cookie secret template');
+requireIncludes('.env.example', 'PUID=1000', 'container user id template');
+requireIncludes('.env.example', 'PGID=1000', 'container group id template');
 requireIncludes('.env.example', 'BIND_ADDRESS=127.0.0.1', 'localhost bind address template');
 requireIncludes('.env.example', 'HOST_PORT=8787', 'host port template');
 requireIncludes('.env.example', 'DATABASE_PATH=/data/misub.db', 'database path template');
