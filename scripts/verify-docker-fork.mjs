@@ -179,6 +179,8 @@ requireIncludes('server/scheduler.js', 'CRON_INTERVAL_SECONDS', 'configurable sc
 
 requireIncludes('index.html', '<title>MiSub Docker</title>', 'MiSub Docker document title');
 requireIncludes('index.html', 'content="MiSub Docker"', 'MiSub Docker Open Graph title/site name');
+requireIncludes('index.html', 'name="robots" content="noindex, nofollow, noarchive, nosnippet"', 'HTML robots noindex meta');
+requireIncludes('public/robots.txt', 'Disallow: /', 'robots.txt disallow rule');
 requireIncludes('src/i18n/messages.js', "name: 'MiSub Docker'", 'MiSub Docker app display name');
 requireIncludes('src/App.vue', 'MiSub Docker', 'MiSub Docker runtime title');
 requireIncludes('src/router/index.js', 'MiSub Docker', 'MiSub Docker route title');
@@ -230,7 +232,9 @@ requireIncludes('scripts/misub-vps.mjs', 'your-domain.example', 'generic Caddy d
 requireIncludes('deployment/caddy/misub.caddy', 'your-domain.example', 'generic Caddy domain template');
 requireIncludes('deployment/caddy/misub.caddy', 'reverse_proxy 127.0.0.1:8787', 'Caddy proxy target');
 requireIncludes('deployment/caddy/misub.caddy', 'Strict-Transport-Security', 'Caddy HSTS header');
+requireIncludes('deployment/caddy/misub.caddy', 'X-Robots-Tag', 'Caddy robots noindex header');
 requireIncludes('scripts/misub-vps.mjs', 'Strict-Transport-Security', 'VPS helper Caddy security headers');
+requireIncludes('scripts/misub-vps.mjs', 'X-Robots-Tag', 'VPS helper robots noindex header');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'DOCKER_FORK_PATHS', 'snapshot migration file list');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'cloneWithRetries', 'snapshot migration clone flow');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'sync:test', 'snapshot migration verification');
