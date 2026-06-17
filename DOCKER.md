@@ -71,7 +71,7 @@ The helper unsets shell `PORT` before invoking Docker Compose, which avoids acci
 
 The SQLite file in `./data` is not replaced by image upgrades.
 
-If you track upstream MiSub updates, follow `MAINTENANCE.md`. MiSub Docker is a maintained fork: upstream file changes should be applied as sanitized squash commits into the Docker branch, then verified before Docker is restarted.
+If you track upstream MiSub updates, follow `MAINTENANCE.md`. MiSub Docker is a maintained fork: upstream file changes should be applied as sanitized tree-diff snapshot commits into the Docker branch, then verified before Docker is restarted.
 
 Quick upstream sync command:
 
@@ -118,6 +118,12 @@ A generic Caddy template is included at `deployment/caddy/misub.caddy`. Keep the
 ```caddyfile
 your-domain.example {
     encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
     reverse_proxy 127.0.0.1:8787
 }
 ```

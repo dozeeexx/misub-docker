@@ -1,6 +1,6 @@
 # Maintaining MiSub Docker
 
-This repository is MiSub Docker, a Docker self-hosting fork of upstream MiSub. Keep the Docker runtime changes isolated and apply upstream updates through sanitized squash commits so leaked upstream history is not imported into the public fork.
+This repository is MiSub Docker, a Docker self-hosting fork of upstream MiSub. Keep the Docker runtime changes isolated and apply upstream updates through sanitized tree-diff snapshots so leaked upstream history is not imported into the public fork.
 
 ## Important: Start From Real Git History
 
@@ -93,7 +93,7 @@ The one-click command wraps `sync:upstream`, which will:
 1. Ensure upstream Git config exists.
 2. Fetch `imzyb/MiSub`.
 3. Create a temporary `docker-selfhost-update/<timestamp>` branch.
-4. Apply upstream file changes as a sanitized squash commit, without importing upstream commit history.
+4. Apply upstream file changes as a sanitized tree-diff snapshot commit, without importing upstream commit history.
 5. Run Docker fork invariant checks.
 6. Run `npm ci`, `npm run build`, and `npm test -- --run`.
 7. Fast-forward the `docker-selfhost` branch when verification passes.
@@ -122,7 +122,7 @@ Upstream MiSub includes upgrade guidance such as `docs/UPGRADE_V2.5.md`. Keep re
 For this Docker fork, interpret the upstream guidance this way:
 
 - Data backup still applies. Use MiSub UI export/WebDAV backup; the one-click update script also creates a SQLite-consistent `./data/misub.db` backup before upgrading.
-- Git sync still applies, but use `npm run sync:upstream` instead of raw `git merge upstream/main`; the script applies a sanitized squash commit, preserves Docker runtime invariants, and runs verification.
+- Git sync still applies, but use `npm run sync:upstream` instead of raw `git merge upstream/main`; the script applies a sanitized tree-diff snapshot commit, preserves Docker runtime invariants, and runs verification.
 - Config migrations still apply. For example, operator-chain migrations should still be completed in the UI when upstream asks for them.
 - Dependency/build notes still apply. The sync flow runs `npm ci`, `npm run build`, and tests so Vite/Tailwind/Node changes are caught early.
 - Cloudflare Pages, Wrangler, KV, and D1 setup notes do not apply to Docker runtime. SQLite is the Docker storage source of truth.
@@ -170,9 +170,7 @@ The one-click flow above is preferred. If you must update manually, use a squash
 
 ```bash
 git switch docker-selfhost
-git fetch upstream
-git switch -c docker-selfhost-update/$(date +%F)
-git merge --squash --no-commit upstream/main
+npm run sync:upstream -- --update-branch docker-selfhost-update/$(date +%F)
 ```
 
 Resolve conflicts by keeping upstream business logic unless it would reintroduce Cloudflare-only runtime requirements. Preserve these Docker invariants:

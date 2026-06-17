@@ -250,8 +250,8 @@ Usage:
 One-click update for the Docker self-hosting branch:
   1. Require a clean work tree
   2. Create a SQLite-consistent backup of ./data/misub.db when present
-  3. Apply upstream through sync:upstream as a sanitized squash commit
-  4. Fast-forward the base branch
+  3. Apply upstream through sync:upstream as a sanitized tree-diff snapshot
+  4. Fast-forward the base branch when an update branch is created
   5. Optionally rebuild/restart Docker Compose with --deploy
 
 Options:
@@ -292,22 +292,6 @@ if (currentBranch !== options.baseBranch) {
 
 ensureRemote(options.remote, options.upstreamUrl);
 configureGitForDockerFork();
-run('git', ['fetch', options.remote, '--prune']);
-const upstreamBranch = resolveUpstreamBranch(options.remote, options.upstreamBranch);
-const upstreamRef = `${options.remote}/${upstreamBranch}`;
-
-if (isAncestor(upstreamRef, options.baseBranch)) {
-  console.info(`No upstream changes to merge from ${upstreamRef}.`);
-  runVerification(options);
-  if (options.deploy) {
-    const docker = dockerCommand();
-    run(docker, ['compose', 'up', '-d', '--build']);
-    run(docker, ['compose', 'ps']);
-  }
-  console.info('\nMiSub Docker is already up to date.');
-  process.exit(0);
-}
-
 const updateBranch = `docker-selfhost-update/${branchTimestamp()}`;
 const syncArgs = [
   'run',
@@ -336,11 +320,15 @@ if (syncResult.status !== 0) {
   process.exit(syncResult.status ?? 1);
 }
 
-run('git', ['switch', options.baseBranch]);
-run('git', ['merge', '--ff-only', updateBranch]);
+if (hasCommit(updateBranch)) {
+  run('git', ['switch', options.baseBranch]);
+  run('git', ['merge', '--ff-only', updateBranch]);
 
-if (!options.keepUpdateBranch) {
-  run('git', ['branch', '-d', updateBranch], { allowFailure: true });
+  if (!options.keepUpdateBranch) {
+    run('git', ['branch', '-d', updateBranch], { allowFailure: true });
+  }
+} else {
+  console.info(`No update branch was created by sync:upstream; ${options.baseBranch} is already aligned with the sanitized upstream snapshot.`);
 }
 
 if (options.deploy) {

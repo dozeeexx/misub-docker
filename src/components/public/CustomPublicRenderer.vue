@@ -54,12 +54,59 @@ const removeScripts = () => {
 const customPageConfig = computed(() => props.config?.customPage || {});
 const customPageType = computed(() => customPageConfig.value.type || 'html');
 const isIframeMode = computed(() => ['iframe-srcdoc', 'iframe-url'].includes(customPageType.value));
-const sanitizeHtml = (html) => DOMPurify.sanitize(html || '', {
+const SANITIZE_OPTIONS = {
   USE_PROFILES: { html: true },
   ADD_ATTR: ['data-slot'],
   FORBID_TAGS: ['script', 'object', 'embed', 'link', 'style'],
   FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'style']
-});
+};
+
+let purifierInstance = null;
+const getPurifier = () => {
+  if (purifierInstance) return purifierInstance;
+  if (DOMPurify?.sanitize) {
+    purifierInstance = DOMPurify;
+    return purifierInstance;
+  }
+  if (typeof DOMPurify === 'function' && globalThis.window) {
+    purifierInstance = DOMPurify(globalThis.window);
+    return purifierInstance;
+  }
+  return null;
+};
+
+const fallbackSanitizeHtml = (html) => {
+  if (!globalThis.document) return String(html || '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  const template = document.createElement('template');
+  template.innerHTML = String(html || '');
+  template.content.querySelectorAll('script, object, embed, link, style').forEach(node => node.remove());
+  template.content.querySelectorAll('*').forEach(node => {
+    for (const attr of Array.from(node.attributes)) {
+      const name = attr.name.toLowerCase();
+      const value = String(attr.value || '').trim();
+      if (name.startsWith('on') || name === 'style') {
+        node.removeAttribute(attr.name);
+        continue;
+      }
+      if (['href', 'src', 'xlink:href'].includes(name) && /^javascript:/i.test(value)) {
+        node.removeAttribute(attr.name);
+      }
+    }
+  });
+  return template.innerHTML;
+};
+
+const containsDangerousMarkup = (html) => /<script\b|\son[a-z]+\s*=|javascript:/i.test(String(html || ''));
+
+const sanitizeHtml = (html) => {
+  const dirty = html || '';
+  const purifier = getPurifier();
+  if (purifier?.sanitize && purifier.isSupported !== false) {
+    const cleaned = purifier.sanitize(dirty, SANITIZE_OPTIONS);
+    if (!containsDangerousMarkup(cleaned)) return cleaned;
+  }
+  return fallbackSanitizeHtml(dirty);
+};
 const iframeSandbox = 'allow-forms allow-popups allow-popups-to-escape-sandbox';
 const iframeSrcdoc = computed(() => (customPageType.value === 'iframe-srcdoc' ? sanitizeHtml(props.content || '') : undefined));
 const safeIframeUrl = (value) => {

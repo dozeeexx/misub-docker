@@ -204,7 +204,7 @@ switch (command) {
     dockerCompose(['config']);
     break;
   case 'caddy':
-    console.info(`${caddyDomain()} {\n    encode zstd gzip\n    reverse_proxy 127.0.0.1:8787\n}`);
+    console.info(`${caddyDomain()} {\n    encode zstd gzip\n    header {\n        Strict-Transport-Security \"max-age=31536000; includeSubDomains\"\n        X-Content-Type-Options \"nosniff\"\n        Referrer-Policy \"strict-origin-when-cross-origin\"\n        Permissions-Policy \"camera=(), microphone=(), geolocation=()\"\n    }\n    reverse_proxy 127.0.0.1:8787\n}`);
     break;
   default:
     console.error(`Unknown command: ${command}\n`);

@@ -1,12 +1,36 @@
 import { spawnSync } from 'node:child_process';
 
 const DEFAULT_UPSTREAM_URL = 'https://github.com/imzyb/MiSub.git';
+const DEFAULT_BASELINE_BRANCH = 'main';
+const PROTECTED_DIFF_PATHS = [
+  '.vscode/settings.json',
+  '.github/workflows/fork-sync.yml',
+  '.gitattributes',
+  'README.md',
+  'README-zh.md',
+  'server/**',
+  'Dockerfile',
+  'docker-compose.yml',
+  '.dockerignore',
+  '.env.example',
+  'DOCKER.md',
+  'MAINTENANCE.md',
+  'tests/unit/docker-sqlite-runtime.test.js',
+  'scripts/migrate-snapshot-to-fork.mjs',
+  'scripts/setup-docker-fork-git.mjs',
+  'scripts/sync-upstream.mjs',
+  'scripts/update-selfhost.mjs',
+  'scripts/verify-docker-fork.mjs',
+  'scripts/misub-vps.mjs',
+  'deployment/caddy/**'
+];
 
 function parseArgs(argv) {
   const options = {
     remote: 'upstream',
     upstreamUrl: DEFAULT_UPSTREAM_URL,
     upstreamBranch: 'main',
+    baselineBranch: DEFAULT_BASELINE_BRANCH,
     updateBranch: '',
     allowDirty: false,
     install: true,
@@ -21,6 +45,7 @@ function parseArgs(argv) {
     if (arg === '--remote') options.remote = argv[++i];
     else if (arg === '--upstream-url') options.upstreamUrl = argv[++i];
     else if (arg === '--upstream-branch') options.upstreamBranch = argv[++i];
+    else if (arg === '--baseline-branch') options.baselineBranch = argv[++i];
     else if (arg === '--update-branch') options.updateBranch = argv[++i];
     else if (arg === '--allow-dirty') options.allowDirty = true;
     else if (arg === '--no-install') options.install = false;
@@ -35,15 +60,16 @@ function parseArgs(argv) {
   return options;
 }
 
-function run(command, args, { allowFailure = false, quiet = false } = {}) {
+function run(command, args, { allowFailure = false, quiet = false, input = undefined } = {}) {
   if (!quiet) console.info(`> ${command} ${args.join(' ')}`);
   const isWindowsScript = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
   const spawnCommand = isWindowsScript ? 'cmd.exe' : command;
   const spawnArgs = isWindowsScript ? ['/d', '/s', '/c', command, ...args] : args;
   const result = spawnSync(spawnCommand, spawnArgs, {
     cwd: process.cwd(),
-    stdio: quiet ? 'pipe' : 'inherit',
-    encoding: 'utf8'
+    stdio: quiet ? ['pipe', 'pipe', 'pipe'] : (input === undefined ? 'inherit' : ['pipe', 'inherit', 'inherit']),
+    encoding: 'utf8',
+    input
   });
 
   if (result.status !== 0 && !allowFailure) {
@@ -60,8 +86,8 @@ function run(command, args, { allowFailure = false, quiet = false } = {}) {
 }
 
 function capture(command, args, options = {}) {
-  const result = run(command, args, { ...options, quiet: true });
-  if (result.status !== 0) return null;
+  const result = run(command, args, { ...options, quiet: true, allowFailure: true });
+  if (result.status !== 0 && !options.allowFailure) return null;
   return String(result.stdout || '').trim();
 }
 
@@ -77,11 +103,8 @@ function branchTimestamp() {
     .replace('T', '-');
 }
 
-function remoteBranchExists(remote, branch) {
-  return run('git', ['rev-parse', '--verify', `refs/remotes/${remote}/${branch}`], {
-    allowFailure: true,
-    quiet: true
-  }).status === 0;
+function hasCommit(ref) {
+  return run('git', ['rev-parse', '--verify', ref], { allowFailure: true, quiet: true }).status === 0;
 }
 
 function ensureRemote(remote, upstreamUrl) {
@@ -104,18 +127,73 @@ function configureGitForDockerFork() {
   run('git', ['config', 'pull.rebase', 'false']);
 }
 
+function remoteBranchExists(remote, branch) {
+  return run('git', ['ls-remote', '--exit-code', '--heads', remote, branch], {
+    allowFailure: true,
+    quiet: true
+  }).status === 0;
+}
+
+function resolveUpstreamBranch(remote, branch) {
+  if (remoteBranchExists(remote, branch)) return branch;
+  if (branch === 'main' && remoteBranchExists(remote, 'master')) return 'master';
+  console.error(`Remote branch ${remote}/${branch} was not found.`);
+  process.exit(1);
+}
+
+function diffPathspecs() {
+  return ['--', '.', ...PROTECTED_DIFF_PATHS.map(item => `:(exclude)${item}`)];
+}
+
+function fetchUpstreamSnapshot(remote, branch, snapshotRef) {
+  // Fetch only the requested branch tip into a temporary local ref. Do not update refs/remotes/upstream/*:
+  // this fork intentionally avoids making old upstream commits with leaked editor settings
+  // reachable from local or pushed fork refs.
+  run('git', ['fetch', '--no-tags', '--depth=1', '--refmap=', remote, `refs/heads/${branch}:${snapshotRef}`]);
+  if (!hasCommit(snapshotRef)) {
+    console.error(`Upstream snapshot ref was not created: ${snapshotRef}`);
+    process.exit(1);
+  }
+  return snapshotRef;
+}
+
+function hasSnapshotDiff(baselineRef, upstreamRef) {
+  const result = run('git', ['diff', '--quiet', '--exit-code', baselineRef, upstreamRef, ...diffPathspecs()], {
+    allowFailure: true,
+    quiet: true
+  });
+  if (result.status === 0) return false;
+  if (result.status === 1) return true;
+  if (result.stderr) console.error(result.stderr.trim());
+  process.exit(result.status ?? 1);
+}
+
+function upstreamPatch(baselineRef, upstreamRef) {
+  const result = run('git', ['diff', '--binary', baselineRef, upstreamRef, ...diffPathspecs()], {
+    allowFailure: true,
+    quiet: true
+  });
+  if (result.status !== 0) {
+    if (result.stderr) console.error(result.stderr.trim());
+    process.exit(result.status ?? 1);
+  }
+  return String(result.stdout || '');
+}
+
 function printHelp() {
   console.info(`
 Usage:
   npm run sync:upstream -- [options]
 
-This fork applies upstream changes with a sanitized squash merge so historical upstream
-commits that contained leaked editor settings are not reintroduced into the public fork.
+This fork applies upstream file changes as a sanitized tree-diff snapshot. It does
+not merge upstream commit history, so historical upstream commits that contained
+leaked editor settings are not reintroduced into the public fork.
 
 Options:
   --remote <name>              Upstream remote name. Default: upstream
   --upstream-url <url>         Upstream Git URL. Default: ${DEFAULT_UPSTREAM_URL}
   --upstream-branch <branch>   Upstream branch. Default: main, falls back to master
+  --baseline-branch <branch>   Sanitized upstream baseline branch. Default: ${DEFAULT_BASELINE_BRANCH}
   --update-branch <branch>     Temporary branch name to create
   --allow-dirty                Allow a dirty working tree
   --no-install                 Skip npm ci
@@ -152,49 +230,51 @@ if (!options.allowDirty) {
   }
 }
 
+if (!hasCommit(options.baselineBranch)) {
+  console.error(`Sanitized baseline branch not found: ${options.baselineBranch}`);
+  process.exit(1);
+}
+
 ensureRemote(options.remote, options.upstreamUrl);
 configureGitForDockerFork();
 
-run('git', ['fetch', options.remote, '--prune']);
-
-let upstreamBranch = options.upstreamBranch;
-if (!remoteBranchExists(options.remote, upstreamBranch)) {
-  if (upstreamBranch === 'main' && remoteBranchExists(options.remote, 'master')) {
-    upstreamBranch = 'master';
-  } else {
-    console.error(`Remote branch ${options.remote}/${upstreamBranch} was not found.`);
-    process.exit(1);
-  }
-}
-
+const upstreamBranch = resolveUpstreamBranch(options.remote, options.upstreamBranch);
+const upstreamRef = fetchUpstreamSnapshot(options.remote, upstreamBranch, 'refs/sync-upstream-snapshot');
 const currentBranch = capture('git', ['branch', '--show-current'], { allowFailure: true }) || 'HEAD';
 const updateBranch = options.updateBranch || `docker-selfhost-update/${branchTimestamp()}`;
 
 console.info(`\nCurrent branch: ${currentBranch}`);
-console.info(`Upstream ref: ${options.remote}/${upstreamBranch}`);
+console.info(`Upstream snapshot: ${options.remote}/${upstreamBranch}`);
+console.info(`Sanitized baseline: ${options.baselineBranch}`);
 console.info(`Update branch: ${updateBranch}\n`);
 
-run('git', ['switch', '-c', updateBranch]);
-
-const mergeResult = run('git', ['merge', '--squash', '--no-commit', `${options.remote}/${upstreamBranch}`], {
-  allowFailure: true
-});
-
-if (mergeResult.status !== 0) {
-  console.error('\nSanitized upstream squash merge stopped with conflicts.');
-  console.error('Resolve conflicts, then run:');
-  console.error('  npm run sync:test');
-  console.error('  git add <resolved files>');
-  console.error('  git commit');
-  console.error(`Then merge ${updateBranch} back into ${currentBranch}.`);
-  process.exit(mergeResult.status ?? 1);
-}
-
-const stagedStatus = capture('git', ['status', '--porcelain']);
-if (stagedStatus) {
-  run('git', ['commit', '-m', `Apply sanitized upstream ${options.remote}/${upstreamBranch}`]);
+if (!hasSnapshotDiff(options.baselineBranch, upstreamRef)) {
+  console.info(`No upstream file changes relative to sanitized baseline ${options.baselineBranch}.`);
 } else {
-  console.info('No sanitized upstream changes were staged.');
+  const patch = upstreamPatch(options.baselineBranch, upstreamRef);
+  run('git', ['switch', '-c', updateBranch]);
+
+  const applyResult = run('git', ['apply', '--index', '--3way'], {
+    allowFailure: true,
+    input: patch
+  });
+
+  if (applyResult.status !== 0) {
+    console.error('\nSanitized upstream snapshot apply stopped with conflicts.');
+    console.error('Resolve conflicts, then run:');
+    console.error('  npm run sync:test');
+    console.error('  git add <resolved files>');
+    console.error('  git commit');
+    console.error(`Then merge ${updateBranch} back into ${currentBranch}.`);
+    process.exit(applyResult.status ?? 1);
+  }
+
+  const stagedStatus = capture('git', ['diff', '--cached', '--name-only']);
+  if (stagedStatus) {
+    run('git', ['commit', '-m', `Apply sanitized upstream ${options.remote}/${upstreamBranch}`]);
+  } else {
+    console.info('No sanitized upstream changes were staged.');
+  }
 }
 
 if (options.install) {
@@ -223,7 +303,13 @@ if (options.docker) {
   }
 }
 
+run('git', ['update-ref', '-d', upstreamRef], { allowFailure: true, quiet: true });
+
 console.info('\nUpstream sync completed.');
-console.info(`Review ${updateBranch}, then merge it back into ${currentBranch}:`);
-console.info(`  git switch ${currentBranch}`);
-console.info(`  git merge --ff-only ${updateBranch}`);
+if (hasCommit(updateBranch)) {
+  console.info(`Review ${updateBranch}, then merge it back into ${currentBranch}:`);
+  console.info(`  git switch ${currentBranch}`);
+  console.info(`  git merge --ff-only ${updateBranch}`);
+} else {
+  console.info('No update branch was created because there were no upstream file changes.');
+}

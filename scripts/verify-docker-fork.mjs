@@ -226,6 +226,8 @@ requireIncludes('scripts/misub-vps.mjs', 'data/backups', 'VPS helper backup targ
 requireIncludes('scripts/misub-vps.mjs', 'your-domain.example', 'generic Caddy domain fallback');
 requireIncludes('deployment/caddy/misub.caddy', 'your-domain.example', 'generic Caddy domain template');
 requireIncludes('deployment/caddy/misub.caddy', 'reverse_proxy 127.0.0.1:8787', 'Caddy proxy target');
+requireIncludes('deployment/caddy/misub.caddy', 'Strict-Transport-Security', 'Caddy HSTS header');
+requireIncludes('scripts/misub-vps.mjs', 'Strict-Transport-Security', 'VPS helper Caddy security headers');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'DOCKER_FORK_PATHS', 'snapshot migration file list');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'cloneWithRetries', 'snapshot migration clone flow');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'sync:test', 'snapshot migration verification');
@@ -238,9 +240,13 @@ requireIncludes('scripts/update-selfhost.mjs', '--deploy', 'one-click deploy opt
 requireIncludes('scripts/update-selfhost.mjs', '--skip-docker', 'one-click local dry-run option');
 requireIncludes('MAINTENANCE.md', 'Upstream Upgrade Notes', 'upstream upgrade guidance mapping');
 requireIncludes('MAINTENANCE.md', 'unsafe for this Docker fork because it discards the Docker runtime', 'reset warning');
-requireIncludes('scripts/sync-upstream.mjs', "'merge', '--squash', '--no-commit'", 'sanitized upstream squash merge');
+requireIncludes('scripts/sync-upstream.mjs', "'diff', '--binary'", 'sanitized upstream tree diff');
+requireIncludes('scripts/sync-upstream.mjs', "'apply', '--index', '--3way'", 'sanitized upstream patch apply');
 requireIncludes('scripts/sync-upstream.mjs', 'leaked editor settings are not reintroduced', 'history leak prevention help text');
-requireIncludes('scripts/update-selfhost.mjs', 'sanitized squash commit', 'one-click update sanitization wording');
+requireIncludes('scripts/sync-upstream.mjs', 'Do not update refs/remotes/upstream', 'avoid persistent upstream leaked history refs');
+requireIncludes('scripts/sync-upstream.mjs', "'--refmap='", 'disable default upstream remote-tracking ref updates');
+requireIncludes('scripts/sync-upstream.mjs', "'update-ref', '-d', upstreamRef", 'remove temporary upstream snapshot ref');
+requireIncludes('scripts/update-selfhost.mjs', 'sanitized upstream snapshot', 'one-click update sanitization wording');
 
 requireIncludes('.github/workflows/fork-sync.yml', "vars.ENABLE_UPSTREAM_MAIN_MIRROR == 'true'", 'fork mirror opt-in guard');
 requireIncludes('.github/workflows/fork-sync.yml', 'npm run sync:upstream', 'Docker sync warning');
