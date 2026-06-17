@@ -71,6 +71,8 @@ function runGitDiffCheck() {
   'MAINTENANCE.md',
   '.github/workflows/fork-sync.yml',
   'scripts/update-selfhost.mjs',
+  'scripts/misub-vps.mjs',
+  'deployment/caddy/misub.caddy',
   'tests/unit/docker-sqlite-runtime.test.js'
 ].forEach(requireFile);
 
@@ -81,7 +83,7 @@ requireJson('package.json', pkg => {
   if (pkg.scripts?.['start:docker'] !== 'node server/index.js') {
     errors.push('package.json scripts.start:docker must be "node server/index.js".');
   }
-  for (const script of ['sync:setup', 'sync:migrate', 'sync:upstream', 'sync:verify', 'sync:test', 'update:selfhost', 'update:deploy']) {
+  for (const script of ['sync:setup', 'sync:migrate', 'sync:upstream', 'sync:verify', 'sync:test', 'misub:vps', 'misub:status', 'misub:health', 'misub:logs', 'misub:backup', 'misub:update', 'update:selfhost', 'update:deploy']) {
     if (!pkg.scripts?.[script]) {
       errors.push(`package.json must define scripts.${script}.`);
     }
@@ -137,6 +139,7 @@ requireIncludes('Dockerfile', 'DATABASE_PATH=/data/misub.db', 'default SQLite pa
 requireIncludes('Dockerfile', 'CMD ["node", "server/index.js"]', 'direct Docker startup command');
 
 requireIncludes('docker-compose.yml', 'PORT: 8787', 'fixed container port');
+requireIncludes('docker-compose.yml', '${BIND_ADDRESS:-127.0.0.1}:${HOST_PORT:-8787}:8787', 'localhost-first host port binding');
 requireIncludes('docker-compose.yml', 'container_name: misub-docker', 'MiSub Docker container name');
 requireIncludes('docker-compose.yml', './data:/data', 'persistent data volume');
 requireIncludes('docker-compose.yml', '/_health', 'Compose healthcheck');
@@ -144,6 +147,8 @@ requireIncludes('docker-compose.yml', 'stop_grace_period: 60s', 'graceful shutdo
 
 requireIncludes('.env.example', 'ADMIN_PASSWORD=', 'admin password template');
 requireIncludes('.env.example', 'COOKIE_SECRET=', 'cookie secret template');
+requireIncludes('.env.example', 'BIND_ADDRESS=127.0.0.1', 'localhost bind address template');
+requireIncludes('.env.example', 'HOST_PORT=8787', 'host port template');
 requireIncludes('.env.example', 'DATABASE_PATH=/data/misub.db', 'database path template');
 
 requireIncludes('src/constants/default-settings.js', "storageType: 'sqlite'", 'Docker default storage type');
@@ -152,6 +157,14 @@ requireIncludes('src/components/settings/sections/SystemSettings.vue', 'SQLite (
 
 requireIncludes('.gitattributes', 'merge=keepDocker', 'Docker fork merge driver attributes');
 requireIncludes('.gitattributes', '/scripts/update-selfhost.mjs merge=keepDocker', 'one-click update merge protection');
+requireIncludes('.gitattributes', '/scripts/misub-vps.mjs merge=keepDocker', 'VPS helper merge protection');
+requireIncludes('.gitattributes', '/deployment/caddy/** merge=keepDocker', 'Caddy deployment template merge protection');
+requireIncludes('.gitattributes', '/.gitattributes merge=keepDocker', 'self-protecting merge attributes');
+requireIncludes('scripts/misub-vps.mjs', 'delete env.PORT', 'VPS helper must ignore shell PORT');
+requireIncludes('scripts/misub-vps.mjs', 'update:deploy', 'VPS helper update command');
+requireIncludes('scripts/misub-vps.mjs', 'data/backups', 'VPS helper backup target');
+requireIncludes('deployment/caddy/misub.caddy', 'mi.333023.xyz', 'MiSub public Caddy domain');
+requireIncludes('deployment/caddy/misub.caddy', 'reverse_proxy 127.0.0.1:8787', 'Caddy proxy target');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'DOCKER_FORK_PATHS', 'snapshot migration file list');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'cloneWithRetries', 'snapshot migration clone flow');
 requireIncludes('scripts/migrate-snapshot-to-fork.mjs', 'sync:test', 'snapshot migration verification');

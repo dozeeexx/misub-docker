@@ -1,0 +1,4 @@
+mi.333023.xyz {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8787
+}

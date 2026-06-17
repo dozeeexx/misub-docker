@@ -33,3 +33,6 @@
 /scripts/sync-upstream.mjs merge=keepDocker
 /scripts/update-selfhost.mjs merge=keepDocker
 /scripts/verify-docker-fork.mjs merge=keepDocker
+/scripts/misub-vps.mjs merge=keepDocker
+/deployment/caddy/** merge=keepDocker
+/.gitattributes merge=keepDocker

@@ -29,7 +29,9 @@ MiSub Docker is the Docker-only self-hosted build of MiSub. It does not require 
 
 Data is stored at `./data/misub.db` on the host.
 
-`PORT` in `.env` controls the host port only. The container always listens on `8787`.
+`HOST_PORT` in `.env` controls the host port. The container always listens on `8787`.
+
+By default Docker binds the host port to `127.0.0.1` so the app is not exposed directly. Put Caddy/Nginx in front for public HTTPS.
 
 Docker Compose includes a healthcheck for `/_health`. Use `docker compose ps` to see whether the container is healthy.
 
@@ -62,8 +64,10 @@ docker compose up -d --build
 For source deployments:
 
 ```bash
-npm run update:deploy
+npm run misub:update
 ```
+
+The helper unsets shell `PORT` before invoking Docker Compose, which avoids accidental overrides from VPS environments.
 
 The SQLite file in `./data` is not replaced by image upgrades.
 
@@ -108,6 +112,15 @@ MiSub Docker honors:
 - `Host`
 
 Set `MISUB_PUBLIC_URL=https://your-domain.example` in `.env` when callback or subscription links must always use the public domain.
+
+Example Caddy config is included at `deployment/caddy/misub.caddy`:
+
+```caddyfile
+mi.333023.xyz {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8787
+}
+```
 
 Example Nginx location:
 

@@ -56,10 +56,16 @@ Keep Docker-specific files and changes on `docker-selfhost`.
 
 ## Fast Update Command
 
-For normal VPS updates, run one command:
+For normal VPS updates, run one command. The helper removes any shell-exported `PORT` before invoking Docker Compose, so `.env` remains authoritative:
 
 ```bash
-npm run update:deploy
+npm run misub:update
+```
+
+Equivalent explicit command:
+
+```bash
+env -u PORT npm run update:deploy -- --docker-build
 ```
 
 This creates a SQLite-consistent backup of `./data/misub.db` when it exists, fetches upstream MiSub, merges it into a temporary update branch, runs Docker fork verification, installs dependencies, builds, runs tests, fast-forwards `docker-selfhost`, and finally runs `docker compose up -d --build`.
@@ -142,6 +148,9 @@ These files are expected to be owned by the Docker fork:
 - `scripts/sync-upstream.mjs`
 - `scripts/update-selfhost.mjs`
 - `scripts/verify-docker-fork.mjs`
+- `scripts/misub-vps.mjs`
+- `deployment/caddy/`
+- `.gitattributes`
 
 These upstream files contain Docker compatibility changes and are more likely to conflict during upstream updates:
 
@@ -193,12 +202,27 @@ git switch docker-selfhost
 git merge --ff-only docker-selfhost-update/$(date +%F)
 ```
 
+## VPS Daily Operations
+
+On the production VPS, prefer the helper commands below. They intentionally unset shell `PORT` before running Docker Compose so unrelated VPS services cannot override the MiSub port.
+
+```bash
+cd /opt/misub-docker
+npm run misub:status
+npm run misub:health
+npm run misub:logs -- -f
+npm run misub:backup
+npm run misub:update
+```
+
+`npm run misub:backup` writes SQLite-consistent backups under `./data/backups` when possible. Keep `./data` out of Git and include it in VPS backups.
+
 ## Release Upgrade On A VPS
 
 For routine VPS upgrades:
 
 ```bash
-npm run update:deploy -- --docker-build
+npm run misub:update
 docker compose ps
 ```
 
