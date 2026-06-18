@@ -50,7 +50,31 @@ export const TRANSFORM_ASSETS = {
         },
         {
             id: 4,
-            name: 'MiSub 内置 Sublink Worker 综合分流',
+            name: 'MiSub 内置 Sublink Worker 最小化分流',
+            url: 'builtin:clash_sublink_worker_minimal',
+            group: 'MiSub Builtin',
+            is_default: false,
+            sourceType: 'builtin-preset',
+            recommendedFor: ['clash', 'singbox'],
+            compatibleClients: ['clash', 'mihomo', 'clash-meta', 'singbox'],
+            strategy: 'model-driven',
+            description: '提取自 7Sageer/sublink-worker 的 minimal 预设，仅保留国内/私有直连、国外网站和兜底规则，适合轻量稳定场景。'
+        },
+        {
+            id: 5,
+            name: 'MiSub 内置 Sublink Worker 均衡分流',
+            url: 'builtin:clash_sublink_worker_balanced',
+            group: 'MiSub Builtin',
+            is_default: false,
+            sourceType: 'builtin-preset',
+            recommendedFor: ['clash', 'singbox'],
+            compatibleClients: ['clash', 'mihomo', 'clash-meta', 'singbox'],
+            strategy: 'model-driven',
+            description: '提取自 7Sageer/sublink-worker 的 balanced 预设，在最小化基础上增加 GitHub、Google、YouTube、AI 与 Telegram 分流。'
+        },
+        {
+            id: 6,
+            name: 'MiSub 内置 Sublink Worker 全面分流',
             url: 'builtin:clash_sublink_worker_comprehensive',
             group: 'MiSub Builtin',
             is_default: false,
@@ -58,7 +82,7 @@ export const TRANSFORM_ASSETS = {
             recommendedFor: ['clash', 'singbox'],
             compatibleClients: ['clash', 'mihomo', 'clash-meta', 'singbox'],
             strategy: 'model-driven',
-            description: '提取自 7Sageer/sublink-worker 的 comprehensive 规则集，基于 MetaCubeX geosite/geoip SRS 规则，适合 Clash Meta/Mihomo 与 Sing-Box。'
+            description: '提取自 7Sageer/sublink-worker 的 comprehensive 预设，基于 MetaCubeX geosite/geoip SRS 规则，适合 Clash Meta/Mihomo 与 Sing-Box。'
         },
         {
             id: 101,
