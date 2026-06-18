@@ -135,7 +135,7 @@ const SING_GEOSITE_BASE = 'https://raw.githubusercontent.com/SagerNet/sing-geosi
 export const REMOTE_SOURCES = {
     ADS: {
         name: '广告拦截',
-        clash: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/BanAD.yaml',
+        clash: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/BanAD.yaml',
         singbox: `${SING_GEOSITE_BASE}/geosite-category-ads-all.srs`,
         surge: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanAD.list',
         quanx: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanAD.list'

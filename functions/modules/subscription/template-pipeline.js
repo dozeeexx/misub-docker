@@ -37,7 +37,7 @@ export function renderClashFromIniTemplate(templateText, options = {}) {
         proxies
     });
 
-    // 智能注入地区分组逻辑
+    // 应用统一模板优化：展开过滤器/占位符并清理无效引用；默认不注入国家/地区节点分组。
     model = applySmartModelOptimizations(model);
     
     return renderClashFromTemplateModel(model);

@@ -21,6 +21,7 @@ const PROTECTED_DIFF_PATHS = [
   'scripts/sync-upstream.mjs',
   'scripts/update-selfhost.mjs',
   'scripts/verify-docker-fork.mjs',
+  'scripts/verify-builtin-rules.mjs',
   'scripts/misub-vps.mjs',
   'deployment/caddy/**'
 ];

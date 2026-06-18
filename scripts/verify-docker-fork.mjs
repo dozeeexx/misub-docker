@@ -58,6 +58,25 @@ function runGitDiffCheck() {
   }
 }
 
+function runBuiltinRulesVerify() {
+  const script = rel('scripts/verify-builtin-rules.mjs');
+  if (!fs.existsSync(script)) {
+    errors.push('Missing required file: scripts/verify-builtin-rules.mjs');
+    return;
+  }
+
+  const result = spawnSync(process.execPath, [script, '--quiet'], {
+    cwd: repoRoot,
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    errors.push('Built-in subscription rules verification failed; country/region auto node groups may have been reintroduced or generated configs are inconsistent.');
+    if (result.stdout) errors.push(result.stdout.trim());
+    if (result.stderr) errors.push(result.stderr.trim());
+  }
+}
+
 function readLocalEnvValues() {
   const envPath = rel('.env');
   if (!fs.existsSync(envPath)) return {};
@@ -130,6 +149,7 @@ function runPersonalDomainLeakCheck() {
   'MAINTENANCE.md',
   '.github/workflows/fork-sync.yml',
   'scripts/update-selfhost.mjs',
+  'scripts/verify-builtin-rules.mjs',
   'scripts/misub-vps.mjs',
   'deployment/caddy/misub.caddy',
   'tests/unit/docker-sqlite-runtime.test.js'
@@ -142,7 +162,7 @@ requireJson('package.json', pkg => {
   if (pkg.scripts?.['start:docker'] !== 'node server/index.js') {
     errors.push('package.json scripts.start:docker must be "node server/index.js".');
   }
-  for (const script of ['sync:setup', 'sync:migrate', 'sync:upstream', 'sync:verify', 'sync:test', 'misub:vps', 'misub:status', 'misub:health', 'misub:logs', 'misub:backup', 'misub:update', 'update:selfhost', 'update:deploy']) {
+  for (const script of ['sync:setup', 'sync:migrate', 'sync:upstream', 'sync:verify', 'rules:verify', 'sync:test', 'misub:vps', 'misub:status', 'misub:health', 'misub:logs', 'misub:backup', 'misub:update', 'update:selfhost', 'update:deploy']) {
     if (!pkg.scripts?.[script]) {
       errors.push(`package.json must define scripts.${script}.`);
     }
@@ -222,6 +242,7 @@ requireIncludes('src/components/settings/sections/SystemSettings.vue', 'SQLite (
 requireIncludes('.gitattributes', 'merge=keepDocker', 'Docker fork merge driver attributes');
 requireIncludes('.gitattributes', '/scripts/update-selfhost.mjs merge=keepDocker', 'one-click update merge protection');
 requireIncludes('.gitattributes', '/scripts/misub-vps.mjs merge=keepDocker', 'VPS helper merge protection');
+requireIncludes('.gitattributes', '/scripts/verify-builtin-rules.mjs merge=keepDocker', 'built-in rules verifier merge protection');
 requireIncludes('.gitattributes', '/deployment/caddy/** merge=keepDocker', 'Caddy deployment template merge protection');
 requireIncludes('.gitattributes', '/.gitattributes merge=keepDocker', 'self-protecting merge attributes');
 requireIncludes('scripts/misub-vps.mjs', 'delete env.PORT', 'VPS helper must ignore shell PORT');
@@ -253,13 +274,20 @@ requireIncludes('scripts/sync-upstream.mjs', 'leaked editor settings are not rei
 requireIncludes('scripts/sync-upstream.mjs', 'Do not update refs/remotes/upstream', 'avoid persistent upstream leaked history refs');
 requireIncludes('scripts/sync-upstream.mjs', "'--refmap='", 'disable default upstream remote-tracking ref updates');
 requireIncludes('scripts/sync-upstream.mjs', "'update-ref', '-d', upstreamRef", 'remove temporary upstream snapshot ref');
+requireIncludes('scripts/sync-upstream.mjs', "'scripts/verify-builtin-rules.mjs'", 'built-in rules verifier protected from upstream snapshots');
 requireIncludes('scripts/update-selfhost.mjs', 'sanitized upstream snapshot', 'one-click update sanitization wording');
+requireIncludes('scripts/verify-builtin-rules.mjs', 'COUNTRY_GROUP_LABELS', 'built-in country group regression guard');
+requireIncludes('scripts/verify-builtin-rules.mjs', 'REMOTE_SOURCES.ADS?.clash', 'built-in remote rule source guard');
+requireIncludes('scripts/verify-builtin-rules.mjs', 'Sublink Worker presets must stay removed', 'Sublink Worker removal guard');
+requireIncludes('scripts/verify-builtin-rules.mjs', 'checkClashConfig', 'Clash built-in rules structural check');
+requireIncludes('scripts/verify-builtin-rules.mjs', 'checkSingboxConfig', 'sing-box built-in rules structural check');
 
 requireIncludes('.github/workflows/fork-sync.yml', "vars.ENABLE_UPSTREAM_MAIN_MIRROR == 'true'", 'fork mirror opt-in guard');
 requireIncludes('.github/workflows/fork-sync.yml', 'npm run sync:upstream', 'Docker sync warning');
 
 runPersonalDomainLeakCheck();
 runGitDiffCheck();
+runBuiltinRulesVerify();
 
 if (warnings.length > 0) {
   console.warn('\nDocker fork verification warnings:');

@@ -13,6 +13,7 @@
     "sync:migrate": "node scripts/migrate-snapshot-to-fork.mjs",
     "sync:upstream": "node scripts/sync-upstream.mjs",
     "sync:verify": "node scripts/verify-docker-fork.mjs",
+    "rules:verify": "node scripts/verify-builtin-rules.mjs",
     "sync:test": "npm run sync:verify && npm run build && npm test -- --run",
     "misub:vps": "node scripts/misub-vps.mjs",
     "misub:status": "node scripts/misub-vps.mjs status",

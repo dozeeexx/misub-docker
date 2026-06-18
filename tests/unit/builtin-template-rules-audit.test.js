@@ -109,6 +109,7 @@ describe('Builtin template rule audit', () => {
         const rawRules = getBuiltinRules('FULL', 'singbox');
         const providers = getRemoteProviderDefinitions('singbox', rawRules);
 
+        expect(REMOTE_SOURCES.ADS.clash).toBe('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/BanAD.yaml');
         expect(REMOTE_SOURCES.ADS.singbox).toBe('https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs');
         expect(Object.values(REMOTE_SOURCES).every(source => !source.singbox?.includes('Loyalsoldier/sing-box-rules'))).toBe(true);
         expect(Object.values(providers).every(provider => provider.format === 'binary')).toBe(true);
