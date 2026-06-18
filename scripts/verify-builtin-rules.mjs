@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 import yaml from 'js-yaml';
 import { TRANSFORM_ASSETS } from '../src/constants/transform-assets.js';
+import {
+    OFFICIAL_ACL4SSR_FLAT_PRESETS,
+    OFFICIAL_ACL4SSR_FLAT_PRESET_ASSETS,
+    isOfficialAcl4ssrConfigUrl,
+    isOfficialAcl4ssrFlatPresetUrl,
+    normalizeOfficialAcl4ssrTemplateText,
+    validateOfficialAcl4ssrFlatTemplate
+} from '../src/shared/acl4ssr-official-flat-presets.js';
 import { BUILTIN_TEMPLATE_REGISTRY, getBuiltinTemplate } from '../functions/modules/subscription/builtin-template-registry.js';
 import { REMOTE_SOURCES } from '../functions/modules/subscription/builtin-rules-provider.js';
 import {
@@ -268,6 +276,57 @@ function verifyBuiltinPresetAssets() {
     }
 }
 
+function verifyOfficialAcl4ssrFlatPresetAssets() {
+    const expectedUrls = new Set(OFFICIAL_ACL4SSR_FLAT_PRESETS.map(preset => preset.url));
+    const assetUrls = new Set(TRANSFORM_ASSETS.configs.map(asset => asset.url));
+
+    for (const preset of OFFICIAL_ACL4SSR_FLAT_PRESETS) {
+        if (!assetUrls.has(preset.url)) {
+            fail(`Missing official ACL4SSR flat preset asset: ${preset.file}`);
+        }
+    }
+
+    const officialAcl4ssrAssets = TRANSFORM_ASSETS.configs.filter(asset => isOfficialAcl4ssrConfigUrl(asset.url));
+    for (const asset of officialAcl4ssrAssets) {
+        if (!isOfficialAcl4ssrFlatPresetUrl(asset.url)) {
+            fail(`Official ACL4SSR preset assets must stay no-country/flat only; remove or move non-flat URL: ${asset.url}`);
+        }
+        if (asset.sourceType !== 'preset') {
+            fail(`Official ACL4SSR flat preset ${asset.url} must use sourceType=preset.`);
+        }
+        if (!Array.isArray(asset.compatibleClients) || !asset.compatibleClients.includes('clash')) {
+            fail(`Official ACL4SSR flat preset ${asset.url} must remain Clash-compatible.`);
+        }
+    }
+
+    if (OFFICIAL_ACL4SSR_FLAT_PRESET_ASSETS.length !== OFFICIAL_ACL4SSR_FLAT_PRESETS.length) {
+        fail('Official ACL4SSR flat shared asset list length must match preset list length.');
+    }
+
+    const sampleUrl = OFFICIAL_ACL4SSR_FLAT_PRESETS.find(preset => preset.file === 'ACL4SSR.ini')?.url;
+    const sampleText = [
+        '[custom]',
+        'ruleset=🎯 全球直连,rules/ACL4SSR/Clash/LocalAreaNetwork.list',
+        'custom_proxy_group=🚀 节点选择`select`[]DIRECT`.*'
+    ].join('\n');
+    const normalized = normalizeOfficialAcl4ssrTemplateText(sampleUrl, sampleText);
+    if (!normalized.includes('https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/LocalAreaNetwork.list')) {
+        fail('Official ACL4SSR relative rules/ACL4SSR paths must be normalized to raw GitHub URLs.');
+    }
+
+    const validation = validateOfficialAcl4ssrFlatTemplate(sampleUrl, normalized);
+    if (!validation.ok) {
+        fail(`Official ACL4SSR flat sample validation failed: ${validation.errors.join('; ')}`);
+    }
+
+    const missingExpectedAssets = OFFICIAL_ACL4SSR_FLAT_PRESET_ASSETS
+        .map(asset => asset.url)
+        .filter(url => !expectedUrls.has(url));
+    if (missingExpectedAssets.length > 0) {
+        fail(`Official ACL4SSR generated asset URLs are outside the allowlist: ${missingExpectedAssets.join(', ')}`);
+    }
+}
+
 function verifyRegistryTemplates() {
     for (const [templateId, template] of Object.entries(BUILTIN_TEMPLATE_REGISTRY)) {
         const label = `builtin template ${templateId}`;
@@ -341,6 +400,7 @@ function verifyBuiltinTargets() {
 }
 
 verifyBuiltinPresetAssets();
+verifyOfficialAcl4ssrFlatPresetAssets();
 verifyBuiltinRemoteSources();
 verifyRegistryTemplates();
 verifyBuiltinTargets();

@@ -18,6 +18,9 @@ services:
       CRON_ENABLED: ${CRON_ENABLED:-true}
       CRON_INTERVAL_SECONDS: ${CRON_INTERVAL_SECONDS:-86400}
       CRON_RUN_ON_START: ${CRON_RUN_ON_START:-false}
+      ACL4SSR_TEMPLATE_REFRESH_ENABLED: ${ACL4SSR_TEMPLATE_REFRESH_ENABLED:-true}
+      ACL4SSR_TEMPLATE_REFRESH_INTERVAL_SECONDS: ${ACL4SSR_TEMPLATE_REFRESH_INTERVAL_SECONDS:-86400}
+      ACL4SSR_TEMPLATE_REFRESH_RUN_ON_START: ${ACL4SSR_TEMPLATE_REFRESH_RUN_ON_START:-true}
     ports:
       # Bind to localhost by default; put Caddy/Nginx in front for public HTTPS.
       # This also avoids shell-exported PORT values overriding the deployment port.

@@ -1,5 +1,10 @@
 import { getCache } from '../../services/node-cache-service.js';
 import { assertPublicNetworkUrl } from '../security-utils.js';
+import {
+    isOfficialAcl4ssrFlatPresetUrl,
+    normalizeOfficialAcl4ssrTemplateText,
+    validateOfficialAcl4ssrFlatTemplate
+} from '../../../src/shared/acl4ssr-official-flat-presets.js';
 
 const TEMPLATE_CACHE_PREFIX = 'transform_template_';
 const DEFAULT_REVALIDATE_INTERVAL_SECONDS = 5 * 60;
@@ -66,6 +71,20 @@ function getHeader(response, name) {
     return response.headers?.get?.(name) || response.headers?.get?.(name.toLowerCase()) || null;
 }
 
+function prepareTemplateText(templateUrl, templateText) {
+    const normalized = normalizeOfficialAcl4ssrTemplateText(templateUrl, templateText);
+
+    if (isOfficialAcl4ssrFlatPresetUrl(templateUrl)) {
+        const validation = validateOfficialAcl4ssrFlatTemplate(templateUrl, normalized);
+        if (!validation.ok) {
+            throw new Error(`Official ACL4SSR flat preset validation failed: ${validation.errors.join('; ')}`);
+        }
+        return validation.normalizedText;
+    }
+
+    return normalized;
+}
+
 async function putTemplateCache(storageAdapter, cacheKey, cacheEntry, maxAgeSeconds) {
     if (storageAdapter?.kv && typeof storageAdapter.kv.put === 'function') {
         await storageAdapter.kv.put(cacheKey, JSON.stringify(cacheEntry), {
@@ -96,7 +115,11 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
     const { data: cachedTemplate } = await getCache(storageAdapter, cacheKey);
 
     if (!forceRefresh && cachedTemplate?.nodes && isCacheYoungerThan(cachedTemplate, cacheConfig.revalidateIntervalMs)) {
-        return cachedTemplate.nodes;
+        try {
+            return prepareTemplateText(safeTemplateUrl, cachedTemplate.nodes);
+        } catch (error) {
+            console.warn(`[TemplateCache] Cached template failed validation, revalidating: ${error.message}`);
+        }
     }
 
     let response;
@@ -107,26 +130,28 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
     } catch (error) {
         if (cachedTemplate?.nodes && isCacheYoungerThan(cachedTemplate, cacheConfig.maxAgeSeconds * 1000)) {
             console.warn(`[TemplateCache] Revalidation failed, falling back to cached template: ${error.message}`);
-            return cachedTemplate.nodes;
+            return prepareTemplateText(safeTemplateUrl, cachedTemplate.nodes);
         }
         throw error;
     }
 
     if (response.status === 304 && cachedTemplate?.nodes) {
-        const refreshedCacheEntry = createCacheEntry(safeTemplateUrl, cachedTemplate.nodes, response, cachedTemplate);
+        const normalizedCachedTemplate = prepareTemplateText(safeTemplateUrl, cachedTemplate.nodes);
+        const refreshedCacheEntry = createCacheEntry(safeTemplateUrl, normalizedCachedTemplate, response, cachedTemplate);
         await putTemplateCache(storageAdapter, cacheKey, refreshedCacheEntry, cacheConfig.maxAgeSeconds);
-        return cachedTemplate.nodes;
+        return normalizedCachedTemplate;
     }
 
     if (!response.ok) {
         if (cachedTemplate?.nodes && isCacheYoungerThan(cachedTemplate, cacheConfig.maxAgeSeconds * 1000)) {
             console.warn(`[TemplateCache] Template fetch failed with HTTP ${response.status}, falling back to cached template`);
-            return cachedTemplate.nodes;
+            return prepareTemplateText(safeTemplateUrl, cachedTemplate.nodes);
         }
         throw new Error(`Template fetch failed: HTTP ${response.status}`);
     }
 
-    const text = await response.text();
+    const rawText = await response.text();
+    const text = prepareTemplateText(safeTemplateUrl, rawText);
     const cacheEntry = createCacheEntry(safeTemplateUrl, text, response, cachedTemplate);
     await putTemplateCache(storageAdapter, cacheKey, cacheEntry, cacheConfig.maxAgeSeconds);
 

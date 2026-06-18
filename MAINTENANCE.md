@@ -143,6 +143,11 @@ These files are expected to be owned by the Docker fork:
 - `DOCKER.md`
 - `MAINTENANCE.md`
 - `tests/unit/docker-sqlite-runtime.test.js`
+- `tests/unit/acl4ssr-official-flat-presets.test.js`
+- `src/constants/transform-assets.js`
+- `src/shared/acl4ssr-official-flat-presets.js`
+- `functions/modules/subscription/transform-template-cache.js`
+- `functions/modules/subscription/official-acl4ssr-refresh.js`
 - `scripts/migrate-snapshot-to-fork.mjs`
 - `scripts/setup-docker-fork-git.mjs`
 - `scripts/sync-upstream.mjs`
@@ -182,6 +187,7 @@ Resolve conflicts by keeping upstream business logic unless it would reintroduce
 - `COOKIE_SECRET` is always required.
 - Cloudflare KV/D1 migration endpoints are not part of the Docker main path.
 - Container scheduler remains the primary automatic task runner.
+- Official ACL4SSR no-country preset allowlist, relative-rule normalization, and scheduled refresh stay protected; `npm run rules:verify` must fail if official ACL4SSR presets with country/region node groups are added.
 
 After resolving conflicts:
 

@@ -1,5 +1,6 @@
 import { handleCronTrigger } from '../functions/modules/notifications.js';
 import { maybeRunScheduledTasks } from '../functions/modules/scheduled-task-runner.js';
+import { maybeRefreshOfficialAcl4ssrFlatPresets } from '../functions/modules/subscription/official-acl4ssr-refresh.js';
 
 const DEFAULT_INTERVAL_SECONDS = 24 * 60 * 60;
 
@@ -25,6 +26,7 @@ export function startScheduler(env) {
     let stopped = false;
     let timer = null;
     let startupTimer = null;
+    let acl4ssrStartupTimer = null;
     let activeRun = null;
 
     const runOnce = async (source = 'docker-cron') => {
@@ -56,12 +58,17 @@ export function startScheduler(env) {
                 forceCheck: true
             });
 
+            const acl4ssrOfficialFlatRefresh = await maybeRefreshOfficialAcl4ssrFlatPresets(env, {
+                source
+            });
+
             console.info('[Scheduler] Completed', {
                 durationMs: Date.now() - startedAt,
                 cron: cronResult,
-                scheduledTasks
+                scheduledTasks,
+                acl4ssrOfficialFlatRefresh
             });
-            return { completed: true, cron: cronResult, scheduledTasks };
+            return { completed: true, cron: cronResult, scheduledTasks, acl4ssrOfficialFlatRefresh };
         })();
 
         try {
@@ -88,6 +95,15 @@ export function startScheduler(env) {
         startupTimer = setTimeout(() => runOnce('docker-startup'), 1000);
         startupTimer.unref?.();
     }
+
+    if (parseBoolean(env.ACL4SSR_TEMPLATE_REFRESH_RUN_ON_START, true)) {
+        acl4ssrStartupTimer = setTimeout(() => {
+            maybeRefreshOfficialAcl4ssrFlatPresets(env, { source: 'docker-startup' })
+                .catch(error => console.error('[ACL4SSR Official Flat] Startup refresh failed:', error));
+        }, 1500);
+        acl4ssrStartupTimer.unref?.();
+    }
+
     scheduleNext();
 
     console.info(`[Scheduler] Enabled, interval=${intervalSeconds}s`);
@@ -98,6 +114,7 @@ export function startScheduler(env) {
             stopped = true;
             if (timer) clearTimeout(timer);
             if (startupTimer) clearTimeout(startupTimer);
+            if (acl4ssrStartupTimer) clearTimeout(acl4ssrStartupTimer);
             if (activeRun) {
                 await activeRun.catch(error => {
                     console.error('[Scheduler] Active run failed during shutdown:', error);

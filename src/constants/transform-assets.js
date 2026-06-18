@@ -1,3 +1,5 @@
+import { OFFICIAL_ACL4SSR_FLAT_PRESET_ASSETS } from '../shared/acl4ssr-official-flat-presets.js';
+
 export const TRANSFORM_ASSETS = {
     configs: [
         {
@@ -48,6 +50,7 @@ export const TRANSFORM_ASSETS = {
             strategy: 'model-driven',
             description: '内置完整 ACL4SSR 分流模板，可通过统一模板模型生成 Clash 与 Sing-Box 配置。'
         },
+        ...OFFICIAL_ACL4SSR_FLAT_PRESET_ASSETS,
         {
             id: 101,
             name: 'CM_Online 默认版 识别港美地区(与Github同步)',

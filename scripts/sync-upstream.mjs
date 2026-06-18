@@ -22,6 +22,10 @@ const PROTECTED_DIFF_PATHS = [
   'scripts/update-selfhost.mjs',
   'scripts/verify-docker-fork.mjs',
   'scripts/verify-builtin-rules.mjs',
+  'src/constants/transform-assets.js',
+  'src/shared/acl4ssr-official-flat-presets.js',
+  'functions/modules/subscription/transform-template-cache.js',
+  'functions/modules/subscription/official-acl4ssr-refresh.js',
   'scripts/misub-vps.mjs',
   'deployment/caddy/**'
 ];

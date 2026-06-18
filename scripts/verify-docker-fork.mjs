@@ -150,6 +150,8 @@ function runPersonalDomainLeakCheck() {
   '.github/workflows/fork-sync.yml',
   'scripts/update-selfhost.mjs',
   'scripts/verify-builtin-rules.mjs',
+  'functions/modules/subscription/official-acl4ssr-refresh.js',
+  'src/shared/acl4ssr-official-flat-presets.js',
   'scripts/misub-vps.mjs',
   'deployment/caddy/misub.caddy',
   'tests/unit/docker-sqlite-runtime.test.js'
@@ -196,6 +198,7 @@ requireIncludes('server/sqlite-d1.js', 'class SQLiteD1PreparedStatement', 'D1-co
 requireIncludes('server/scheduler.js', 'handleCronTrigger', 'cron trigger reuse');
 requireIncludes('server/scheduler.js', 'maybeRunScheduledTasks', 'scheduled task reuse');
 requireIncludes('server/scheduler.js', 'CRON_INTERVAL_SECONDS', 'configurable scheduler interval');
+requireIncludes('server/scheduler.js', 'maybeRefreshOfficialAcl4ssrFlatPresets', 'scheduled official ACL4SSR flat preset refresh');
 
 requireIncludes('index.html', '<title>MiSub Docker</title>', 'MiSub Docker document title');
 requireIncludes('index.html', 'content="MiSub Docker"', 'MiSub Docker Open Graph title/site name');
@@ -227,6 +230,11 @@ requireIncludes('docker-compose.yml', './data:/data', 'persistent data volume');
 requireIncludes('docker-compose.yml', '/_health', 'Compose healthcheck');
 requireIncludes('docker-compose.yml', 'stop_grace_period: 60s', 'graceful shutdown window');
 
+requireIncludes('docker-compose.yml', 'CRON_RUN_ON_START', 'container scheduler startup option');
+requireIncludes('docker-compose.yml', 'ACL4SSR_TEMPLATE_REFRESH_ENABLED', 'official ACL4SSR flat preset refresh toggle');
+requireIncludes('docker-compose.yml', 'ACL4SSR_TEMPLATE_REFRESH_INTERVAL_SECONDS', 'official ACL4SSR flat preset refresh interval');
+requireIncludes('docker-compose.yml', 'ACL4SSR_TEMPLATE_REFRESH_RUN_ON_START', 'official ACL4SSR flat preset startup refresh');
+
 requireIncludes('.env.example', 'ADMIN_PASSWORD=', 'admin password template');
 requireIncludes('.env.example', 'COOKIE_SECRET=', 'cookie secret template');
 requireIncludes('.env.example', 'PUID=1000', 'container user id template');
@@ -234,6 +242,9 @@ requireIncludes('.env.example', 'PGID=1000', 'container group id template');
 requireIncludes('.env.example', 'BIND_ADDRESS=127.0.0.1', 'localhost bind address template');
 requireIncludes('.env.example', 'HOST_PORT=8787', 'host port template');
 requireIncludes('.env.example', 'DATABASE_PATH=/data/misub.db', 'database path template');
+requireIncludes('.env.example', 'ACL4SSR_TEMPLATE_REFRESH_ENABLED=true', 'official ACL4SSR flat preset refresh template');
+requireIncludes('.env.example', 'ACL4SSR_TEMPLATE_REFRESH_INTERVAL_SECONDS=86400', 'official ACL4SSR flat preset refresh interval template');
+requireIncludes('.env.example', 'ACL4SSR_TEMPLATE_REFRESH_RUN_ON_START=true', 'official ACL4SSR flat preset startup refresh template');
 
 requireIncludes('src/constants/default-settings.js', "storageType: 'sqlite'", 'Docker default storage type');
 requireIncludes('src/composables/useSettingsLogic.js', "'sqlite'", 'frontend SQLite storage type validation');
@@ -243,6 +254,10 @@ requireIncludes('.gitattributes', 'merge=keepDocker', 'Docker fork merge driver 
 requireIncludes('.gitattributes', '/scripts/update-selfhost.mjs merge=keepDocker', 'one-click update merge protection');
 requireIncludes('.gitattributes', '/scripts/misub-vps.mjs merge=keepDocker', 'VPS helper merge protection');
 requireIncludes('.gitattributes', '/scripts/verify-builtin-rules.mjs merge=keepDocker', 'built-in rules verifier merge protection');
+requireIncludes('.gitattributes', '/src/constants/transform-assets.js merge=keepDocker', 'transform preset list merge protection');
+requireIncludes('.gitattributes', '/src/shared/acl4ssr-official-flat-presets.js merge=keepDocker', 'official ACL4SSR flat preset allowlist merge protection');
+requireIncludes('.gitattributes', '/functions/modules/subscription/transform-template-cache.js merge=keepDocker', 'official ACL4SSR template cache normalization merge protection');
+requireIncludes('.gitattributes', '/functions/modules/subscription/official-acl4ssr-refresh.js merge=keepDocker', 'official ACL4SSR refresh worker merge protection');
 requireIncludes('.gitattributes', '/deployment/caddy/** merge=keepDocker', 'Caddy deployment template merge protection');
 requireIncludes('.gitattributes', '/.gitattributes merge=keepDocker', 'self-protecting merge attributes');
 requireIncludes('scripts/misub-vps.mjs', 'delete env.PORT', 'VPS helper must ignore shell PORT');
@@ -268,6 +283,7 @@ requireIncludes('scripts/update-selfhost.mjs', '--deploy', 'one-click deploy opt
 requireIncludes('scripts/update-selfhost.mjs', '--skip-docker', 'one-click local dry-run option');
 requireIncludes('MAINTENANCE.md', 'Upstream Upgrade Notes', 'upstream upgrade guidance mapping');
 requireIncludes('MAINTENANCE.md', 'unsafe for this Docker fork because it discards the Docker runtime', 'reset warning');
+requireIncludes('MAINTENANCE.md', 'Official ACL4SSR no-country preset allowlist', 'official ACL4SSR flat preset maintenance invariant');
 requireIncludes('scripts/sync-upstream.mjs', "'diff', '--binary'", 'sanitized upstream tree diff');
 requireIncludes('scripts/sync-upstream.mjs', "'apply', '--index', '--3way'", 'sanitized upstream patch apply');
 requireIncludes('scripts/sync-upstream.mjs', 'leaked editor settings are not reintroduced', 'history leak prevention help text');
@@ -275,12 +291,22 @@ requireIncludes('scripts/sync-upstream.mjs', 'Do not update refs/remotes/upstrea
 requireIncludes('scripts/sync-upstream.mjs', "'--refmap='", 'disable default upstream remote-tracking ref updates');
 requireIncludes('scripts/sync-upstream.mjs', "'update-ref', '-d', upstreamRef", 'remove temporary upstream snapshot ref');
 requireIncludes('scripts/sync-upstream.mjs', "'scripts/verify-builtin-rules.mjs'", 'built-in rules verifier protected from upstream snapshots');
+requireIncludes('scripts/sync-upstream.mjs', "'src/constants/transform-assets.js'", 'transform preset list protected from upstream snapshots');
+requireIncludes('scripts/sync-upstream.mjs', "'src/shared/acl4ssr-official-flat-presets.js'", 'official ACL4SSR flat preset allowlist protected from upstream snapshots');
+requireIncludes('scripts/sync-upstream.mjs', "'functions/modules/subscription/transform-template-cache.js'", 'official ACL4SSR template cache normalization protected from upstream snapshots');
+requireIncludes('scripts/sync-upstream.mjs', "'functions/modules/subscription/official-acl4ssr-refresh.js'", 'official ACL4SSR refresh worker protected from upstream snapshots');
 requireIncludes('scripts/update-selfhost.mjs', 'sanitized upstream snapshot', 'one-click update sanitization wording');
 requireIncludes('scripts/verify-builtin-rules.mjs', 'COUNTRY_GROUP_LABELS', 'built-in country group regression guard');
 requireIncludes('scripts/verify-builtin-rules.mjs', 'REMOTE_SOURCES.ADS?.clash', 'built-in remote rule source guard');
 requireIncludes('scripts/verify-builtin-rules.mjs', 'Sublink Worker presets must stay removed', 'Sublink Worker removal guard');
 requireIncludes('scripts/verify-builtin-rules.mjs', 'checkClashConfig', 'Clash built-in rules structural check');
 requireIncludes('scripts/verify-builtin-rules.mjs', 'checkSingboxConfig', 'sing-box built-in rules structural check');
+requireIncludes('scripts/verify-builtin-rules.mjs', 'OFFICIAL_ACL4SSR_FLAT_PRESETS', 'official ACL4SSR flat preset regression guard');
+requireIncludes('scripts/verify-builtin-rules.mjs', 'isOfficialAcl4ssrFlatPresetUrl', 'official ACL4SSR flat preset allowlist guard');
+requireIncludes('src/constants/transform-assets.js', 'OFFICIAL_ACL4SSR_FLAT_PRESET_ASSETS', 'official ACL4SSR flat preset assets');
+requireIncludes('src/shared/acl4ssr-official-flat-presets.js', 'ACL4SSR_Online_NoAuto.ini', 'official ACL4SSR no-country preset allowlist');
+requireIncludes('functions/modules/subscription/transform-template-cache.js', 'normalizeOfficialAcl4ssrTemplateText', 'official ACL4SSR relative rules normalization');
+requireIncludes('functions/modules/subscription/official-acl4ssr-refresh.js', 'refreshOfficialAcl4ssrFlatPresets', 'scheduled official ACL4SSR flat preset refresh');
 
 requireIncludes('.github/workflows/fork-sync.yml', "vars.ENABLE_UPSTREAM_MAIN_MIRROR == 'true'", 'fork mirror opt-in guard');
 requireIncludes('.github/workflows/fork-sync.yml', 'npm run sync:upstream', 'Docker sync warning');

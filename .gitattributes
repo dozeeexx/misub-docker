@@ -34,6 +34,10 @@
 /scripts/update-selfhost.mjs merge=keepDocker
 /scripts/verify-docker-fork.mjs merge=keepDocker
 /scripts/verify-builtin-rules.mjs merge=keepDocker
+/src/constants/transform-assets.js merge=keepDocker
+/src/shared/acl4ssr-official-flat-presets.js merge=keepDocker
+/functions/modules/subscription/transform-template-cache.js merge=keepDocker
+/functions/modules/subscription/official-acl4ssr-refresh.js merge=keepDocker
 /scripts/misub-vps.mjs merge=keepDocker
 /deployment/caddy/** merge=keepDocker
 /.gitattributes merge=keepDocker
