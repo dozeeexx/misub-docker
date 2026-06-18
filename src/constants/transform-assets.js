@@ -49,6 +49,18 @@ export const TRANSFORM_ASSETS = {
             description: '内置完整 ACL4SSR 分流模板，可通过统一模板模型生成 Clash 与 Sing-Box 配置。'
         },
         {
+            id: 4,
+            name: 'MiSub 内置 Sublink Worker 综合分流',
+            url: 'builtin:clash_sublink_worker_comprehensive',
+            group: 'MiSub Builtin',
+            is_default: false,
+            sourceType: 'builtin-preset',
+            recommendedFor: ['clash', 'singbox'],
+            compatibleClients: ['clash', 'mihomo', 'clash-meta', 'singbox'],
+            strategy: 'model-driven',
+            description: '提取自 7Sageer/sublink-worker 的 comprehensive 规则集，基于 MetaCubeX geosite/geoip SRS 规则，适合 Clash Meta/Mihomo 与 Sing-Box。'
+        },
+        {
             id: 101,
             name: 'CM_Online 默认版 识别港美地区(与Github同步)',
             url: 'https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online.ini',

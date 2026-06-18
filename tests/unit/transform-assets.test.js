@@ -28,6 +28,14 @@ describe('Transform assets', () => {
         expect(asset?.compatibleClients).toContain('surge');
     });
 
+    it('should include sublink-worker comprehensive preset for clash meta and sing-box', () => {
+        const asset = getTransformAssetByUrl('builtin:clash_sublink_worker_comprehensive');
+        expect(asset?.sourceType).toBe('builtin-preset');
+        expect(asset?.compatibleClients).toContain('clash-meta');
+        expect(asset?.compatibleClients).toContain('singbox');
+        expect(asset?.strategy).toBe('model-driven');
+    });
+
     it('should expose only builtin presets that exist in the backend registry', () => {
         const builtinAssets = TRANSFORM_ASSETS.configs.filter(asset => asset.sourceType === 'builtin-preset');
         expect(builtinAssets.length).toBeGreaterThan(0);

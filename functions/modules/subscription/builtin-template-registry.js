@@ -119,8 +119,91 @@ custom_proxy_group=🐟 漏网之鱼\`select\`[]🚀 节点选择\`[]DIRECT
 
 enable_rule_generator=true
 overwrite_original_rules=true`
-    },
-    clash_exclusive_ai: {
+     },
+     clash_sublink_worker_comprehensive: {
+         id: 'clash_sublink_worker_comprehensive',
+         name: 'Sublink Worker 综合分流',
+         target: 'clash',
+         format: 'ini',
+         description: '提取自 7Sageer/sublink-worker 的 comprehensive 规则集，使用 MetaCubeX geosite/geoip SRS 规则源；Clash 输出时自动转为 MetaCubeX YAML providers。',
+         content: `[custom]
+; Source: https://github.com/7Sageer/sublink-worker (MIT), src/config/rules.js PREDEFINED_RULE_SETS.comprehensive
+ruleset=🛑 广告拦截,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/category-ads-all.srs
+ruleset=🤖 AI 服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/category-ai-!cn.srs
+ruleset=📺 哔哩哔哩,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/bilibili.srs
+ruleset=📹 油管视频,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/youtube.srs
+ruleset=🔎 谷歌服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/google.srs
+ruleset=🔎 谷歌服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/google.srs
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/private.srs
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/geolocation-cn.srs
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/cn.srs
+ruleset=🎯 全球直连,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/cn.srs
+ruleset=📲 电报消息,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/telegram.srs
+ruleset=💻 代码托管,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/github.srs
+ruleset=💻 代码托管,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/gitlab.srs
+ruleset=Ⓜ️ 微软服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/microsoft.srs
+ruleset=🍎 苹果服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/apple.srs
+ruleset=🌐 社交媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/facebook.srs
+ruleset=🌐 社交媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/instagram.srs
+ruleset=🌐 社交媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/twitter.srs
+ruleset=🌐 社交媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/tiktok.srs
+ruleset=🌐 社交媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/linkedin.srs
+ruleset=🎬 流媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/netflix.srs
+ruleset=🎬 流媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/hulu.srs
+ruleset=🎬 流媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/disney.srs
+ruleset=🎬 流媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/hbo.srs
+ruleset=🎬 流媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/amazon.srs
+ruleset=🎬 流媒体,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/bahamut.srs
+ruleset=🎮 游戏平台,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/steam.srs
+ruleset=🎮 游戏平台,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/epicgames.srs
+ruleset=🎮 游戏平台,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/ea.srs
+ruleset=🎮 游戏平台,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/ubisoft.srs
+ruleset=🎮 游戏平台,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/blizzard.srs
+ruleset=🎓 学术教育,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/coursera.srs
+ruleset=🎓 学术教育,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/edx.srs
+ruleset=🎓 学术教育,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/udemy.srs
+ruleset=🎓 学术教育,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/khanacademy.srs
+ruleset=🎓 学术教育,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/category-scholar-!cn.srs
+ruleset=💳 金融服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/paypal.srs
+ruleset=💳 金融服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/visa.srs
+ruleset=💳 金融服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/mastercard.srs
+ruleset=💳 金融服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/stripe.srs
+ruleset=💳 金融服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/wise.srs
+ruleset=☁️ 云服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/aws.srs
+ruleset=☁️ 云服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/azure.srs
+ruleset=☁️ 云服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/digitalocean.srs
+ruleset=☁️ 云服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/heroku.srs
+ruleset=☁️ 云服务,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/dropbox.srs
+ruleset=🌍 国外网站,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/geolocation-!cn.srs
+ruleset=🐟 漏网之鱼,[]FINAL
+
+custom_proxy_group=🚀 节点选择\`select\`[]♻️ 自动选择\`[]🔯 故障转移\`[]<%regionStrategyChain%>\`[]☑️ 手动切换\`[]DIRECT
+custom_proxy_group=☑️ 手动切换\`select\`.*
+custom_proxy_group=♻️ 自动选择\`url-test\`.*\`http://www.gstatic.com/generate_204\`300,,50
+custom_proxy_group=🔯 故障转移\`fallback\`.*\`http://www.gstatic.com/generate_204\`300,,50
+custom_proxy_group=🤖 AI 服务\`select\`[]🚀 节点选择\`[]🔯 故障转移\`[]🇺🇸 美国节点\`[]🇯🇵 日本节点\`[]🌍 狮城节点
+custom_proxy_group=📺 哔哩哔哩\`select\`[]DIRECT\`[]🚀 节点选择
+custom_proxy_group=📹 油管视频\`select\`[]🚀 节点选择\`[]♻️ 自动选择
+custom_proxy_group=🔎 谷歌服务\`select\`[]🚀 节点选择\`[]♻️ 自动选择\`[]🇺🇸 美国节点
+custom_proxy_group=📲 电报消息\`select\`[]🚀 节点选择\`[]🇸🇬 狮城节点\`[]🇭🇰 香港节点
+custom_proxy_group=💻 代码托管\`select\`[]🚀 节点选择\`[]♻️ 自动选择\`[]DIRECT
+custom_proxy_group=Ⓜ️ 微软服务\`select\`[]DIRECT\`[]🚀 节点选择
+custom_proxy_group=🍎 苹果服务\`select\`[]DIRECT\`[]🚀 节点选择
+custom_proxy_group=🌐 社交媒体\`select\`[]🚀 节点选择\`[]♻️ 自动选择
+custom_proxy_group=🎬 流媒体\`select\`[]🚀 节点选择\`[]♻️ 自动选择
+custom_proxy_group=🎮 游戏平台\`select\`[]🚀 节点选择\`[]DIRECT
+custom_proxy_group=🎓 学术教育\`select\`[]🚀 节点选择\`[]DIRECT
+custom_proxy_group=💳 金融服务\`select\`[]🚀 节点选择\`[]DIRECT
+custom_proxy_group=☁️ 云服务\`select\`[]🚀 节点选择\`[]DIRECT
+custom_proxy_group=🌍 国外网站\`select\`[]🚀 节点选择\`[]♻️ 自动选择
+custom_proxy_group=🎯 全球直连\`select\`[]DIRECT
+custom_proxy_group=🛑 广告拦截\`select\`[]REJECT\`[]DIRECT
+custom_proxy_group=🐟 漏网之鱼\`select\`[]🚀 节点选择\`[]DIRECT
+
+enable_rule_generator=true
+overwrite_original_rules=true`
+     },
+     clash_exclusive_ai: {
         id: 'clash_exclusive_ai',
         name: 'MiSub 深度 AI 开发者模板',
         target: 'clash',

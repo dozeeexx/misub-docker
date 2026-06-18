@@ -149,7 +149,6 @@ MATCH,节点选择
         expect(aclRuleSets.length).toBeGreaterThan(0);
         expect(aclRuleSets.every(ruleSet => ruleSet.format === 'source')).toBe(true);
     });
-
     it('should render surge config sections from ACL4SSR custom template', () => {
         const builtinTemplate = getBuiltinTemplate('clash_acl4ssr_full');
         const rendered = renderSurgeFromIniTemplate(builtinTemplate.content, {
@@ -164,6 +163,42 @@ MATCH,节点选择
         expect(rendered).toContain('[Proxy Group]');
         expect(rendered).toContain('[Rule]');
         expect(rendered).toContain('🚀 节点选择 = select');
+    });
+
+    it('should render sublink-worker comprehensive template into Clash and Sing-box friendly rule sets', () => {
+        const builtinTemplate = getBuiltinTemplate('clash_sublink_worker_comprehensive');
+        expect(builtinTemplate).toBeTruthy();
+
+        const clashRendered = renderClashFromIniTemplate(builtinTemplate.content, {
+            proxies: [
+                { name: 'HK-01', type: 'trojan', server: '1.1.1.1', port: 443, password: 'pass' },
+                { name: 'JP-01', type: 'trojan', server: '2.2.2.2', port: 443, password: 'pass' },
+                { name: 'US-01', type: 'trojan', server: '3.3.3.3', port: 443, password: 'pass' }
+            ],
+            managedConfigUrl: 'https://example.com/sub',
+            targetFormat: 'clash'
+        });
+        const clashParsed = yaml.load(clashRendered);
+        const clashProviders = Object.values(clashParsed['rule-providers'] || {});
+
+        expect(clashProviders.some(provider => provider.url.includes('/meta/geo/geosite/category-ai-!cn.yaml') && provider.behavior === 'domain')).toBe(true);
+        expect(clashProviders.some(provider => provider.url.includes('/meta/geo/geoip/telegram.yaml') && provider.behavior === 'ipcidr')).toBe(true);
+        expect(clashParsed.rules).toContain('MATCH,🐟 漏网之鱼');
+        expect(clashParsed['proxy-groups'].some(group => group.name === '🤖 AI 服务')).toBe(true);
+
+        const singboxRendered = renderSingboxFromIniTemplate(builtinTemplate.content, {
+            nodeList: [
+                'trojan://password@1.2.3.4:443#HK-01',
+                'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ=@1.2.3.5:8388#JP-01'
+            ].join('\n'),
+            targetFormat: 'singbox'
+        });
+        const singboxParsed = JSON.parse(singboxRendered);
+        const ruleSets = singboxParsed.route.rule_set || [];
+
+        expect(ruleSets.some(ruleSet => ruleSet.url.endsWith('category-ai-!cn.srs') && ruleSet.format === 'binary')).toBe(true);
+        expect(ruleSets.some(ruleSet => ruleSet.url.endsWith('telegram.srs') && ruleSet.format === 'binary')).toBe(true);
+        expect(singboxParsed.route.rules.some(rule => rule.outbound === '🐟 漏网之鱼' || rule.outbound === 'REJECT')).toBe(true);
     });
 
     it('should render loon and quanx config sections from ACL4SSR custom template', () => {
