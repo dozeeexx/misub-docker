@@ -29,7 +29,8 @@ COPY --from=builder /app/functions ./functions
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/src/shared ./src/shared
 
-RUN mkdir -p /data
+RUN chmod -R a+rX /app \
+    && mkdir -p /data
 
 EXPOSE 8787
 VOLUME ["/data"]

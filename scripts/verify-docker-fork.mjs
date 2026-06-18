@@ -219,6 +219,8 @@ requireIncludes('functions/modules/api-handler.js', 'runtime: isDockerRuntime(en
 requireIncludes('Dockerfile', 'FROM node:22-bookworm-slim', 'Node 22 runtime');
 requireIncludes('Dockerfile', 'COPY --from=builder /app/server ./server', 'server copied to runtime image');
 requireIncludes('Dockerfile', 'COPY --from=builder /app/functions ./functions', 'functions copied to runtime image');
+requireIncludes('Dockerfile', 'COPY --from=builder /app/src/shared ./src/shared', 'shared runtime constants copied to runtime image');
+requireIncludes('Dockerfile', 'chmod -R a+rX /app', 'runtime files readable by non-root container user');
 requireIncludes('Dockerfile', 'DATABASE_PATH=/data/misub.db', 'default SQLite path');
 requireIncludes('Dockerfile', 'CMD ["node", "server/index.js"]', 'direct Docker startup command');
 
