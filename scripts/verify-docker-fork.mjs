@@ -211,6 +211,8 @@ requireIncludes('src/router/index.js', 'MiSub Docker', 'MiSub Docker route title
 requireIncludes('functions/storage-adapter.js', "SQLITE: 'sqlite'", 'SQLite storage type');
 requireIncludes('functions/storage-adapter.js', 'isDockerRuntime', 'Docker runtime detection');
 requireIncludes('functions/storage-adapter.js', 'SQLiteStorageAdapter', 'SQLite adapter');
+requireIncludes('functions/storage-adapter.js', "startsWith('transform_template_')", 'template cache keys stored without warning');
+requireIncludes('functions/storage-adapter.js', 'misub_acl4ssr_official_flat_refresh_v1', 'official ACL4SSR refresh state key stored without warning');
 requireIncludes('functions/modules/utils.js', 'SYSTEM_ADMIN_PASSWORD', 'SQLite-backed auth password');
 requireIncludes('functions/modules/utils.js', 'SYSTEM_COOKIE_SECRET', 'SQLite-backed cookie secret');
 requireIncludes('functions/modules/api-router.js', 'Docker SQLite runtime does not use Cloudflare KV/D1 migration', 'Docker migration guard');

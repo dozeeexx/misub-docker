@@ -492,6 +492,12 @@ class D1StorageAdapter {
             if (String(key).startsWith(DATA_KEYS.PROFILE_DOWNLOAD_COUNT_PREFIX)) {
                 return { table: 'settings', queryField: 'key', queryValue: key };
             }
+            if (String(key).startsWith('transform_template_')) {
+                return { table: 'settings', queryField: 'key', queryValue: key };
+            }
+            if (String(key) === 'misub_acl4ssr_official_flat_refresh_v1') {
+                return { table: 'settings', queryField: 'key', queryValue: key };
+            }
             if (String(key).startsWith('tmp_external_nodes:')) {
                 return { table: 'settings', queryField: 'key', queryValue: key };
             }
