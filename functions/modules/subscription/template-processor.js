@@ -1,5 +1,3 @@
-import { groupNodeLinesByRegion } from './region-groups.js';
-
 /**
  * 解析并扩展策略组中的正则过滤器
  * @param {Object} model - 统一模板模型
@@ -73,30 +71,6 @@ function pruneEmptyGroups(model) {
         model.rules = model.rules.filter(rule => !emptyGroupNames.has(rule.policy));
         if (model.rules.length !== initialRuleCount) changed = true;
     }
-}
-
-function normalizeGroupSemanticName(name = '') {
-    return String(name)
-        .replace(/^[^\u4e00-\u9fa5A-Za-z0-9]+/, '')
-        .replace(/[\s_-]+/g, '')
-        .replace(/节点/g, '')
-        .toLowerCase();
-}
-
-function hasEquivalentRegionGroup(model, region) {
-    const regionTags = new Set(region.tags || []);
-    const normalizedRegionName = normalizeGroupSemanticName(region.name);
-
-    return model.groups.some(group => {
-        const normalizedGroupName = normalizeGroupSemanticName(group.name);
-        if (normalizedGroupName === normalizedRegionName) return true;
-
-        const members = Array.isArray(group.members) ? group.members : [];
-        if (members.length === 0) return false;
-
-        const overlapCount = members.filter(member => regionTags.has(member)).length;
-        return overlapCount > 0 && overlapCount === members.length && overlapCount === regionTags.size;
-    });
 }
 
 function dedupeGroupsByName(model) {
@@ -191,7 +165,7 @@ function pruneInvalidMembers(model) {
 
 /**
  * 模板模型智能优化器（主入口）
- * 包含：自动解析过滤器、注入地区组、展开占位符、清理无效引用及空组
+ * 包含：自动解析过滤器、展开占位符、清理无效引用及空组
  * @param {Object} model - 统一模板模型
  */
 export function applySmartModelOptimizations(model) {
@@ -200,38 +174,13 @@ export function applySmartModelOptimizations(model) {
     // 1. 执行现有的正则过滤器解析 (始终执行)
     resolveGroupFilters(model);
 
-    // 2. 检查等级。如果是 none (完全禁用)，我们只执行占位符展开和清理，不进行智能注入。
+    // 2. 检查等级。如果是 none/base，仍只做占位符展开与清理。
     const normalizedLevel = (ruleLevel || '').toLowerCase();
-    
-    if (normalizedLevel !== 'none' && normalizedLevel !== 'base' && normalizedLevel) {
-        // 3. 准备获取所有节点的名称，用于后续注入
-        const proxyNames = model.proxies.map(p => p.name || p.tag).filter(Boolean);
-        if (proxyNames.length > 0) {
-            // 4. 识别地区分组并注入
-            const nodeEntries = proxyNames.map(name => ({ tag: name }));
-            const regions = groupNodeLinesByRegion(nodeEntries);
-            
-            // 注入地区自动选优组
-            regions.forEach(region => {
-                if (hasEquivalentRegionGroup(model, region)) return;
-                model.groups.push({
-                    name: region.name,
-                    type: 'url-test',
-                    members: region.tags,
-                    options: {
-                        url: 'http://www.gstatic.com/generate_204',
-                        interval: '300',
-                        tolerance: '50'
-                    }
-                });
-            });
-        }
-    }
 
-    // 5. 展开魔法占位符 (始终执行，确保模板标签被替换)
+    // 3. 展开魔法占位符 (始终执行，确保模板标签被替换)
     expandMagicPlaceholders(model);
 
-    // 6. 只有在非精简模式下才执行主选择器兜底注入
+    // 4. 只有在非精简模式下才执行主选择器兜底注入
     if (normalizedLevel !== 'none' && normalizedLevel !== 'base' && normalizedLevel) {
         const mainGroupCandidates = model.groups.filter(g => 
             /选择|Proxy|Default|Global|Main|select/i.test(g.name)

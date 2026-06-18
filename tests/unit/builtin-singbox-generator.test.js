@@ -16,7 +16,8 @@ describe('Built-in Sing-box generator', () => {
         expect(parsed.outbounds.some(outbound => outbound.tag.includes('节点选择'))).toBe(true);
         expect(parsed.outbounds.some(outbound => outbound.tag.includes('视频广告'))).toBe(true);
         expect(parsed.outbounds.some(outbound => outbound.tag.includes('Apple'))).toBe(true);
-        expect(parsed.outbounds.some(outbound => outbound.tag.includes('日本') && outbound.type === 'urltest')).toBe(true);
+        expect(parsed.outbounds.some(outbound => outbound.tag.includes('日本') && outbound.type === 'urltest')).toBe(false);
+        expect(parsed.outbounds.some(outbound => outbound.tag.includes('自动选择') && outbound.type === 'urltest')).toBe(true);
         expect(parsed.route.final).toContain('节点选择');
     });
 

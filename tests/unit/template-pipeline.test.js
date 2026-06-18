@@ -149,6 +149,7 @@ MATCH,节点选择
         expect(aclRuleSets.length).toBeGreaterThan(0);
         expect(aclRuleSets.every(ruleSet => ruleSet.format === 'source')).toBe(true);
     });
+
     it('should render surge config sections from ACL4SSR custom template', () => {
         const builtinTemplate = getBuiltinTemplate('clash_acl4ssr_full');
         const rendered = renderSurgeFromIniTemplate(builtinTemplate.content, {
@@ -163,70 +164,6 @@ MATCH,节点选择
         expect(rendered).toContain('[Proxy Group]');
         expect(rendered).toContain('[Rule]');
         expect(rendered).toContain('🚀 节点选择 = select');
-    });
-
-    it('should render sublink-worker minimal, balanced, and comprehensive templates into Clash and Sing-box friendly rule sets', () => {
-        const cases = [
-            {
-                id: 'clash_sublink_worker_minimal',
-                expectedGroup: '🌍 国外网站',
-                expectedClashProvider: '/meta/geo/geosite/geolocation-!cn.yaml',
-                expectedSingboxRuleSet: 'geolocation-!cn.srs',
-                unexpectedGroup: '🤖 AI 服务'
-            },
-            {
-                id: 'clash_sublink_worker_balanced',
-                expectedGroup: '🤖 AI 服务',
-                expectedClashProvider: '/meta/geo/geosite/category-ai-!cn.yaml',
-                expectedSingboxRuleSet: 'category-ai-!cn.srs'
-            },
-            {
-                id: 'clash_sublink_worker_comprehensive',
-                expectedGroup: '🛑 广告拦截',
-                expectedClashProvider: '/meta/geo/geosite/category-ads-all.yaml',
-                expectedSingboxRuleSet: 'category-ads-all.srs'
-            }
-        ];
-
-        for (const testCase of cases) {
-            const builtinTemplate = getBuiltinTemplate(testCase.id);
-            expect(builtinTemplate).toBeTruthy();
-
-            const clashRendered = renderClashFromIniTemplate(builtinTemplate.content, {
-                proxies: [
-                    { name: 'HK-01', type: 'trojan', server: '1.1.1.1', port: 443, password: 'pass' },
-                    { name: 'JP-01', type: 'trojan', server: '2.2.2.2', port: 443, password: 'pass' },
-                    { name: 'US-01', type: 'trojan', server: '3.3.3.3', port: 443, password: 'pass' }
-                ],
-                managedConfigUrl: 'https://example.com/sub',
-                targetFormat: 'clash'
-            });
-            const clashParsed = yaml.load(clashRendered);
-            const clashProviders = Object.values(clashParsed['rule-providers'] || {});
-            const clashGroups = clashParsed['proxy-groups'].map(group => group.name);
-
-            expect(clashProviders.some(provider => provider.url.includes(testCase.expectedClashProvider) && provider.behavior === 'domain')).toBe(true);
-            expect(clashProviders.some(provider => provider.url.includes('/meta/geo/geoip/private.yaml') && provider.behavior === 'ipcidr')).toBe(true);
-            expect(clashParsed.rules).toContain('MATCH,🐟 漏网之鱼');
-            expect(clashGroups).toContain(testCase.expectedGroup);
-            if (testCase.unexpectedGroup) {
-                expect(clashGroups).not.toContain(testCase.unexpectedGroup);
-            }
-
-            const singboxRendered = renderSingboxFromIniTemplate(builtinTemplate.content, {
-                nodeList: [
-                    'trojan://password@1.2.3.4:443#HK-01',
-                    'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ=@1.2.3.5:8388#JP-01'
-                ].join('\n'),
-                targetFormat: 'singbox'
-            });
-            const singboxParsed = JSON.parse(singboxRendered);
-            const ruleSets = singboxParsed.route.rule_set || [];
-
-            expect(ruleSets.some(ruleSet => ruleSet.url.endsWith(testCase.expectedSingboxRuleSet) && ruleSet.format === 'binary')).toBe(true);
-            expect(ruleSets.some(ruleSet => ruleSet.url.endsWith('private.srs') && ruleSet.format === 'binary')).toBe(true);
-            expect(singboxParsed.route.rules.some(rule => rule.outbound === '🐟 漏网之鱼' || rule.outbound === 'REJECT')).toBe(true);
-        }
     });
 
     it('should render loon and quanx config sections from ACL4SSR custom template', () => {

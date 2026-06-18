@@ -261,21 +261,20 @@ describe('Surge 内置生成器', () => {
             expect(result).toContain('♻️ 自动选择 = url-test');
         });
 
-        it('应按地区自动分组', () => {
+        it('不再按地区自动分组，自动选择直接包含所有节点', () => {
             const nodeList = [
                 'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ=@1.2.3.4:8388#香港节点1',
                 'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ=@5.6.7.8:8388#US Node',
                 'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ=@9.10.11.12:8388#未知地区节点'
             ].join('\n');
             const result = generateBuiltinSurgeConfig(nodeList);
-            expect(result).toContain('🇭🇰 香港节点 = select');
-            expect(result).toContain('🇺🇸 美国节点 = select');
-            expect(result).not.toContain('🇯🇵 日本节点 = select'); // 不包含未匹配的地区
-            expect(result).toContain('⚡️ 🇭🇰 香港 - 自动测速 = url-test');
-            expect(result).toContain('⚡️ 🇺🇸 美国 - 自动测速 = url-test');
-            
-            // 主分组应包含地区分组和默认策略
-            expect(result).toContain('🚀 节点选择 = select, ♻️ 自动选择, 🔯 故障转移, 👋 手动切换, 🇭🇰 香港节点, 🇺🇸 美国节点');
+            expect(result).not.toContain('🇭🇰 香港节点 = select');
+            expect(result).not.toContain('🇺🇸 美国节点 = select');
+            expect(result).not.toContain('🇯🇵 日本节点 = select');
+            expect(result).not.toContain('⚡️ 🇭🇰 香港 - 自动测速 = url-test');
+            expect(result).not.toContain('⚡️ 🇺🇸 美国 - 自动测速 = url-test');
+            expect(result).toContain('♻️ 自动选择 = url-test, 🇭🇰 香港节点1, 🇺🇸 US Node, 🌍 未知地区节点, url=http://www.gstatic.com/generate_204, interval=300, tolerance=50');
+            expect(result).toContain('🚀 节点选择 = select, ♻️ 自动选择, 🔯 故障转移, 👋 手动切换, DIRECT');
         });
     });
 

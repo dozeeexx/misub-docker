@@ -70,16 +70,7 @@ function toClashRuleProviderUrl(sourceUrl) {
         const pathParts = url.pathname.split('/').filter(Boolean);
         const owner = pathParts[0] || '';
         const repo = pathParts[1] || '';
-        if (owner.toLowerCase() !== 'acl4ssr' || repo.toLowerCase() !== 'acl4ssr') {
-            if (owner.toLowerCase() === 'metacubeX'.toLowerCase() && repo.toLowerCase() === 'meta-rules-dat') {
-                url.pathname = url.pathname
-                    .replace(/\/refs\/heads\/sing\/geo\//i, '/refs/heads/meta/geo/')
-                    .replace(/\/sing\/geo\//i, '/meta/geo/')
-                    .replace(/\.(srs|mrs)$/i, '.yaml');
-                return url.toString();
-            }
-            return sourceUrl;
-        }
+        if (owner.toLowerCase() !== 'acl4ssr' || repo.toLowerCase() !== 'acl4ssr') return sourceUrl;
         if (!/\/Clash\/.*\.(list|txt)$/i.test(url.pathname)) return sourceUrl;
 
         const fileName = url.pathname.split('/').pop()?.replace(/\.(list|txt)$/i, '') || '';
@@ -109,10 +100,7 @@ function toClashRuleProviderUrl(sourceUrl) {
 
 function getRuleProviderBehavior(providerUrl) {
     try {
-        const url = new URL(providerUrl);
-        if (/\/geo\/geosite\//i.test(url.pathname)) return 'domain';
-        if (/\/geo\/geoip\//i.test(url.pathname)) return 'ipcidr';
-        const fileName = url.pathname.split('/').pop()?.replace(/\.(yaml|yml|list|txt|conf|srs|mrs)$/i, '') || '';
+        const fileName = new URL(providerUrl).pathname.split('/').pop()?.replace(/\.(yaml|yml|list|txt|conf)$/i, '') || '';
         if (ACL4SSR_IPCIDR_PROVIDER_FILES.has(fileName.toLowerCase())) return 'ipcidr';
     } catch {
         // ignore invalid provider url shapes and keep default behavior

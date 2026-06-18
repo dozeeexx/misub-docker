@@ -47,15 +47,21 @@ describe('Builtin template rule audit', () => {
         expect(findGroup(model, '☑️ 手动切换')).toBeTruthy();
     });
 
-    it('lets ACL4SSR lite auto selection include all smart region groups', () => {
+    it('keeps ACL4SSR lite auto selection flat without smart region groups', () => {
         const model = getOptimizedTemplateModel('clash_acl4ssr_lite');
         const autoGroup = findGroup(model, '♻️ 自动选择');
 
-        expect(autoGroup?.members).toContain('🇭🇰 香港节点');
-        expect(autoGroup?.members).toContain('🇯🇵 日本节点');
-        expect(autoGroup?.members).toContain('🇺🇸 美国节点');
-        expect(autoGroup?.members).toContain('🌍 狮城节点');
-        expect(autoGroup?.members).not.toContain('🇺🇲 美国节点');
+        expect(autoGroup?.members).toContain('香港 01');
+        expect(autoGroup?.members).toContain('日本 01');
+        expect(autoGroup?.members).toContain('美国 01');
+        expect(autoGroup?.members).toContain('新加坡 01');
+        expect(model.groups.map(group => group.name)).not.toEqual(expect.arrayContaining([
+            '🇭🇰 香港节点',
+            '🇯🇵 日本节点',
+            '🇺🇸 美国节点',
+            '🇸🇬 狮城节点',
+            '🌍 狮城节点'
+        ]));
     });
 
     it('does not put MiSub media AI main selector inside itself', () => {
@@ -65,19 +71,22 @@ describe('Builtin template rule audit', () => {
         expect(mainGroup?.members).not.toContain('🚀 节点选择');
     });
 
-    it('keeps AI service choices proxy-only and preserves United States region choice', () => {
+    it('keeps AI service choices proxy-only without country-specific shortcuts', () => {
         const model = getOptimizedTemplateModel('clash_misub_media_ai');
         const aiGroup = findGroup(model, '🤖 AI 服务');
 
         expect(aiGroup?.members).toContain('🚀 节点选择');
         expect(aiGroup?.members).toContain('♻️ 自动选择');
-        expect(aiGroup?.members).toContain('🇺🇸 美国节点');
-        expect(aiGroup?.members).toContain('🇯🇵 日本节点');
+        expect(aiGroup?.members).toContain('☑️ 手动切换');
         expect(aiGroup?.members).not.toContain('DIRECT');
-        expect(aiGroup?.members).not.toContain('🇺🇲 美国节点');
+        expect(aiGroup?.members).not.toEqual(expect.arrayContaining([
+            '🇺🇸 美国节点',
+            '🇯🇵 日本节点',
+            '🇺🇲 美国节点'
+        ]));
     });
 
-    it('uses a consistent AI service group and United States region in ACL4SSR full', () => {
+    it('uses a consistent AI service group without country-specific shortcuts in ACL4SSR full', () => {
         const model = getOptimizedTemplateModel('clash_acl4ssr_full');
         const aiGroup = findGroup(model, '🤖 AI 服务');
         const legacyOpenAiGroup = findGroup(model, '🤖 OpenAi');
@@ -85,8 +94,15 @@ describe('Builtin template rule audit', () => {
         expect(legacyOpenAiGroup).toBeUndefined();
         expect(aiGroup?.members).toContain('🚀 节点选择');
         expect(aiGroup?.members).toContain('🔯 故障转移');
-        expect(aiGroup?.members).toContain('🇺🇸 美国节点');
-        expect(aiGroup?.members).not.toContain('🇺🇲 美国节点');
+        expect(aiGroup?.members).toContain('♻️ 自动选择');
+        expect(aiGroup?.members).toContain('☑️ 手动切换');
+        expect(aiGroup?.members).not.toEqual(expect.arrayContaining([
+            '🇺🇸 美国节点',
+            '🇸🇬 狮城节点',
+            '🇯🇵 日本节点',
+            '🌍 狮城节点',
+            '🇺🇲 美国节点'
+        ]));
     });
 
     it('uses maintained SagerNet sing-box binary rule sets instead of deprecated Loyalsoldier JSON rules', () => {
