@@ -12,7 +12,7 @@ import {
 describe('Official ACL4SSR flat presets', () => {
     it('exposes every allowlisted no-country official ACL4SSR config as a preset asset', () => {
         const urls = new Set(TRANSFORM_ASSETS.configs.map(asset => asset.url));
-        expect(OFFICIAL_ACL4SSR_FLAT_PRESETS).toHaveLength(25);
+        expect(OFFICIAL_ACL4SSR_FLAT_PRESETS).toHaveLength(5);
         expect(OFFICIAL_ACL4SSR_FLAT_PRESET_ASSETS).toHaveLength(OFFICIAL_ACL4SSR_FLAT_PRESETS.length);
 
         for (const preset of OFFICIAL_ACL4SSR_FLAT_PRESETS) {

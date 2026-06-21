@@ -22,118 +22,10 @@ export const OFFICIAL_ACL4SSR_FLAT_PRESETS = [
         description: 'ACL4SSR 官方基础配置，不含国家/地区节点分组。'
     },
     {
-        id: 202,
-        file: 'ACL4SSR_AdblockPlus.ini',
-        label: '基础版 + AdblockPlus',
-        description: 'ACL4SSR 官方基础广告增强配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 203,
-        file: 'ACL4SSR_BackCN.ini',
-        label: '回国优化版',
-        description: 'ACL4SSR 官方回国/国内访问优化配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 204,
-        file: 'ACL4SSR_Mini.ini',
-        label: 'Mini 精简版',
-        description: 'ACL4SSR 官方 Mini 精简配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 205,
-        file: 'ACL4SSR_Mini_Fallback.ini',
-        label: 'Mini 故障转移版',
-        description: 'ACL4SSR 官方 Mini Fallback 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 206,
-        file: 'ACL4SSR_Mini_MultiMode.ini',
-        label: 'Mini 多模式版',
-        description: 'ACL4SSR 官方 Mini 多模式配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 207,
-        file: 'ACL4SSR_Mini_NoAuto.ini',
-        label: 'Mini 无自动测速版',
-        description: 'ACL4SSR 官方 Mini NoAuto 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 208,
-        file: 'ACL4SSR_NoApple.ini',
-        label: '无 Apple 分流版',
-        description: 'ACL4SSR 官方 NoApple 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 209,
-        file: 'ACL4SSR_NoAuto.ini',
-        label: '无自动测速版',
-        description: 'ACL4SSR 官方 NoAuto 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 210,
-        file: 'ACL4SSR_NoAuto_NoApple.ini',
-        label: '无自动测速 + 无 Apple 版',
-        description: 'ACL4SSR 官方 NoAuto NoApple 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 211,
-        file: 'ACL4SSR_NoAuto_NoApple_NoMicrosoft.ini',
-        label: '无自动测速 + 无 Apple/Microsoft 版',
-        description: 'ACL4SSR 官方 NoAuto NoApple NoMicrosoft 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 212,
-        file: 'ACL4SSR_NoMicrosoft.ini',
-        label: '无 Microsoft 分流版',
-        description: 'ACL4SSR 官方 NoMicrosoft 配置，不含国家/地区节点分组。'
-    },
-    {
         id: 213,
         file: 'ACL4SSR_Online.ini',
         label: 'Online 默认版',
         description: 'ACL4SSR 官方 Online 默认配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 214,
-        file: 'ACL4SSR_Online_AdblockPlus.ini',
-        label: 'Online + AdblockPlus',
-        description: 'ACL4SSR 官方 Online 广告增强配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 215,
-        file: 'ACL4SSR_Online_Mini.ini',
-        label: 'Online Mini 精简版',
-        description: 'ACL4SSR 官方 Online Mini 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 216,
-        file: 'ACL4SSR_Online_Mini_AdblockPlus.ini',
-        label: 'Online Mini + AdblockPlus',
-        description: 'ACL4SSR 官方 Online Mini 广告增强配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 217,
-        file: 'ACL4SSR_Online_Mini_Ai.ini',
-        label: 'Online Mini AI 版',
-        description: 'ACL4SSR 官方 Online Mini AI 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 218,
-        file: 'ACL4SSR_Online_Mini_Fallback.ini',
-        label: 'Online Mini 故障转移版',
-        description: 'ACL4SSR 官方 Online Mini Fallback 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 219,
-        file: 'ACL4SSR_Online_Mini_MultiMode.ini',
-        label: 'Online Mini 多模式版',
-        description: 'ACL4SSR 官方 Online Mini 多模式配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 220,
-        file: 'ACL4SSR_Online_Mini_NoAuto.ini',
-        label: 'Online Mini 无自动测速版',
-        description: 'ACL4SSR 官方 Online Mini NoAuto 配置，不含国家/地区节点分组。'
     },
     {
         id: 221,
@@ -148,22 +40,10 @@ export const OFFICIAL_ACL4SSR_FLAT_PRESETS = [
         description: 'ACL4SSR 官方 Online NoReject 配置，不含国家/地区节点分组。'
     },
     {
-        id: 223,
-        file: 'ACL4SSR_WithChinaIp.ini',
-        label: '包含 ChinaIP 版',
-        description: 'ACL4SSR 官方 WithChinaIp 配置，不含国家/地区节点分组。'
-    },
-    {
         id: 224,
         file: 'ACL4SSR_WithChinaIp_WithGFW.ini',
         label: '包含 ChinaIP + GFW 版',
         description: 'ACL4SSR 官方 WithChinaIp WithGFW 配置，不含国家/地区节点分组。'
-    },
-    {
-        id: 225,
-        file: 'ACL4SSR_WithGFW.ini',
-        label: '包含 GFW 版',
-        description: 'ACL4SSR 官方 WithGFW 配置，不含国家/地区节点分组。'
     }
 ].map(preset => ({
     ...preset,
